@@ -1,0 +1,45 @@
+{
+  "name": "ms-bot",
+  "version": "0.0.1",
+  "description": "Official MS Gaming Discord bot",
+  "main": "dist/index.js",
+  "homepage": "https://github.com/DTrombett/ms-bot#readme",
+  "author": "DTrombett",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DTrombett/ms-bot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DTrombett/ms-bot.git"
+  },
+  "scripts": {
+    "test": "eslint src && prettier --check src/**/*.ts && tsc --noEmit",
+    "prepublish": "npm run test",
+    "build": "tsc",
+    "lint": "eslint src --fix",
+    "prettier": "prettier --write src/**/*.ts",
+    "commands": "npm run build && node dist/registerCommands.js",
+    "start": "npm run build && node ."
+  },
+  "dependencies": {
+    "@discordjs/builders": "^0.8.2",
+    "@discordjs/collection": "^0.3.2",
+    "@discordjs/rest": "^0.1.0-canary.0",
+    "@tsconfig/node16": "^1.0.2",
+    "@types/node": "^16.11.9",
+    "bufferutil": "^4.0.5",
+    "discord-api-types": "^0.24.0",
+    "discord.js": "^13.3.1",
+    "dotenv": "^10.0.0",
+    "utf-8-validate": "^5.0.7",
+    "zlib-sync": "^0.1.7"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.4.0",
+    "@typescript-eslint/parser": "^5.4.0",
+    "eslint": "^8.3.0",
+    "prettier": "^2.4.1",
+    "typescript": "^4.5.2"
+  }
+}
