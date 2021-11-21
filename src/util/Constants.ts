@@ -2,6 +2,7 @@ import type {
 	SlashCommandBuilder,
 	SlashCommandSubcommandsOnlyBuilder,
 } from "@discordjs/builders";
+import { OAuth2Scopes, PermissionFlagsBits } from "discord-api-types";
 import type { Awaitable, ClientEvents, CommandInteraction } from "discord.js";
 import type { Command, Event } from ".";
 
@@ -13,6 +14,19 @@ export const enum Constants {
 	ClientOnline = "Client online",
 	RegisterCommands = "Register slash commands",
 }
+
+export const DynamicConstants = {
+	inviteUrl: () =>
+		`https://discord.com/api/oauth2/authorize?client_id=${process.env
+			.DISCORD_CLIENT_ID!}&permissions=${DynamicConstants.botPermissions()}&scope=${DynamicConstants.applicationScopes().join(
+			"%20"
+		)}` as const,
+	botPermissions: () => PermissionFlagsBits.Administrator,
+	applicationScopes: () => [
+		OAuth2Scopes.Bot,
+		OAuth2Scopes.ApplicationsCommands,
+	],
+};
 
 /**
  * Options to create a command
