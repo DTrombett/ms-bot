@@ -2,7 +2,7 @@ import type {
 	SlashCommandBuilder,
 	SlashCommandSubcommandsOnlyBuilder,
 } from "@discordjs/builders";
-import { OAuth2Scopes, PermissionFlagsBits } from "discord-api-types";
+import { OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v9";
 import type { Awaitable, ClientEvents, CommandInteraction } from "discord.js";
 import type { Command, Event } from ".";
 
