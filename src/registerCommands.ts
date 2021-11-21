@@ -40,7 +40,10 @@ void promises
 					? Routes.applicationCommands(applicationId!)
 					: Routes.applicationGuildCommands(applicationId!, guildId!),
 				{
-					body: files.map((file) => file.command.data.toJSON()),
+					body: (registerGlobal
+						? files.filter((file) => !(file.command.reserved ?? false))
+						: files
+					).map((file) => file.command.data.toJSON()),
 				}
 			)
 	)
