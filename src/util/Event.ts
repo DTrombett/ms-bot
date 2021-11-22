@@ -1,5 +1,7 @@
 import type { Client, ClientEvents } from "discord.js";
+import { join } from "path";
 import type { EventOptions } from ".";
+import { Constants } from ".";
 
 /**
  * A class representing a ClientRoyale event
@@ -32,10 +34,24 @@ export class Event<T extends keyof ClientEvents = keyof ClientEvents> {
 	constructor(client: Client, data: EventOptions<T>) {
 		this.client = client;
 		this.name = data.name;
-		this.on = data.on?.bind<EventOptions<T>["on"]>(this);
-		this.once = data.once?.bind<EventOptions<T>["once"]>(this);
+		this.patch(data);
+	}
+
+	/**
+	 * Patches this event with the given data.
+	 * @param data - The data to use to create this event
+	 */
+	patch(data: Partial<EventOptions<T>>) {
+		this.remove();
+
+		if (data.on !== undefined)
+			this.on = data.on.bind<EventOptions<T>["on"]>(this);
+		if (data.once !== undefined)
+			this.once = data.once.bind<EventOptions<T>["once"]>(this);
 
 		this.addListeners();
+
+		return this;
 	}
 
 	/**
@@ -52,6 +68,19 @@ export class Event<T extends keyof ClientEvents = keyof ClientEvents> {
 	 */
 	emit(...args: ClientEvents[T]): boolean {
 		return this.client.emit(this.name, ...args);
+	}
+
+	/**
+	 * Reloads this event.
+	 * @returns The new event
+	 */
+	async reload(): Promise<this> {
+		const path = join(__dirname, "..", Constants.Events, `${this.name}.js`);
+		delete require.cache[require.resolve(path)];
+
+		return this.patch(
+			((await import(path)) as { event: EventOptions<T> }).event
+		);
 	}
 
 	/**

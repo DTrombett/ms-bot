@@ -11,7 +11,7 @@ import {
 	Intents,
 } from "discord.js";
 import { config } from "dotenv";
-import Constants, { executeEval, loadEvents } from "./util";
+import Constants, { loadEvents, runEval } from "./util";
 
 // Load environment variables from .env file
 config();
@@ -20,7 +20,7 @@ process.stdin.on("data", async (chunk) => {
 	const data = chunk.toString();
 
 	if (data.trim() === "") return;
-	console.log(await executeEval(data));
+	console.log(await runEval(data));
 });
 
 console.time(Constants.ClientOnline);

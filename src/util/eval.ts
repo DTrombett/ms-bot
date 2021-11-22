@@ -5,14 +5,27 @@ import { inspect } from "node:util";
  * @param code - The code to execute
  * @returns The result of the code
  */
-export const executeEval = async (code: string): Promise<string> => {
+export async function runEval(code: string): Promise<unknown> {
+	try {
+		return (await eval(code)) as unknown;
+	} catch (e) {
+		return e;
+	}
+}
+
+/**
+ * Execute some code and return the parsed result.
+ * @param code - The code to execute
+ * @param thisArg - The value of `this` in the code
+ * @returns The result of the code
+ */
+export async function parseEval(
+	code: string,
+	thisArg?: unknown
+): Promise<string> {
 	let result;
 
-	try {
-		result = (await eval(code)) as unknown;
-	} catch (e) {
-		result = e;
-	}
+	result = await runEval.bind(thisArg)(code);
 	switch (typeof result) {
 		case "string":
 		case "bigint":
@@ -30,4 +43,4 @@ export const executeEval = async (code: string): Promise<string> => {
 	}
 
 	return result;
-};
+}

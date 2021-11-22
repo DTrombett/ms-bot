@@ -1,5 +1,6 @@
 import type { Snowflake } from "discord-api-types/v9";
 import type { Client, CommandInteraction } from "discord.js";
+import { join } from "path";
 import type { CommandOptions } from ".";
 import Constants from "./Constants";
 
@@ -17,26 +18,25 @@ export class Command {
 	/**
 	 * The Discord data for this command
 	 */
-	data: CommandOptions["data"];
+	data!: CommandOptions["data"];
 
 	/**
 	 * If this command is private and can only be executed by the owners of the bot
 	 */
-	reserved: boolean;
+	reserved = false;
 
 	/**
 	 * The function provided to handle the command received
 	 */
-	private _execute: OmitThisParameter<CommandOptions["run"]>;
+	private _execute!: OmitThisParameter<CommandOptions["run"]>;
 
 	/**
 	 * @param options - Options for this command
 	 */
 	constructor(client: Client, options: CommandOptions) {
-		this._execute = options.run.bind(this);
 		this.client = client;
-		this.data = options.data;
-		this.reserved = options.reserved ?? false;
+
+		this.patch(options);
 	}
 
 	/**
@@ -47,6 +47,31 @@ export class Command {
 	}
 	set name(name) {
 		this.data.setName(name);
+	}
+
+	/**
+	 * Patch this command
+	 * @param options - Options for this command
+	 */
+	patch(options: Partial<CommandOptions>) {
+		if (options.run !== undefined) this._execute = options.run.bind(this);
+		if (options.data !== undefined) this.data = options.data;
+		if (options.reserved !== undefined) this.reserved = options.reserved;
+
+		return this;
+	}
+
+	/**
+	 * Reload this command
+	 * @returns The new command
+	 */
+	async reload() {
+		const path = join(__dirname, "..", Constants.Commands, `${this.name}.js`);
+		delete require.cache[require.resolve(path)];
+
+		return this.patch(
+			((await import(path)) as { command: CommandOptions }).command
+		);
 	}
 
 	/**
