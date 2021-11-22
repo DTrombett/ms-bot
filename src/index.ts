@@ -1,3 +1,9 @@
+(
+	process as NodeJS.Process & {
+		setSourceMapsEnabled: (enabled: boolean) => void;
+	}
+).setSourceMapsEnabled(true);
+
 import {
 	Client,
 	Options,
@@ -5,9 +11,17 @@ import {
 	Intents,
 } from "discord.js";
 import { config } from "dotenv";
-import Constants, { loadEvents } from "./util";
+import Constants, { executeEval, loadEvents } from "./util";
 
+// Load environment variables from .env file
 config();
+// Execute any input from stdin as eval and print the result
+process.stdin.on("data", async (chunk) => {
+	const data = chunk.toString();
+
+	if (data.trim() === "") return;
+	console.log(await executeEval(data));
+});
 
 console.time(Constants.ClientOnline);
 

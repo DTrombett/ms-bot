@@ -6,8 +6,9 @@ import {
 } from "@discordjs/builders";
 import { exec as nativeExec } from "child_process";
 import { Constants, Util } from "discord.js";
-import { inspect, promisify } from "util";
+import { promisify } from "util";
 import type { CommandOptions } from "../util";
+import { executeEval } from "../util";
 
 const enum SubCommands {
 	shell = "shell",
@@ -56,7 +57,10 @@ export const command: CommandOptions = {
 					SubCommandOptions.command,
 					true
 				);
-				const result = await exec(cmd);
+				const result = (await exec(cmd).catch((e: Error) => e)) as {
+					stdout: string;
+					stderr: string;
+				};
 				const embeds: Embed[] = [];
 
 				if (result.stdout)
@@ -92,7 +96,9 @@ export const command: CommandOptions = {
 							.setTimestamp()
 					);
 				await interaction.editReply({
-					content: inlineCode(`${__dirname}> ${Util.escapeInlineCode(cmd)}`),
+					content: inlineCode(
+						`${process.cwd()}> ${Util.escapeInlineCode(cmd)}`
+					),
 					embeds: embeds.map((e) => e.toJSON()),
 				});
 				break;
@@ -101,19 +107,11 @@ export const command: CommandOptions = {
 					SubCommandOptions.command,
 					true
 				);
-				let object;
-				try {
-					object = (await eval(code)) as unknown;
-				} catch (e) {
-					object = e;
-				}
+				const object = await executeEval(code);
 				const embed = new Embed()
 					.setTitle("Eval")
 					.setDescription(
-						codeBlock(
-							"js",
-							Util.escapeCodeBlock(inspect(object)).slice(0, 4096 - 9)
-						)
+						codeBlock("js", Util.escapeCodeBlock(object).slice(0, 4096 - 9))
 					)
 					.addField({
 						name: "Code",
@@ -128,6 +126,7 @@ export const command: CommandOptions = {
 					})
 					.setColor(Constants.Colors.BLURPLE)
 					.setTimestamp();
+
 				await interaction.editReply({
 					embeds: [embed.toJSON()],
 				});
