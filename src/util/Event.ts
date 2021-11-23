@@ -1,7 +1,7 @@
 import type { Client, ClientEvents } from "discord.js";
-import { join } from "path";
+import { join } from "node:path";
 import type { EventOptions } from ".";
-import { Constants } from ".";
+import Constants from "./Constants";
 
 /**
  * A class representing a ClientRoyale event

@@ -6,9 +6,9 @@
 
 import {
 	Client,
-	Options,
 	Constants as DiscordConstants,
 	Intents,
+	Options,
 } from "discord.js";
 import { config } from "dotenv";
 import Constants, { loadEvents, runEval } from "./util";

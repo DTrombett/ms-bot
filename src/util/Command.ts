@@ -1,6 +1,6 @@
 import type { Snowflake } from "discord-api-types/v9";
 import type { Client, CommandInteraction } from "discord.js";
-import { join } from "path";
+import { join } from "node:path";
 import type { CommandOptions } from ".";
 import Constants from "./Constants";
 

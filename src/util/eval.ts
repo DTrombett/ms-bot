@@ -28,6 +28,8 @@ export async function parseEval(
 	result = await runEval.bind(thisArg)(code);
 	switch (typeof result) {
 		case "string":
+			result = `"${result.replaceAll("\n", "\\n").replaceAll("\r", "\\r")}"`;
+			break;
 		case "bigint":
 		case "number":
 		case "boolean":

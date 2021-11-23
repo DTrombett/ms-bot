@@ -5,11 +5,11 @@ import {
 	inlineCode,
 	SlashCommandBuilder,
 	time,
-	TimestampStyles,
+	TimestampStyles
 } from "@discordjs/builders";
-import { exec as nativeExec, spawn } from "child_process";
 import { Constants, Util } from "discord.js";
-import { promisify } from "util";
+import { exec as nativeExec, spawn } from "node:child_process";
+import { promisify } from "node:util";
 import type { CommandOptions } from "../util";
 import { commands, events, parseEval } from "../util";
 
@@ -229,10 +229,7 @@ export const command: CommandOptions = {
 					})
 					.setTitle("Eval")
 					.setDescription(
-						codeBlock(
-							"js",
-							Util.escapeCodeBlock(parsed || '""').slice(0, 4096 - 9)
-						)
+						codeBlock("js", Util.escapeCodeBlock(parsed).slice(0, 4096 - 9))
 					)
 					.addField({
 						name: "Code",

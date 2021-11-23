@@ -4,7 +4,7 @@ import { config } from "dotenv";
 import { promises } from "node:fs";
 import { join } from "node:path";
 import type { CommandOptions } from "./util";
-import { Constants } from "./util";
+import Constants from "./util";
 
 console.time(Constants.RegisterCommands);
 
