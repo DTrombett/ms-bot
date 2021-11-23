@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/member-ordering */
 import type { Snowflake } from "discord-api-types/v9";
 import type { Client, CommandInteraction } from "discord.js";
 import { join } from "node:path";
@@ -47,6 +48,16 @@ export class Command {
 	}
 	set name(name) {
 		this.data.setName(name);
+	}
+
+	/**
+	 * The description of this command
+	 */
+	get description() {
+		return this.data.description;
+	}
+	set description(description) {
+		this.data.setDescription(description);
 	}
 
 	/**

@@ -5,13 +5,13 @@ import {
 	inlineCode,
 	SlashCommandBuilder,
 	time,
-	TimestampStyles
+	TimestampStyles,
 } from "@discordjs/builders";
 import { Constants, Util } from "discord.js";
 import { exec as nativeExec, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import type { CommandOptions } from "../util";
-import { commands, events, parseEval } from "../util";
+import { commands, events, loadCommands, loadEvents, parseEval } from "../util";
 
 const enum SubCommands {
 	shell = "shell",
@@ -211,7 +211,9 @@ export const command: CommandOptions = {
 				}
 
 				await interaction.editReply({
-					content: `Comando eseguito in ${Date.now() - now}ms\n${inlineCode(
+					content: `Comando eseguito in ${bold(
+						`${Date.now() - now}ms`
+					)}\n${inlineCode(
 						`${process.cwd()}> ${Util.escapeInlineCode(
 							cmd.slice(0, 2000 - 100)
 						)}`
@@ -242,7 +244,7 @@ export const command: CommandOptions = {
 					.setTimestamp();
 
 				await interaction.editReply({
-					content: `Eval elaborato in ${Date.now() - now}ms`,
+					content: `Eval elaborato in ${bold(`${Date.now() - now}ms`)}`,
 					embeds: [evalEmbed.toJSON()],
 				});
 				break;
@@ -280,15 +282,21 @@ export const command: CommandOptions = {
 					interaction.options.getBoolean(SubCommandOptions.reloadCommands) ??
 					true
 				)
-					await Promise.all(commands.map((c) => c.reload()));
+					await Promise.all([
+						...commands.map((c) => c.reload()),
+						loadCommands(this.client),
+					]);
 				if (
 					interaction.options.getBoolean(SubCommandOptions.reloadEvents) ??
 					true
 				)
-					await Promise.all(events.map((e) => e.reload()));
+					await Promise.all([
+						...events.map((e) => e.reload()),
+						loadEvents(this.client),
+					]);
 
 				await interaction.editReply({
-					content: `Ricaricato in ${Date.now() - now}ms`,
+					content: `Ricaricato in ${bold(`${Date.now() - now}ms`)}`,
 				});
 				break;
 			case SubCommands.restart:
@@ -314,7 +322,7 @@ export const command: CommandOptions = {
 					this.client.token = process.env.DISCORD_TOKEN!;
 					await this.client.login();
 					await interaction.editReply({
-						content: `Ricollegato in ${Date.now() - now}ms.`,
+						content: `Ricollegato in ${bold(`${Date.now() - now}ms`)}.`,
 					});
 				}
 				break;
@@ -346,7 +354,9 @@ export const command: CommandOptions = {
 					.setTimestamp();
 
 				await interaction.editReply({
-					content: `Process uptime calcolato in ${Date.now() - now}ms`,
+					content: `Process uptime calcolato in ${bold(
+						`${Date.now() - now}ms`
+					)}`,
 					embeds: [uptimeEmbed.toJSON()],
 				});
 				break;

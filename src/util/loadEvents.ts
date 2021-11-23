@@ -31,8 +31,12 @@ export const loadEvents = (client: Client) =>
 		)
 		.then((files) => files.map((file) => file.event))
 		.then((eventsOptions) => {
-			for (const event of eventsOptions)
-				events.set(event.name, new Event(client, event));
+			for (const event of eventsOptions) {
+				const existing = events.get(event.name);
+
+				if (existing !== undefined) existing.patch(event);
+				else events.set(event.name, new Event(client, event));
+			}
 		});
 
 export default loadEvents;

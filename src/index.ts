@@ -11,7 +11,7 @@ import {
 	Options,
 } from "discord.js";
 import { config } from "dotenv";
-import Constants, { loadEvents, runEval } from "./util";
+import Constants, { loadCommands, loadEvents, runEval } from "./util";
 
 // Load environment variables from .env file
 config();
@@ -72,5 +72,4 @@ const client = new Client({
 	shards: "auto",
 });
 
-void loadEvents(client);
-void client.login();
+void Promise.all([loadEvents(client), loadCommands(client), client.login()]);

@@ -31,8 +31,12 @@ export const loadCommands = (client: Client) =>
 		)
 		.then((files) => files.map((file) => file.command))
 		.then((commandOptions) => {
-			for (const command of commandOptions)
-				commands.set(command.data.name, new Command(client, command));
+			for (const command of commandOptions) {
+				const existing = commands.get(command.data.name);
+
+				if (existing !== undefined) existing.patch(command);
+				else commands.set(command.data.name, new Command(client, command));
+			}
 		});
 
 export default commands;

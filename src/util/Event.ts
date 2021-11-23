@@ -42,7 +42,7 @@ export class Event<T extends keyof ClientEvents = keyof ClientEvents> {
 	 * @param data - The data to use to create this event
 	 */
 	patch(data: Partial<EventOptions<T>>) {
-		this.remove();
+		this.removeListeners();
 
 		if (data.on !== undefined)
 			this.on = data.on.bind<EventOptions<T>["on"]>(this);
@@ -86,7 +86,7 @@ export class Event<T extends keyof ClientEvents = keyof ClientEvents> {
 	/**
 	 * Removes this event.
 	 */
-	remove(): void {
+	removeListeners(): void {
 		if (this.on) this.client.off(this.name, this.on);
 		if (this.once) this.client.off(this.name, this.once);
 	}
