@@ -8,10 +8,17 @@ import {
 	TimestampStyles,
 } from "@discordjs/builders";
 import { Constants, Util } from "discord.js";
-import { exec as nativeExec, spawn } from "node:child_process";
+import { exec as nativeExec } from "node:child_process";
 import { promisify } from "node:util";
 import type { CommandOptions } from "../util";
-import { commands, events, loadCommands, loadEvents, parseEval } from "../util";
+import {
+	commands,
+	events,
+	loadCommands,
+	loadEvents,
+	parseEval,
+	restart,
+} from "../util";
 
 const enum SubCommands {
 	shell = "shell",
@@ -19,9 +26,10 @@ const enum SubCommands {
 	test = "test",
 	ram = "ram",
 	reload = "reload",
-	restart = "restart",
+	restartCmd = "restart",
 	shutdown = "shutdown",
 	uptime = "uptime",
+	pull = "pull",
 }
 const enum SubCommandOptions {
 	cmd = "cmd",
@@ -115,9 +123,9 @@ export const command: CommandOptions = {
 						.setRequired(false)
 				)
 		)
-		.addSubcommand((restart) =>
-			restart
-				.setName(SubCommands.restart)
+		.addSubcommand((restartCmd) =>
+			restartCmd
+				.setName(SubCommands.restartCmd)
 				.setDescription("Riavvia il bot")
 				.addBooleanOption((process) =>
 					process
@@ -150,6 +158,19 @@ export const command: CommandOptions = {
 			uptime
 				.setName(SubCommands.uptime)
 				.setDescription("Mostra l'uptime del bot")
+				.addBooleanOption((ephemeral) =>
+					ephemeral
+						.setName(SubCommandOptions.ephemeral)
+						.setDescription(
+							"Scegli se mostrare il risultato privatamente (default: true)"
+						)
+						.setRequired(false)
+				)
+		)
+		.addSubcommand((pull) =>
+			pull
+				.setName(SubCommands.pull)
+				.setDescription("Aggiorna il bot")
 				.addBooleanOption((ephemeral) =>
 					ephemeral
 						.setName(SubCommandOptions.ephemeral)
@@ -299,7 +320,7 @@ export const command: CommandOptions = {
 					content: `Ricaricato in ${bold(`${Date.now() - now}ms`)}`,
 				});
 				break;
-			case SubCommands.restart:
+			case SubCommands.restartCmd:
 				if (interaction.options.getBoolean(SubCommandOptions.process) ?? true) {
 					const argvs = process.argv
 						.map((arg) => inlineCode(Util.escapeInlineCode(arg)))
@@ -308,15 +329,7 @@ export const command: CommandOptions = {
 					await interaction.editReply({
 						content: `Sto facendo ripartire il programma con i seguenti argv:\n${argvs}`,
 					});
-					process.once("exit", () => {
-						spawn(process.argv[0], process.argv.slice(1), {
-							cwd: process.cwd(),
-							detached: true,
-							stdio: "inherit",
-						}).unref();
-					});
-					this.client.destroy();
-					process.exit(0);
+					restart(this.client);
 				} else {
 					this.client.destroy();
 					this.client.token = process.env.DISCORD_TOKEN!;
@@ -359,6 +372,15 @@ export const command: CommandOptions = {
 					)}`,
 					embeds: [uptimeEmbed.toJSON()],
 				});
+				break;
+			case SubCommands.pull:
+				await exec("git pull && npm run commands");
+				await interaction.editReply({
+					content: `Aggiornato in ${bold(
+						`${Date.now() - now}ms`
+					)}\nSto riavviando il processo per rendere effettivi i cambiamenti...`,
+				});
+				restart(this.client);
 				break;
 
 			case SubCommands.test:
