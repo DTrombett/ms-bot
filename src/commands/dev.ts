@@ -374,7 +374,16 @@ export const command: CommandOptions = {
 				});
 				break;
 			case SubCommands.pull:
-				await exec("git pull && npm run commands");
+				const result = await exec("git pull && npm run commands").catch(
+					async (err: Error) => {
+						console.error(err);
+						await interaction.editReply({
+							content: `Errore durante il pull: ${err.message}`,
+						});
+					}
+				);
+
+				if (!result) break;
 				await interaction.editReply({
 					content: `Aggiornato in ${bold(
 						`${Date.now() - now}ms`
