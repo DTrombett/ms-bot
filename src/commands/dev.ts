@@ -4,8 +4,10 @@ import {
 	Embed,
 	inlineCode,
 	SlashCommandBuilder,
+	time,
+	TimestampStyles,
 } from "@discordjs/builders";
-import { exec as nativeExec } from "child_process";
+import { exec as nativeExec, spawn } from "child_process";
 import { Constants, Util } from "discord.js";
 import { promisify } from "util";
 import type { CommandOptions } from "../util";
@@ -17,13 +19,16 @@ const enum SubCommands {
 	test = "test",
 	ram = "ram",
 	reload = "reload",
+	restart = "restart",
+	shutdown = "shutdown",
+	uptime = "uptime",
 }
 const enum SubCommandOptions {
 	cmd = "cmd",
 	ephemeral = "ephemeral",
-	value = "value",
 	reloadCommands = "commands",
 	reloadEvents = "events",
+	process = "process",
 }
 
 const exec = promisify(nativeExec);
@@ -75,7 +80,17 @@ export const command: CommandOptions = {
 			test.setName(SubCommands.test).setDescription("Un comando di test")
 		)
 		.addSubcommand((ram) =>
-			ram.setName(SubCommands.ram).setDescription("Mostra la RAM utilizzata")
+			ram
+				.setName(SubCommands.ram)
+				.setDescription("Mostra la RAM utilizzata")
+				.addBooleanOption((ephemeral) =>
+					ephemeral
+						.setName(SubCommandOptions.ephemeral)
+						.setDescription(
+							"Scegli se mostrare il risultato privatamente (default: true)"
+						)
+						.setRequired(false)
+				)
 		)
 		.addSubcommand((reload) =>
 			reload
@@ -91,6 +106,58 @@ export const command: CommandOptions = {
 						.setName(SubCommandOptions.reloadEvents)
 						.setDescription("Se ricaricare gli eventi (default: true)")
 				)
+				.addBooleanOption((ephemeral) =>
+					ephemeral
+						.setName(SubCommandOptions.ephemeral)
+						.setDescription(
+							"Scegli se mostrare il risultato privatamente (default: true)"
+						)
+						.setRequired(false)
+				)
+		)
+		.addSubcommand((restart) =>
+			restart
+				.setName(SubCommands.restart)
+				.setDescription("Riavvia il bot")
+				.addBooleanOption((process) =>
+					process
+						.setName(SubCommandOptions.process)
+						.setDescription("Se riavviare il processo (default: true)")
+				)
+				.addBooleanOption((ephemeral) =>
+					ephemeral
+						.setName(SubCommandOptions.ephemeral)
+						.setDescription(
+							"Scegli se mostrare il risultato privatamente (default: true)"
+						)
+						.setRequired(false)
+				)
+		)
+		.addSubcommand((shutdown) =>
+			shutdown
+				.setName(SubCommands.shutdown)
+				.setDescription("Spegni il bot")
+				.addBooleanOption((ephemeral) =>
+					ephemeral
+						.setName(SubCommandOptions.ephemeral)
+						.setDescription(
+							"Scegli se mostrare il risultato privatamente (default: true)"
+						)
+						.setRequired(false)
+				)
+		)
+		.addSubcommand((uptime) =>
+			uptime
+				.setName(SubCommands.uptime)
+				.setDescription("Mostra l'uptime del bot")
+				.addBooleanOption((ephemeral) =>
+					ephemeral
+						.setName(SubCommandOptions.ephemeral)
+						.setDescription(
+							"Scegli se mostrare il risultato privatamente (default: true)"
+						)
+						.setRequired(false)
+				)
 		),
 	async run(interaction) {
 		await interaction.deferReply({
@@ -98,6 +165,7 @@ export const command: CommandOptions = {
 				interaction.options.getBoolean(SubCommandOptions.ephemeral) ?? true,
 		});
 
+		const now = Date.now();
 		switch (interaction.options.getSubcommand()) {
 			case SubCommands.shell:
 				const cmd = interaction.options.getString(SubCommandOptions.cmd, true);
@@ -143,16 +211,18 @@ export const command: CommandOptions = {
 				}
 
 				await interaction.editReply({
-					content: inlineCode(
-						`${process.cwd()}> ${Util.escapeInlineCode(cmd)}`
-					),
+					content: `Comando eseguito in ${Date.now() - now}ms\n${inlineCode(
+						`${process.cwd()}> ${Util.escapeInlineCode(
+							cmd.slice(0, 2000 - 100)
+						)}`
+					)}`,
 					embeds: embeds.map((e) => e.toJSON()),
 				});
 				break;
 			case SubCommands.evalCmd:
 				const code = interaction.options.getString(SubCommandOptions.cmd, true);
 				const parsed = await parseEval(code, this);
-				const embed = new Embed()
+				const evalEmbed = new Embed()
 					.setAuthor({
 						name: interaction.user.tag,
 						iconURL: interaction.user.displayAvatarURL(),
@@ -168,42 +238,42 @@ export const command: CommandOptions = {
 						name: "Code",
 						value: codeBlock(
 							"js",
-							Util.escapeCodeBlock(code).slice(0, 4096 - 9)
+							Util.escapeCodeBlock(code).slice(0, 2048 - 9)
 						),
 					})
 					.setColor(Constants.Colors.BLURPLE)
 					.setTimestamp();
 
 				await interaction.editReply({
-					embeds: [embed.toJSON()],
+					content: `Eval elaborato in ${Date.now() - now}ms`,
+					embeds: [evalEmbed.toJSON()],
 				});
 				break;
 			case SubCommands.ram:
 				const mem = process.memoryUsage();
+				const ramEmbed = new Embed()
+					.setAuthor({
+						name: interaction.user.tag,
+						iconURL: interaction.user.displayAvatarURL(),
+					})
+					.setTitle("RAM")
+					.setDescription(
+						`${bold("Resident Set Size")}: ${
+							Math.round((mem.rss / 1024 / 1024) * 100) / 100
+						} MB\n${bold("Heap Total")}: ${
+							Math.round((mem.heapTotal / 1024 / 1024) * 100) / 100
+						} MB\n${bold("Heap Used")}: ${
+							Math.round((mem.heapUsed / 1024 / 1024) * 100) / 100
+						} MB\n${bold("External")}: ${
+							Math.round((mem.external / 1024 / 1024) * 100) / 100
+						} MB`
+					)
+					.setColor(Constants.Colors.BLURPLE)
+					.setTimestamp();
 
 				await interaction.editReply({
-					embeds: [
-						new Embed()
-							.setAuthor({
-								name: interaction.user.tag,
-								iconURL: interaction.user.displayAvatarURL(),
-							})
-							.setTitle("RAM")
-							.setDescription(
-								`${bold("Resident Set Size")}: ${
-									Math.round((mem.rss / 1024 / 1024) * 100) / 100
-								} MB\n${bold("Heap Total")}: ${
-									Math.round((mem.heapTotal / 1024 / 1024) * 100) / 100
-								} MB\n${bold("Heap Used")}: ${
-									Math.round((mem.heapUsed / 1024 / 1024) * 100) / 100
-								} MB\n${bold("External")}: ${
-									Math.round((mem.external / 1024 / 1024) * 100) / 100
-								} MB`
-							)
-							.setColor(Constants.Colors.BLURPLE)
-							.setTimestamp()
-							.toJSON(),
-					],
+					content: `Memoria calcolata in ${Date.now() - now}`,
+					embeds: [ramEmbed.toJSON()],
 				});
 				break;
 			case SubCommands.reload:
@@ -221,17 +291,78 @@ export const command: CommandOptions = {
 					await Promise.all(events.map((e) => e.reload()));
 
 				await interaction.editReply({
-					content: "Reloaded.",
+					content: `Ricaricato in ${Date.now() - now}ms`,
+				});
+				break;
+			case SubCommands.restart:
+				if (interaction.options.getBoolean(SubCommandOptions.process) ?? true) {
+					const argvs = process.argv
+						.map((arg) => inlineCode(Util.escapeInlineCode(arg)))
+						.join("\n");
+
+					await interaction.editReply({
+						content: `Sto facendo ripartire il programma con i seguenti argv:\n${argvs}`,
+					});
+					process.once("exit", () => {
+						spawn(process.argv[0], process.argv.slice(1), {
+							cwd: process.cwd(),
+							detached: true,
+							stdio: "inherit",
+						}).unref();
+					});
+					this.client.destroy();
+					process.exit(0);
+				} else {
+					this.client.destroy();
+					this.client.token = process.env.DISCORD_TOKEN!;
+					await this.client.login();
+					await interaction.editReply({
+						content: `Ricollegato in ${Date.now() - now}ms.`,
+					});
+				}
+				break;
+			case SubCommands.shutdown:
+				await interaction.editReply({
+					content: `Sto spegnendo il bot...`,
+				});
+				this.client.destroy();
+				return process.exit(0);
+			case SubCommands.uptime:
+				const processUptime = new Date(Date.now() - process.uptime() * 1000);
+				const botUptime = new Date(Date.now() - this.client.uptime!);
+				const uptimeEmbed = new Embed()
+					.setAuthor({
+						name: interaction.user.tag,
+						iconURL: interaction.user.displayAvatarURL(),
+					})
+					.setTitle("Uptime")
+					.setDescription(
+						`${bold("Processo")}: ${time(
+							processUptime,
+							TimestampStyles.RelativeTime
+						)} (${time(processUptime)})\n${bold("Bot")}: ${time(
+							botUptime,
+							TimestampStyles.RelativeTime
+						)} (${time(botUptime)})`
+					)
+					.setColor(Constants.Colors.BLURPLE)
+					.setTimestamp();
+
+				await interaction.editReply({
+					content: `Process uptime calcolato in ${Date.now() - now}ms`,
+					embeds: [uptimeEmbed.toJSON()],
 				});
 				break;
 
 			case SubCommands.test:
 				await interaction.editReply({
-					content: "Check something else",
+					content: "Nothing to see here.",
 				});
 				break;
 			default:
 				await interaction.editReply("Comando non riconosciuto");
 		}
+
+		return undefined;
 	},
 };
