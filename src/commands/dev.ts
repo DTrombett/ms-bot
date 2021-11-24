@@ -331,7 +331,7 @@ export const command: CommandOptions = {
 				});
 				break;
 			case SubCommands.reload:
-				await exec("npm run build");
+				await exec("rm -rf dist && npm run build");
 
 				if (
 					interaction.options.getBoolean(SubCommandOptions.reloadCommands) ??
