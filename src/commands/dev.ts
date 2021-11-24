@@ -39,7 +39,7 @@ const enum SubCommandOptions {
 	reloadEvents = "events",
 	process = "process",
 	rebuild = "rebuild",
-	registerCommands = "commands",
+	registerCommands = "synccommands",
 	restartProcess = "restart",
 	packages = "packages",
 }
