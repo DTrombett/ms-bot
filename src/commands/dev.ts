@@ -7,6 +7,7 @@ import {
 	time,
 	TimestampStyles,
 } from "@discordjs/builders";
+import type { CommandInteraction } from "discord.js";
 import { Constants, Util } from "discord.js";
 import { exec as nativeExec } from "node:child_process";
 import { promisify } from "node:util";
@@ -37,9 +38,19 @@ const enum SubCommandOptions {
 	reloadCommands = "commands",
 	reloadEvents = "events",
 	process = "process",
+	rebuild = "rebuild",
+	registerCommands = "commands",
+	restartProcess = "restart",
 }
 
 const exec = promisify(nativeExec);
+const catchPullError =
+	(interaction: CommandInteraction) => async (err: Error) => {
+		console.error(err);
+		await interaction.editReply({
+			content: `Errore durante il pull: ${err.message}`,
+		});
+	};
 
 export const command: CommandOptions = {
 	reserved: true,
@@ -62,7 +73,6 @@ export const command: CommandOptions = {
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
-						.setRequired(false)
 				)
 		)
 		.addSubcommand((evalCmd) =>
@@ -81,11 +91,7 @@ export const command: CommandOptions = {
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
-						.setRequired(false)
 				)
-		)
-		.addSubcommand((test) =>
-			test.setName(SubCommands.test).setDescription("Un comando di test")
 		)
 		.addSubcommand((ram) =>
 			ram
@@ -97,7 +103,6 @@ export const command: CommandOptions = {
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
-						.setRequired(false)
 				)
 		)
 		.addSubcommand((reload) =>
@@ -120,7 +125,6 @@ export const command: CommandOptions = {
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
-						.setRequired(false)
 				)
 		)
 		.addSubcommand((restartCmd) =>
@@ -138,7 +142,6 @@ export const command: CommandOptions = {
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
-						.setRequired(false)
 				)
 		)
 		.addSubcommand((shutdown) =>
@@ -151,7 +154,6 @@ export const command: CommandOptions = {
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
-						.setRequired(false)
 				)
 		)
 		.addSubcommand((uptime) =>
@@ -164,21 +166,47 @@ export const command: CommandOptions = {
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
-						.setRequired(false)
 				)
 		)
 		.addSubcommand((pull) =>
 			pull
 				.setName(SubCommands.pull)
 				.setDescription("Aggiorna il bot")
+				.addBooleanOption((rebuild) =>
+					rebuild
+						.setName(SubCommandOptions.rebuild)
+						.setDescription("Ricompila il progetto con i nuovi cambiamenti")
+				)
+				.addBooleanOption((reloadCommands) =>
+					reloadCommands
+						.setName(SubCommandOptions.reloadCommands)
+						.setDescription("Ricarica i comandi")
+				)
+				.addBooleanOption((reloadEvents) =>
+					reloadEvents
+						.setName(SubCommandOptions.reloadEvents)
+						.setDescription("Ricarica gli eventi")
+				)
+				.addBooleanOption((registerCommands) =>
+					registerCommands
+						.setName(SubCommandOptions.registerCommands)
+						.setDescription("Risincronizza i comandi con Discord")
+				)
+				.addBooleanOption((restartProcess) =>
+					restartProcess
+						.setName(SubCommandOptions.restartProcess)
+						.setDescription("Riavvia il processo")
+				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
 						.setName(SubCommandOptions.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
-						.setRequired(false)
 				)
+		)
+		.addSubcommand((test) =>
+			test.setName(SubCommands.test).setDescription("Un comando di test")
 		),
 	async run(interaction) {
 		await interaction.deferReply({
@@ -374,22 +402,58 @@ export const command: CommandOptions = {
 				});
 				break;
 			case SubCommands.pull:
-				const result = await exec("git pull && npm run commands").catch(
-					async (err: Error) => {
-						console.error(err);
-						await interaction.editReply({
-							content: `Errore durante il pull: ${err.message}`,
-						});
-					}
+				const cmds = ["git pull"];
+				const reloadCommands =
+					interaction.options.getBoolean(SubCommandOptions.reloadCommands) ??
+					false;
+				const reloadEvents =
+					interaction.options.getBoolean(SubCommandOptions.reloadEvents) ??
+					false;
+				const restartProcess =
+					interaction.options.getBoolean(SubCommandOptions.restartProcess) ??
+					false;
+
+				if (interaction.options.getBoolean(SubCommandOptions.rebuild) ?? false)
+					cmds.push("npm run build");
+				if (
+					interaction.options.getBoolean(SubCommandOptions.registerCommands) ??
+					false
+				)
+					cmds.push("npm run commands");
+				const result = await exec(cmds.join(" && ")).catch(
+					catchPullError(interaction)
 				);
 
 				if (!result) break;
 				await interaction.editReply({
-					content: `Aggiornato in ${bold(
+					content: `Ho eseguito ${cmds.join(" && ")} in ${bold(
 						`${Date.now() - now}ms`
-					)}\nSto riavviando il processo per rendere effettivi i cambiamenti...`,
+					)}\n${
+						restartProcess
+							? "Sto riavviando il processo per rendere effettivi i cambiamenti..."
+							: reloadCommands || reloadEvents
+							? "Sto ricaricando i comandi e/o gli eventi come richiesto"
+							: "Il bot è nuovamente pronto all'uso!"
+					}`,
 				});
-				restart(this.client);
+
+				if (reloadCommands)
+					await Promise.all([
+						...commands.map((c) => c.reload()),
+						loadCommands(this.client),
+					]);
+				if (reloadEvents)
+					await Promise.all([
+						...events.map((e) => e.reload()),
+						loadEvents(this.client),
+					]);
+				if (restartProcess) restart(this.client);
+
+				await interaction.editReply({
+					content: `Terminate tutte le operazioni in ${bold(
+						`${Date.now() - now}ms`
+					)}`,
+				});
 				break;
 
 			case SubCommands.test:
