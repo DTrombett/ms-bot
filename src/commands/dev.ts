@@ -41,6 +41,7 @@ const enum SubCommandOptions {
 	rebuild = "rebuild",
 	registerCommands = "commands",
 	restartProcess = "restart",
+	packages = "packages",
 }
 
 const exec = promisify(nativeExec);
@@ -196,6 +197,11 @@ export const command: CommandOptions = {
 					restartProcess
 						.setName(SubCommandOptions.restartProcess)
 						.setDescription("Riavvia il processo")
+				)
+				.addBooleanOption((packages) =>
+					packages
+						.setName(SubCommandOptions.packages)
+						.setDescription("Aggiorna i pacchetti")
 				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
@@ -413,8 +419,10 @@ export const command: CommandOptions = {
 					interaction.options.getBoolean(SubCommandOptions.restartProcess) ??
 					false;
 
+				if (interaction.options.getBoolean(SubCommandOptions.packages) ?? false)
+					cmds.push("npm ci");
 				if (interaction.options.getBoolean(SubCommandOptions.rebuild) ?? false)
-					cmds.push("npm run build");
+					cmds.push("rm -rf dist", "npm run build");
 				if (
 					interaction.options.getBoolean(SubCommandOptions.registerCommands) ??
 					false
