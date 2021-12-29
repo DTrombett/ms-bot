@@ -23,7 +23,7 @@
     "start": "npm run build && node ."
   },
   "dependencies": {
-    "@discordjs/builders": "^0.10.0",
+    "@discordjs/builders": "^0.11.0",
     "@discordjs/collection": "^0.4.0",
     "@discordjs/rest": "^0.2.0-canary.0",
     "@tsconfig/node16": "^1.0.2",
