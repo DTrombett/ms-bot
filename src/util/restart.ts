@@ -1,20 +1,23 @@
-import type { Client } from "discord.js";
 import { spawn } from "node:child_process";
+import process, { argv, cwd, exit } from "node:process";
+import CustomClient from "./CustomClient";
 
 /**
  * Restarts the process.
  * @param client The client to restart
  */
-export const restart = (client: Client) => {
+export const restart = (client: CustomClient) => {
+	if (!(client instanceof CustomClient))
+		throw new TypeError("Argument 'client' must be a CustomClient");
 	process.once("exit", () => {
-		spawn(process.argv[0], process.argv.slice(1), {
-			cwd: process.cwd(),
+		spawn(argv[0], argv.slice(1), {
+			cwd: cwd(),
 			detached: true,
 			stdio: "inherit",
 		}).unref();
 	});
 	client.destroy();
-	process.exit(0);
+	exit(0);
 };
 
 export default restart;

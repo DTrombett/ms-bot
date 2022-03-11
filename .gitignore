@@ -5,3 +5,5 @@ coverage/
 *.log
 dist/
 .vscode/
+database/
+tmp/

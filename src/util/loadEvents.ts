@@ -1,42 +1,42 @@
-import Collection from "@discordjs/collection";
-import type { Client } from "discord.js";
 import { promises } from "node:fs";
 import { join } from "node:path";
-import type { EventOptions } from ".";
+import { URL } from "node:url";
+import type { EventOptions, EventType } from ".";
+import { CustomClient } from ".";
 import Constants from "./Constants";
 import Event from "./Event";
 
-export const events = new Collection<string, Event>();
+const folder = Constants.eventsFolderName();
 
 /**
  * Load events listeners for the client.
  * @param client - The client to load the events for
+ * @param subfolder - The subfolder to load the events from
  */
-export const loadEvents = (client: Client) =>
-	promises
-		.readdir(join(__dirname, "..", Constants.Events))
-		.then((fileNames) =>
-			Promise.all(
-				fileNames
-					.filter((fileName) => fileName.endsWith(".js"))
-					.map(
-						(fileName) =>
-							import(
-								join(__dirname, "..", Constants.Events, fileName)
-							) as Promise<{
-								event: EventOptions;
-							}>
-					)
+export const loadEvents = async (
+	client: CustomClient,
+	subfolder: EventType
+) => {
+	if (!(client instanceof CustomClient))
+		throw new TypeError("Argument 'client' must be a CustomClient");
+	if (typeof subfolder !== "string")
+		throw new TypeError("Argument 'subfolder' must be a string");
+	const fileNames = await promises.readdir(
+		new URL(join(folder, subfolder), import.meta.url)
+	);
+	const files = await Promise.all(
+		fileNames
+			.filter((fileName) => fileName.endsWith(".js"))
+			.map(
+				(fileName) =>
+					import(`./${folder}/${subfolder}/${fileName}`) as Promise<{
+						event: EventOptions;
+					}>
 			)
-		)
-		.then((files) => files.map((file) => file.event))
-		.then((eventsOptions) => {
-			for (const event of eventsOptions) {
-				const existing = events.get(event.name);
-
-				if (existing !== undefined) existing.patch(event);
-				else events.set(event.name, new Event(client, event));
-			}
-		});
+	);
+	const events = files.map((file) => file.event);
+	for (const event of events)
+		client.events.set(event.name, new Event(client, event));
+};
 
 export default loadEvents;

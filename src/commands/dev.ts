@@ -1,63 +1,67 @@
 import {
 	bold,
 	codeBlock,
-	Embed,
 	inlineCode,
+	Modal,
 	SlashCommandBuilder,
 	time,
 	TimestampStyles,
 } from "@discordjs/builders";
-import type { CommandInteraction } from "discord.js";
-import { Constants, Util } from "discord.js";
-import { exec as nativeExec } from "node:child_process";
-import { promisify } from "node:util";
-import type { CommandOptions } from "../util";
+import { ComponentType, TextInputStyle } from "discord-api-types/v9";
+import { Colors, Util } from "discord.js";
+import type { Buffer } from "node:buffer";
+import type { ChildProcess } from "node:child_process";
+import { exec, execFile } from "node:child_process";
+import { createReadStream, createWriteStream } from "node:fs";
+import { unlink } from "node:fs/promises";
 import {
-	commands,
-	events,
-	loadCommands,
-	loadEvents,
-	parseEval,
-	restart,
-} from "../util";
+	argv,
+	cwd,
+	env,
+	exit,
+	memoryUsage,
+	stderr,
+	stdout,
+	uptime,
+} from "node:process";
+import type { CommandOptions } from "../util";
+import { CustomClient, restart } from "../util";
 
-const enum SubCommands {
+enum SubCommands {
 	shell = "shell",
 	evalCmd = "eval",
 	test = "test",
 	ram = "ram",
-	reload = "reload",
 	restartCmd = "restart",
 	shutdown = "shutdown",
-	uptime = "uptime",
+	uptimeCmd = "uptime",
 	pull = "pull",
+	cpp = "cpp",
+	logs = "logs",
 }
-const enum SubCommandOptions {
+enum SubCommandOptions {
 	cmd = "cmd",
 	ephemeral = "ephemeral",
-	reloadCommands = "commands",
-	reloadEvents = "events",
 	process = "process",
 	rebuild = "rebuild",
 	registerCommands = "synccommands",
 	restartProcess = "restart",
 	packages = "packages",
+	code = "code",
+	include = "include",
+	namespaces = "namespaces",
+	lines = "lines",
 }
 
-const exec = promisify(nativeExec);
-const catchPullError =
-	(interaction: CommandInteraction) => async (err: Error) => {
-		console.error(err);
-		await interaction.editReply({
-			content: `Errore durante il pull: ${err.message}`,
-		});
-	};
+const bytesToMb = (memory: number) =>
+		Math.round((memory / 1024 / 1024) * 100) / 100,
+	commaRegex = /,\s{0,}/g;
 
 export const command: CommandOptions = {
-	reserved: true,
 	data: new SlashCommandBuilder()
 		.setName("dev")
 		.setDescription("Comandi privati disponibili solo ai sviluppatori")
+		.setDefaultPermission(false)
 		.addSubcommand((shell) =>
 			shell
 				.setName(SubCommands.shell)
@@ -80,12 +84,6 @@ export const command: CommandOptions = {
 			evalCmd
 				.setName(SubCommands.evalCmd)
 				.setDescription("Esegue del codice")
-				.addStringOption((cmd) =>
-					cmd
-						.setName(SubCommandOptions.cmd)
-						.setDescription("Codice da eseguire")
-						.setRequired(true)
-				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
 						.setName(SubCommandOptions.ephemeral)
@@ -98,28 +96,6 @@ export const command: CommandOptions = {
 			ram
 				.setName(SubCommands.ram)
 				.setDescription("Mostra la RAM utilizzata")
-				.addBooleanOption((ephemeral) =>
-					ephemeral
-						.setName(SubCommandOptions.ephemeral)
-						.setDescription(
-							"Scegli se mostrare il risultato privatamente (default: true)"
-						)
-				)
-		)
-		.addSubcommand((reload) =>
-			reload
-				.setName(SubCommands.reload)
-				.setDescription("Ricarica i comandi e/o gli eventi del bot")
-				.addBooleanOption((reloadCommands) =>
-					reloadCommands
-						.setName(SubCommandOptions.reloadCommands)
-						.setDescription("Se ricaricare i comandi (default: true)")
-				)
-				.addBooleanOption((reloadEvents) =>
-					reloadEvents
-						.setName(SubCommandOptions.reloadEvents)
-						.setDescription("Se ricaricare gli eventi (default: true)")
-				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
 						.setName(SubCommandOptions.ephemeral)
@@ -157,9 +133,9 @@ export const command: CommandOptions = {
 						)
 				)
 		)
-		.addSubcommand((uptime) =>
-			uptime
-				.setName(SubCommands.uptime)
+		.addSubcommand((uptimeCmd) =>
+			uptimeCmd
+				.setName(SubCommands.uptimeCmd)
 				.setDescription("Mostra l'uptime del bot")
 				.addBooleanOption((ephemeral) =>
 					ephemeral
@@ -178,20 +154,10 @@ export const command: CommandOptions = {
 						.setName(SubCommandOptions.rebuild)
 						.setDescription("Ricompila il progetto con i nuovi cambiamenti")
 				)
-				.addBooleanOption((reloadCommands) =>
-					reloadCommands
-						.setName(SubCommandOptions.reloadCommands)
-						.setDescription("Ricarica i comandi")
-				)
-				.addBooleanOption((reloadEvents) =>
-					reloadEvents
-						.setName(SubCommandOptions.reloadEvents)
-						.setDescription("Ricarica gli eventi")
-				)
 				.addBooleanOption((registerCommands) =>
 					registerCommands
 						.setName(SubCommandOptions.registerCommands)
-						.setDescription("Risincronizza i comandi con Discord")
+						.setDescription("Sincronizza i comandi con Discord")
 				)
 				.addBooleanOption((restartProcess) =>
 					restartProcess
@@ -211,165 +177,172 @@ export const command: CommandOptions = {
 						)
 				)
 		)
+		.addSubcommand((cpp) =>
+			cpp
+				.setName(SubCommands.cpp)
+				.setDescription("Compila il codice")
+				.addStringOption((code) =>
+					code
+						.setName(SubCommandOptions.code)
+						.setDescription("Codice da compilare")
+						.setRequired(true)
+				)
+				.addStringOption((include) =>
+					include
+						.setName(SubCommandOptions.include)
+						.setDescription(
+							"Librerie da includere, separate da virgola (default: iostream)"
+						)
+				)
+				.addStringOption((namespaces) =>
+					namespaces
+						.setName(SubCommandOptions.namespaces)
+						.setDescription("Namespaces da usare (default: std)")
+				)
+				.addBooleanOption((ephemeral) =>
+					ephemeral
+						.setName(SubCommandOptions.ephemeral)
+						.setDescription(
+							"Scegli se mostrare il risultato privatamente (default: true)"
+						)
+				)
+		)
+		.addSubcommand((logs) =>
+			logs
+				.setName(SubCommands.logs)
+				.setDescription("Mostra i log del bot")
+				.addIntegerOption((lines) =>
+					lines
+						.setName(SubCommandOptions.lines)
+						.setDescription("Numero di righe da mostrare (default: max)")
+				)
+				.addBooleanOption((ephemeral) =>
+					ephemeral
+						.setName(SubCommandOptions.ephemeral)
+						.setDescription(
+							"Scegli se mostrare il risultato privatamente (default: true)"
+						)
+				)
+		)
 		.addSubcommand((test) =>
 			test.setName(SubCommands.test).setDescription("Un comando di test")
 		),
 	async run(interaction) {
-		await interaction.deferReply({
-			ephemeral:
+		const ephemeral =
 				interaction.options.getBoolean(SubCommandOptions.ephemeral) ?? true,
-		});
+			subCommand = interaction.options.getSubcommand();
 
+		if (subCommand !== SubCommands.evalCmd)
+			await interaction.deferReply({
+				ephemeral,
+			});
 		const now = Date.now();
-		switch (interaction.options.getSubcommand()) {
+		let botUptime: Date,
+			child: ChildProcess,
+			cmd: string,
+			code: string,
+			error: Error | undefined,
+			exitCode: number,
+			lines: number | null,
+			logs: string[],
+			memory: NodeJS.MemoryUsage,
+			output: string,
+			processUptime: Date;
+
+		switch (subCommand) {
 			case SubCommands.shell:
-				const cmd = interaction.options.getString(SubCommandOptions.cmd, true);
-				const [stdout, stderr] = await exec(cmd)
-					.catch((e: Awaited<ReturnType<typeof exec>>) => e)
-					.then((e) => [
-						e.stdout.toString().trim(),
-						e.stderr.toString().trim(),
-					]);
-				const embeds: Embed[] = [];
-
-				if (stdout) {
-					console.log(stdout);
-					embeds.push(
-						new Embed()
-							.setAuthor({
-								name: interaction.user.tag,
-								iconURL: interaction.user.displayAvatarURL(),
-							})
-							.setTitle("Stdout")
-							.setDescription(
-								codeBlock(Util.escapeCodeBlock(stdout.slice(0, 4096 - 7)))
-							)
-							.setColor(Constants.Colors.GREEN)
-							.setTimestamp()
-					);
-				}
-				if (stderr) {
-					console.error(stderr);
-					embeds.push(
-						new Embed()
-							.setAuthor({
-								name: interaction.user.tag,
-								iconURL: interaction.user.displayAvatarURL(),
-							})
-							.setTitle("Stderr")
-							.setDescription(
-								codeBlock(Util.escapeCodeBlock(stderr.slice(0, 4096 - 7)))
-							)
-							.setColor(Constants.Colors.RED)
-							.setTimestamp()
-					);
-				}
-
+				cmd = interaction.options.getString(SubCommandOptions.cmd, true);
+				child = exec(cmd);
+				output = "";
+				child.stdout?.on("data", (data: Buffer) => (output += data.toString()));
+				child.stderr?.on("data", (data: Buffer) => (output += data.toString()));
+				child.stderr?.pipe(stderr);
+				child.stdout?.pipe(stdout);
+				exitCode = await new Promise((resolve) => {
+					child.once("close", resolve);
+				});
 				await interaction.editReply({
-					content: `Comando eseguito in ${bold(
-						`${Date.now() - now}ms`
-					)}\n${inlineCode(
-						`${process.cwd()}> ${Util.escapeInlineCode(
-							cmd.slice(0, 2000 - 100)
-						)}`
+					content: `Comando eseguito in ${Date.now() - now}ms\n${inlineCode(
+						`${cwd()}> ${Util.escapeInlineCode(cmd.slice(0, 2000 - 100))}`
 					)}`,
-					embeds: embeds.map((e) => e.toJSON()),
+					embeds: [
+						{
+							author: {
+								name: interaction.user.tag,
+								iconURL: interaction.user.displayAvatarURL(),
+							},
+							title: "Output",
+							description: codeBlock(
+								Util.escapeCodeBlock(output.slice(0, 4096 - 7))
+							),
+							color: exitCode ? Colors.Red : Colors.Green,
+							timestamp: new Date().toISOString(),
+						},
+					],
 				});
 				break;
 			case SubCommands.evalCmd:
-				const code = interaction.options.getString(SubCommandOptions.cmd, true);
-				const parsed = await parseEval(code, this);
-				const evalEmbed = new Embed()
-					.setAuthor({
-						name: interaction.user.tag,
-						iconURL: interaction.user.displayAvatarURL(),
+				await interaction.showModal(
+					new Modal({
+						title: "Eval",
+						custom_id: `eval-${ephemeral ? "eph" : ""}`,
+						components: [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										label: "TypeScript code",
+										style: TextInputStyle.Paragraph,
+										custom_id: "code",
+										type: ComponentType.TextInput,
+										required: true,
+										placeholder:
+											"The code to be formatted with Prettier and compiled by TypeScript...",
+									},
+								],
+							},
+						],
 					})
-					.setTitle("Eval")
-					.setDescription(
-						codeBlock("js", Util.escapeCodeBlock(parsed).slice(0, 4096 - 9))
-					)
-					.addField({
-						name: "Code",
-						value: codeBlock(
-							"js",
-							Util.escapeCodeBlock(code).slice(0, 2048 - 9)
-						),
-					})
-					.setColor(Constants.Colors.BLURPLE)
-					.setTimestamp();
-
-				await interaction.editReply({
-					content: `Eval elaborato in ${bold(`${Date.now() - now}ms`)}`,
-					embeds: [evalEmbed.toJSON()],
-				});
+				);
 				break;
 			case SubCommands.ram:
-				const mem = process.memoryUsage();
-				const ramEmbed = new Embed()
-					.setAuthor({
-						name: interaction.user.tag,
-						iconURL: interaction.user.displayAvatarURL(),
-					})
-					.setTitle("RAM")
-					.setDescription(
-						`${bold("Resident Set Size")}: ${
-							Math.round((mem.rss / 1024 / 1024) * 100) / 100
-						} MB\n${bold("Heap Total")}: ${
-							Math.round((mem.heapTotal / 1024 / 1024) * 100) / 100
-						} MB\n${bold("Heap Used")}: ${
-							Math.round((mem.heapUsed / 1024 / 1024) * 100) / 100
-						} MB\n${bold("External")}: ${
-							Math.round((mem.external / 1024 / 1024) * 100) / 100
-						} MB`
-					)
-					.setColor(Constants.Colors.BLURPLE)
-					.setTimestamp();
-
+				memory = memoryUsage();
 				await interaction.editReply({
-					content: `Memoria calcolata in ${Date.now() - now}`,
-					embeds: [ramEmbed.toJSON()],
-				});
-				break;
-			case SubCommands.reload:
-				await exec("rm -rf dist && npm run build");
-
-				if (
-					interaction.options.getBoolean(SubCommandOptions.reloadCommands) ??
-					true
-				)
-					await Promise.all([
-						...commands.map((c) => c.reload()),
-						loadCommands(this.client),
-					]);
-				if (
-					interaction.options.getBoolean(SubCommandOptions.reloadEvents) ??
-					true
-				)
-					await Promise.all([
-						...events.map((e) => e.reload()),
-						loadEvents(this.client),
-					]);
-
-				await interaction.editReply({
-					content: `Ricaricato in ${bold(`${Date.now() - now}ms`)}`,
+					content: `Memoria calcolata in ${Date.now() - now}ms`,
+					embeds: [
+						{
+							author: {
+								name: interaction.user.tag,
+								iconURL: interaction.user.displayAvatarURL(),
+							},
+							title: "RAM",
+							description: `${bold("Resident Set Size")}: ${bytesToMb(
+								memory.rss
+							)} MB\n${bold("Heap Total")}: ${bytesToMb(
+								memory.heapTotal
+							)} MB\n${bold("Heap Used")}: ${bytesToMb(
+								memory.heapUsed
+							)} MB\n${bold("External")}: ${bytesToMb(memory.external)} MB`,
+							color: Math.round(((memory.rss / 1024 / 1024) * 16777215) / 500),
+							timestamp: new Date().toISOString(),
+						},
+					],
 				});
 				break;
 			case SubCommands.restartCmd:
 				if (interaction.options.getBoolean(SubCommandOptions.process) ?? true) {
-					const argvs = process.argv
-						.map((arg) => inlineCode(Util.escapeInlineCode(arg)))
-						.join("\n");
-
 					await interaction.editReply({
-						content: `Sto facendo ripartire il programma con i seguenti argv:\n${argvs}`,
+						content: `Sto facendo ripartire il programma con i seguenti argv:\n${argv
+							.map((arg) => inlineCode(Util.escapeInlineCode(arg)))
+							.join("\n")}`,
 					});
 					restart(this.client);
 				} else {
 					this.client.destroy();
-					this.client.token = process.env.DISCORD_TOKEN!;
+					this.client.token = env.DISCORD_TOKEN!;
 					await this.client.login();
 					await interaction.editReply({
-						content: `Ricollegato in ${bold(`${Date.now() - now}ms`)}.`,
+						content: `Ricollegato in ${Date.now() - now}ms.`,
 					});
 				}
 				break;
@@ -378,96 +351,195 @@ export const command: CommandOptions = {
 					content: `Sto spegnendo il bot...`,
 				});
 				this.client.destroy();
-				return process.exit(0);
-			case SubCommands.uptime:
-				const processUptime = new Date(Date.now() - process.uptime() * 1000);
-				const botUptime = new Date(Date.now() - this.client.uptime!);
-				const uptimeEmbed = new Embed()
-					.setAuthor({
-						name: interaction.user.tag,
-						iconURL: interaction.user.displayAvatarURL(),
-					})
-					.setTitle("Uptime")
-					.setDescription(
-						`${bold("Processo")}: ${time(
-							processUptime,
-							TimestampStyles.RelativeTime
-						)} (${time(processUptime)})\n${bold("Bot")}: ${time(
-							botUptime,
-							TimestampStyles.RelativeTime
-						)} (${time(botUptime)})`
-					)
-					.setColor(Constants.Colors.BLURPLE)
-					.setTimestamp();
-
+				return exit(0);
+			case SubCommands.uptimeCmd:
+				processUptime = new Date(Date.now() - uptime() * 1000);
+				botUptime = new Date(Date.now() - this.client.uptime);
 				await interaction.editReply({
 					content: `Process uptime calcolato in ${bold(
 						`${Date.now() - now}ms`
 					)}`,
-					embeds: [uptimeEmbed.toJSON()],
+					embeds: [
+						{
+							author: {
+								name: interaction.user.tag,
+								iconURL: interaction.user.displayAvatarURL(),
+							},
+							title: "Uptime",
+							description: `${bold("Processo")}: ${time(
+								processUptime,
+								TimestampStyles.RelativeTime
+							)} (${time(processUptime)})\n${bold("Bot")}: ${time(
+								botUptime,
+								TimestampStyles.RelativeTime
+							)} (${time(botUptime)})`,
+							color: Colors.Blurple,
+							timestamp: new Date().toISOString(),
+						},
+					],
 				});
 				break;
-			case SubCommands.pull:
-				const cmds = ["git pull"];
-				const reloadCommands =
-					interaction.options.getBoolean(SubCommandOptions.reloadCommands) ??
-					false;
-				const reloadEvents =
-					interaction.options.getBoolean(SubCommandOptions.reloadEvents) ??
-					false;
-				const restartProcess =
-					interaction.options.getBoolean(SubCommandOptions.restartProcess) ??
-					false;
-
-				if (interaction.options.getBoolean(SubCommandOptions.packages) ?? false)
-					cmds.push("npm ci");
-				if (interaction.options.getBoolean(SubCommandOptions.rebuild) ?? false)
-					cmds.push("rm -rf dist", "npm run build");
-				if (
-					interaction.options.getBoolean(SubCommandOptions.registerCommands) ??
-					false
-				)
-					cmds.push("npm run commands");
-				const result = await exec(cmds.join(" && ")).catch(
-					catchPullError(interaction)
+			case SubCommands.cpp:
+				const codeOption = interaction.options.getString(
+					SubCommandOptions.code,
+					true
 				);
 
-				if (!result) break;
-				await interaction.editReply({
-					content: `Ho eseguito ${cmds.join(" && ")} in ${bold(
-						`${Date.now() - now}ms`
-					)}\n${
-						restartProcess
-							? "Sto riavviando il processo per rendere effettivi i cambiamenti..."
-							: reloadCommands || reloadEvents
-							? "Sto ricaricando i comandi e/o gli eventi come richiesto"
-							: "Il bot è nuovamente pronto all'uso!"
-					}`,
+				code = `${(
+					interaction.options.getString(SubCommandOptions.include) ?? "iostream"
+				)
+					.split(commaRegex)
+					.map((include) => `#include <${include}>`)
+					.join("\n")}\n${(
+					interaction.options.getString(SubCommandOptions.namespaces) ?? "std"
+				)
+					.split(commaRegex)
+					.map((namespace) => `using namespace ${namespace};`)
+					.join("\n")}\n\nint main() {\n\t${codeOption}${
+					codeOption.endsWith(";") ? "" : ";"
+				}\n}`;
+				error = await new Promise((resolve) => {
+					createWriteStream("./tmp/cpp.cpp")
+						.once("error", resolve)
+						.once("finish", resolve)
+						.setDefaultEncoding("utf8")
+						.end(code);
 				});
+				if (error) {
+					void CustomClient.printToStderr(error);
+					await interaction.editReply({
+						content: `Errore durante la creazione del file: ${CustomClient.inspect(
+							error
+						)}`,
+					});
+					break;
+				}
+				child = exec("g++ ./tmp/cpp.cpp -o ./tmp/cpp.exe");
+				output = "";
+				child.stdout?.on("data", (data) => (output += data));
+				child.stderr?.on("data", (data) => (output += data));
+				child.stdout?.pipe(stdout);
+				child.stderr?.pipe(stderr);
+				exitCode = await new Promise((resolve) => {
+					child.once("close", resolve);
+				});
+				unlink("./tmp/cpp.cpp").catch(CustomClient.printToStderr);
+				if (exitCode) {
+					await interaction.editReply({
+						content: `Errore durante la compilazione del codice C++\nCodice di errore: ${exitCode}`,
+						embeds: [
+							{
+								author: {
+									name: interaction.user.tag,
+									iconURL: interaction.user.displayAvatarURL(),
+								},
+								title: "Output",
+								description: codeBlock(
+									Util.escapeCodeBlock(output.slice(0, 4096 - 7))
+								),
+								color: Colors.Red,
+								timestamp: new Date().toISOString(),
+							},
+							{
+								author: {
+									name: interaction.user.tag,
+									iconURL: interaction.user.displayAvatarURL(),
+								},
+								title: "Codice C++",
+								description: codeBlock(
+									"cpp",
+									Util.escapeCodeBlock(code.slice(0, 4096 - 7))
+								),
+								color: Colors.Blurple,
+								timestamp: new Date().toISOString(),
+							},
+						],
+					});
+					break;
+				}
+				const collector = interaction.channel?.createMessageCollector({
+					filter: (m) => m.author.id === interaction.user.id,
+				});
+				const onData = (data: Buffer) => {
+					output += data;
+					interaction
+						.editReply({
+							content: output,
+						})
+						.catch(CustomClient.printToStderr);
+				};
 
-				if (reloadCommands)
-					await Promise.all([
-						...commands.map((c) => c.reload()),
-						loadCommands(this.client),
-					]);
-				if (reloadEvents)
-					await Promise.all([
-						...events.map((e) => e.reload()),
-						loadEvents(this.client),
-					]);
-				if (restartProcess) restart(this.client);
+				output = "";
+				child = execFile("./tmp/cpp.exe");
+				child.stderr?.on("data", onData);
+				child.stdout?.on("data", onData);
+				collector?.on("collect", (message) => {
+					const input = `${message.content}\n`;
 
+					message.delete().catch(CustomClient.printToStderr);
+					output += input;
+					child.stdin?.write(input);
+				});
+				exitCode = await new Promise((resolve) => {
+					child.once("close", resolve);
+				});
+				collector?.stop();
+				unlink("./tmp/cpp.exe").catch(CustomClient.printToStderr);
 				await interaction.editReply({
-					content: `Terminate tutte le operazioni in ${bold(
-						`${Date.now() - now}ms`
-					)}`,
+					content: `${output}\n\n**Processo terminato in ${
+						Date.now() - now
+					}ms con codice ${exitCode}**`,
 				});
 				break;
+			case SubCommands.logs:
+				logs = await new Promise<string[]>((resolve) => {
+					let data = "";
 
-			case SubCommands.test:
-				await interaction.editReply({
-					content: "Nothing to see here.",
+					createReadStream(`./debug.log`)
+						.setEncoding("utf8")
+						.on("data", (chunk) => (data += chunk))
+						.once("end", () => {
+							resolve(data.split("\n"));
+						})
+						.once("error", (err) => {
+							interaction
+								.editReply({
+									content: `Errore durante la lettura del file di log: ${CustomClient.inspect(
+										err
+									)}`,
+								})
+								.catch(CustomClient.printToStderr);
+							resolve([]);
+						});
 				});
+				if (!logs.length) break;
+				const { length } = logs;
+
+				lines = interaction.options.getInteger(SubCommandOptions.lines);
+				if (lines != null && lines > 0)
+					logs = logs.slice(Math.max(0, length - lines - 1));
+				while (logs.join("\n").length > 4096 - 7) logs.shift();
+				await interaction.editReply({
+					content: `Logs letti in ${
+						Date.now() - now
+					}ms\nRighe totali: ${length}\nRighe visualizzate: ${logs.length}`,
+					embeds: [
+						{
+							author: {
+								name: interaction.user.tag,
+								iconURL: interaction.user.displayAvatarURL(),
+							},
+							title: "Logs",
+							description: codeBlock(
+								Util.escapeCodeBlock(logs.slice(0, 4096 - 7).join("\n"))
+							),
+							color: Colors.Blurple,
+							timestamp: new Date().toISOString(),
+						},
+					],
+				});
+				break;
+			case SubCommands.test:
 				break;
 			default:
 				await interaction.editReply("Comando non riconosciuto");

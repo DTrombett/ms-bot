@@ -1,6 +1,6 @@
 {
 	"include": [
-		"src/**/*",
+		"src/**/*"
 	],
 	"extends": "@tsconfig/node16/tsconfig.json",
 	"compilerOptions": {
@@ -8,15 +8,18 @@
 		"allowSyntheticDefaultImports": true,
 		"allowUnreachableCode": false,
 		"alwaysStrict": true,
+		"esModuleInterop": true,
+		"isolatedModules": true,
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
 		"noImplicitThis": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"resolveJsonModule": true,
 		"outDir": "dist",
 		"pretty": true,
-		"sourceMap": true
+		"resolveJsonModule": true,
+		"sourceMap": true,
+		"module": "ESNext"
 	}
 }

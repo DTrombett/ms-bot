@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/member-ordering */
-import type { Snowflake } from "discord-api-types/v9";
-import type { Client, CommandInteraction } from "discord.js";
-import { join } from "node:path";
+import {
+	AutocompleteInteraction,
+	ChatInputCommandInteraction,
+} from "discord.js";
+import { env } from "process";
 import type { CommandOptions } from ".";
-import Constants from "./Constants";
-
-const owners: Snowflake[] = [Constants.OwnerId1, Constants.OwnerId2];
+import CustomClient from "./CustomClient";
 
 /**
  * A class representing a Discord slash command
@@ -14,7 +14,7 @@ export class Command {
 	/**
 	 * The client that instantiated this
 	 */
-	client: Client;
+	readonly client: CustomClient<true>;
 
 	/**
 	 * The Discord data for this command
@@ -22,9 +22,14 @@ export class Command {
 	data!: CommandOptions["data"];
 
 	/**
-	 * If this command is private and can only be executed by the owners of the bot
+	 * If this command is public
 	 */
-	reserved = false;
+	isPublic = false;
+
+	/**
+	 * The function to handle the autocomplete of this command
+	 */
+	private _autocomplete: OmitThisParameter<CommandOptions["autocomplete"]>;
 
 	/**
 	 * The function provided to handle the command received
@@ -34,7 +39,9 @@ export class Command {
 	/**
 	 * @param options - Options for this command
 	 */
-	constructor(client: Client, options: CommandOptions) {
+	constructor(client: CustomClient, options: CommandOptions) {
+		if (!(client instanceof CustomClient))
+			throw new TypeError("Argument 'client' must be a CustomClient");
 		this.client = client;
 
 		this.patch(options);
@@ -47,6 +54,8 @@ export class Command {
 		return this.data.name;
 	}
 	set name(name) {
+		if (typeof name !== "string")
+			throw new TypeError("Property 'name' must be a string");
 		this.data.setName(name);
 	}
 
@@ -57,7 +66,26 @@ export class Command {
 		return this.data.description;
 	}
 	set description(description) {
+		if (typeof description !== "string")
+			throw new TypeError("Property 'description' must be a string");
 		this.data.setDescription(description);
+	}
+
+	/**
+	 * Autocomplete this command.
+	 * @param interaction - The interaction received
+	 */
+	async autocomplete(interaction: AutocompleteInteraction) {
+		if (!(interaction instanceof AutocompleteInteraction))
+			throw new TypeError(
+				"Argument 'interaction' must be an AutocompleteInteraction"
+			);
+		try {
+			if (this.isPublic || interaction.user.id === env.OWNER_ID)
+				await this._autocomplete?.(interaction);
+		} catch (message) {
+			void CustomClient.printToStderr(message, true);
+		}
 	}
 
 	/**
@@ -65,41 +93,29 @@ export class Command {
 	 * @param options - Options for this command
 	 */
 	patch(options: Partial<CommandOptions>) {
-		if (options.run !== undefined) this._execute = options.run.bind(this);
 		if (options.data !== undefined) this.data = options.data;
-		if (options.reserved !== undefined) this.reserved = options.reserved;
+		if (options.autocomplete !== undefined)
+			this._autocomplete = options.autocomplete.bind(this);
+		if (options.isPublic !== undefined) this.isPublic = options.isPublic;
+		if (options.run !== undefined) this._execute = options.run.bind(this);
 
 		return this;
-	}
-
-	/**
-	 * Reload this command
-	 * @returns The new command
-	 */
-	async reload() {
-		const path = join(__dirname, "..", Constants.Commands, `${this.name}.js`);
-		delete require.cache[require.resolve(path)];
-
-		return this.patch(
-			((await import(path)) as { command: CommandOptions }).command
-		);
 	}
 
 	/**
 	 * Run this command.
 	 * @param interaction - The interaction received
 	 */
-	async run(interaction: CommandInteraction) {
+	async run(interaction: ChatInputCommandInteraction) {
+		if (!(interaction instanceof ChatInputCommandInteraction))
+			throw new TypeError(
+				"Argument 'interaction' must be an ChatInputCommandInteraction"
+			);
 		try {
-			if (this.reserved && !owners.includes(interaction.user.id)) {
-				await interaction.reply({
-					content: "Questo comando è riservato ai proprietari del bot.",
-				});
-				return;
-			}
-			await this._execute(interaction);
+			if (this.isPublic || interaction.user.id === env.OWNER_ID)
+				await this._execute(interaction);
 		} catch (message) {
-			console.error(message);
+			void CustomClient.printToStderr(message, true);
 		}
 	}
 }

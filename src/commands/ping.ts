@@ -1,15 +1,12 @@
-import { bold, SlashCommandBuilder } from "@discordjs/builders";
+import { SlashCommandBuilder } from "@discordjs/builders";
 import type { CommandOptions } from "../util";
 
 export const command: CommandOptions = {
 	data: new SlashCommandBuilder().setName("ping").setDescription("Pong!"),
+	isPublic: true,
 	async run(interaction) {
-		return interaction.reply(
-			`Pong! (WS: ${bold(
-				`${interaction.client.ws.ping}ms`
-			)}, interazione: ${bold(
-				`${Date.now() - interaction.createdTimestamp}ms`
-			)})`
-		);
+		return interaction.reply({
+			content: `Pong! Latency is **${this.client.ws.ping}ms**.`,
+		});
 	},
 };

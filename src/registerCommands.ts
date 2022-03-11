@@ -1,53 +1,62 @@
 import { REST } from "@discordjs/rest";
+import type {
+	APIApplicationCommand,
+	APIGuildApplicationCommandPermissions,
+} from "discord-api-types/v9";
 import { APIVersion, Routes } from "discord-api-types/v9";
-import { config } from "dotenv";
+import { EnumResolvers } from "discord.js";
 import { promises } from "node:fs";
-import { join } from "node:path";
+import { env } from "node:process";
+import { URL } from "node:url";
 import type { CommandOptions } from "./util";
-import Constants from "./util";
+import Constants, { CustomClient } from "./util";
 
-console.time(Constants.RegisterCommands);
+console.time("Register slash commands");
 
-config({ path: join(__dirname, "../.env") });
-
-const {
-	DISCORD_CLIENT_ID: applicationId,
-	TEST_GUILD: guildId,
-	DISCORD_TOKEN: token,
-	GLOBAL_COMMANDS,
-} = process.env;
-const registerGlobal = GLOBAL_COMMANDS === "true";
-
-void promises
-	.readdir(join(__dirname, Constants.Commands))
-	.then((files) =>
+const { DISCORD_CLIENT_ID: applicationId, TEST_GUILD: guildId } = env;
+const rest = new REST({ version: APIVersion }).setToken(env.DISCORD_TOKEN!);
+const commands = await promises
+	.readdir(new URL(Constants.commandsFolderName(), import.meta.url))
+	.then((fileNames) =>
 		Promise.all(
-			files
+			fileNames
 				.filter((file): file is `${string}.js` => file.endsWith(".js"))
 				.map(async (file) => {
 					const fileData = (await import(
-						join(__dirname, Constants.Commands, file)
+						`./${Constants.commandsFolderName()}/${file}`
 					)) as { command: CommandOptions };
-					return fileData;
+					return fileData.command;
 				})
 		)
-	)
-	.then((files) =>
-		new REST({ version: APIVersion })
-			.setToken(token!)
-			.put(
-				registerGlobal
-					? Routes.applicationCommands(applicationId!)
-					: Routes.applicationGuildCommands(applicationId!, guildId!),
+	);
+const [APICommands] = await Promise.all([
+	rest.put(Routes.applicationGuildCommands(applicationId!, guildId!), {
+		body: commands
+			.filter((c) => c.isPublic !== true)
+			.map((file) => file.data.toJSON()),
+	}) as Promise<APIApplicationCommand[]>,
+	rest.put(Routes.applicationCommands(applicationId!), {
+		body: commands.filter((c) => c.isPublic).map((file) => file.data.toJSON()),
+	}),
+]);
+
+await rest.put(
+	Routes.guildApplicationCommandsPermissions(applicationId!, guildId!),
+	{
+		body: APICommands.map<APIGuildApplicationCommandPermissions>((command) => ({
+			application_id: applicationId!,
+			guild_id: guildId!,
+			id: command.id,
+			permissions: [
 				{
-					body: (registerGlobal
-						? files.filter((file) => !(file.command.reserved ?? false))
-						: files
-					).map((file) => file.command.data.toJSON()),
-				}
-			)
-	)
-	.then((res) => {
-		console.log(res);
-		console.timeEnd(Constants.RegisterCommands);
-	});
+					id: env.OWNER_ID!,
+					type: EnumResolvers.resolveApplicationCommandPermissionType("USER"),
+					permission: true,
+				},
+			],
+		})),
+	}
+);
+
+await CustomClient.printToStdout(APICommands);
+console.timeEnd("Register slash commands");

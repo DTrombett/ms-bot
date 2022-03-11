@@ -8,7 +8,8 @@
 	"extends": [
 		"eslint:recommended",
 		"plugin:@typescript-eslint/recommended",
-		"plugin:@typescript-eslint/recommended-requiring-type-checking"
+		"plugin:@typescript-eslint/recommended-requiring-type-checking",
+		"plugin:node/recommended"
 	],
 	"parser": "@typescript-eslint/parser",
 	"parserOptions": {
@@ -18,7 +19,8 @@
 		"tsconfigRootDir": "."
 	},
 	"plugins": [
-		"@typescript-eslint"
+		"@typescript-eslint",
+		"node"
 	],
 	"rules": {
 		"no-extend-native": "warn",
@@ -103,6 +105,7 @@
 		"no-new-func": "warn",
 		"no-new-wrappers": "warn",
 		"no-octal-escape": "warn",
+		"no-process-exit": "off",
 		"no-promise-executor-return": "warn",
 		"no-proto": "warn",
 		"no-self-compare": "warn",
@@ -118,6 +121,31 @@
 		"no-useless-rename": "warn",
 		"no-var": "warn",
 		"no-warning-comments": "warn",
+		"node/no-missing-import": "off",
+		"node/no-unsupported-features/es-syntax": [
+			"error",
+			{
+				"ignores": [
+					"dynamicImport",
+					"modules"
+				]
+			}
+		],
+		"node/prefer-global/buffer": [
+			"warn",
+			"never"
+		],
+		"node/prefer-global/console": "warn",
+		"node/prefer-global/process": [
+			"warn",
+			"never"
+		],
+		"node/prefer-global/text-decoder": "warn",
+		"node/prefer-global/text-encoder": "warn",
+		"node/prefer-global/url-search-params": "warn",
+		"node/prefer-global/url": "warn",
+		"node/prefer-promises/dns": "warn",
+		"node/prefer-promises/fs": "warn",
 		"object-shorthand": "warn",
 		"prefer-arrow-callback": "warn",
 		"prefer-const": "warn",
@@ -128,7 +156,6 @@
 		"prefer-rest-params": "warn",
 		"prefer-spread": "warn",
 		"prefer-template": "warn",
-		"require-atomic-updates": "warn",
 		"semi-spacing": "warn",
 		"semi-style": "warn",
 		"sort-vars": "warn",
@@ -148,7 +175,6 @@
 		"@typescript-eslint/no-explicit-any": "off",
 		"@typescript-eslint/no-extraneous-class": "warn",
 		"@typescript-eslint/no-implied-eval": "off",
-		"@typescript-eslint/no-invalid-this": "warn",
 		"@typescript-eslint/no-loop-func": "warn",
 		"@typescript-eslint/no-loss-of-precision": "warn",
 		"@typescript-eslint/no-misused-promises": "off",
@@ -160,7 +186,8 @@
 		"@typescript-eslint/no-unnecessary-condition": "warn",
 		"@typescript-eslint/no-unnecessary-qualifier": "warn",
 		"@typescript-eslint/no-unnecessary-type-constraint": "warn",
-		"@typescript-eslint/no-unsafe-argument": "warn",
+		"@typescript-eslint/no-unsafe-argument": "off",
+		"@typescript-eslint/no-unsafe-assignment": "off",
 		"@typescript-eslint/no-unused-vars": "off",
 		"@typescript-eslint/no-use-before-define": "warn",
 		"@typescript-eslint/no-useless-constructor": "warn",
