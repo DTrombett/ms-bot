@@ -61,15 +61,15 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 			return;
 		}
 		if (interaction.isButton()) {
-// 			const [arg, ...args] = interaction.customId.split("-");
-// 
-// 			switch (arg) {
-// 				default:
-// 					void CustomClient.printToStderr(
-// 						`Received unknown button interaction ${interaction.customId}`
-// 					);
-// 			}
-// 			return;
+			// 			const [arg, ...args] = interaction.customId.split("-");
+			//
+			// 			switch (arg) {
+			// 				default:
+			// 					void CustomClient.printToStderr(
+			// 						`Received unknown button interaction ${interaction.customId}`
+			// 					);
+			// 			}
+			// 			return;
 		}
 		if (interaction.isModalSubmit()) {
 			const [customId, ...args] = interaction.customId.split("-");
