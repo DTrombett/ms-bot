@@ -3,19 +3,27 @@ import type {
 	SlashCommandSubcommandsOnlyBuilder,
 } from "@discordjs/builders";
 import type { RestEvents } from "@discordjs/rest";
+import type { Snowflake } from "discord-api-types/v10";
 import type {
 	AutocompleteInteraction,
 	Awaitable,
-	ButtonInteraction,
 	ChatInputCommandInteraction,
-	ClientEvents as DiscordEvents,
-	CommandInteraction,
-	InteractionReplyOptions,
+	ClientEvents,
+	Guild,
+	GuildMember,
 	MessageOptions,
-	SelectMenuInteraction,
+	User,
+	WebhookEditMessageOptions,
 } from "discord.js";
-import type { Buffer } from "node:buffer";
-import type { Command, Event } from ".";
+import type { Command, CustomClient, Event } from ".";
+
+/**
+ * A function to be called when an action is executed
+ */
+export type ActionMethod<T extends keyof ButtonActions> = (
+	client: CustomClient<true>,
+	...args: ButtonActions[T][0]
+) => Promise<WebhookEditMessageOptions>;
 
 /**
  * An action row to be sent to Discord
@@ -27,12 +35,33 @@ export type ActionRowType = NonNullable<
 	: never;
 
 /**
- * An activity from Argo
+ * Actions from a button
  */
-export type Activity = {
-	date: Date;
-	description: string;
-	subject: string;
+export type ButtonActions = {
+	bann: [
+		[
+			user: User,
+			guild: Guild,
+			executor?: GuildMember,
+			reason?: string,
+			deleteMessageDays?: number
+		],
+		[
+			user: Snowflake,
+			guild: Snowflake,
+			executor: Snowflake,
+			reason?: string,
+			deleteMessageDays?: number
+		]
+	];
+	kick: [
+		[user: User, guild: Guild, executor?: GuildMember, reason?: string],
+		[user: Snowflake, guild: Snowflake, executor: Snowflake, reason?: string]
+	];
+	unbann: [
+		[user: Snowflake, guild: Guild, executor?: GuildMember, reason?: string],
+		[user: Snowflake, guild: Snowflake, executor: Snowflake, reason?: string]
+	];
 };
 
 /**
@@ -273,11 +302,11 @@ export enum Emojis {
 export type EventOptions<
 	T extends EventType = EventType,
 	K extends T extends EventType.Discord
-		? keyof DiscordEvents
+		? keyof ClientEvents
 		: T extends EventType.Rest
 		? keyof RestEvents
 		: never = T extends EventType.Discord
-		? keyof DiscordEvents
+		? keyof ClientEvents
 		: T extends EventType.Rest
 		? keyof RestEvents
 		: never
@@ -297,8 +326,8 @@ export type EventOptions<
 	 */
 	on?: (
 		this: Event<T, K>,
-		...args: K extends keyof DiscordEvents
-			? DiscordEvents[K]
+		...args: K extends keyof ClientEvents
+			? ClientEvents[K]
 			: K extends keyof RestEvents
 			? RestEvents[K]
 			: never
@@ -542,25 +571,3 @@ export enum MatchLevel {
 	 */
 	Full,
 }
-
-/**
- * The return type of a method to handle Argo data
- */
-export type RegistroMethod = Promise<InteractionReplyOptions & MessageOptions>;
-
-/**
- * An interaction that can be replied to
- */
-export type ReplyableInteraction =
-	| ButtonInteraction
-	| CommandInteraction
-	| SelectMenuInteraction;
-
-export type TranslationResults = {
-	from: LanguageCode | "auto";
-	to: LanguageCode;
-	word: string;
-	attachment: Buffer;
-	maybe?: string;
-	language?: LanguageCode;
-};

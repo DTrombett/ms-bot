@@ -9,7 +9,9 @@ import {
 	CustomClient,
 	EventType,
 	interactionCommand,
+	parseActionButton,
 	parseEval,
+	unbann,
 } from "../../util";
 
 export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
@@ -61,15 +63,28 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 			return;
 		}
 		if (interaction.isButton()) {
-			// 			const [arg, ...args] = interaction.customId.split("-");
-			//
-			// 			switch (arg) {
-			// 				default:
-			// 					void CustomClient.printToStderr(
-			// 						`Received unknown button interaction ${interaction.customId}`
-			// 					);
-			// 			}
-			// 			return;
+			const { action, args } = parseActionButton(interaction.customId);
+
+			switch (action) {
+				case "unbann":
+					const guild = this.client.guilds.cache.get(args[1])!;
+					const [options] = await Promise.all([
+						guild.members
+							.fetch(args[2])
+							.then((member) =>
+								unbann(this.client, args[0], guild, member, args[3])
+							),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				default:
+					void CustomClient.printToStderr(
+						`Received unknown button interaction ${interaction.customId}`
+					);
+			}
+			return;
 		}
 		if (interaction.isModalSubmit()) {
 			const [customId, ...args] = interaction.customId.split("-");

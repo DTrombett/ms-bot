@@ -2,8 +2,8 @@ import { REST } from "@discordjs/rest";
 import type {
 	APIApplicationCommand,
 	APIGuildApplicationCommandPermissions,
-} from "discord-api-types/v9";
-import { APIVersion, Routes } from "discord-api-types/v9";
+} from "discord-api-types/v10";
+import { APIVersion, Routes } from "discord-api-types/v10";
 import { EnumResolvers } from "discord.js";
 import { promises } from "node:fs";
 import { env } from "node:process";
@@ -34,10 +34,11 @@ const commands = await promises
 				})
 		)
 	);
-let privateAPICommands: APIApplicationCommand[];
+let privateAPICommands: APIApplicationCommand[],
+	publicAPICommands: APIApplicationCommand[] = [];
 
 if (nodeEnv === "production")
-	[privateAPICommands] = await Promise.all([
+	[privateAPICommands, publicAPICommands] = await Promise.all([
 		rest.put(Routes.applicationGuildCommands(applicationId!, guildId!), {
 			body: commands
 				.filter((c) => c.isPublic !== true)
@@ -47,7 +48,7 @@ if (nodeEnv === "production")
 			body: commands
 				.filter((c) => c.isPublic)
 				.map((file) => file.data.toJSON()),
-		}),
+		}) as Promise<APIApplicationCommand[]>,
 	]);
 else
 	privateAPICommands = await rest
@@ -82,6 +83,5 @@ await rest.put(
 	}
 );
 
-// TODO: Log all the commands
-await CustomClient.printToStdout(privateAPICommands);
+await CustomClient.printToStdout([...privateAPICommands, ...publicAPICommands]);
 console.timeEnd("Register slash commands");

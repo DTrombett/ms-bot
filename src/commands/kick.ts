@@ -1,7 +1,12 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { ButtonStyle, ComponentType, OAuth2Scopes } from "discord-api-types/v9";
+import {
+	ButtonStyle,
+	ComponentType,
+	OAuth2Scopes,
+} from "discord-api-types/v10";
 import { PermissionFlagsBits, Util } from "discord.js";
 import type { CommandOptions } from "../util";
+import { CustomClient } from "../util";
 
 enum SubCommands {
 	member = "membro",
@@ -25,26 +30,45 @@ export const command: CommandOptions = {
 		),
 	isPublic: true,
 	async run(interaction) {
-		// TODO: Add checks like in bann.ts
 		if (!interaction.inCachedGuild())
 			return interaction.reply({
 				content: "Questo comando è disponibile solo all'interno dei server!",
 				ephemeral: true,
 			});
-		const { guild } = interaction;
-		const user = interaction.options.getUser(SubCommands.member, true);
-		const reason = interaction.options.getString(SubCommands.reason);
-		let { me } = guild;
-
 		if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers))
 			return interaction.reply({
 				content:
 					"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Espelli membri",
 				ephemeral: true,
 			});
-		me ??= await guild.members.fetch(this.client.user.id);
-		if (!me.permissions.has(PermissionFlagsBits.KickMembers))
+		const { guild } = interaction;
+		const user = interaction.options.getUser(SubCommands.member, true);
+		const member = await guild.members.fetch(user.id).catch(() => null);
+
+		if (member?.id === guild.ownerId)
 			return interaction.reply({
+				content: "Non puoi espellere il proprietario del server!",
+				ephemeral: true,
+			});
+		const rawPosition = member?.roles.highest.rawPosition;
+
+		if (
+			member &&
+			interaction.user.id !== guild.ownerId &&
+			interaction.member.roles.highest.rawPosition <= rawPosition!
+		)
+			return interaction.reply({
+				content:
+					"Non puoi espellere un membro con un ruolo superiore o uguale al tuo!",
+				ephemeral: true,
+			});
+		const [me] = await Promise.all([
+			guild.me ?? guild.members.fetch(this.client.user.id),
+			interaction.deferReply(),
+		]);
+
+		if (!me.permissions.has(PermissionFlagsBits.KickMembers))
+			return void interaction.editReply({
 				content:
 					"Non ho i permessi per espellere membri!\nPer favore, autorizzami cliccando il pulsante qui sotto.",
 				components: [
@@ -64,8 +88,14 @@ export const command: CommandOptions = {
 						],
 					},
 				],
-				ephemeral: true,
 			});
+		if (member && me.roles.highest.rawPosition <= rawPosition!)
+			return void interaction.editReply({
+				content:
+					"Non posso espellere un membro con un ruolo maggiore o uguale al mio!",
+			});
+		const reason = interaction.options.getString(SubCommands.reason);
+
 		return guild.members
 			.kick(
 				user.id,
@@ -73,24 +103,28 @@ export const command: CommandOptions = {
 					reason == null ? "" : `: ${reason}`
 				}`
 			)
-			.then(() =>
-				interaction.reply({
-					content: `**${Util.escapeBold(
-						user.tag
-					)}** è stato espulso dal server!${
-						reason == null
-							? ""
-							: `\n\nMotivo: ${
-									reason.length > 1000 ? `${reason.slice(0, 1000)}...` : reason
-							  }`
-					}`,
-				})
+			.then(
+				() =>
+					void interaction.editReply({
+						content: `<@!${user.id}> (${Util.escapeMarkdown(user.tag)} - ${
+							user.id
+						}) è stato espulso dal server!${
+							reason == null
+								? ""
+								: `\n\nMotivo: ${
+										reason.length > 1000
+											? `${reason.slice(0, 1000)}...`
+											: reason
+								  }`
+						}`,
+					})
 			)
-			.catch((error: Error) =>
-				interaction.reply({
+			.catch((error: Error) => {
+				void CustomClient.printToStderr(error);
+				return interaction.reply({
 					content: `Si è verificato un errore: \`${error.message}\``,
 					ephemeral: true,
-				})
-			);
+				});
+			});
 	},
 };

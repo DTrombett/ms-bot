@@ -1,5 +1,7 @@
 import Constants from "./Constants";
 
+export * from "./actions";
+export * from "./actions/";
 export * from "./calculateRam";
 export * from "./cast";
 export * from "./colors";

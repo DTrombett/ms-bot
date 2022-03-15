@@ -7,7 +7,7 @@ import {
 	time,
 	TimestampStyles,
 } from "@discordjs/builders";
-import { ComponentType, TextInputStyle } from "discord-api-types/v9";
+import { ComponentType, TextInputStyle } from "discord-api-types/v10";
 import { Colors, Util } from "discord.js";
 import type { Buffer } from "node:buffer";
 import type { ChildProcess } from "node:child_process";

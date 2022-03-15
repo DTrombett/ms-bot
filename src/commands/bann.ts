@@ -1,7 +1,12 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { ButtonStyle, ComponentType, OAuth2Scopes } from "discord-api-types/v9";
+import {
+	ButtonStyle,
+	ComponentType,
+	OAuth2Scopes,
+} from "discord-api-types/v10";
 import { PermissionFlagsBits, Util } from "discord.js";
 import type { CommandOptions } from "../util";
+import { CustomClient } from "../util";
 
 enum SubCommands {
 	user = "utente",
@@ -113,9 +118,9 @@ export const command: CommandOptions = {
 			.then(
 				() =>
 					void interaction.editReply({
-						content: `**${Util.escapeBold(
-							user.tag
-						)}** è stato bannato dal server!${
+						content: `<@!${user.id}> (${Util.escapeMarkdown(user.tag)} - ${
+							user.id
+						}) è stato bannato dal server!${
 							reason == null
 								? ""
 								: `\n\nMotivo: ${
@@ -128,17 +133,18 @@ export const command: CommandOptions = {
 							{
 								type: ComponentType.ActionRow,
 								components: [
-									// TODO: Add a button to unban the user
+									// TODO: Add a button to unbann the user
 								],
 							},
 						],
 					})
 			)
-			.catch((error: Error) =>
-				interaction.reply({
+			.catch((error: Error) => {
+				void CustomClient.printToStderr(error);
+				return interaction.reply({
 					content: `Si è verificato un errore: \`${error.message}\``,
 					ephemeral: true,
-				})
-			);
+				});
+			});
 	},
 };
