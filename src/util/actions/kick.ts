@@ -4,26 +4,21 @@ import {
 	OAuth2Scopes,
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
-import type {
-	DiscordAPIError,
-	Guild,
-	Snowflake,
-	WebhookEditMessageOptions,
-} from "discord.js";
+import type { Guild, WebhookEditMessageOptions } from "discord.js";
 import { GuildMember, Util } from "discord.js";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
 import { createActionButton } from "./actions";
 
 /**
- * Unbann a user from a guild.
+ * Kick a user from a guild.
  * @param client - The client
- * @param user - The id of the user to unbann
- * @param guild - The guild to unbann the user from
+ * @param user - The id of the user to kick
+ * @param guild - The guild to kick the user from
  * @param executor - The user who executed the action, if any
  * @param reason - The reason for the action
  */
-export const unbann: ActionMethod<"unbann"> = async (
+export const kick: ActionMethod<"kick"> = async (
 	client,
 	user,
 	guild,
@@ -36,17 +31,38 @@ export const unbann: ActionMethod<"unbann"> = async (
 		executor instanceof GuildMember || executor == null
 			? executor
 			: await guild.members.fetch(executor).catch(() => undefined);
-	if (executor && !executor.permissions.has(PermissionFlagsBits.BanMembers))
+	if (executor && !executor.permissions.has(PermissionFlagsBits.KickMembers))
 		return {
 			content:
-				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Bannare i membri",
+				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Espelli membri",
+		};
+	const member = await guild.members.fetch(user).catch(() => null);
+
+	if (!member)
+		return {
+			content: "L'utente non fa parte del server!",
+		};
+	if (member.id === guild.ownerId)
+		return {
+			content: "Non puoi espellere il proprietario del server!",
+		};
+	const { rawPosition } = member.roles.highest;
+
+	if (
+		executor &&
+		executor.user.id !== guild.ownerId &&
+		executor.roles.highest.rawPosition <= rawPosition
+	)
+		return {
+			content:
+				"Non puoi espellere un membro con un ruolo superiore o uguale al tuo!",
 		};
 	const { me } = guild;
 
-	if (!me!.permissions.has(PermissionFlagsBits.BanMembers))
+	if (!me!.permissions.has(PermissionFlagsBits.KickMembers))
 		return {
 			content:
-				"Non ho i permessi per sbannare membri!\nPer favore, autorizzami cliccando il pulsante qui sotto.",
+				"Non ho i permessi per espellere membri!\nPer favore, autorizzami cliccando il pulsante qui sotto.",
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -56,7 +72,7 @@ export const unbann: ActionMethod<"unbann"> = async (
 							url: `https://discord.com/api/oauth2/authorize?client_id=${
 								client.application.id
 							}&permissions=${
-								PermissionFlagsBits.BanMembers | me!.permissions.bitfield
+								PermissionFlagsBits.KickMembers | me!.permissions.bitfield
 							}&scope=${OAuth2Scopes.Bot}&guild_id=${guild.id}`,
 							label: "Autorizza",
 							style: ButtonStyle.Link,
@@ -65,27 +81,24 @@ export const unbann: ActionMethod<"unbann"> = async (
 				},
 			],
 		};
-	if (
-		!guild.bans.cache.has(user) &&
-		!(await guild.bans.fetch().then((bans) => bans.has(user as Snowflake)))
-	)
+	if (me!.roles.highest.rawPosition <= rawPosition)
 		return {
-			content: "Questo utente non è bannato!",
+			content:
+				"Non posso espellere un membro con un ruolo maggiore o uguale al mio!",
 		};
-	return Promise.all([
-		client.users.fetch(user),
-		guild.members.unban(
+
+	return guild.members
+		.kick(
 			user,
 			`${
-				executor ? `Sbannato da ${executor.user.tag} (${executor.user.id})` : ""
+				executor ? `Espulso da ${executor.user.tag} (${executor.user.id})` : ""
 			}${reason == null ? "" : `${executor ? ": " : ""}${reason}`}`
-		),
-	])
+		)
 		.then(
-			([unbanned]): WebhookEditMessageOptions => ({
-				content: `Ho revocato il bann per <@!${
-					unbanned.id
-				}> (${Util.escapeMarkdown(unbanned.tag)} - ${unbanned.id})!${
+			(): WebhookEditMessageOptions => ({
+				content: `<@!${member.id}> (${Util.escapeMarkdown(member.user.tag)} - ${
+					member.id
+				}) è stato espulso dal server!${
 					reason == null
 						? ""
 						: `\n\nMotivo: ${
@@ -98,11 +111,11 @@ export const unbann: ActionMethod<"unbann"> = async (
 						components: [
 							{
 								type: ComponentType.Button,
-								label: "Banna di nuovo",
+								label: "Banna",
 								style: ButtonStyle.Danger,
 								custom_id: createActionButton(
 									"bann",
-									unbanned.id,
+									member.id,
 									(guild as Guild).id,
 									(executor as GuildMember | undefined)?.id
 								),
@@ -112,7 +125,7 @@ export const unbann: ActionMethod<"unbann"> = async (
 				],
 			})
 		)
-		.catch((error: DiscordAPIError | Error) => {
+		.catch((error: Error) => {
 			void CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,

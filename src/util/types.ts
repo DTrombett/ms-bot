@@ -40,23 +40,28 @@ export type ActionRowType = NonNullable<
 export type ButtonActions = {
 	bann: [
 		[
-			user: User,
-			guild: Guild,
-			executor?: GuildMember,
+			user: Snowflake | User,
+			guild: Guild | Snowflake,
+			executor?: GuildMember | Snowflake,
 			reason?: string,
 			deleteMessageDays?: number
 		],
 		[
 			user: Snowflake,
 			guild: Snowflake,
-			executor: Snowflake,
+			executor?: Snowflake,
 			reason?: string,
 			deleteMessageDays?: number
 		]
 	];
 	kick: [
-		[user: User, guild: Guild, executor?: GuildMember, reason?: string],
-		[user: Snowflake, guild: Snowflake, executor: Snowflake, reason?: string]
+		[
+			user: Snowflake | User,
+			guild: Guild | Snowflake,
+			executor?: GuildMember | Snowflake,
+			reason?: string
+		],
+		[user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string]
 	];
 	unbann: [
 		[
@@ -65,7 +70,7 @@ export type ButtonActions = {
 			executor?: GuildMember | Snowflake,
 			reason?: string
 		],
-		[user: Snowflake, guild: Snowflake, executor: Snowflake, reason?: string]
+		[user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string]
 	];
 };
 

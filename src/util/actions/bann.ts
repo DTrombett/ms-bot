@@ -4,31 +4,28 @@ import {
 	OAuth2Scopes,
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
-import type {
-	DiscordAPIError,
-	Guild,
-	Snowflake,
-	WebhookEditMessageOptions,
-} from "discord.js";
+import type { Guild, WebhookEditMessageOptions } from "discord.js";
 import { GuildMember, Util } from "discord.js";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
 import { createActionButton } from "./actions";
 
 /**
- * Unbann a user from a guild.
+ * Bann a user from a guild.
  * @param client - The client
- * @param user - The id of the user to unbann
- * @param guild - The guild to unbann the user from
+ * @param user - The id of the user to bann
+ * @param guild - The guild to bann the user from
  * @param executor - The user who executed the action, if any
  * @param reason - The reason for the action
+ * @param deleteMessageDays - The number of days to delete
  */
-export const unbann: ActionMethod<"unbann"> = async (
+export const bann: ActionMethod<"bann"> = async (
 	client,
 	user,
 	guild,
 	executor,
-	reason
+	reason,
+	deleteMessageDays
 ) => {
 	user = client.users.resolveId(user);
 	guild = client.guilds.resolve(guild)!;
@@ -41,12 +38,29 @@ export const unbann: ActionMethod<"unbann"> = async (
 			content:
 				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Bannare i membri",
 		};
+	const member = await guild.members.fetch(user).catch(() => null);
+	if (member?.id === guild.ownerId)
+		return {
+			content: "Non puoi bannare il proprietario del server!",
+		};
+	const rawPosition = member?.roles.highest.rawPosition;
+
+	if (
+		member &&
+		executor &&
+		executor.user.id !== guild.ownerId &&
+		executor.roles.highest.rawPosition <= rawPosition!
+	)
+		return {
+			content:
+				"Non puoi bannare un membro con un ruolo superiore o uguale al tuo!",
+		};
 	const { me } = guild;
 
 	if (!me!.permissions.has(PermissionFlagsBits.BanMembers))
 		return {
 			content:
-				"Non ho i permessi per sbannare membri!\nPer favore, autorizzami cliccando il pulsante qui sotto.",
+				"Non ho i permessi per bannare membri!\nPer favore, autorizzami cliccando il pulsante qui sotto.",
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -65,27 +79,26 @@ export const unbann: ActionMethod<"unbann"> = async (
 				},
 			],
 		};
-	if (
-		!guild.bans.cache.has(user) &&
-		!(await guild.bans.fetch().then((bans) => bans.has(user as Snowflake)))
-	)
+	if (member && me!.roles.highest.rawPosition <= rawPosition!)
 		return {
-			content: "Questo utente non è bannato!",
+			content:
+				"Non posso bannare un membro con un ruolo maggiore o uguale al mio!",
 		};
+
 	return Promise.all([
-		client.users.fetch(user),
-		guild.members.unban(
-			user,
-			`${
-				executor ? `Sbannato da ${executor.user.tag} (${executor.user.id})` : ""
-			}${reason == null ? "" : `${executor ? ": " : ""}${reason}`}`
-		),
+		member?.user ?? client.users.fetch(user),
+		guild.members.ban(user, {
+			reason: `${
+				executor ? `Bannato da ${executor.user.tag} (${executor.user.id})` : ""
+			}${reason == null ? "" : `${executor ? ": " : ""}${reason}`}`,
+			deleteMessageDays,
+		}),
 	])
 		.then(
-			([unbanned]): WebhookEditMessageOptions => ({
-				content: `Ho revocato il bann per <@!${
-					unbanned.id
-				}> (${Util.escapeMarkdown(unbanned.tag)} - ${unbanned.id})!${
+			([banned]): WebhookEditMessageOptions => ({
+				content: `<@!${banned.id}> (${Util.escapeMarkdown(banned.tag)} - ${
+					banned.id
+				}) è stato bannato dal server!${
 					reason == null
 						? ""
 						: `\n\nMotivo: ${
@@ -98,11 +111,11 @@ export const unbann: ActionMethod<"unbann"> = async (
 						components: [
 							{
 								type: ComponentType.Button,
-								label: "Banna di nuovo",
+								label: "Revoca bann",
 								style: ButtonStyle.Danger,
 								custom_id: createActionButton(
-									"bann",
-									unbanned.id,
+									"unbann",
+									banned.id,
 									(guild as Guild).id,
 									(executor as GuildMember | undefined)?.id
 								),
@@ -112,7 +125,7 @@ export const unbann: ActionMethod<"unbann"> = async (
 				],
 			})
 		)
-		.catch((error: DiscordAPIError | Error) => {
+		.catch((error: Error) => {
 			void CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,

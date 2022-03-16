@@ -6,9 +6,11 @@ import type { CompilerOptions } from "typescript";
 import ts from "typescript";
 import type { EventOptions } from "../../util";
 import {
+	bann,
 	CustomClient,
 	EventType,
 	interactionCommand,
+	kick,
 	parseActionButton,
 	parseEval,
 	unbann,
@@ -64,10 +66,27 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 		}
 		if (interaction.isButton()) {
 			const { action, args } = parseActionButton(interaction.customId);
+			let options;
 
 			switch (action) {
+				case "bann":
+					[options] = await Promise.all([
+						bann(this.client, args[0], args[1], args[2], args[3], args[4]),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "kick":
+					[options] = await Promise.all([
+						kick(this.client, args[0], args[1], args[2], args[3]),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
 				case "unbann":
-					const [options] = await Promise.all([
+					[options] = await Promise.all([
 						unbann(this.client, args[0], args[1], args[2], args[3]),
 						interaction.deferReply(),
 					]);
