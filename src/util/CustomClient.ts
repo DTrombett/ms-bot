@@ -1,4 +1,4 @@
-import { Client, Options } from "discord.js";
+import { Client, Options, Partials } from "discord.js";
 import { createWriteStream } from "node:fs";
 import { stderr, stdout } from "node:process";
 import { inspect } from "node:util";
@@ -36,7 +36,13 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 
 	constructor() {
 		super({
-			intents: ["Guilds", "GuildMessages"],
+			intents: [
+				"Guilds",
+				"GuildMessages",
+				"GuildBans",
+				"GuildPresences",
+				"GuildMembers",
+			],
 			allowedMentions: { parse: [], repliedUser: false, roles: [], users: [] },
 			failIfNotExists: false,
 			rest: {
@@ -47,24 +53,35 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			makeCache: Options.cacheWithLimits({
 				...Options.defaultMakeCacheSettings,
 				BaseGuildEmojiManager: 0,
-				GuildBanManager: 0,
+				GuildBanManager: 100,
 				GuildEmojiManager: 0,
 				GuildInviteManager: 0,
-				GuildMemberManager: 0,
+				GuildMemberManager: 1_000,
 				GuildStickerManager: 0,
 				MessageManager: 0,
-				PresenceManager: 0,
+				PresenceManager: 10_000,
 				ReactionManager: 0,
 				ReactionUserManager: 0,
 				StageInstanceManager: 0,
 				ThreadMemberManager: 0,
-				UserManager: 0,
+				UserManager: 1_000_000,
 				VoiceStateManager: 0,
 			}),
 			presence: {
 				activities: [{ name: "Clash Royale", type: 3 /** Watching */ }],
 			},
 			shards: "auto",
+			partials: [
+				Partials.Channel,
+				Partials.GuildMember,
+				Partials.Message,
+				Partials.Reaction,
+				Partials.User,
+				Partials.GuildScheduledEvent,
+				Partials.ThreadMember,
+			],
+			waitGuildTimeout: 1_000,
+			ws: { large_threshold: 100 },
 		});
 	}
 

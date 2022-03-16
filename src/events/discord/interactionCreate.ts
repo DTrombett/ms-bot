@@ -67,13 +67,8 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 
 			switch (action) {
 				case "unbann":
-					const guild = this.client.guilds.cache.get(args[1])!;
 					const [options] = await Promise.all([
-						guild.members
-							.fetch(args[2])
-							.then((member) =>
-								unbann(this.client, args[0], guild, member, args[3])
-							),
+						unbann(this.client, args[0], args[1], args[2], args[3]),
 						interaction.deferReply(),
 					]);
 

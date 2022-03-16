@@ -6,7 +6,7 @@ import {
 } from "discord-api-types/v10";
 import { PermissionFlagsBits, Util } from "discord.js";
 import type { CommandOptions } from "../util";
-import { CustomClient } from "../util";
+import { createActionButton, CustomClient } from "../util";
 
 enum SubCommands {
 	user = "utente",
@@ -133,7 +133,17 @@ export const command: CommandOptions = {
 							{
 								type: ComponentType.ActionRow,
 								components: [
-									// TODO: Add a button to unbann the user
+									{
+										type: ComponentType.Button,
+										label: "Revoca bann",
+										style: ButtonStyle.Danger,
+										custom_id: createActionButton(
+											"unbann",
+											user.id,
+											guild.id,
+											interaction.user.id
+										),
+									},
 								],
 							},
 						],

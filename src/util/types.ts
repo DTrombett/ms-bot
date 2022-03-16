@@ -59,7 +59,12 @@ export type ButtonActions = {
 		[user: Snowflake, guild: Snowflake, executor: Snowflake, reason?: string]
 	];
 	unbann: [
-		[user: Snowflake, guild: Guild, executor?: GuildMember, reason?: string],
+		[
+			user: Snowflake | User,
+			guild: Guild | Snowflake,
+			executor?: GuildMember | Snowflake,
+			reason?: string
+		],
 		[user: Snowflake, guild: Snowflake, executor: Snowflake, reason?: string]
 	];
 };
