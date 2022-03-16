@@ -2,7 +2,6 @@ import {
 	bold,
 	codeBlock,
 	inlineCode,
-	ModalBuilder,
 	SlashCommandBuilder,
 	time,
 	TimestampStyles,
@@ -282,28 +281,26 @@ export const command: CommandOptions = {
 				});
 				break;
 			case SubCommands.evalCmd:
-				await interaction.showModal(
-					new ModalBuilder({
-						title: "Eval",
-						custom_id: `eval-${ephemeral ? "eph" : ""}`,
-						components: [
-							{
-								type: ComponentType.ActionRow,
-								components: [
-									{
-										label: "TypeScript code",
-										style: TextInputStyle.Paragraph,
-										custom_id: "code",
-										type: ComponentType.TextInput,
-										required: true,
-										placeholder:
-											"The code to be formatted with Prettier and compiled by TypeScript...",
-									},
-								],
-							},
-						],
-					})
-				);
+				await interaction.showModal({
+					title: "Eval",
+					custom_id: `eval-${ephemeral ? "eph" : ""}`,
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									label: "TypeScript code",
+									style: TextInputStyle.Paragraph,
+									custom_id: "code",
+									type: ComponentType.TextInput,
+									required: true,
+									placeholder:
+										"The code to be formatted with Prettier and compiled by TypeScript...",
+								},
+							],
+						},
+					],
+				});
 				break;
 			case SubCommands.ram:
 				memory = memoryUsage();
