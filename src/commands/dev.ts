@@ -2,7 +2,7 @@ import {
 	bold,
 	codeBlock,
 	inlineCode,
-	Modal,
+	ModalBuilder,
 	SlashCommandBuilder,
 	time,
 	TimestampStyles,
@@ -269,7 +269,7 @@ export const command: CommandOptions = {
 						{
 							author: {
 								name: interaction.user.tag,
-								iconURL: interaction.user.displayAvatarURL(),
+								icon_url: interaction.user.displayAvatarURL(),
 							},
 							title: "Output",
 							description: codeBlock(
@@ -283,7 +283,7 @@ export const command: CommandOptions = {
 				break;
 			case SubCommands.evalCmd:
 				await interaction.showModal(
-					new Modal({
+					new ModalBuilder({
 						title: "Eval",
 						custom_id: `eval-${ephemeral ? "eph" : ""}`,
 						components: [
@@ -313,7 +313,7 @@ export const command: CommandOptions = {
 						{
 							author: {
 								name: interaction.user.tag,
-								iconURL: interaction.user.displayAvatarURL(),
+								icon_url: interaction.user.displayAvatarURL(),
 							},
 							title: "RAM",
 							description: `${bold("Resident Set Size")}: ${bytesToMb(
@@ -363,7 +363,7 @@ export const command: CommandOptions = {
 						{
 							author: {
 								name: interaction.user.tag,
-								iconURL: interaction.user.displayAvatarURL(),
+								icon_url: interaction.user.displayAvatarURL(),
 							},
 							title: "Uptime",
 							description: `${bold("Processo")}: ${time(
@@ -431,7 +431,7 @@ export const command: CommandOptions = {
 							{
 								author: {
 									name: interaction.user.tag,
-									iconURL: interaction.user.displayAvatarURL(),
+									icon_url: interaction.user.displayAvatarURL(),
 								},
 								title: "Output",
 								description: codeBlock(
@@ -443,7 +443,7 @@ export const command: CommandOptions = {
 							{
 								author: {
 									name: interaction.user.tag,
-									iconURL: interaction.user.displayAvatarURL(),
+									icon_url: interaction.user.displayAvatarURL(),
 								},
 								title: "Codice C++",
 								description: codeBlock(
@@ -527,7 +527,7 @@ export const command: CommandOptions = {
 						{
 							author: {
 								name: interaction.user.tag,
-								iconURL: interaction.user.displayAvatarURL(),
+								icon_url: interaction.user.displayAvatarURL(),
 							},
 							title: "Logs",
 							description: codeBlock(

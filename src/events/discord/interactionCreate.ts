@@ -142,7 +142,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 							{
 								author: {
 									name: interaction.user.tag,
-									iconURL: interaction.user.displayAvatarURL(),
+									icon_url: interaction.user.displayAvatarURL(),
 								},
 								title: "Eval output",
 								description: codeBlock(
