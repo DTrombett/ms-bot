@@ -1,34 +1,34 @@
-import type { ButtonActions } from "../types";
+import type { Actions } from "../types";
 
 /**
- * Create a button action id.
+ * Create an action id.
  * @param action - The action to do
  * @param args - The arguments to pass to the action
  * @returns The id of the action
  */
-export const createActionButton = <T extends keyof ButtonActions>(
+export const createActionId = <T extends keyof Actions>(
 	action: T,
-	...args: ButtonActions[T][1]
+	...args: Actions[T]
 ) => `${action}-${args.join("-")}`;
 
 /**
- * Parse a button action id.
- * @param button - The button to parse
- * @returns The action and arguments of the button
+ * Parse an action id.
+ * @param id - The id to parse
+ * @returns The action and arguments of the action
  */
-export const parseActionButton: {
-	<T extends keyof ButtonActions>(button: string): T extends keyof ButtonActions
+export const parseActionId: {
+	<T extends keyof Actions>(id: string): T extends keyof Actions
 		? {
 				action: T;
-				args: ButtonActions[T][1];
+				args: Actions[T];
 		  }
 		: never;
-	<_ extends keyof ButtonActions>(button: string): {
+	<_ extends keyof Actions>(button: string): {
 		action: string;
 		args: string[];
 	};
-} = (button) => {
-	const args = button.split("-");
+} = (id) => {
+	const args = id.split("-");
 
 	return {
 		action: args[0],

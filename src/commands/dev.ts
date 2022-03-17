@@ -38,7 +38,7 @@ enum SubCommands {
 	cpp = "cpp",
 	logs = "logs",
 }
-enum SubCommandOptions {
+enum Options {
 	cmd = "cmd",
 	ephemeral = "ephemeral",
 	process = "process",
@@ -67,13 +67,13 @@ export const command: CommandOptions = {
 				.setDescription("Esegue un comando nel terminal")
 				.addStringOption((cmd) =>
 					cmd
-						.setName(SubCommandOptions.cmd)
+						.setName(Options.cmd)
 						.setDescription("Comando da eseguire")
 						.setRequired(true)
 				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -85,7 +85,7 @@ export const command: CommandOptions = {
 				.setDescription("Esegue del codice")
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -97,7 +97,7 @@ export const command: CommandOptions = {
 				.setDescription("Mostra la RAM utilizzata")
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -109,12 +109,12 @@ export const command: CommandOptions = {
 				.setDescription("Riavvia il bot")
 				.addBooleanOption((process) =>
 					process
-						.setName(SubCommandOptions.process)
+						.setName(Options.process)
 						.setDescription("Se riavviare il processo (default: true)")
 				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -126,7 +126,7 @@ export const command: CommandOptions = {
 				.setDescription("Spegni il bot")
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -138,7 +138,7 @@ export const command: CommandOptions = {
 				.setDescription("Mostra l'uptime del bot")
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -150,27 +150,27 @@ export const command: CommandOptions = {
 				.setDescription("Aggiorna il bot")
 				.addBooleanOption((rebuild) =>
 					rebuild
-						.setName(SubCommandOptions.rebuild)
+						.setName(Options.rebuild)
 						.setDescription("Ricompila il progetto con i nuovi cambiamenti")
 				)
 				.addBooleanOption((registerCommands) =>
 					registerCommands
-						.setName(SubCommandOptions.registerCommands)
+						.setName(Options.registerCommands)
 						.setDescription("Sincronizza i comandi con Discord")
 				)
 				.addBooleanOption((restartProcess) =>
 					restartProcess
-						.setName(SubCommandOptions.restartProcess)
+						.setName(Options.restartProcess)
 						.setDescription("Riavvia il processo")
 				)
 				.addBooleanOption((packages) =>
 					packages
-						.setName(SubCommandOptions.packages)
+						.setName(Options.packages)
 						.setDescription("Aggiorna i pacchetti")
 				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -182,25 +182,25 @@ export const command: CommandOptions = {
 				.setDescription("Compila il codice")
 				.addStringOption((code) =>
 					code
-						.setName(SubCommandOptions.code)
+						.setName(Options.code)
 						.setDescription("Codice da compilare")
 						.setRequired(true)
 				)
 				.addStringOption((include) =>
 					include
-						.setName(SubCommandOptions.include)
+						.setName(Options.include)
 						.setDescription(
 							"Librerie da includere, separate da virgola (default: iostream)"
 						)
 				)
 				.addStringOption((namespaces) =>
 					namespaces
-						.setName(SubCommandOptions.namespaces)
+						.setName(Options.namespaces)
 						.setDescription("Namespaces da usare (default: std)")
 				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -212,12 +212,12 @@ export const command: CommandOptions = {
 				.setDescription("Mostra i log del bot")
 				.addIntegerOption((lines) =>
 					lines
-						.setName(SubCommandOptions.lines)
+						.setName(Options.lines)
 						.setDescription("Numero di righe da mostrare (default: max)")
 				)
 				.addBooleanOption((ephemeral) =>
 					ephemeral
-						.setName(SubCommandOptions.ephemeral)
+						.setName(Options.ephemeral)
 						.setDescription(
 							"Scegli se mostrare il risultato privatamente (default: true)"
 						)
@@ -228,7 +228,7 @@ export const command: CommandOptions = {
 		),
 	async run(interaction) {
 		const ephemeral =
-				interaction.options.getBoolean(SubCommandOptions.ephemeral) ?? true,
+				interaction.options.getBoolean(Options.ephemeral) ?? true,
 			subCommand = interaction.options.getSubcommand();
 
 		if (subCommand !== SubCommands.evalCmd)
@@ -250,7 +250,7 @@ export const command: CommandOptions = {
 
 		switch (subCommand) {
 			case SubCommands.shell:
-				cmd = interaction.options.getString(SubCommandOptions.cmd, true);
+				cmd = interaction.options.getString(Options.cmd, true);
 				child = exec(cmd);
 				output = "";
 				child.stdout?.on("data", (data: Buffer) => (output += data.toString()));
@@ -327,7 +327,7 @@ export const command: CommandOptions = {
 				});
 				break;
 			case SubCommands.restartCmd:
-				if (interaction.options.getBoolean(SubCommandOptions.process) ?? true) {
+				if (interaction.options.getBoolean(Options.process) ?? true) {
 					await interaction.editReply({
 						content: `Sto facendo ripartire il programma con i seguenti argv:\n${argv
 							.map((arg) => inlineCode(Util.escapeInlineCode(arg)))
@@ -378,17 +378,17 @@ export const command: CommandOptions = {
 				break;
 			case SubCommands.cpp:
 				const codeOption = interaction.options.getString(
-					SubCommandOptions.code,
+					Options.code,
 					true
 				);
 
 				code = `${(
-					interaction.options.getString(SubCommandOptions.include) ?? "iostream"
+					interaction.options.getString(Options.include) ?? "iostream"
 				)
 					.split(commaRegex)
 					.map((include) => `#include <${include}>`)
 					.join("\n")}\n${(
-					interaction.options.getString(SubCommandOptions.namespaces) ?? "std"
+					interaction.options.getString(Options.namespaces) ?? "std"
 				)
 					.split(commaRegex)
 					.map((namespace) => `using namespace ${namespace};`)
@@ -512,7 +512,7 @@ export const command: CommandOptions = {
 				if (!logs.length) break;
 				const { length } = logs;
 
-				lines = interaction.options.getInteger(SubCommandOptions.lines);
+				lines = interaction.options.getInteger(Options.lines);
 				if (lines != null && lines > 0)
 					logs = logs.slice(Math.max(0, length - lines - 1));
 				while (logs.join("\n").length > 4096 - 7) logs.shift();

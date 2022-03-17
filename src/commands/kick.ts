@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import type { CommandOptions } from "../util";
 import { kick } from "../util";
 
-enum SubCommands {
+enum Options {
 	member = "membro",
 	reason = "motivo",
 }
@@ -13,14 +13,12 @@ export const command: CommandOptions = {
 		.setDescription("Espelli un membro dal server")
 		.addUserOption((member) =>
 			member
-				.setName(SubCommands.member)
+				.setName(Options.member)
 				.setDescription("Il membro da espellere")
 				.setRequired(true)
 		)
 		.addStringOption((reason) =>
-			reason
-				.setName(SubCommands.reason)
-				.setDescription("Il motivo dell'espulsione")
+			reason.setName(Options.reason).setDescription("Il motivo dell'espulsione")
 		),
 	isPublic: true,
 	async run(interaction) {
@@ -32,10 +30,10 @@ export const command: CommandOptions = {
 		const [options] = await Promise.all([
 			kick(
 				this.client,
-				interaction.options.getUser(SubCommands.member, true),
-				interaction.guild,
-				interaction.member,
-				interaction.options.getString(SubCommands.reason) ?? undefined
+				interaction.options.getUser(Options.member, true).id,
+				interaction.guildId,
+				interaction.user.id,
+				interaction.options.getString(Options.reason) ?? undefined
 			),
 			interaction.deferReply(),
 		]);

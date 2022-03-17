@@ -1,7 +1,8 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import type { CommandOptions } from "../util";
+import { avatar } from "../util";
 
-enum SubCommands {
+enum Options {
 	user = "utente",
 }
 
@@ -11,21 +12,18 @@ export const command: CommandOptions = {
 		.setDescription("Mostra l'avatar di un utente")
 		.addUserOption((user) =>
 			user
-				.setName(SubCommands.user)
+				.setName(Options.user)
 				.setDescription("L'utente di cui mostrare l'avatar")
 		),
 	isPublic: true,
 	async run(interaction) {
-		const user =
-			interaction.options.getUser(SubCommands.user) ?? interaction.user;
-		const avatar = user.displayAvatarURL({
-			extension: "png",
-			forceStatic: false,
-			size: 4096,
-		});
+		const { id } =
+			interaction.options.getUser(Options.user) ?? interaction.user;
+		const [options] = await Promise.all([
+			avatar(this.client, id, interaction.guildId ?? undefined),
+			interaction.deferReply(),
+		]);
 
-		return interaction.reply({
-			content: `[Avatar di ${user.tag}](${avatar} ):`,
-		});
+		return void (await interaction.editReply(options));
 	},
 };

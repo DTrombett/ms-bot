@@ -4,45 +4,49 @@ import {
 	OAuth2Scopes,
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
-import type { Guild, WebhookEditMessageOptions } from "discord.js";
-import { GuildMember, Util } from "discord.js";
+import type { WebhookEditMessageOptions } from "discord.js";
+import { Util } from "discord.js";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
-import { createActionButton } from "./actions";
+import { createActionId } from "./actions";
 
 /**
  * Kick a user from a guild.
  * @param client - The client
- * @param user - The id of the user to kick
- * @param guild - The guild to kick the user from
- * @param executor - The user who executed the action, if any
+ * @param userId - The id of the user to kick
+ * @param guildId - The guild to kick the user from
+ * @param executorId - The user who executed the action, if any
  * @param reason - The reason for the action
  */
 export const kick: ActionMethod<"kick"> = async (
 	client,
-	user,
-	guild,
-	executor,
+	userId,
+	guildId,
+	executorId,
 	reason
 ) => {
-	user = client.users.resolveId(user);
-	guild = client.guilds.resolve(guild)!;
-	executor =
-		executor instanceof GuildMember || executor == null
-			? executor
-			: await guild.members.fetch(executor).catch(() => undefined);
-	if (executor && !executor.permissions.has(PermissionFlagsBits.KickMembers))
+	const guild = client.guilds.cache.get(guildId)!;
+	const executor =
+		executorId === undefined
+			? null
+			: await guild.members.fetch(executorId).catch(() => null);
+	const isNotOwner = executorId !== guild.ownerId;
+
+	if (
+		isNotOwner &&
+		executor?.permissions.has(PermissionFlagsBits.KickMembers) !== true
+	)
 		return {
 			content:
 				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Espelli membri",
 		};
-	const member = await guild.members.fetch(user).catch(() => null);
+	const member = await guild.members.fetch(userId).catch(() => null);
 
 	if (!member)
 		return {
 			content: "L'utente non fa parte del server!",
 		};
-	if (member.id === guild.ownerId)
+	if (userId === guild.ownerId)
 		return {
 			content: "Non puoi espellere il proprietario del server!",
 		};
@@ -50,7 +54,7 @@ export const kick: ActionMethod<"kick"> = async (
 
 	if (
 		executor &&
-		executor.user.id !== guild.ownerId &&
+		isNotOwner &&
 		executor.roles.highest.rawPosition <= rawPosition
 	)
 		return {
@@ -73,7 +77,7 @@ export const kick: ActionMethod<"kick"> = async (
 								client.application.id
 							}&permissions=${
 								PermissionFlagsBits.KickMembers | me!.permissions.bitfield
-							}&scope=${OAuth2Scopes.Bot}&guild_id=${guild.id}`,
+							}&scope=${OAuth2Scopes.Bot}&guild_id=${guildId}`,
 							label: "Autorizza",
 							style: ButtonStyle.Link,
 						},
@@ -89,16 +93,16 @@ export const kick: ActionMethod<"kick"> = async (
 
 	return guild.members
 		.kick(
-			user,
-			`${
-				executor ? `Espulso da ${executor.user.tag} (${executor.user.id})` : ""
-			}${reason == null ? "" : `${executor ? ": " : ""}${reason}`}`
+			userId,
+			`${executor ? `Espulso da ${executor.user.tag} (${executorId!})` : ""}${
+				reason == null ? "" : `${executor ? ": " : ""}${reason}`
+			}`
 		)
 		.then(
 			(): WebhookEditMessageOptions => ({
-				content: `<@!${member.id}> (${Util.escapeMarkdown(member.user.tag)} - ${
-					member.id
-				}) è stato espulso dal server!${
+				content: `<@!${userId}> (${Util.escapeMarkdown(
+					member.user.tag
+				)} - ${userId}) è stato espulso dal server!${
 					reason == null
 						? ""
 						: `\n\nMotivo: ${
@@ -113,12 +117,7 @@ export const kick: ActionMethod<"kick"> = async (
 								type: ComponentType.Button,
 								label: "Banna",
 								style: ButtonStyle.Danger,
-								custom_id: createActionButton(
-									"bann",
-									member.id,
-									(guild as Guild).id,
-									(executor as GuildMember | undefined)?.id
-								),
+								custom_id: createActionId("bann", userId, guildId, executorId),
 							},
 						],
 					},

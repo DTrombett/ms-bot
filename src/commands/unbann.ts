@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import type { CommandOptions } from "../util";
 import { unbann } from "../util";
 
-enum SubCommands {
+enum Options {
 	user = "utente",
 	reason = "motivo",
 }
@@ -13,13 +13,13 @@ export const command: CommandOptions = {
 		.setDescription("Revoca il bann di un utente")
 		.addUserOption((user) =>
 			user
-				.setName(SubCommands.user)
+				.setName(Options.user)
 				.setDescription("L'utente bannato")
 				.setRequired(true)
 		)
 		.addStringOption((reason) =>
 			reason
-				.setName(SubCommands.reason)
+				.setName(Options.reason)
 				.setDescription("Il motivo per cui revocare il bann")
 		),
 	isPublic: true,
@@ -32,10 +32,10 @@ export const command: CommandOptions = {
 		const [options] = await Promise.all([
 			unbann(
 				this.client,
-				interaction.options.getUser(SubCommands.user, true),
-				interaction.guild,
-				interaction.member,
-				interaction.options.getString(SubCommands.reason, true)
+				interaction.options.getUser(Options.user, true).id,
+				interaction.guildId,
+				interaction.user.id,
+				interaction.options.getString(Options.reason, true)
 			),
 			interaction.deferReply(),
 		]);

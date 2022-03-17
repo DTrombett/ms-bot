@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import type { CommandOptions } from "../util";
 import { bann } from "../util";
 
-enum SubCommands {
+enum Options {
 	user = "utente",
 	deleteMessageDays = "elimina-messaggi",
 	reason = "motivo",
@@ -14,13 +14,13 @@ export const command: CommandOptions = {
 		.setDescription("Banna un membro dal server")
 		.addUserOption((user) =>
 			user
-				.setName(SubCommands.user)
+				.setName(Options.user)
 				.setDescription("L'utente da bannare")
 				.setRequired(true)
 		)
 		.addIntegerOption((deleteMessageDays) =>
 			deleteMessageDays
-				.setName(SubCommands.deleteMessageDays)
+				.setName(Options.deleteMessageDays)
 				.setDescription(
 					"Quanti giorni eliminare della sua cronologia dei messaggi recenti (0 - 7)"
 				)
@@ -29,7 +29,7 @@ export const command: CommandOptions = {
 		)
 		.addStringOption((reason) =>
 			reason
-				.setName(SubCommands.reason)
+				.setName(Options.reason)
 				.setDescription("Il motivo per cui bannare l'utente")
 		),
 	isPublic: true,
@@ -42,12 +42,11 @@ export const command: CommandOptions = {
 		const [options] = await Promise.all([
 			bann(
 				this.client,
-				interaction.options.getUser(SubCommands.user, true),
-				interaction.guild,
-				interaction.member,
-				interaction.options.getString(SubCommands.reason) ?? undefined,
-				interaction.options.getInteger(SubCommands.deleteMessageDays) ??
-					undefined
+				interaction.options.getUser(Options.user, true).id,
+				interaction.guildId,
+				interaction.user.id,
+				interaction.options.getString(Options.reason) ?? undefined,
+				interaction.options.getInteger(Options.deleteMessageDays) ?? undefined
 			),
 			interaction.deferReply(),
 		]);

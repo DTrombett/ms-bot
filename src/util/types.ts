@@ -9,21 +9,47 @@ import type {
 	Awaitable,
 	ChatInputCommandInteraction,
 	ClientEvents,
-	Guild,
-	GuildMember,
+	InteractionReplyOptions,
 	MessageOptions,
-	User,
 	WebhookEditMessageOptions,
 } from "discord.js";
 import type { Command, CustomClient, Event } from ".";
 
 /**
+ * List of actions and their arguments
+ */
+export type Actions = {
+	avatar: [user: Snowflake, guild?: Snowflake];
+	bann: [
+		user: Snowflake,
+		guild: Snowflake,
+		executor?: Snowflake,
+		reason?: string,
+		deleteMessageDays?: number
+	];
+	icon: [guild: Snowflake];
+	kick: [
+		user: Snowflake,
+		guild: Snowflake,
+		executor?: Snowflake,
+		reason?: string
+	];
+	ping: [];
+	unbann: [
+		user: Snowflake,
+		guild: Snowflake,
+		executor?: Snowflake,
+		reason?: string
+	];
+};
+
+/**
  * A function to be called when an action is executed
  */
-export type ActionMethod<T extends keyof ButtonActions> = (
+export type ActionMethod<T extends keyof Actions> = (
 	client: CustomClient<true>,
-	...args: ButtonActions[T][0]
-) => Promise<WebhookEditMessageOptions>;
+	...args: Actions[T]
+) => Promise<InteractionReplyOptions & WebhookEditMessageOptions>;
 
 /**
  * An action row to be sent to Discord
@@ -33,46 +59,6 @@ export type ActionRowType = NonNullable<
 > extends (infer T)[]
 	? T
 	: never;
-
-/**
- * Actions from a button
- */
-export type ButtonActions = {
-	bann: [
-		[
-			user: Snowflake | User,
-			guild: Guild | Snowflake,
-			executor?: GuildMember | Snowflake,
-			reason?: string,
-			deleteMessageDays?: number
-		],
-		[
-			user: Snowflake,
-			guild: Snowflake,
-			executor?: Snowflake,
-			reason?: string,
-			deleteMessageDays?: number
-		]
-	];
-	kick: [
-		[
-			user: Snowflake | User,
-			guild: Guild | Snowflake,
-			executor?: GuildMember | Snowflake,
-			reason?: string
-		],
-		[user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string]
-	];
-	unbann: [
-		[
-			user: Snowflake | User,
-			guild: Guild | Snowflake,
-			executor?: GuildMember | Snowflake,
-			reason?: string
-		],
-		[user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string]
-	];
-};
 
 /**
  * Options to create a command

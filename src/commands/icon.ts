@@ -1,5 +1,6 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import type { CommandOptions } from "../util";
+import { icon } from "../util";
 
 export const command: CommandOptions = {
 	data: new SlashCommandBuilder()
@@ -7,26 +8,13 @@ export const command: CommandOptions = {
 		.setDescription("Mostra l'icona del server"),
 	isPublic: true,
 	async run(interaction) {
-		const { guild } = interaction;
-
-		if (!guild)
+		if (!interaction.inCachedGuild())
 			return interaction.reply({
-				content: "Questo comando è disponibile solo in un server!",
+				content: "Questo comando è disponibile solo all'interno dei server!",
 				ephemeral: true,
 			});
-		const icon = guild.iconURL({
-			extension: "png",
-			forceStatic: false,
-			size: 4096,
-		});
+		const options = await icon(this.client, interaction.guildId);
 
-		if (icon == null)
-			return interaction.reply({
-				content: "Questo server non ha un'icona!",
-				ephemeral: true,
-			});
-		return interaction.reply({
-			content: `[Icona di ${guild.name}](${icon} ):`,
-		});
+		return interaction.reply(options);
 	},
 };

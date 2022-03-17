@@ -4,42 +4,46 @@ import {
 	OAuth2Scopes,
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
-import type { Guild, WebhookEditMessageOptions } from "discord.js";
-import { GuildMember, Util } from "discord.js";
+import type { WebhookEditMessageOptions } from "discord.js";
+import { Util } from "discord.js";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
-import { createActionButton } from "./actions";
+import { createActionId } from "./actions";
 
 /**
  * Bann a user from a guild.
  * @param client - The client
- * @param user - The id of the user to bann
- * @param guild - The guild to bann the user from
- * @param executor - The user who executed the action, if any
+ * @param userId - The id of the user to bann
+ * @param guildId - The guild to bann the user from
+ * @param executorId - The user who executed the action, if any
  * @param reason - The reason for the action
  * @param deleteMessageDays - The number of days to delete
  */
 export const bann: ActionMethod<"bann"> = async (
 	client,
-	user,
-	guild,
-	executor,
+	userId,
+	guildId,
+	executorId,
 	reason,
 	deleteMessageDays
 ) => {
-	user = client.users.resolveId(user);
-	guild = client.guilds.resolve(guild)!;
-	executor =
-		executor instanceof GuildMember || executor == null
-			? executor
-			: await guild.members.fetch(executor).catch(() => undefined);
-	if (executor && !executor.permissions.has(PermissionFlagsBits.BanMembers))
+	const guild = client.guilds.cache.get(guildId)!;
+	const executor =
+		executorId === undefined
+			? null
+			: await guild.members.fetch(executorId).catch(() => null);
+	const isNotOwner = executorId !== guild.ownerId;
+
+	if (
+		isNotOwner &&
+		executor?.permissions.has(PermissionFlagsBits.BanMembers) !== true
+	)
 		return {
 			content:
 				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Bannare i membri",
 		};
-	const member = await guild.members.fetch(user).catch(() => null);
-	if (member?.id === guild.ownerId)
+	const member = await guild.members.fetch(userId).catch(() => null);
+	if (userId === guild.ownerId)
 		return {
 			content: "Non puoi bannare il proprietario del server!",
 		};
@@ -48,7 +52,7 @@ export const bann: ActionMethod<"bann"> = async (
 	if (
 		member &&
 		executor &&
-		executor.user.id !== guild.ownerId &&
+		isNotOwner &&
 		executor.roles.highest.rawPosition <= rawPosition!
 	)
 		return {
@@ -71,7 +75,7 @@ export const bann: ActionMethod<"bann"> = async (
 								client.application.id
 							}&permissions=${
 								PermissionFlagsBits.BanMembers | me!.permissions.bitfield
-							}&scope=${OAuth2Scopes.Bot}&guild_id=${guild.id}`,
+							}&scope=${OAuth2Scopes.Bot}&guild_id=${guildId}`,
 							label: "Autorizza",
 							style: ButtonStyle.Link,
 						},
@@ -86,19 +90,19 @@ export const bann: ActionMethod<"bann"> = async (
 		};
 
 	return Promise.all([
-		member?.user ?? client.users.fetch(user),
-		guild.members.ban(user, {
+		member?.user ?? client.users.fetch(userId),
+		guild.members.ban(userId, {
 			reason: `${
-				executor ? `Bannato da ${executor.user.tag} (${executor.user.id})` : ""
+				executor ? `Bannato da ${executor.user.tag} (${executorId!})` : ""
 			}${reason == null ? "" : `${executor ? ": " : ""}${reason}`}`,
 			deleteMessageDays,
 		}),
 	])
 		.then(
 			([banned]): WebhookEditMessageOptions => ({
-				content: `<@!${banned.id}> (${Util.escapeMarkdown(banned.tag)} - ${
-					banned.id
-				}) è stato bannato dal server!${
+				content: `<@!${userId}> (${Util.escapeMarkdown(
+					banned.tag
+				)} - ${userId}) è stato bannato dal server!${
 					reason == null
 						? ""
 						: `\n\nMotivo: ${
@@ -113,11 +117,11 @@ export const bann: ActionMethod<"bann"> = async (
 								type: ComponentType.Button,
 								label: "Revoca bann",
 								style: ButtonStyle.Danger,
-								custom_id: createActionButton(
+								custom_id: createActionId(
 									"unbann",
-									banned.id,
-									(guild as Guild).id,
-									(executor as GuildMember | undefined)?.id
+									userId,
+									guildId,
+									executorId
 								),
 							},
 						],

@@ -1,4 +1,8 @@
 import { codeBlock } from "@discordjs/builders";
+import type {
+	InteractionReplyOptions,
+	WebhookEditMessageOptions,
+} from "discord.js";
 import { Colors, GuildChannel, Util } from "discord.js";
 import { readFile } from "fs/promises";
 import prettier from "prettier";
@@ -6,13 +10,16 @@ import type { CompilerOptions } from "typescript";
 import ts from "typescript";
 import type { EventOptions } from "../../util";
 import {
+	avatar,
 	bann,
 	CustomClient,
 	EventType,
+	icon,
 	interactionCommand,
 	kick,
-	parseActionButton,
+	parseActionId,
 	parseEval,
+	ping,
 	unbann,
 } from "../../util";
 
@@ -65,10 +72,18 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 			return;
 		}
 		if (interaction.isButton()) {
-			const { action, args } = parseActionButton(interaction.customId);
-			let options;
+			const { action, args } = parseActionId(interaction.customId);
+			let options: InteractionReplyOptions & WebhookEditMessageOptions;
 
 			switch (action) {
+				case "avatar":
+					[options] = await Promise.all([
+						avatar(this.client, args[0], args[1]),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
 				case "bann":
 					[options] = await Promise.all([
 						bann(this.client, args[0], args[1], args[2], args[3], args[4]),
@@ -77,6 +92,11 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 
 					await interaction.editReply(options);
 					break;
+				case "icon":
+					options = { ...(await icon(this.client, args[0])) };
+
+					await interaction.reply(options);
+					break;
 				case "kick":
 					[options] = await Promise.all([
 						kick(this.client, args[0], args[1], args[2], args[3]),
@@ -84,6 +104,11 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					]);
 
 					await interaction.editReply(options);
+					break;
+				case "ping":
+					options = { ...(await ping(this.client)), ephemeral: true };
+
+					await interaction.reply(options);
 					break;
 				case "unbann":
 					[options] = await Promise.all([
