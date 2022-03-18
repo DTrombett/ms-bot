@@ -4,6 +4,7 @@ export * from "./bann";
 export * from "./banner";
 export * from "./cat";
 export * from "./dog";
+export * from "./emojiInfo";
 export * from "./emojiList";
 export * from "./icon";
 export * from "./kick";

@@ -21,14 +21,14 @@ const {
 } = env;
 const rest = new REST({ version: APIVersion }).setToken(token!);
 const commands = await promises
-	.readdir(new URL(Constants.commandsFolderName(), import.meta.url))
+	.readdir(new URL(Constants.commandsFolderName, import.meta.url))
 	.then((fileNames) =>
 		Promise.all(
 			fileNames
 				.filter((file): file is `${string}.js` => file.endsWith(".js"))
 				.map(async (file) => {
 					const fileData = (await import(
-						`./${Constants.commandsFolderName()}/${file}`
+						`./${Constants.commandsFolderName}/${file}`
 					)) as { command: CommandOptions };
 					return fileData.command;
 				})

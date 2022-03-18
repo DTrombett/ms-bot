@@ -16,6 +16,8 @@ import {
 	cat,
 	CustomClient,
 	dog,
+	emojiInfo,
+	emojiList,
 	EventType,
 	icon,
 	interactionCommand,
@@ -118,6 +120,22 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					]);
 
 					await interaction.editReply(options);
+					break;
+				case "emojiInfo":
+					options = {
+						...(await emojiInfo(this.client, args[0], args[1])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
+					break;
+				case "emojiList":
+					options = {
+						...(await emojiList(this.client, args[0])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
 					break;
 				case "icon":
 					options = { ...(await icon(this.client, args[0])) };

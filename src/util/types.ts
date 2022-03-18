@@ -30,6 +30,7 @@ export type Actions = {
 	banner: [user: Snowflake];
 	cat: [];
 	dog: [];
+	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
 	emojiList: [guild: Snowflake];
 	icon: [guild: Snowflake];
 	kick: [
