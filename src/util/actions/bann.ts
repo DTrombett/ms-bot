@@ -41,11 +41,13 @@ export const bann: ActionMethod<"bann"> = async (
 		return {
 			content:
 				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Bannare i membri",
+			ephemeral: true,
 		};
 	const member = await guild.members.fetch(userId).catch(() => null);
 	if (userId === guild.ownerId)
 		return {
 			content: "Non puoi bannare il proprietario del server!",
+			ephemeral: true,
 		};
 	const rawPosition = member?.roles.highest.rawPosition;
 
@@ -58,6 +60,7 @@ export const bann: ActionMethod<"bann"> = async (
 		return {
 			content:
 				"Non puoi bannare un membro con un ruolo superiore o uguale al tuo!",
+			ephemeral: true,
 		};
 	const { me } = guild;
 
@@ -87,6 +90,7 @@ export const bann: ActionMethod<"bann"> = async (
 		return {
 			content:
 				"Non posso bannare un membro con un ruolo maggiore o uguale al mio!",
+			ephemeral: true,
 		};
 
 	return Promise.all([
@@ -133,6 +137,7 @@ export const bann: ActionMethod<"bann"> = async (
 			void CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
+				ephemeral: true,
 			};
 		});
 };

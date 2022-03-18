@@ -27,6 +27,10 @@ export type Actions = {
 		reason?: string,
 		deleteMessageDays?: number
 	];
+	banner: [user: Snowflake];
+	cat: [];
+	dog: [];
+	emojiList: [guild: Snowflake];
 	icon: [guild: Snowflake];
 	kick: [
 		user: Snowflake,
@@ -96,10 +100,33 @@ export type CommandOptions = {
 };
 
 /**
+ * A response from thecatapi.com
+ */
+export type CatResponse = {
+	breeds: [];
+	categories: { id: number; name: string }[];
+	height: number;
+	id: string;
+	url: string;
+	width: number;
+}[];
+
+/**
  * Custom emojis for the bot
  */
 
 export enum CustomEmojis {}
+
+/**
+ * A response from thedogapi.com
+ */
+export type DogResponse = {
+	breeds: [];
+	height: number;
+	id: string;
+	url: string;
+	width: number;
+}[];
 
 /**
  * Emojis for the bot

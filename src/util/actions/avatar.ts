@@ -1,3 +1,5 @@
+import { ButtonStyle, ComponentType } from "discord-api-types/v10";
+import { Util } from "discord.js";
 import type { ActionMethod } from "../types";
 
 /**
@@ -24,10 +26,23 @@ export const avatar: ActionMethod<"avatar"> = async (
 	});
 
 	return {
-		content: `[Avatar di ${
+		content: `Avatar di **[${Util.escapeBold(
 			"nickname" in userOrMember
 				? userOrMember.nickname ?? userOrMember.user.username
 				: userOrMember.username
-		}](${avatarURL} ):`,
+		)}](${avatarURL} )**:`,
+		components: [
+			{
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						url: avatarURL,
+						style: ButtonStyle.Link,
+						label: "Apri l'originale",
+					},
+				],
+			},
+		],
 	};
 };

@@ -12,7 +12,10 @@ import type { EventOptions } from "../../util";
 import {
 	avatar,
 	bann,
+	banner,
+	cat,
 	CustomClient,
+	dog,
 	EventType,
 	icon,
 	interactionCommand,
@@ -88,6 +91,30 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					[options] = await Promise.all([
 						bann(this.client, args[0], args[1], args[2], args[3], args[4]),
 						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "banner":
+					[options] = await Promise.all([
+						banner(this.client, args[0]),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "cat":
+					[options] = await Promise.all([
+						cat(this.client),
+						interaction.deferReply({ ephemeral: true }),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "dog":
+					[options] = await Promise.all([
+						dog(this.client),
+						interaction.deferReply({ ephemeral: true }),
 					]);
 
 					await interaction.editReply(options);

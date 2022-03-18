@@ -39,16 +39,19 @@ export const kick: ActionMethod<"kick"> = async (
 		return {
 			content:
 				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Espelli membri",
+			ephemeral: true,
 		};
 	const member = await guild.members.fetch(userId).catch(() => null);
 
 	if (!member)
 		return {
 			content: "L'utente non fa parte del server!",
+			ephemeral: true,
 		};
 	if (userId === guild.ownerId)
 		return {
 			content: "Non puoi espellere il proprietario del server!",
+			ephemeral: true,
 		};
 	const { rawPosition } = member.roles.highest;
 
@@ -60,6 +63,7 @@ export const kick: ActionMethod<"kick"> = async (
 		return {
 			content:
 				"Non puoi espellere un membro con un ruolo superiore o uguale al tuo!",
+			ephemeral: true,
 		};
 	const { me } = guild;
 
@@ -89,6 +93,7 @@ export const kick: ActionMethod<"kick"> = async (
 		return {
 			content:
 				"Non posso espellere un membro con un ruolo maggiore o uguale al mio!",
+			ephemeral: true,
 		};
 
 	return guild.members
@@ -128,6 +133,7 @@ export const kick: ActionMethod<"kick"> = async (
 			void CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
+				ephemeral: true,
 			};
 		});
 };

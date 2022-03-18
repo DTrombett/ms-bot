@@ -39,6 +39,7 @@ export const unbann: ActionMethod<"unbann"> = async (
 		return {
 			content:
 				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Bannare i membri",
+			ephemeral: true,
 		};
 	const { me } = guild;
 
@@ -70,6 +71,7 @@ export const unbann: ActionMethod<"unbann"> = async (
 	)
 		return {
 			content: "Questo utente non è bannato!",
+			ephemeral: true,
 		};
 	return Promise.all([
 		client.users.fetch(userId),
@@ -110,6 +112,7 @@ export const unbann: ActionMethod<"unbann"> = async (
 			void CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
+				ephemeral: true,
 			};
 		});
 };

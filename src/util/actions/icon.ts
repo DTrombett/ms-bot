@@ -1,3 +1,5 @@
+import { ButtonStyle, ComponentType } from "discord-api-types/v10";
+import { Util } from "discord.js";
 import type { ActionMethod } from "../types";
 
 /**
@@ -20,7 +22,22 @@ export const icon: ActionMethod<"icon"> = (client, guildId) => {
 					ephemeral: true,
 			  }
 			: {
-					content: `[Icona di ${guild.name}](${iconURL} ):`,
+					content: `Icona di **[${Util.escapeBold(
+						guild.name
+					)}](${iconURL} )**:`,
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									url: iconURL,
+									style: ButtonStyle.Link,
+									label: "Apri l'originale",
+								},
+							],
+						},
+					],
 			  }
 	);
 };

@@ -227,8 +227,7 @@ export const command: CommandOptions = {
 			test.setName(SubCommands.test).setDescription("Un comando di test")
 		),
 	async run(interaction) {
-		const ephemeral =
-				interaction.options.getBoolean(Options.ephemeral) ?? true,
+		const ephemeral = interaction.options.getBoolean(Options.ephemeral) ?? true,
 			subCommand = interaction.options.getSubcommand();
 
 		if (subCommand !== SubCommands.evalCmd)
@@ -377,14 +376,9 @@ export const command: CommandOptions = {
 				});
 				break;
 			case SubCommands.cpp:
-				const codeOption = interaction.options.getString(
-					Options.code,
-					true
-				);
+				const codeOption = interaction.options.getString(Options.code, true);
 
-				code = `${(
-					interaction.options.getString(Options.include) ?? "iostream"
-				)
+				code = `${(interaction.options.getString(Options.include) ?? "iostream")
 					.split(commaRegex)
 					.map((include) => `#include <${include}>`)
 					.join("\n")}\n${(
