@@ -31,7 +31,7 @@ export type Actions = {
 	cat: [];
 	dog: [];
 	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
-	emojiList: [guild: Snowflake];
+	emojiList: [guild: Snowflake, page?: number];
 	icon: [guild: Snowflake];
 	kick: [
 		user: Snowflake,

@@ -131,7 +131,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "emojiList":
 					options = {
-						...(await emojiList(this.client, args[0])),
+						...(await emojiList(this.client, args[0], args[1])),
 						ephemeral: true,
 					};
 

@@ -1,3 +1,4 @@
+import { ActivityType } from "discord-api-types/v10";
 import { Client, Options, Partials } from "discord.js";
 import { createWriteStream } from "node:fs";
 import { stderr, stdout } from "node:process";
@@ -68,7 +69,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 				VoiceStateManager: 0,
 			}),
 			presence: {
-				activities: [{ name: "Clash Royale", type: 3 /** Watching */ }],
+				activities: [{ name: "MS Gaming", type: ActivityType.Watching }],
 			},
 			shards: "auto",
 			partials: [

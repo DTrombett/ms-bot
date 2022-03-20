@@ -13,6 +13,7 @@ enum SubCommands {
 }
 enum Options {
 	emoji = "emoji",
+	page = "page",
 }
 
 export const command: CommandOptions = {
@@ -20,7 +21,17 @@ export const command: CommandOptions = {
 		.setName("emojis")
 		.setDescription("Gestisci le emoji del server")
 		.addSubcommand((list) =>
-			list.setName("list").setDescription("Mostra tutte le emoji del server")
+			list
+				.setName("list")
+				.setDescription("Mostra tutte le emoji del server")
+				.addNumberOption((page) =>
+					page
+						.setName("page")
+						.setDescription(
+							"Pagina da mostrare - Ogni pagina contiene 25 emoji"
+						)
+						.setMaxValue(10)
+				)
 		)
 		.addSubcommand((info) =>
 			info
@@ -46,7 +57,11 @@ export const command: CommandOptions = {
 							"Questo comando è disponibile solo all'interno dei server!",
 						ephemeral: true,
 					});
-				options = await emojiList(this.client, interaction.guildId);
+				options = await emojiList(
+					this.client,
+					interaction.guildId,
+					interaction.options.getNumber(Options.page) ?? undefined
+				);
 
 				await interaction.reply(options);
 				break;

@@ -34,34 +34,29 @@ const commands = await promises
 				})
 		)
 	);
-let privateAPICommands: APIApplicationCommand[],
-	publicAPICommands: APIApplicationCommand[] = [];
-
-if (nodeEnv === "production")
-	[privateAPICommands, publicAPICommands] = await Promise.all([
-		rest.put(Routes.applicationGuildCommands(applicationId!, guildId!), {
-			body: commands
-				.filter((c) => c.isPublic !== true)
-				.map((file) => file.data.toJSON()),
-		}) as Promise<APIApplicationCommand[]>,
-		rest.put(Routes.applicationCommands(applicationId!), {
-			body: commands
-				.filter((c) => c.isPublic)
-				.map((file) => file.data.toJSON()),
-		}) as Promise<APIApplicationCommand[]>,
-	]);
-else
-	privateAPICommands = await rest
+const [privateAPICommands, publicAPICommands] = await Promise.all([
+	rest
 		.put(Routes.applicationGuildCommands(applicationId!, guildId!), {
-			body: commands.map((file) => file.data.toJSON()),
+			body: commands
+				.filter((c) => nodeEnv !== "production" || c.isPublic !== true)
+				.map((file) => file.data.toJSON()),
 		})
 		.then((registeredCommands) => {
+			if (nodeEnv === "production") return registeredCommands;
 			const privateCommands = commands.filter((c) => c.isPublic !== true);
 
 			return (registeredCommands as APIApplicationCommand[]).filter((cmd) =>
 				privateCommands.some((c) => c.data.name === cmd.name)
 			);
-		});
+		}) as Promise<APIApplicationCommand[]>,
+	nodeEnv === "production"
+		? (rest.put(Routes.applicationCommands(applicationId!), {
+				body: commands
+					.filter((c) => c.isPublic)
+					.map((file) => file.data.toJSON()),
+		  }) as Promise<APIApplicationCommand[]>)
+		: [],
+]);
 
 await rest.put(
 	Routes.guildApplicationCommandsPermissions(applicationId!, guildId!),
@@ -83,5 +78,10 @@ await rest.put(
 	}
 );
 
-await CustomClient.printToStdout([...privateAPICommands, ...publicAPICommands]);
+await Promise.all([
+	CustomClient.printToStdout("Public commands: "),
+	CustomClient.printToStdout(publicAPICommands),
+	CustomClient.printToStdout("Private commands: "),
+	CustomClient.printToStdout(privateAPICommands),
+]);
 console.timeEnd("Register slash commands");
