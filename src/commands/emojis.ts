@@ -24,7 +24,7 @@ export const command: CommandOptions = {
 			list
 				.setName("list")
 				.setDescription("Mostra tutte le emoji del server")
-				.addNumberOption((page) =>
+				.addIntegerOption((page) =>
 					page
 						.setName("page")
 						.setDescription(
@@ -60,7 +60,7 @@ export const command: CommandOptions = {
 				options = await emojiList(
 					this.client,
 					interaction.guildId,
-					interaction.options.getNumber(Options.page) ?? undefined
+					`${interaction.options.getInteger(Options.page) ?? ""}` || undefined
 				);
 
 				await interaction.reply(options);

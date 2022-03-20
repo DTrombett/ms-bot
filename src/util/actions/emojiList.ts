@@ -1,5 +1,10 @@
 import { TimestampStyles } from "@discordjs/builders";
 import { ButtonStyle, ComponentType } from "discord-api-types/v10";
+import type {
+	InteractionReplyOptions,
+	InteractionUpdateOptions,
+	WebhookEditMessageOptions,
+} from "discord.js";
 import { Colors } from "discord.js";
 import type { ActionMethod } from "../types";
 import { createActionId } from "./actions";
@@ -10,14 +15,14 @@ import { createActionId } from "./actions";
  * @param guildId - The id of the server
  * @param page - The page number
  */
-export const emojiList: ActionMethod<"emojiList"> = (
-	client,
-	guildId,
-	page = 0
-) => {
+export const emojiList: ActionMethod<
+	"emojiList",
+	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
+> = (client, guildId, page = "0") => {
+	const pageNumber = Number(page);
 	const guild = client.guilds.cache.get(guildId)!;
-	const end = page * 25 + 25;
-	const emojis = [...guild.emojis.cache.values()].slice(page * 25, end);
+	const end = pageNumber * 25 + 25;
+	const emojis = [...guild.emojis.cache.values()].slice(pageNumber * 25, end);
 
 	return Promise.resolve<Awaited<ReturnType<typeof emojiList>>>({
 		embeds: [
@@ -28,7 +33,9 @@ export const emojiList: ActionMethod<"emojiList"> = (
 
 					return {
 						name: emoji.name ?? "emoji",
-						value: `<:${emoji.identifier}> [${emoji.name ?? "emoji"}](<${
+						value: `<${emoji.animated ?? false ? "" : ":"}${
+							emoji.identifier
+						}> [${emoji.name ?? "emoji"}](<${
 							emoji.url
 						}>) - <t:${createdTimestamp}:${
 							TimestampStyles.LongDateTime
@@ -36,7 +43,9 @@ export const emojiList: ActionMethod<"emojiList"> = (
 					};
 				}),
 				footer: {
-					text: `Pagina ${page + 1}/${Math.ceil(guild.emojis.cache.size / 25)}`,
+					text: `Pagina ${pageNumber + 1}/${Math.ceil(
+						guild.emojis.cache.size / 25
+					)}`,
 				},
 				description: emojis.length === 0 ? "Nessun emoji trovata!" : undefined,
 				author: {
@@ -58,9 +67,13 @@ export const emojiList: ActionMethod<"emojiList"> = (
 				components: [
 					{
 						type: ComponentType.Button,
-						custom_id: createActionId("emojiList", guildId, page - 1),
+						custom_id: createActionId(
+							"emojiList",
+							guildId,
+							`${pageNumber - 1}`
+						),
 						style: ButtonStyle.Primary,
-						disabled: page === 0,
+						disabled: page === "0",
 						emoji: {
 							name: "⬅",
 						},
@@ -68,7 +81,11 @@ export const emojiList: ActionMethod<"emojiList"> = (
 					},
 					{
 						type: ComponentType.Button,
-						custom_id: createActionId("emojiList", guildId, page + 1),
+						custom_id: createActionId(
+							"emojiList",
+							guildId,
+							`${pageNumber + 1}`
+						),
 						style: ButtonStyle.Primary,
 						disabled: end >= guild.emojis.cache.size,
 						emoji: {

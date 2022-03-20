@@ -1,4 +1,5 @@
 import { ButtonStyle, ComponentType } from "discord-api-types/v10";
+import type { WebhookEditMessageOptions } from "discord.js";
 import { request } from "https";
 import { env } from "node:process";
 import CustomClient from "../CustomClient";
@@ -8,7 +9,7 @@ import { createActionId } from "./actions";
 /**
  * Get a cat image.
  */
-export const cat: ActionMethod<"cat"> = async () =>
+export const cat: ActionMethod<"cat", WebhookEditMessageOptions> = async () =>
 	new Promise((resolve) => {
 		request(
 			{
@@ -68,7 +69,6 @@ export const cat: ActionMethod<"cat"> = async () =>
 									],
 								},
 							],
-							ephemeral: true,
 						});
 					});
 			}

@@ -46,7 +46,8 @@ export const command: CommandOptions = {
 				interaction.guildId,
 				interaction.user.id,
 				interaction.options.getString(Options.reason) ?? undefined,
-				interaction.options.getInteger(Options.deleteMessageDays) ?? undefined
+				`${interaction.options.getInteger(Options.deleteMessageDays) ?? ""}` ||
+					undefined
 			),
 			interaction.deferReply(),
 		]);

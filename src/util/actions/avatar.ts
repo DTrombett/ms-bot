@@ -1,4 +1,5 @@
 import { ButtonStyle, ComponentType } from "discord-api-types/v10";
+import type { WebhookEditMessageOptions } from "discord.js";
 import { Util } from "discord.js";
 import type { ActionMethod } from "../types";
 
@@ -8,7 +9,7 @@ import type { ActionMethod } from "../types";
  * @param userId - The id of the user
  * @param guildId - The id of the guild
  */
-export const avatar: ActionMethod<"avatar"> = async (
+export const avatar: ActionMethod<"avatar", WebhookEditMessageOptions> = async (
 	client,
 	userId,
 	guildId

@@ -10,6 +10,7 @@ import type {
 	ChatInputCommandInteraction,
 	ClientEvents,
 	InteractionReplyOptions,
+	InteractionUpdateOptions,
 	MessageOptions,
 	WebhookEditMessageOptions,
 } from "discord.js";
@@ -25,13 +26,13 @@ export type Actions = {
 		guild: Snowflake,
 		executor?: Snowflake,
 		reason?: string,
-		deleteMessageDays?: number
+		deleteMessageDays?: `${number}`
 	];
 	banner: [user: Snowflake];
 	cat: [];
 	dog: [];
 	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
-	emojiList: [guild: Snowflake, page?: number];
+	emojiList: [guild: Snowflake, page?: `${number}`];
 	icon: [guild: Snowflake];
 	kick: [
 		user: Snowflake,
@@ -51,10 +52,14 @@ export type Actions = {
 /**
  * A function to be called when an action is executed
  */
-export type ActionMethod<T extends keyof Actions> = (
-	client: CustomClient<true>,
-	...args: Actions[T]
-) => Promise<InteractionReplyOptions & WebhookEditMessageOptions>;
+export type ActionMethod<
+	T extends keyof Actions,
+	R extends
+		| InteractionReplyOptions
+		| InteractionUpdateOptions
+		| WebhookEditMessageOptions = InteractionUpdateOptions &
+		WebhookEditMessageOptions
+> = (client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
 
 /**
  * An action row to be sent to Discord

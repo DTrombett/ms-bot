@@ -18,7 +18,7 @@ import { createActionId } from "./actions";
  * @param executorId - The user who executed the action, if any
  * @param reason - The reason for the action
  */
-export const kick: ActionMethod<"kick"> = async (
+export const kick: ActionMethod<"kick", WebhookEditMessageOptions> = async (
 	client,
 	userId,
 	guildId,

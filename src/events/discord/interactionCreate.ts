@@ -1,8 +1,4 @@
 import { codeBlock } from "@discordjs/builders";
-import type {
-	InteractionReplyOptions,
-	WebhookEditMessageOptions,
-} from "discord.js";
 import { Colors, GuildChannel, Util } from "discord.js";
 import { readFile } from "fs/promises";
 import prettier from "prettier";
@@ -78,7 +74,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 		}
 		if (interaction.isButton()) {
 			const { action, args } = parseActionId(interaction.customId);
-			let options: InteractionReplyOptions & WebhookEditMessageOptions;
+			let options;
 
 			switch (action) {
 				case "avatar":
@@ -132,10 +128,9 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 				case "emojiList":
 					options = {
 						...(await emojiList(this.client, args[0], args[1])),
-						ephemeral: true,
 					};
 
-					await interaction.reply(options);
+					await interaction.update(options);
 					break;
 				case "icon":
 					options = { ...(await icon(this.client, args[0])) };

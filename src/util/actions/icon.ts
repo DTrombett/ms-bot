@@ -1,4 +1,9 @@
 import { ButtonStyle, ComponentType } from "discord-api-types/v10";
+import type {
+	InteractionReplyOptions,
+	InteractionUpdateOptions,
+	WebhookEditMessageOptions,
+} from "discord.js";
 import { Util } from "discord.js";
 import type { ActionMethod } from "../types";
 
@@ -7,7 +12,10 @@ import type { ActionMethod } from "../types";
  * @param client - The client
  * @param guildId - The id of the guild
  */
-export const icon: ActionMethod<"icon"> = (client, guildId) => {
+export const icon: ActionMethod<
+	"icon",
+	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
+> = (client, guildId) => {
 	const guild = client.guilds.cache.get(guildId)!;
 	const iconURL = guild.iconURL({
 		extension: "png",

@@ -18,7 +18,7 @@ import { createActionId } from "./actions";
  * @param executorId - The user who executed the action, if any
  * @param reason - The reason for the action
  */
-export const unbann: ActionMethod<"unbann"> = async (
+export const unbann: ActionMethod<"unbann", WebhookEditMessageOptions> = async (
 	client,
 	userId,
 	guildId,

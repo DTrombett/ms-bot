@@ -19,7 +19,7 @@ import { createActionId } from "./actions";
  * @param reason - The reason for the action
  * @param deleteMessageDays - The number of days to delete
  */
-export const bann: ActionMethod<"bann"> = async (
+export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 	client,
 	userId,
 	guildId,
@@ -99,7 +99,7 @@ export const bann: ActionMethod<"bann"> = async (
 			reason: `${
 				executor ? `Bannato da ${executor.user.tag} (${executorId!})` : ""
 			}${reason == null ? "" : `${executor ? ": " : ""}${reason}`}`,
-			deleteMessageDays,
+			deleteMessageDays: Number(deleteMessageDays) || undefined,
 		}),
 	])
 		.then(

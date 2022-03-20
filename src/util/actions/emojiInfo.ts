@@ -1,6 +1,11 @@
 import { TimestampStyles } from "@discordjs/builders";
 import { ButtonStyle, ComponentType } from "discord-api-types/v10";
-import type { MessageOptions } from "discord.js";
+import type {
+	InteractionReplyOptions,
+	InteractionUpdateOptions,
+	MessageOptions,
+	WebhookEditMessageOptions,
+} from "discord.js";
 import { Util } from "discord.js";
 import type { ActionMethod } from "../types";
 import { createActionId } from "./actions";
@@ -11,11 +16,10 @@ import { createActionId } from "./actions";
  * @param emojiIdentifier - The id of the emoji or its name
  * @param guildId - The id of the guild
  */
-export const emojiInfo: ActionMethod<"emojiInfo"> = async (
-	client,
-	emojiIdentifier,
-	guildId
-) => {
+export const emojiInfo: ActionMethod<
+	"emojiInfo",
+	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
+> = async (client, emojiIdentifier, guildId) => {
 	const emoji =
 		client.emojis.cache.get(emojiIdentifier) ??
 		(guildId !== undefined
