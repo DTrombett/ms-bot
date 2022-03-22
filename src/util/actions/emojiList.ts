@@ -33,9 +33,7 @@ export const emojiList: ActionMethod<
 
 					return {
 						name: emoji.name ?? "emoji",
-						value: `<${emoji.animated ?? false ? "" : ":"}${
-							emoji.identifier
-						}> [${emoji.name ?? "emoji"}](<${
+						value: `${emoji.toString()} [${emoji.name ?? "emoji"}](<${
 							emoji.url
 						}>) - <t:${createdTimestamp}:${
 							TimestampStyles.LongDateTime

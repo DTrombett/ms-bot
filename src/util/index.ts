@@ -1,7 +1,6 @@
 import Constants from "./Constants";
 
 export * from "./actions";
-export * from "./actions/";
 export * from "./calculateRam";
 export * from "./cast";
 export * from "./colors";
@@ -10,6 +9,7 @@ export * from "./Constants";
 export * from "./CustomClient";
 export * from "./eval";
 export * from "./Event";
+export * from "./fetch";
 export * from "./interactions";
 export * from "./loadCommands";
 export * from "./loadEvents";

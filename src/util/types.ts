@@ -14,6 +14,8 @@ import type {
 	MessageOptions,
 	WebhookEditMessageOptions,
 } from "discord.js";
+import type { Buffer } from "node:buffer";
+import type { IncomingHttpHeaders } from "node:http";
 import type { Command, CustomClient, Event } from ".";
 
 /**
@@ -31,6 +33,16 @@ export type Actions = {
 	banner: [user: Snowflake];
 	cat: [];
 	dog: [];
+	createEmoji: [
+		guild: Snowflake,
+		attachment: Buffer | string,
+		name: string,
+		executor?: Snowflake,
+		reason?: string,
+		...roles: Snowflake[]
+	];
+	emojiDelete: [];
+	emojiEdit: [];
 	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
 	emojiList: [guild: Snowflake, page?: `${number}`];
 	icon: [guild: Snowflake];
@@ -104,6 +116,15 @@ export type CommandOptions = {
 	 */
 	run(this: Command, interaction: ChatInputCommandInteraction): Awaitable<void>;
 };
+
+/**
+ * Type of content received from a web request
+ */
+export enum ContentType {
+	Json,
+	PlainText,
+	Buffer,
+}
 
 /**
  * A response from thecatapi.com
@@ -600,3 +621,19 @@ export enum MatchLevel {
 	 */
 	Full,
 }
+
+/**
+ * A response from a web request
+ */
+export type RequestResponse<R> = {
+	data: R;
+	complete: boolean;
+	headers: IncomingHttpHeaders;
+	statusCode: number;
+	statusMessage: string;
+};
+
+/**
+ * A valid url
+ */
+export type Url = URL | `http${"" | "s"}://${string}`;

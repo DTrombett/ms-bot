@@ -5,15 +5,20 @@ import type {
 	WebhookEditMessageOptions,
 } from "discord.js";
 import type { CommandOptions } from "../util";
-import { emojiInfo, emojiList } from "../util";
+import { createEmoji, emojiInfo, emojiList } from "../util";
 
 enum SubCommands {
 	list = "list",
 	info = "info",
+	create = "create",
 }
 enum Options {
 	emoji = "emoji",
 	page = "page",
+	file = "file",
+	name = "name",
+	reason = "reason",
+	roles = "roles",
 }
 
 export const command: CommandOptions = {
@@ -22,11 +27,11 @@ export const command: CommandOptions = {
 		.setDescription("Gestisci le emoji del server")
 		.addSubcommand((list) =>
 			list
-				.setName("list")
+				.setName(SubCommands.list)
 				.setDescription("Mostra tutte le emoji del server")
 				.addIntegerOption((page) =>
 					page
-						.setName("page")
+						.setName(Options.page)
 						.setDescription(
 							"Pagina da mostrare - Ogni pagina contiene 25 emoji"
 						)
@@ -35,14 +40,46 @@ export const command: CommandOptions = {
 		)
 		.addSubcommand((info) =>
 			info
-				.setName("info")
+				.setName(SubCommands.info)
 				.setDescription("Mostra le informazioni di un emoji")
 				.addStringOption((emoji) =>
 					emoji
-						.setName("emoji")
+						.setName(Options.emoji)
 						.setDescription("L'emoji da cercare")
 						.setAutocomplete(true)
 						.setRequired(true)
+				)
+		)
+		.addSubcommand((create) =>
+			create
+				.setName(SubCommands.create)
+				.setDescription("Carica un emoji")
+				.addAttachmentOption((file) =>
+					file
+						.setName(Options.file)
+						.setDescription(
+							"L'immagine da caricare. Tipo: .png, .jpg, .gif, .webp. Dimensione max: 256kb"
+						)
+						.setRequired(true)
+				)
+				.addStringOption((name) =>
+					name
+						.setName(Options.name)
+						.setDescription(
+							"Il nome dell'emoji, lungo almeno 2 caratteri e con solo caratteri alfanumerici e trattini bassi"
+						)
+						.setRequired(true)
+				)
+				.addStringOption((reason) =>
+					reason
+						.setName(Options.reason)
+						.setDescription("Il motivo per cui stai caricando l'emoji")
+				)
+				.addStringOption((roles) =>
+					roles
+						.setName(Options.roles)
+						.setDescription("I ruoli da assegnare all'emoji")
+						.setAutocomplete(true)
 				)
 		),
 	isPublic: true,
@@ -73,6 +110,29 @@ export const command: CommandOptions = {
 				);
 
 				await interaction.reply(options);
+				break;
+			case SubCommands.create:
+				if (!interaction.inCachedGuild())
+					return interaction.reply({
+						content:
+							"Questo comando è disponibile solo all'interno dei server!",
+						ephemeral: true,
+					});
+				[options] = await Promise.all([
+					createEmoji(
+						this.client,
+						interaction.guildId,
+						interaction.options.getAttachment(Options.file, true).proxyURL,
+						interaction.options.getString(Options.name, true),
+						interaction.user.id,
+						interaction.options.getString(Options.reason) ?? undefined,
+						...(interaction.options.getString(Options.roles)?.split(/,\s*/) ??
+							[])
+					),
+					interaction.deferReply(),
+				]);
+
+				await interaction.editReply(options);
 				break;
 			default:
 				return interaction.reply("Comando non riconosciuto.");

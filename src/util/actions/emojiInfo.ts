@@ -29,7 +29,7 @@ export const emojiInfo: ActionMethod<
 						(e) =>
 							e.id === emojiIdentifier ||
 							e.name === emojiIdentifier ||
-							`<:${e.identifier}>` === emojiIdentifier
+							e.toString() === emojiIdentifier
 					)
 			: undefined);
 
@@ -62,9 +62,9 @@ export const emojiInfo: ActionMethod<
 			],
 		});
 	return {
-		content: `<:${emoji.identifier}> [${emoji.name ?? "emoji"}](${
-			emoji.url
-		}) (${emoji.id})\n\nAnimata: **${
+		content: `${emoji.toString()} [${emoji.name ?? "emoji"}](${emoji.url}) (${
+			emoji.id
+		})\n\nAnimata: **${
 			emoji.animated ?? false ? "Sì" : "No"
 		}**\nCreata <t:${createdTimestamp}:${
 			TimestampStyles.LongDateTime
