@@ -41,7 +41,12 @@ export type Actions = {
 		reason?: string,
 		...roles: Snowflake[]
 	];
-	emojiDelete: [];
+	deleteEmoji: [
+		emoji: Snowflake | string,
+		guild: Snowflake,
+		executor?: Snowflake,
+		reason?: string
+	];
 	emojiEdit: [];
 	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
 	emojiList: [guild: Snowflake, page?: `${number}`];

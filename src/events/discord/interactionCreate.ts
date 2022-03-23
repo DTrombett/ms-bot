@@ -11,6 +11,7 @@ import {
 	banner,
 	cat,
 	CustomClient,
+	deleteEmoji,
 	dog,
 	emojiInfo,
 	emojiList,
@@ -79,7 +80,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 			switch (action) {
 				case "avatar":
 					[options] = await Promise.all([
-						avatar(this.client, args[0], args[1]),
+						avatar(this.client, ...args),
 						interaction.deferReply(),
 					]);
 
@@ -87,7 +88,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "bann":
 					[options] = await Promise.all([
-						bann(this.client, args[0], args[1], args[2], args[3], args[4]),
+						bann(this.client, ...args),
 						interaction.deferReply(),
 					]);
 
@@ -95,7 +96,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "banner":
 					[options] = await Promise.all([
-						banner(this.client, args[0]),
+						banner(this.client, ...args),
 						interaction.deferReply(),
 					]);
 
@@ -103,7 +104,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "cat":
 					[options] = await Promise.all([
-						cat(this.client),
+						cat(this.client, ...args),
 						interaction.deferReply({ ephemeral: true }),
 					]);
 
@@ -111,7 +112,15 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "dog":
 					[options] = await Promise.all([
-						dog(this.client),
+						dog(this.client, ...args),
+						interaction.deferReply({ ephemeral: true }),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "deleteEmoji":
+					[options] = await Promise.all([
+						deleteEmoji(this.client, ...args),
 						interaction.deferReply({ ephemeral: true }),
 					]);
 
@@ -119,7 +128,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "emojiInfo":
 					options = {
-						...(await emojiInfo(this.client, args[0], args[1])),
+						...(await emojiInfo(this.client, ...args)),
 						ephemeral: true,
 					};
 
@@ -127,32 +136,35 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "emojiList":
 					options = {
-						...(await emojiList(this.client, args[0], args[1])),
+						...(await emojiList(this.client, ...args)),
 					};
 
 					await interaction.update(options);
 					break;
 				case "icon":
-					options = { ...(await icon(this.client, args[0])) };
+					options = { ...(await icon(this.client, ...args)) };
 
 					await interaction.reply(options);
 					break;
 				case "kick":
 					[options] = await Promise.all([
-						kick(this.client, args[0], args[1], args[2], args[3]),
+						kick(this.client, ...args),
 						interaction.deferReply(),
 					]);
 
 					await interaction.editReply(options);
 					break;
 				case "ping":
-					options = { ...(await ping(this.client)), ephemeral: true };
+					options = {
+						...(await ping(this.client, ...args)),
+						ephemeral: true,
+					};
 
 					await interaction.reply(options);
 					break;
 				case "unbann":
 					[options] = await Promise.all([
-						unbann(this.client, args[0], args[1], args[2], args[3]),
+						unbann(this.client, ...args),
 						interaction.deferReply(),
 					]);
 

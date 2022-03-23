@@ -5,12 +5,13 @@ import type {
 	WebhookEditMessageOptions,
 } from "discord.js";
 import type { CommandOptions } from "../util";
-import { createEmoji, emojiInfo, emojiList } from "../util";
+import { createEmoji, deleteEmoji, emojiInfo, emojiList } from "../util";
 
 enum SubCommands {
 	list = "list",
 	info = "info",
 	create = "create",
+	delete = "delete",
 }
 enum Options {
 	emoji = "emoji",
@@ -18,7 +19,7 @@ enum Options {
 	file = "file",
 	name = "name",
 	reason = "reason",
-	roles = "roles",
+	role = "role",
 }
 
 export const command: CommandOptions = {
@@ -75,11 +76,27 @@ export const command: CommandOptions = {
 						.setName(Options.reason)
 						.setDescription("Il motivo per cui stai caricando l'emoji")
 				)
-				.addStringOption((roles) =>
-					roles
-						.setName(Options.roles)
-						.setDescription("I ruoli da assegnare all'emoji")
+				.addRoleOption((role) =>
+					role
+						.setName(Options.role)
+						.setDescription("Il ruolo che può utilizzare questa emoji")
+				)
+		)
+		.addSubcommand((del) =>
+			del
+				.setName(SubCommands.delete)
+				.setDescription("Elimina un emoji")
+				.addStringOption((emoji) =>
+					emoji
+						.setName(Options.emoji)
+						.setDescription("L'emoji da eliminare")
 						.setAutocomplete(true)
+						.setRequired(true)
+				)
+				.addStringOption((reason) =>
+					reason
+						.setName(Options.reason)
+						.setDescription("Il motivo per cui stai eliminando l'emoji")
 				)
 		),
 	isPublic: true,
@@ -126,8 +143,28 @@ export const command: CommandOptions = {
 						interaction.options.getString(Options.name, true),
 						interaction.user.id,
 						interaction.options.getString(Options.reason) ?? undefined,
-						...(interaction.options.getString(Options.roles)?.split(/,\s*/) ??
+						...(interaction.options.getString(Options.role)?.split(/,\s*/) ??
 							[])
+					),
+					interaction.deferReply(),
+				]);
+
+				await interaction.editReply(options);
+				break;
+			case SubCommands.delete:
+				if (!interaction.inCachedGuild())
+					return interaction.reply({
+						content:
+							"Questo comando è disponibile solo all'interno dei server!",
+						ephemeral: true,
+					});
+				[options] = await Promise.all([
+					deleteEmoji(
+						this.client,
+						interaction.options.getString(Options.emoji, true),
+						interaction.guildId,
+						interaction.user.id,
+						interaction.options.getString(Options.reason) ?? undefined
 					),
 					interaction.deferReply(),
 				]);

@@ -54,7 +54,7 @@ export const createEmoji: ActionMethod<
 	)
 		return {
 			content:
-				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Gestire emoji e adesivi",
+				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: **Gestire emoji e adesivi**",
 			ephemeral: true,
 		};
 	if (name.length < 2 || name.length > 32)

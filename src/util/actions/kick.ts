@@ -38,7 +38,7 @@ export const kick: ActionMethod<"kick", WebhookEditMessageOptions> = async (
 	)
 		return {
 			content:
-				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Espelli membri",
+				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: **Espelli membri**",
 			ephemeral: true,
 		};
 	const member = await guild.members.fetch(userId).catch(() => null);

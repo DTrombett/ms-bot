@@ -40,7 +40,7 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 	)
 		return {
 			content:
-				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: Bannare i membri",
+				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: **Bannare i membri**",
 			ephemeral: true,
 		};
 	const member = await guild.members.fetch(userId).catch(() => null);
