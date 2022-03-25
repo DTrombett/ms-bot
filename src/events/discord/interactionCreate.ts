@@ -9,6 +9,7 @@ import {
 	avatar,
 	bann,
 	banner,
+	bannList,
 	cat,
 	CustomClient,
 	deleteEmoji,
@@ -109,6 +110,13 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					]);
 
 					await interaction.editReply(options);
+					break;
+				case "bannList":
+					options = {
+						...(await bannList(this.client, args[0], args[1])),
+					};
+
+					await interaction.update(options);
 					break;
 				case "cat":
 					[options] = await Promise.all([

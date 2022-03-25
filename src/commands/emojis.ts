@@ -144,10 +144,12 @@ export const command: CommandOptions = {
 							"Questo comando è disponibile solo all'interno dei server!",
 						ephemeral: true,
 					});
+				const page = interaction.options.getInteger(Options.page);
+
 				options = await emojiList(
 					this.client,
 					interaction.guildId,
-					`${interaction.options.getInteger(Options.page) ?? ""}` || undefined
+					page != null ? `${page - 1}` : undefined
 				);
 
 				await interaction.reply(options);

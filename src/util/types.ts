@@ -31,6 +31,7 @@ export type Actions = {
 		deleteMessageDays?: `${number}`
 	];
 	banner: [user: Snowflake];
+	bannList: [guild: Snowflake, page?: `${number}`];
 	cat: [];
 	createEmoji: [
 		guild: Snowflake,
