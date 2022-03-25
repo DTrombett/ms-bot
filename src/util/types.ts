@@ -32,7 +32,6 @@ export type Actions = {
 	];
 	banner: [user: Snowflake];
 	cat: [];
-	dog: [];
 	createEmoji: [
 		guild: Snowflake,
 		attachment: Buffer | string,
@@ -47,7 +46,15 @@ export type Actions = {
 		executor?: Snowflake,
 		reason?: string
 	];
-	emojiEdit: [];
+	dog: [];
+	editEmoji: [
+		emoji: Snowflake | string,
+		guild: Snowflake,
+		name?: string,
+		executor?: Snowflake,
+		reason?: string,
+		...roles: Snowflake[]
+	];
 	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
 	emojiList: [guild: Snowflake, page?: `${number}`];
 	icon: [guild: Snowflake];
@@ -76,7 +83,7 @@ export type ActionMethod<
 		| InteractionUpdateOptions
 		| WebhookEditMessageOptions = InteractionUpdateOptions &
 		WebhookEditMessageOptions
-> = (client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
+> = (this: void, client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
 
 /**
  * An action row to be sent to Discord

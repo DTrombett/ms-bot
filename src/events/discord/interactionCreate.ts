@@ -13,6 +13,7 @@ import {
 	CustomClient,
 	deleteEmoji,
 	dog,
+	editEmoji,
 	emojiInfo,
 	emojiList,
 	EventType,
@@ -121,6 +122,14 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 				case "deleteEmoji":
 					[options] = await Promise.all([
 						deleteEmoji(this.client, ...args),
+						interaction.deferReply({ ephemeral: true }),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "editEmoji":
+					[options] = await Promise.all([
+						editEmoji(this.client, ...args),
 						interaction.deferReply({ ephemeral: true }),
 					]);
 

@@ -6,6 +6,7 @@ export * from "./cat";
 export * from "./createEmoji";
 export * from "./deleteEmoji";
 export * from "./dog";
+export * from "./editEmoji";
 export * from "./emojiInfo";
 export * from "./emojiList";
 export * from "./icon";
