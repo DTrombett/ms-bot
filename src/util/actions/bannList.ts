@@ -33,13 +33,13 @@ export const bannList: ActionMethod<
 		embeds: [
 			{
 				title: "Membri bannati",
-				fields: bans.map((ban) => ({
-					name: `${ban.user.tag} (${ban.user.id})`,
+				fields: bans.map((bann) => ({
+					name: `${bann.user.tag} (${bann.user.id})`,
 					value:
-						ban.reason != null
-							? ban.reason.length > 1024
-								? `${ban.reason.slice(0, 1021)}...`
-								: ban.reason
+						bann.reason != null
+							? bann.reason.length > 1024
+								? `${bann.reason.slice(0, 1021)}...`
+								: bann.reason
 							: "Nessuna motivazione",
 				})),
 				footer: {
