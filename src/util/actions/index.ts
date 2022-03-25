@@ -6,6 +6,7 @@ export * from "./bannList";
 export * from "./cat";
 export * from "./createEmoji";
 export * from "./deleteEmoji";
+export * from "./dice";
 export * from "./dog";
 export * from "./editEmoji";
 export * from "./emojiInfo";

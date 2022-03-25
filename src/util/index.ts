@@ -14,6 +14,7 @@ export * from "./interactions";
 export * from "./loadCommands";
 export * from "./loadEvents";
 export * from "./occurrences";
+export * from "./randomNumber";
 export * from "./restart";
 export * from "./types";
 
