@@ -81,7 +81,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 			switch (action) {
 				case "avatar":
 					[options] = await Promise.all([
-						avatar(this.client, ...args),
+						avatar(this.client, args[0], args[1]),
 						interaction.deferReply(),
 					]);
 
@@ -89,7 +89,14 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "bann":
 					[options] = await Promise.all([
-						bann(this.client, ...args),
+						bann(
+							this.client,
+							args[0],
+							args[1],
+							interaction.user.id,
+							args[3],
+							args[4]
+						),
 						interaction.deferReply(),
 					]);
 
@@ -97,7 +104,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "banner":
 					[options] = await Promise.all([
-						banner(this.client, ...args),
+						banner(this.client, args[0]),
 						interaction.deferReply(),
 					]);
 
@@ -105,7 +112,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "cat":
 					[options] = await Promise.all([
-						cat(this.client, ...args),
+						cat(this.client),
 						interaction.deferReply({ ephemeral: true }),
 					]);
 
@@ -113,7 +120,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "dog":
 					[options] = await Promise.all([
-						dog(this.client, ...args),
+						dog(this.client),
 						interaction.deferReply({ ephemeral: true }),
 					]);
 
@@ -121,7 +128,13 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "deleteEmoji":
 					[options] = await Promise.all([
-						deleteEmoji(this.client, ...args),
+						deleteEmoji(
+							this.client,
+							args[0],
+							args[1],
+							interaction.user.id,
+							undefined
+						),
 						interaction.deferReply({ ephemeral: true }),
 					]);
 
@@ -129,7 +142,15 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "editEmoji":
 					[options] = await Promise.all([
-						editEmoji(this.client, ...args),
+						editEmoji(
+							this.client,
+							args[0],
+							args[1],
+							args[2],
+							interaction.user.id,
+							undefined,
+							...(args as string[]).slice(3)
+						),
 						interaction.deferReply({ ephemeral: true }),
 					]);
 
@@ -137,7 +158,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "emojiInfo":
 					options = {
-						...(await emojiInfo(this.client, ...args)),
+						...(await emojiInfo(this.client, args[0], args[1])),
 						ephemeral: true,
 					};
 
@@ -145,19 +166,19 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "emojiList":
 					options = {
-						...(await emojiList(this.client, ...args)),
+						...(await emojiList(this.client, args[0], args[1])),
 					};
 
 					await interaction.update(options);
 					break;
 				case "icon":
-					options = { ...(await icon(this.client, ...args)) };
+					options = { ...(await icon(this.client, args[0])) };
 
 					await interaction.reply(options);
 					break;
 				case "kick":
 					[options] = await Promise.all([
-						kick(this.client, ...args),
+						kick(this.client, args[0], args[1], interaction.user.id, args[3]),
 						interaction.deferReply(),
 					]);
 
@@ -165,7 +186,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "ping":
 					options = {
-						...(await ping(this.client, ...args)),
+						...(await ping(this.client)),
 						ephemeral: true,
 					};
 
@@ -173,7 +194,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					break;
 				case "unbann":
 					[options] = await Promise.all([
-						unbann(this.client, ...args),
+						unbann(this.client, args[0], args[1], interaction.user.id, args[3]),
 						interaction.deferReply(),
 					]);
 
