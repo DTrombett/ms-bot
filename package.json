@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@discordjs/builders": "^0.13.0-dev.1646913825.dcd4797",
-    "@discordjs/rest": "^0.4.0-dev.1647259762.2297c2b",
+    "@discordjs/rest": "^0.4.0-dev.1648166871.cedd053",
     "bufferutil": "^4.0.6",
     "discord-api-types": "*",
     "discord.js": "^14.0.0-dev.1646914074.dcd4797",
