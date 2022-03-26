@@ -53,7 +53,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 				invalidRequestWarningInterval: 9_998,
 			},
 			makeCache: Options.cacheWithLimits({
-				...Options.defaultMakeCacheSettings,
+				...Options.DefaultMakeCacheSettings,
 				BaseGuildEmojiManager: 0,
 				GuildBanManager: 100,
 				GuildInviteManager: 0,
