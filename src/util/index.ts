@@ -9,7 +9,6 @@ export * from "./Constants";
 export * from "./CustomClient";
 export * from "./eval";
 export * from "./Event";
-export * from "./fetch";
 export * from "./interactions";
 export * from "./loadCommands";
 export * from "./loadEvents";

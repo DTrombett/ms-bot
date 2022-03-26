@@ -2,34 +2,32 @@ import { ButtonStyle, ComponentType } from "discord-api-types/v10";
 import type { WebhookEditMessageOptions } from "discord.js";
 import { env } from "node:process";
 import CustomClient from "../CustomClient";
-import { fetch } from "../fetch";
 import type { ActionMethod, DogResponse } from "../types";
-import { ContentType } from "../types";
 import { createActionId } from "./actions";
 
 /**
  * Get a dog image.
  */
 export const dog: ActionMethod<"cat", WebhookEditMessageOptions> = () =>
-	fetch<DogResponse, ContentType.Json>(
+	fetch(
 		"https://api.thedogapi.com/v1/images/search?size=full&order=RANDOM&limit=1&format=json",
 		{
 			method: "GET",
 			headers: {
-				"x-api-key": env.DOG_API_KEY,
+				"x-api-key": env.DOG_API_KEY!,
 			},
-			type: ContentType.Json,
 		}
 	)
-		.then<Awaited<ReturnType<typeof dog>>>(({ data }) => ({
-			content: `[Woof!](${data[0].url}) 🐶`,
+		.then<DogResponse>((res) => res.json())
+		.then<Awaited<ReturnType<typeof dog>>>(([{ url }]) => ({
+			content: `[Woof!](${url}) 🐶`,
 			components: [
 				{
 					type: ComponentType.ActionRow,
 					components: [
 						{
 							type: ComponentType.Button,
-							url: data[0].url,
+							url,
 							style: ButtonStyle.Link,
 							label: "Apri l'originale",
 						},

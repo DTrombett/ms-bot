@@ -2,34 +2,32 @@ import { ButtonStyle, ComponentType } from "discord-api-types/v10";
 import type { WebhookEditMessageOptions } from "discord.js";
 import { env } from "node:process";
 import CustomClient from "../CustomClient";
-import { fetch } from "../fetch";
 import type { ActionMethod, CatResponse } from "../types";
-import { ContentType } from "../types";
 import { createActionId } from "./actions";
 
 /**
  * Get a cat image.
  */
 export const cat: ActionMethod<"cat", WebhookEditMessageOptions> = () =>
-	fetch<CatResponse, ContentType.Json>(
+	fetch(
 		"https://api.thecatapi.com/v1/images/search?size=full&order=RANDOM&limit=1&format=json",
 		{
 			method: "GET",
 			headers: {
-				"x-api-key": env.CAT_API_KEY,
+				"x-api-key": env.CAT_API_KEY!,
 			},
-			type: ContentType.Json,
 		}
 	)
-		.then<Awaited<ReturnType<typeof cat>>>(({ data }) => ({
-			content: `[Meow!](${data[0].url}) 🐱`,
+		.then<CatResponse>((res) => res.json())
+		.then<Awaited<ReturnType<typeof cat>>>(([{ url }]) => ({
+			content: `[Meow!](${url}) 🐱`,
 			components: [
 				{
 					type: ComponentType.ActionRow,
 					components: [
 						{
 							type: ComponentType.Button,
-							url: data[0].url,
+							url,
 							style: ButtonStyle.Link,
 							label: "Apri l'originale",
 						},
