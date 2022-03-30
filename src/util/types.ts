@@ -76,6 +76,12 @@ export type Actions = {
 		executor?: Snowflake,
 		reason?: string
 	];
+	love: [
+		user1: Snowflake,
+		user2: Snowflake,
+		discriminator1: string,
+		discriminator2: string
+	];
 	ping: [];
 	unbann: [
 		user: Snowflake,

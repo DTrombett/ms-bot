@@ -13,5 +13,6 @@ export * from "./emojiInfo";
 export * from "./emojiList";
 export * from "./icon";
 export * from "./kick";
+export * from "./love";
 export * from "./ping";
 export * from "./unbann";

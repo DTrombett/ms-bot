@@ -22,6 +22,7 @@ import {
 	icon,
 	interactionCommand,
 	kick,
+	love,
 	parseActionId,
 	parseEval,
 	ping,
@@ -212,6 +213,14 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					]);
 
 					await interaction.editReply(options);
+					break;
+				case "love":
+					options = {
+						...(await love(this.client, args[0], args[1], args[2], args[3])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
 					break;
 				case "ping":
 					options = {
