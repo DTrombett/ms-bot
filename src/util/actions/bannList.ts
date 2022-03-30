@@ -1,4 +1,8 @@
-import { ButtonStyle, ComponentType } from "discord-api-types/v10";
+import {
+	ButtonStyle,
+	ComponentType,
+	PermissionFlagsBits,
+} from "discord-api-types/v10";
 import type {
 	InteractionReplyOptions,
 	InteractionUpdateOptions,
@@ -17,9 +21,24 @@ import { createActionId } from "./actions";
 export const bannList: ActionMethod<
 	"bannList",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
-> = async (client, guildId, page = "0") => {
-	const pageNumber = Number(page);
+> = async (client, guildId, page = "0", executorId) => {
 	const guild = client.guilds.cache.get(guildId)!;
+	const executor =
+		executorId === undefined
+			? null
+			: await guild.members.fetch(executorId).catch(() => null);
+	const isNotOwner = executorId !== guild.ownerId;
+
+	if (
+		isNotOwner &&
+		executor?.permissions.has(PermissionFlagsBits.BanMembers) !== true
+	)
+		return {
+			content:
+				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: **Bannare i membri**",
+			ephemeral: true,
+		};
+	const pageNumber = Number(page);
 	const end = pageNumber * 25 + 25;
 	const collection = (
 		guild.bans.cache.size ? guild.bans.cache : await guild.bans.fetch()
@@ -65,7 +84,13 @@ export const bannList: ActionMethod<
 				components: [
 					{
 						type: ComponentType.Button,
-						custom_id: createActionId("bannList", guildId, `${pageNumber - 1}`),
+						custom_id: createActionId(
+							"bannList",
+							guildId,
+							`${pageNumber - 1}`,
+							executorId,
+							"true"
+						),
 						style: ButtonStyle.Primary,
 						disabled: page === "0",
 						emoji: {
@@ -75,7 +100,13 @@ export const bannList: ActionMethod<
 					},
 					{
 						type: ComponentType.Button,
-						custom_id: createActionId("bannList", guildId, `${pageNumber + 1}`),
+						custom_id: createActionId(
+							"bannList",
+							guildId,
+							`${pageNumber + 1}`,
+							executorId,
+							"true"
+						),
 						style: ButtonStyle.Primary,
 						disabled: end >= size,
 						emoji: {

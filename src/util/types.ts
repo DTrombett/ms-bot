@@ -31,7 +31,12 @@ export type Actions = {
 		deleteMessageDays?: `${number}`
 	];
 	banner: [user: Snowflake];
-	bannList: [guild: Snowflake, page?: `${number}`];
+	bannList: [
+		guild: Snowflake,
+		page?: `${number}`,
+		executor?: Snowflake,
+		update?: `${boolean}`
+	];
 	cat: [];
 	createEmoji: [
 		guild: Snowflake,
@@ -58,7 +63,12 @@ export type Actions = {
 		...roles: Snowflake[]
 	];
 	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
-	emojiList: [guild: Snowflake, page?: `${number}`];
+	emojiList: [
+		guild: Snowflake,
+		page?: `${number}`,
+		executor?: Snowflake,
+		update?: `${boolean}`
+	];
 	icon: [guild: Snowflake];
 	kick: [
 		user: Snowflake,

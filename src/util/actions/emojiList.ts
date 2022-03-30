@@ -18,7 +18,7 @@ import { createActionId } from "./actions";
 export const emojiList: ActionMethod<
 	"emojiList",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
-> = (client, guildId, page = "0") => {
+> = (client, guildId, page = "0", executorId) => {
 	const pageNumber = Number(page);
 	const guild = client.guilds.cache.get(guildId)!;
 	const end = pageNumber * 25 + 25;
@@ -68,7 +68,9 @@ export const emojiList: ActionMethod<
 						custom_id: createActionId(
 							"emojiList",
 							guildId,
-							`${pageNumber - 1}`
+							`${pageNumber - 1}`,
+							executorId,
+							"true"
 						),
 						style: ButtonStyle.Primary,
 						disabled: page === "0",
@@ -82,7 +84,9 @@ export const emojiList: ActionMethod<
 						custom_id: createActionId(
 							"emojiList",
 							guildId,
-							`${pageNumber + 1}`
+							`${pageNumber + 1}`,
+							executorId,
+							"true"
 						),
 						style: ButtonStyle.Primary,
 						disabled: end >= guild.emojis.cache.size,

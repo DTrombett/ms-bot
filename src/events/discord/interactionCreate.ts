@@ -113,11 +113,17 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					await interaction.editReply(options);
 					break;
 				case "bannList":
-					options = {
-						...(await bannList(this.client, args[0], args[1])),
-					};
+					options = await bannList(
+						this.client,
+						args[0],
+						args[1],
+						args[2],
+						args[3]
+					);
 
-					await interaction.update(options);
+					await (args[3] === "true" && interaction.user.id === args[2]
+						? interaction.update(options)
+						: interaction.reply({ ...options, ephemeral: true }));
 					break;
 				case "cat":
 					[options] = await Promise.all([
@@ -182,11 +188,17 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					await interaction.reply(options);
 					break;
 				case "emojiList":
-					options = {
-						...(await emojiList(this.client, args[0], args[1])),
-					};
+					options = await emojiList(
+						this.client,
+						args[0],
+						args[1],
+						args[2],
+						args[3]
+					);
 
-					await interaction.update(options);
+					await (args[3] === "true" && interaction.user.id === args[2]
+						? interaction.update(options)
+						: interaction.reply({ ...options, ephemeral: true }));
 					break;
 				case "icon":
 					options = { ...(await icon(this.client, args[0])) };
