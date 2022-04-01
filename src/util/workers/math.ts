@@ -1,3 +1,4 @@
+import type { UnitDefinition } from "mathjs";
 import { all, create } from "mathjs";
 import { worker } from "workerpool";
 
@@ -7,13 +8,25 @@ const mathNumber = create(all, {
 const mathFraction = create(all, {
 	number: "Fraction",
 });
+const units: Record<string, UnitDefinition> = {
+	knot: {
+		definition: "0.514444444 m/s",
+		aliases: ["knot", "knots", "kt", "kts", "kn"],
+	},
+	mph: {
+		definition: "0.44704 m/s",
+		aliases: ["miles per hour", "mph", "mile per hour", "MPH", "mi/h"],
+	},
+};
 const evaluate = (expr: string, fraction: boolean) => {
 	const math = fraction ? mathFraction : mathNumber;
 
 	return math.format(math.evaluate(expr));
 };
 
-for (const math of [mathNumber, mathFraction])
+for (const math of [mathNumber, mathFraction]) {
+	for (const unit in units)
+		if (Object.hasOwn(units, unit)) math.createUnit(unit, units[unit]);
 	math.import(
 		{
 			range: () => {
@@ -34,4 +47,5 @@ for (const math of [mathNumber, mathFraction])
 		},
 		{ override: true }
 	);
+}
 worker({ evaluate });
