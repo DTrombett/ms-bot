@@ -15,7 +15,7 @@ import type { ActionMethod } from "../types";
 export const icon: ActionMethod<
 	"icon",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
-> = (client, guildId) => {
+> = async (client, guildId) => {
 	const guild = client.guilds.cache.get(guildId)!;
 	const iconURL = guild.iconURL({
 		extension: "png",
@@ -23,29 +23,25 @@ export const icon: ActionMethod<
 		size: 4096,
 	});
 
-	return Promise.resolve(
-		iconURL == null
-			? {
-					content: "Questo server non ha un'icona!",
-					ephemeral: true,
-			  }
-			: {
-					content: `Icona di **[${Util.escapeBold(
-						guild.name
-					)}](${iconURL} )**:`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									url: iconURL,
-									style: ButtonStyle.Link,
-									label: "Apri l'originale",
-								},
-							],
-						},
-					],
-			  }
-	);
+	return iconURL == null
+		? {
+				content: "Questo server non ha un'icona!",
+				ephemeral: true,
+		  }
+		: {
+				content: `Icona di **[${Util.escapeBold(guild.name)}](${iconURL} )**:`,
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								url: iconURL,
+								style: ButtonStyle.Link,
+								label: "Apri l'originale",
+							},
+						],
+					},
+				],
+		  };
 };

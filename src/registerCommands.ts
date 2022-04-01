@@ -6,7 +6,7 @@ import type {
 import { APIVersion, Routes } from "discord-api-types/v10";
 import { EnumResolvers } from "discord.js";
 import { promises } from "node:fs";
-import { env } from "node:process";
+import { env, exit } from "node:process";
 import { URL } from "node:url";
 import type { CommandOptions } from "./util";
 import Constants, { CustomClient } from "./util";
@@ -85,3 +85,4 @@ await Promise.all([
 	CustomClient.printToStdout(privateAPICommands),
 ]);
 console.timeEnd("Register slash commands");
+exit(0);

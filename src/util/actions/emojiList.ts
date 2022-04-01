@@ -18,13 +18,13 @@ import { createActionId } from "./actions";
 export const emojiList: ActionMethod<
 	"emojiList",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
-> = (client, guildId, page = "0", executorId) => {
+> = async (client, guildId, page = "0", executorId) => {
 	const pageNumber = Number(page);
 	const guild = client.guilds.cache.get(guildId)!;
 	const end = pageNumber * 25 + 25;
 	const emojis = [...guild.emojis.cache.values()].slice(pageNumber * 25, end);
 
-	return Promise.resolve<Awaited<ReturnType<typeof emojiList>>>({
+	return {
 		embeds: [
 			{
 				title: "Emoji del server",
@@ -98,5 +98,5 @@ export const emojiList: ActionMethod<
 				],
 			},
 		],
-	});
+	};
 };

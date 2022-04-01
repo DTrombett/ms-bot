@@ -16,14 +16,14 @@ import { createActionId } from "./actions";
 export const dice: ActionMethod<
 	"dice",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
-> = (_client, count = "1") => {
+> = async (_client, count = "1") => {
 	const diceCount = Number(count);
 
 	if (diceCount > 100)
-		return Promise.resolve({
+		return {
 			content: `Non puoi lanciare più di 100 dadi!`,
 			ephemeral: true,
-		});
+		};
 	const results: number[] = [];
 	let result = 0;
 
@@ -33,7 +33,7 @@ export const dice: ActionMethod<
 		result += roll;
 		results.push(roll);
 	}
-	return Promise.resolve({
+	return {
 		content: `🎲 **${result}** (${results.join(", ")}) con ${diceCount} dadi!`,
 		components: [
 			{
@@ -51,5 +51,5 @@ export const dice: ActionMethod<
 				],
 			},
 		],
-	});
+	};
 };

@@ -14,21 +14,20 @@ import { createActionId } from "./actions";
 export const ping: ActionMethod<
 	"ping",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
-> = (client) =>
-	Promise.resolve({
-		content: `Latency is **${client.ws.ping}ms**.`,
-		components: [
-			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.Button,
-						custom_id: createActionId("ping"),
-						label: "Pong!",
-						style: ButtonStyle.Success,
-						emoji: { name: "🏓" },
-					},
-				],
-			},
-		],
-	});
+> = async (client) => ({
+	content: `Latency is **${client.ws.ping}ms**.`,
+	components: [
+		{
+			type: ComponentType.ActionRow,
+			components: [
+				{
+					type: ComponentType.Button,
+					custom_id: createActionId("ping"),
+					label: "Pong!",
+					style: ButtonStyle.Success,
+					emoji: { name: "🏓" },
+				},
+			],
+		},
+	],
+});

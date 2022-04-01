@@ -10,6 +10,7 @@ import {
 	bann,
 	banner,
 	bannList,
+	calc,
 	cat,
 	CustomClient,
 	deleteEmoji,
@@ -125,6 +126,14 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					await (args[3] === "true" && interaction.user.id === args[2]
 						? interaction.update(options)
 						: interaction.reply({ ...options, ephemeral: true }));
+					break;
+				case "calc":
+					options = {
+						...(await calc(this.client, args[0], args[1])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
 					break;
 				case "cat":
 					[options] = await Promise.all([

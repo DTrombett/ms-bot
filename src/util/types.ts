@@ -37,6 +37,7 @@ export type Actions = {
 		executor?: Snowflake,
 		update?: `${boolean}`
 	];
+	calc: [expr: string, fraction?: `${boolean}`];
 	cat: [];
 	createEmoji: [
 		guild: Snowflake,

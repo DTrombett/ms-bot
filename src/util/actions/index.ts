@@ -3,6 +3,7 @@ export * from "./avatar";
 export * from "./bann";
 export * from "./banner";
 export * from "./bannList";
+export * from "./calc";
 export * from "./cat";
 export * from "./createEmoji";
 export * from "./deleteEmoji";

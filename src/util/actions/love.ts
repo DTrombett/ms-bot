@@ -16,15 +16,15 @@ import type { ActionMethod } from "../types";
 export const love: ActionMethod<
 	"love",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
-> = (_client, user1Id, user2Id, discriminator1, discriminator2) => {
+> = async (_client, user1Id, user2Id, discriminator1, discriminator2) => {
 	const bigint1 = BigInt(user1Id) * BigInt(discriminator1);
 	const bigint2 = BigInt(user2Id) * BigInt(discriminator2);
 
-	return Promise.resolve({
+	return {
 		content: `❤️ L'amore tra <@!${user1Id}> e <@!${user2Id}> è del ${
 			bigint1 > bigint2
 				? (bigint2 * 100n) / bigint1
 				: (bigint1 * 100n) / bigint2
 		}% ❤️`,
-	});
+	};
 };
