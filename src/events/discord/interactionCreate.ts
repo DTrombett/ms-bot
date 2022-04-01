@@ -6,10 +6,28 @@ import type { CompilerOptions } from "typescript";
 import ts from "typescript";
 import type { EventOptions } from "../../util";
 import {
+	avatar,
+	bann,
+	banner,
+	bannList,
+	calc,
+	cat,
 	CustomClient,
+	deleteEmoji,
+	dice,
+	dog,
+	editEmoji,
+	emojiInfo,
+	emojiList,
 	EventType,
+	icon,
 	interactionCommand,
+	kick,
+	love,
+	parseActionId,
 	parseEval,
+	ping,
+	unbann,
 } from "../../util";
 
 export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
@@ -61,15 +79,180 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 			return;
 		}
 		if (interaction.isButton()) {
-			// 			const [arg, ...args] = interaction.customId.split("-");
-			//
-			// 			switch (arg) {
-			// 				default:
-			// 					void CustomClient.printToStderr(
-			// 						`Received unknown button interaction ${interaction.customId}`
-			// 					);
-			// 			}
-			// 			return;
+			const { action, args } = parseActionId(interaction.customId);
+			let options;
+
+			switch (action) {
+				case "avatar":
+					[options] = await Promise.all([
+						avatar(this.client, args[0], args[1]),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "bann":
+					[options] = await Promise.all([
+						bann(
+							this.client,
+							args[0],
+							args[1],
+							interaction.user.id,
+							args[3],
+							args[4]
+						),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "banner":
+					[options] = await Promise.all([
+						banner(this.client, args[0]),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "bannList":
+					options = await bannList(
+						this.client,
+						args[0],
+						args[1],
+						args[2],
+						args[3]
+					);
+
+					await (args[3] === "true" && interaction.user.id === args[2]
+						? interaction.update(options)
+						: interaction.reply({ ...options, ephemeral: true }));
+					break;
+				case "calc":
+					options = {
+						...(await calc(this.client, args[0], args[1])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
+					break;
+				case "cat":
+					[options] = await Promise.all([
+						cat(this.client),
+						interaction.deferReply({ ephemeral: true }),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "dog":
+					[options] = await Promise.all([
+						dog(this.client),
+						interaction.deferReply({ ephemeral: true }),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "deleteEmoji":
+					[options] = await Promise.all([
+						deleteEmoji(
+							this.client,
+							args[0],
+							args[1],
+							interaction.user.id,
+							undefined
+						),
+						interaction.deferReply({ ephemeral: true }),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "dice":
+					options = {
+						...(await dice(this.client, args[0])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
+					break;
+				case "editEmoji":
+					[options] = await Promise.all([
+						editEmoji(
+							this.client,
+							args[0],
+							args[1],
+							args[2],
+							interaction.user.id,
+							undefined,
+							...(args as string[]).slice(3)
+						),
+						interaction.deferReply({ ephemeral: true }),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "emojiInfo":
+					options = {
+						...(await emojiInfo(this.client, args[0], args[1])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
+					break;
+				case "emojiList":
+					options = await emojiList(
+						this.client,
+						args[0],
+						args[1],
+						args[2],
+						args[3]
+					);
+
+					await (args[3] === "true" && interaction.user.id === args[2]
+						? interaction.update(options)
+						: interaction.reply({ ...options, ephemeral: true }));
+					break;
+				case "icon":
+					options = { ...(await icon(this.client, args[0])) };
+
+					await interaction.reply(options);
+					break;
+				case "kick":
+					[options] = await Promise.all([
+						kick(this.client, args[0], args[1], interaction.user.id, args[3]),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				case "love":
+					options = {
+						...(await love(this.client, args[0], args[1], args[2], args[3])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
+					break;
+				case "ping":
+					options = {
+						...(await ping(this.client)),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
+					break;
+				case "unbann":
+					[options] = await Promise.all([
+						unbann(this.client, args[0], args[1], interaction.user.id, args[3]),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
+					break;
+				default:
+					void CustomClient.printToStderr(
+						`Received unknown button interaction ${interaction.customId}`
+					);
+			}
+			return;
 		}
 		if (interaction.isModalSubmit()) {
 			const [customId, ...args] = interaction.customId.split("-");
@@ -127,7 +310,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 							{
 								author: {
 									name: interaction.user.tag,
-									iconURL: interaction.user.displayAvatarURL(),
+									icon_url: interaction.user.displayAvatarURL(),
 								},
 								title: "Eval output",
 								description: codeBlock(

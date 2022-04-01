@@ -199,6 +199,7 @@
 		"@typescript-eslint/prefer-optional-chain": "warn",
 		"@typescript-eslint/prefer-string-starts-ends-with": "warn",
 		"@typescript-eslint/prefer-ts-expect-error": "warn",
+		"@typescript-eslint/require-await": "off",
 		"@typescript-eslint/return-await": "warn",
 		"@typescript-eslint/strict-boolean-expressions": "warn",
 		"@typescript-eslint/sort-type-union-intersection-members": "warn",

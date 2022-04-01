@@ -3,19 +3,106 @@ import type {
 	SlashCommandSubcommandsOnlyBuilder,
 } from "@discordjs/builders";
 import type { RestEvents } from "@discordjs/rest";
+import type { Snowflake } from "discord-api-types/v10";
 import type {
 	AutocompleteInteraction,
 	Awaitable,
-	ButtonInteraction,
 	ChatInputCommandInteraction,
-	ClientEvents as DiscordEvents,
-	CommandInteraction,
+	ClientEvents,
 	InteractionReplyOptions,
+	InteractionUpdateOptions,
 	MessageOptions,
-	SelectMenuInteraction,
+	WebhookEditMessageOptions,
 } from "discord.js";
 import type { Buffer } from "node:buffer";
-import type { Command, Event } from ".";
+import type { IncomingHttpHeaders } from "node:http";
+import type { Command, CustomClient, Event } from ".";
+
+/**
+ * List of actions and their arguments
+ */
+export type Actions = {
+	avatar: [user: Snowflake, guild?: Snowflake];
+	bann: [
+		user: Snowflake,
+		guild: Snowflake,
+		executor?: Snowflake,
+		reason?: string,
+		deleteMessageDays?: `${number}`
+	];
+	banner: [user: Snowflake];
+	bannList: [
+		guild: Snowflake,
+		page?: `${number}`,
+		executor?: Snowflake,
+		update?: `${boolean}`
+	];
+	calc: [expr: string, fraction?: `${boolean}`];
+	cat: [];
+	createEmoji: [
+		guild: Snowflake,
+		attachment: Buffer | string,
+		name: string,
+		executor?: Snowflake,
+		reason?: string,
+		...roles: Snowflake[]
+	];
+	deleteEmoji: [
+		emoji: Snowflake | string,
+		guild: Snowflake,
+		executor?: Snowflake,
+		reason?: string
+	];
+	dice: [count?: `${number}`];
+	dog: [];
+	editEmoji: [
+		emoji: Snowflake | string,
+		guild: Snowflake,
+		name?: string,
+		executor?: Snowflake,
+		reason?: string,
+		...roles: Snowflake[]
+	];
+	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
+	emojiList: [
+		guild: Snowflake,
+		page?: `${number}`,
+		executor?: Snowflake,
+		update?: `${boolean}`
+	];
+	icon: [guild: Snowflake];
+	kick: [
+		user: Snowflake,
+		guild: Snowflake,
+		executor?: Snowflake,
+		reason?: string
+	];
+	love: [
+		user1: Snowflake,
+		user2: Snowflake,
+		discriminator1: string,
+		discriminator2: string
+	];
+	ping: [];
+	unbann: [
+		user: Snowflake,
+		guild: Snowflake,
+		executor?: Snowflake,
+		reason?: string
+	];
+};
+
+/**
+ * A function to be called when an action is executed
+ */
+export type ActionMethod<
+	T extends keyof Actions,
+	R extends
+		| InteractionReplyOptions
+		| InteractionUpdateOptions
+		| WebhookEditMessageOptions = InteractionUpdateOptions &
+		WebhookEditMessageOptions
+> = (this: void, client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
 
 /**
  * An action row to be sent to Discord
@@ -25,15 +112,6 @@ export type ActionRowType = NonNullable<
 > extends (infer T)[]
 	? T
 	: never;
-
-/**
- * An activity from Argo
- */
-export type Activity = {
-	date: Date;
-	description: string;
-	subject: string;
-};
 
 /**
  * Options to create a command
@@ -71,201 +149,42 @@ export type CommandOptions = {
 };
 
 /**
+ * Type of content received from a web request
+ */
+export enum ContentType {
+	Json,
+	PlainText,
+	Buffer,
+}
+
+/**
+ * A response from thecatapi.com
+ */
+export type CatResponse = {
+	breeds: [];
+	categories: { id: number; name: string }[];
+	height: number;
+	id: string;
+	url: string;
+	width: number;
+}[];
+
+/**
  * Custom emojis for the bot
  */
 
 export enum CustomEmojis {}
 
 /**
- * Emojis for the bot
+ * A response from thedogapi.com
  */
-
-export enum Emojis {
-	/**
-	 * The emoji for a check mark
-	 */
-	Check = "✅",
-
-	/**
-	 * The emoji for a cross mark
-	 */
-	Cross = "❌",
-
-	/**
-	 * The emoji for a warning sign
-	 */
-	Warning = "⚠️",
-
-	/**
-	 * The emoji for a question mark
-	 */
-	Question = "❓",
-
-	/**
-	 * The emoji for a exclamation mark
-	 */
-	Exclamation = "❗",
-
-	/**
-	 * The emoji for a double exclamation mark
-	 */
-	DoubleExclamation = "❕",
-
-	/**
-	 * The emoji for a heavy check mark
-	 */
-	HeavyCheck = "✔️",
-
-	/**
-	 * The emoji for a heavy multiplication sign
-	 */
-	HeavyMultiplication = "✖️",
-
-	/**
-	 * The emoji for a heavy division sign
-	 */
-	HeavyDivision = "➗",
-
-	/**
-	 * The emoji for a heavy minus sign
-	 */
-	HeavyMinus = "➖",
-
-	/**
-	 * The emoji for a heavy plus sign
-	 */
-	HeavyPlus = "➕",
-
-	/**
-	 * The emoji for a trophy
-	 */
-	Trophy = "🏆",
-
-	/**
-	 * The emoji for a crown
-	 */
-	Crown = "👑",
-
-	/**
-	 * The emoji for a star
-	 */
-	Star = "⭐",
-
-	/**
-	 * The emoji for a sparkles
-	 */
-	Sparkles = "✨",
-
-	/**
-	 * The emoji for a snowflake
-	 */
-	Snowflake = "❄",
-
-	/**
-	 * The emoji for a heart
-	 */
-	Heart = "❤",
-
-	/**
-	 * The emoji for a heavy heart
-	 */
-	HeavyHeart = "💖",
-
-	/**
-	 * The emoji for money with wings
-	 */
-	MoneyWithWings = "💸",
-
-	/**
-	 * The emoji for people
-	 */
-	People = "👥",
-
-	/**
-	 * The emoji for a score
-	 */
-	Score = "💯",
-
-	/**
-	 * The emoji for a location
-	 */
-	Location = "📍",
-
-	/**
-	 * The emoji for a back arrow
-	 */
-	BackArrow = "⬅",
-
-	/**
-	 * The emoji for a forward arrow
-	 */
-	ForwardArrow = "➡",
-
-	/**
-	 * The emoji for an up arrow
-	 */
-	UpArrow = "⬆",
-
-	/**
-	 * The emoji for a down arrow
-	 */
-	DownArrow = "⬇",
-
-	/**
-	 * The emoji for a medal
-	 */
-	medal = "🏅",
-
-	/**
-	 * The emoji for a boat
-	 */
-	Boat = "⛵",
-
-	/**
-	 * The emoji for a dagger
-	 */
-	Dagger = "🗡",
-
-	/**
-	 * The emoji for a deck
-	 */
-	Deck = "🎴",
-
-	/**
-	 * The emoji for an information symbol
-	 */
-	Info = "ℹ",
-
-	/**
-	 * The emoji for a log
-	 */
-	Log = "🗒",
-
-	/**
-	 * The emoji for crossed swords
-	 */
-	CrossedSwords = "⚔",
-
-	/**
-	 * The emoji for a robot
-	 */
-	Robot = "🤖",
-
-	/**
-	 * The emoji for today
-	 */
-	Today = "📅",
-
-	/**
-	 * The emoji for a watch
-	 */
-	Watch = "⌚",
-
-	/**
-	 * The emoji for the alphabet
-	 */
-	Alphabet = "🔤",
-}
+export type DogResponse = {
+	breeds: [];
+	height: number;
+	id: string;
+	url: string;
+	width: number;
+}[];
 
 /**
  * The data for an event
@@ -273,11 +192,11 @@ export enum Emojis {
 export type EventOptions<
 	T extends EventType = EventType,
 	K extends T extends EventType.Discord
-		? keyof DiscordEvents
+		? keyof ClientEvents
 		: T extends EventType.Rest
 		? keyof RestEvents
 		: never = T extends EventType.Discord
-		? keyof DiscordEvents
+		? keyof ClientEvents
 		: T extends EventType.Rest
 		? keyof RestEvents
 		: never
@@ -297,8 +216,8 @@ export type EventOptions<
 	 */
 	on?: (
 		this: Event<T, K>,
-		...args: K extends keyof DiscordEvents
-			? DiscordEvents[K]
+		...args: K extends keyof ClientEvents
+			? ClientEvents[K]
 			: K extends keyof RestEvents
 			? RestEvents[K]
 			: never
@@ -544,23 +463,17 @@ export enum MatchLevel {
 }
 
 /**
- * The return type of a method to handle Argo data
+ * A response from a web request
  */
-export type RegistroMethod = Promise<InteractionReplyOptions & MessageOptions>;
+export type RequestResponse<R> = {
+	data: R;
+	complete: boolean;
+	headers: IncomingHttpHeaders;
+	statusCode: number;
+	statusMessage: string;
+};
 
 /**
- * An interaction that can be replied to
+ * A valid url
  */
-export type ReplyableInteraction =
-	| ButtonInteraction
-	| CommandInteraction
-	| SelectMenuInteraction;
-
-export type TranslationResults = {
-	from: LanguageCode | "auto";
-	to: LanguageCode;
-	word: string;
-	attachment: Buffer;
-	maybe?: string;
-	language?: LanguageCode;
-};
+export type Url = URL | `http${"" | "s"}://${string}`;

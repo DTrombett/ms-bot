@@ -1,5 +1,3 @@
-import { env } from "node:process";
-
 /**
  * Constants about time
  */
@@ -92,39 +90,24 @@ export const TIME = {
 
 export const Constants = {
 	/**
-	 * The label used for the online event of the client.
+	 * The label used for the online event of the client
 	 */
-	clientOnlineLabel: () => "Client online" as const,
+	clientOnlineLabel: "Client online",
 
 	/**
-	 * The name of the folder with commands.
+	 * The name of the folder with commands
 	 */
-	commandsFolderName: () => "commands" as const,
+	commandsFolderName: "commands",
 
 	/**
-	 * The name of the folder with events.
+	 * The name of the folder with events
 	 */
-	eventsFolderName: () => "events" as const,
+	eventsFolderName: "events",
 
 	/**
-	 * A zero-width space.
+	 * A regex to match a snowflake
 	 */
-	zeroWidthSpace: () => "\u200b" as const,
-
-	/**
-	 * The message to log when a command is not recognized.
-	 * @param command - The command
-	 */
-	optionNotRecognizedLog: (command: string) =>
-		`Option not recognized: ${command}` as const,
-
-	/**
-	 * The invite URL for the bot.
-	 */
-	inviteUrl: () =>
-		`https://discord.com/api/oauth2/authorize?client_id=${env.DISCORD_CLIENT_ID!}&scope=${[
-			"applications.commands",
-		].join("%20")}` as const,
+	snowflakeRegex: /^\d{17,19}$/,
 } as const;
 
 export default Constants;

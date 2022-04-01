@@ -6,8 +6,6 @@ import { CustomClient } from ".";
 import Constants from "./Constants";
 import Event from "./Event";
 
-const folder = Constants.eventsFolderName();
-
 /**
  * Load events listeners for the client.
  * @param client - The client to load the events for
@@ -22,14 +20,16 @@ export const loadEvents = async (
 	if (typeof subfolder !== "string")
 		throw new TypeError("Argument 'subfolder' must be a string");
 	const fileNames = await promises.readdir(
-		new URL(join(folder, subfolder), import.meta.url)
+		new URL(join(Constants.eventsFolderName, subfolder), import.meta.url)
 	);
 	const files = await Promise.all(
 		fileNames
 			.filter((fileName) => fileName.endsWith(".js"))
 			.map(
 				(fileName) =>
-					import(`./${folder}/${subfolder}/${fileName}`) as Promise<{
+					import(
+						`./${Constants.eventsFolderName}/${subfolder}/${fileName}`
+					) as Promise<{
 						event: EventOptions;
 					}>
 			)

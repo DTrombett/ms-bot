@@ -2,7 +2,7 @@ import { setInterval } from "timers/promises";
 import type { EventOptions } from "../../util";
 import Constants, { calculateRam, CustomClient, EventType } from "../../util";
 
-const label = Constants.clientOnlineLabel();
+const label = Constants.clientOnlineLabel;
 
 export const event: EventOptions<EventType.Discord, "ready"> = {
 	name: "ready",
