@@ -3,6 +3,7 @@
 	"entry": [
 		"src/commands/**/*.ts",
 		"src/events/**/*.ts",
+		"src/util/workers/**/*.ts",
 		"src/index.ts",
 		"src/registerCommands.ts"
 	],

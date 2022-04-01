@@ -5,8 +5,6 @@ import { CustomClient } from ".";
 import Command from "./Command";
 import Constants from "./Constants";
 
-const folder = Constants.commandsFolderName();
-
 /**
  * Loads all commands from the commands directory.
  * @param client - The client to load commands into
@@ -14,13 +12,15 @@ const folder = Constants.commandsFolderName();
 export const loadCommands = async (client: CustomClient) => {
 	if (!(client instanceof CustomClient))
 		throw new TypeError("Argument 'client' must be a CustomClient");
-	const fileNames = await promises.readdir(new URL(folder, import.meta.url));
+	const fileNames = await promises.readdir(
+		new URL(Constants.commandsFolderName, import.meta.url)
+	);
 	const files = await Promise.all(
 		fileNames
 			.filter((fileName) => fileName.endsWith(".js"))
 			.map(
 				(fileName) =>
-					import(`./${folder}/${fileName}`) as Promise<{
+					import(`./${Constants.commandsFolderName}/${fileName}`) as Promise<{
 						command: CommandOptions;
 					}>
 			)
