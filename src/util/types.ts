@@ -176,6 +176,14 @@ export type CatResponse = {
 export enum CustomEmojis {}
 
 /**
+ * Variables that can be stored in the database
+ */
+export type DatabaseVariables = {
+	timeouts: Record<string, string>;
+	warns: Record<string, Record<string, Warn[]>>;
+};
+
+/**
  * A response from thedogapi.com
  */
 export type DogResponse = {
@@ -477,3 +485,12 @@ export type RequestResponse<R> = {
  * A valid url
  */
 export type Url = URL | `http${"" | "s"}://${string}`;
+
+/**
+ * The json representation of a member warn
+ */
+export type Warn = {
+	createdAt: number;
+	executor: Snowflake;
+	reason: string;
+};

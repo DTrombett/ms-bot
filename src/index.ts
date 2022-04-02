@@ -3,14 +3,11 @@ import express from "express";
 import process, { env } from "node:process";
 import Constants, { CustomClient } from "./util";
 
-process.on("uncaughtException", (err) => {
-	console.error(err);
-});
-
 void CustomClient.printToStdout("Starting...");
+process.on("uncaughtException", CustomClient.printToStderr);
 if (env.DISCORD_TOKEN == null) config();
-await CustomClient.logToFile("\n");
 console.time(Constants.clientOnlineLabel);
+await CustomClient.logToFile("\n");
 
 const client = new CustomClient();
 const app = express();

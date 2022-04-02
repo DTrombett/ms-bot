@@ -100,6 +100,11 @@ export const Constants = {
 	commandsFolderName: "commands",
 
 	/**
+	 * The name of the folder with the database
+	 */
+	databaseFolderName: "database",
+
+	/**
 	 * The name of the folder with events
 	 */
 	eventsFolderName: "events",

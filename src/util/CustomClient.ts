@@ -1,10 +1,13 @@
 import { ActivityType } from "discord-api-types/v10";
 import { Client, Options, Partials } from "discord.js";
 import { createWriteStream } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { stderr, stdout } from "node:process";
 import { inspect } from "node:util";
 import color, { Color } from "./colors";
 import type Command from "./Command";
+import Constants from "./Constants";
+import { importVariable } from "./database";
 import type Event from "./Event";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
@@ -174,6 +177,11 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 		await Promise.all([
 			loadCommands(this),
 			...Object.values(EventType).map((type) => loadEvents(this, type)),
+			readdir(`./${Constants.databaseFolderName}`).then((files) =>
+				Promise.all(
+					files.map(importVariable as (name: string) => Promise<void>)
+				)
+			),
 		]);
 
 		return super.login();

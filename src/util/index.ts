@@ -7,6 +7,7 @@ export * from "./colors";
 export * from "./Command";
 export * from "./Constants";
 export * from "./CustomClient";
+export * from "./database";
 export * from "./eval";
 export * from "./Event";
 export * from "./interactions";
