@@ -1,7 +1,9 @@
+import { AsyncQueue } from "@sapphire/async-queue";
 import { createReadStream, createWriteStream } from "node:fs";
 import Constants from "./Constants";
 import type { DatabaseVariables } from "./types";
 
+const queues: Partial<Record<keyof DatabaseVariables, AsyncQueue>> = {};
 export const database: Partial<DatabaseVariables> = {};
 
 /**
@@ -14,6 +16,8 @@ export const importVariable = async <T extends keyof DatabaseVariables>(
 	name: T,
 	force = false
 ): Promise<DatabaseVariables[T]> => {
+	await (queues[name] ??= new AsyncQueue()).wait();
+	queues[name]!.shift();
 	if (database[name] !== undefined && !force) return database[name]!;
 	let data = "";
 
@@ -41,11 +45,15 @@ export const writeVariable = async <T extends keyof DatabaseVariables>(
 	name: T,
 	value: DatabaseVariables[T]
 ): Promise<void> => {
+	await (queues[name] ??= new AsyncQueue()).wait();
 	database[name] = value;
-	return new Promise((resolve, reject) => {
+	const promise = new Promise<void>((resolve, reject) => {
 		createWriteStream(`./${Constants.databaseFolderName}/${name}.json`)
 			.once("error", reject)
 			.setDefaultEncoding("utf8")
 			.end(JSON.stringify(value), resolve);
 	});
+
+	promise.finally(queues[name]!.shift.bind(queues));
+	return promise;
 };
