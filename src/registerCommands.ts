@@ -5,11 +5,14 @@ import type {
 } from "discord-api-types/v10";
 import { APIVersion, Routes } from "discord-api-types/v10";
 import { EnumResolvers } from "discord.js";
+import { config } from "dotenv";
 import { promises } from "node:fs";
 import { env, exit } from "node:process";
 import { URL } from "node:url";
 import type { CommandOptions } from "./util";
 import Constants, { CustomClient } from "./util";
+
+if (env.DISCORD_TOKEN == null) config();
 
 console.time("Register slash commands");
 
