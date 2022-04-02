@@ -46,6 +46,7 @@ export const writeVariable = async <T extends keyof DatabaseVariables>(
 	value: DatabaseVariables[T]
 ): Promise<void> => {
 	await (queues[name] ??= new AsyncQueue()).wait();
+	if (database[name] === value) return undefined;
 	database[name] = value;
 	const promise = new Promise<void>((resolve, reject) => {
 		createWriteStream(`./${Constants.databaseFolderName}/${name}.json`)

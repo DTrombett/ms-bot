@@ -179,8 +179,8 @@ export enum CustomEmojis {}
  * Variables that can be stored in the database
  */
 export type DatabaseVariables = {
-	timeouts: Record<string, string>;
-	warns: Record<string, Record<string, Warn[]>>;
+	timeouts: Timeout[];
+	warns: Partial<Record<string, Record<string, Warn[]>>>;
 };
 
 /**
@@ -479,6 +479,15 @@ export type RequestResponse<R> = {
 	headers: IncomingHttpHeaders;
 	statusCode: number;
 	statusMessage: string;
+};
+
+/**
+ * A timeout
+ */
+export type Timeout = {
+	date: number;
+	args: string[];
+	path: string;
 };
 
 /**

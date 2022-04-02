@@ -7,7 +7,7 @@ import { inspect } from "node:util";
 import color, { Color } from "./colors";
 import type Command from "./Command";
 import Constants from "./Constants";
-import { importVariable } from "./database";
+import { importVariable, writeVariable } from "./database";
 import type Event from "./Event";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
@@ -182,6 +182,25 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 					files.map(importVariable as (name: string) => Promise<void>)
 				)
 			),
+			importVariable("timeouts").then((timeouts) => {
+				timeouts = timeouts.filter((timeout) => timeout.date > Date.now());
+				for (const { args, date, path } of timeouts)
+					setTimeout(async () => {
+						await Promise.all([
+							import(path).then(
+								(module: { default: (...funcArgs: typeof args) => unknown }) =>
+									module.default(...args)
+							),
+							importVariable("timeouts").then((newTimeouts) =>
+								writeVariable(
+									"timeouts",
+									newTimeouts.filter((t) => t.date !== date)
+								)
+							),
+						]);
+					}, date - Date.now()).unref();
+				return writeVariable("timeouts", timeouts);
+			}),
 		]);
 
 		return super.login();
