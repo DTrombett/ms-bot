@@ -30,19 +30,19 @@ for (const math of [mathNumber, mathFraction]) {
 	math.import(
 		{
 			range: () => {
-				throw new Error("Function `range` is disabled for security reasons");
+				throw new Error("La funzione `range` è disattivata per motivi di sicurezza");
 			},
 			import: () => {
-				throw new Error("Function `import` is disabled for security reasons");
+				throw new Error("La funzione `import` è disattivata per motivi di sicurezza. Puoi suggerire nuove funzioni in <#816768278675849318>");
 			},
 			createUnit: () => {
-				throw new Error("Function `createUnit` is disabled for security reasons");
+				throw new Error("La funzione `createUnit` è disattivata per motivi di sicurezza. Suggerisci unità di misura mancanti in <#816768278675849318>");
 			},
 			simplify: () => {
-				throw new Error("Function `simplify` is disabled for security reasons");
+				throw new Error("La funzione `simplify` è disattivata per motivi di sicurezza");
 			},
 			derivative: () => {
-				throw new Error("Function `derivative` is disabled for security reasons");
+				throw new Error("La funzione `derivative` è disattivata per motivi di sicurezza");
 			},
 		},
 		{ override: true }
