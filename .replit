@@ -1,2 +1,2 @@
-language = "nodejs";
-run = "npm run build && npm run start";
+language = "nodejs"
+run = "npm run build && npm run start"
