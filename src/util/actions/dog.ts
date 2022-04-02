@@ -10,7 +10,7 @@ import { createActionId } from "./actions";
  */
 export const dog: ActionMethod<"cat", WebhookEditMessageOptions> = () =>
 	fetch(
-		"https://api.thedogapi.com/v1/images/search?size=full&order=RANDOM&limit=1&format=json",
+		"https://api.thedogapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
 		{
 			method: "GET",
 			headers: {
