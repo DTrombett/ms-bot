@@ -1,9 +1,9 @@
-import { AsyncQueue } from "@sapphire/async-queue";
 import { createReadStream, createWriteStream } from "node:fs";
 import Constants from "./Constants";
+import Queue from "./Queue";
 import type { DatabaseVariables } from "./types";
 
-const queues: Partial<Record<keyof DatabaseVariables, AsyncQueue>> = {};
+const queues: Partial<Record<keyof DatabaseVariables, Queue>> = {};
 export const database: Partial<DatabaseVariables> = {};
 
 /**
@@ -16,8 +16,8 @@ export const importVariable = async <T extends keyof DatabaseVariables>(
 	name: T,
 	force = false
 ): Promise<DatabaseVariables[T]> => {
-	await (queues[name] ??= new AsyncQueue()).wait();
-	queues[name]!.shift();
+	await (queues[name] ??= new Queue()).wait();
+	queues[name]!.next();
 	if (database[name] !== undefined && !force) return database[name]!;
 	let data = "";
 
@@ -45,7 +45,8 @@ export const writeVariable = async <T extends keyof DatabaseVariables>(
 	name: T,
 	value: DatabaseVariables[T]
 ): Promise<void> => {
-	await (queues[name] ??= new AsyncQueue()).wait();
+	await (queues[name] ??= new Queue()).wait();
+	if (database[name] === value) return undefined;
 	database[name] = value;
 	const promise = new Promise<void>((resolve, reject) => {
 		createWriteStream(`./${Constants.databaseFolderName}/${name}.json`)
@@ -54,6 +55,6 @@ export const writeVariable = async <T extends keyof DatabaseVariables>(
 			.end(JSON.stringify(value), resolve);
 	});
 
-	promise.finally(queues[name]!.shift.bind(queues));
+	promise.finally(queues[name]!.next.bind(queues[name]));
 	return promise;
 };

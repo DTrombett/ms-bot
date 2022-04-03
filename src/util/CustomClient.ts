@@ -7,11 +7,12 @@ import { inspect } from "node:util";
 import color, { Color } from "./colors";
 import type Command from "./Command";
 import Constants from "./Constants";
-import { importVariable } from "./database";
+import { importVariable, writeVariable } from "./database";
 import type Event from "./Event";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
 import occurrences from "./occurrences";
+import type { DatabaseVariables } from "./types";
 import { EventType } from "./types";
 
 /**
@@ -179,9 +180,30 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			...Object.values(EventType).map((type) => loadEvents(this, type)),
 			readdir(`./${Constants.databaseFolderName}`).then((files) =>
 				Promise.all(
-					files.map(importVariable as (name: string) => Promise<void>)
+					files.map((name) =>
+						importVariable(name.split(".")[0] as keyof DatabaseVariables)
+					)
 				)
 			),
+			importVariable("timeouts").then((timeouts) => {
+				timeouts = timeouts.filter((timeout) => timeout.date > Date.now());
+				for (const { args, date, name } of timeouts)
+					setTimeout(async () => {
+						await Promise.all([
+							import(`./util/timeouts/${name}.js`).then(
+								(module: { default: (...funcArgs: typeof args) => unknown }) =>
+									module.default(...args)
+							),
+							importVariable("timeouts").then((newTimeouts) =>
+								writeVariable(
+									"timeouts",
+									newTimeouts.filter((t) => t.date !== date)
+								)
+							),
+						]);
+					}, date - Date.now()).unref();
+				return writeVariable("timeouts", timeouts);
+			}),
 		]);
 
 		return super.login();

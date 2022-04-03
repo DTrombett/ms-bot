@@ -6,7 +6,9 @@ import {
 } from "discord-api-types/v10";
 import type { WebhookEditMessageOptions } from "discord.js";
 import { Util } from "discord.js";
+import ms from "ms";
 import CustomClient from "../CustomClient";
+import { setPermanentTimeout } from "../setPermanentTimeout";
 import type { ActionMethod } from "../types";
 import { createActionId } from "./actions";
 
@@ -18,6 +20,7 @@ import { createActionId } from "./actions";
  * @param executorId - The user who executed the action, if any
  * @param reason - The reason for the action
  * @param deleteMessageDays - The number of days to delete
+ * @param duration - The duration of the ban
  */
 export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 	client,
@@ -25,7 +28,8 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 	guildId,
 	executorId,
 	reason,
-	deleteMessageDays
+	deleteMessageDays,
+	duration
 ) => {
 	const guild = client.guilds.cache.get(guildId)!;
 	const executor =
@@ -62,6 +66,14 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 				"Non puoi bannare un membro con un ruolo superiore o uguale al tuo!",
 			ephemeral: true,
 		};
+	const durationMs = duration !== undefined ? ms(duration) : undefined;
+	const noDuration = durationMs === undefined;
+
+	if (!noDuration && durationMs < 60_000)
+		return {
+			content: "La durata deve essere maggiore di 1 minuto!",
+			ephemeral: true,
+		};
 	const { me } = guild;
 
 	if (!me!.permissions.has(PermissionFlagsBits.BanMembers))
@@ -92,6 +104,9 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 				"Non posso bannare un membro con un ruolo maggiore o uguale al mio!",
 			ephemeral: true,
 		};
+	const timestamp = noDuration
+		? undefined
+		: Math.round((Date.now() + durationMs) / 1000);
 
 	return Promise.all([
 		member?.user ?? client.users.fetch(userId),
@@ -101,12 +116,17 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 			}${reason == null ? "" : `${executor ? ": " : ""}${reason}`}`,
 			deleteMessageDays: Number(deleteMessageDays) || undefined,
 		}),
+		noDuration
+			? undefined
+			: setPermanentTimeout("unbann", durationMs, guildId, userId),
 	])
 		.then(
 			([banned]): WebhookEditMessageOptions => ({
 				content: `<@${userId}> (${Util.escapeMarkdown(
 					banned.tag
-				)} - ${userId}) è stato bannato dal server!${
+				)} - ${userId}) è stato bannato dal server${
+					noDuration ? "" : ` fino a <t:${timestamp!}:F> (<t:${timestamp!}:R>)`
+				}!${
 					reason == null
 						? ""
 						: `\n\nMotivo: ${

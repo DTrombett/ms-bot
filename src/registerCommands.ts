@@ -10,7 +10,7 @@ import { promises } from "node:fs";
 import { env, exit } from "node:process";
 import { URL } from "node:url";
 import type { CommandOptions } from "./util";
-import Constants, { CustomClient } from "./util";
+import Constants from "./util/Constants";
 
 if (env.DISCORD_TOKEN == null) config();
 
@@ -81,11 +81,7 @@ await rest.put(
 	}
 );
 
-await Promise.all([
-	CustomClient.printToStdout("Public commands: "),
-	CustomClient.printToStdout(publicAPICommands),
-	CustomClient.printToStdout("Private commands: "),
-	CustomClient.printToStdout(privateAPICommands),
-]);
+console.log("Public commands:", publicAPICommands);
+console.log("Private commands:", privateAPICommands);
 console.timeEnd("Register slash commands");
 exit(0);

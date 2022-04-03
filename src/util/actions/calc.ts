@@ -6,12 +6,11 @@ import type {
 import { Colors } from "discord.js";
 import { join } from "node:path";
 import { cwd } from "node:process";
+import type { WorkerPool } from "workerpool";
 import { pool as workerpool } from "workerpool";
 import type { ActionMethod } from "../types";
 
-const pool = workerpool(join(cwd(), "/dist/util/workers/math.js"));
-
-await pool.exec("evaluate", ["0"]).timeout(10_000);
+let pool: WorkerPool;
 
 /**
  * Calculate a mathematical expression.
@@ -23,6 +22,7 @@ export const calc: ActionMethod<
 	"calc",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
 > = async (_client, expr, fraction) => {
+	pool ??= workerpool(join(cwd(), "/dist/util/workers/math.js"));
 	const result = await pool
 		.exec("evaluate", [expr, fraction === "true"])
 		.timeout(10_000)

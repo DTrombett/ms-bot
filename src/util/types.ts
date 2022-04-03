@@ -28,7 +28,8 @@ export type Actions = {
 		guild: Snowflake,
 		executor?: Snowflake,
 		reason?: string,
-		deleteMessageDays?: `${number}`
+		deleteMessageDays?: `${number}`,
+		duration?: string
 	];
 	banner: [user: Snowflake];
 	bannList: [
@@ -179,8 +180,8 @@ export enum CustomEmojis {}
  * Variables that can be stored in the database
  */
 export type DatabaseVariables = {
-	timeouts: Record<string, string>;
-	warns: Record<string, Record<string, Warn[]>>;
+	timeouts: Timeout[];
+	warns: Partial<Record<string, Record<string, Warn[]>>>;
 };
 
 /**
@@ -471,6 +472,11 @@ export enum MatchLevel {
 }
 
 /**
+ * A promise for the queue
+ */
+export type QueuePromise = { promise: Promise<void>; resolve(): void };
+
+/**
  * A response from a web request
  */
 export type RequestResponse<R> = {
@@ -479,6 +485,15 @@ export type RequestResponse<R> = {
 	headers: IncomingHttpHeaders;
 	statusCode: number;
 	statusMessage: string;
+};
+
+/**
+ * A timeout
+ */
+export type Timeout = {
+	date: number;
+	args: string[];
+	name: string;
 };
 
 /**

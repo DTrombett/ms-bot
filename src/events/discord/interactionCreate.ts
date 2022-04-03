@@ -99,7 +99,8 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 							args[1],
 							interaction.user.id,
 							args[3],
-							args[4]
+							args[4],
+							args[5]
 						),
 						interaction.deferReply(),
 					]);
