@@ -25,7 +25,7 @@ export const calc: ActionMethod<
 	pool ??= workerpool(join(cwd(), "/dist/util/workers/math.js"));
 	const result = await pool
 		.exec("evaluate", [expr, fraction === "true"])
-		.timeout(10_000)
+		.timeout(60_000)
 		.catch((err: unknown) => err);
 	const error = typeof result !== "string";
 
