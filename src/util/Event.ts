@@ -1,7 +1,9 @@
 import type { RestEvents } from "@discordjs/rest";
 import type { Client, ClientEvents as DiscordEvents } from "discord.js";
+import process from "node:process";
 import type { EventOptions } from ".";
 import CustomClient from "./CustomClient";
+import type { ProcessEvents } from "./types";
 import { EventType } from "./types";
 
 /**
@@ -11,10 +13,14 @@ export class Event<
 	T extends EventType = EventType,
 	K extends T extends EventType.Discord
 		? keyof DiscordEvents
+		: T extends EventType.Process
+		? keyof ProcessEvents
 		: T extends EventType.Rest
 		? keyof RestEvents
 		: never = T extends EventType.Discord
 		? keyof DiscordEvents
+		: T extends EventType.Process
+		? keyof ProcessEvents
 		: T extends EventType.Rest
 		? keyof RestEvents
 		: never
@@ -92,6 +98,12 @@ export class Event<
 						this.on as Parameters<Client["rest"]["on"]>[1]
 					);
 					break;
+				case EventType.Process:
+					process.on(
+						this.name as keyof ProcessEvents,
+						this.on as Parameters<typeof process.on>[1]
+					);
+					break;
 				default:
 			}
 		if (this.once)
@@ -105,7 +117,13 @@ export class Event<
 				case EventType.Rest:
 					this.client.rest.once(
 						this.name as keyof RestEvents,
-						this.on as Parameters<Client["rest"]["on"]>[1]
+						this.once as Parameters<Client["rest"]["once"]>[1]
+					);
+					break;
+				case EventType.Process:
+					process.once(
+						this.name as keyof ProcessEvents,
+						this.once as Parameters<typeof process.once>[1]
 					);
 					break;
 				default:
@@ -130,6 +148,12 @@ export class Event<
 						this.on as Parameters<Client["rest"]["on"]>[1]
 					);
 					break;
+				case EventType.Process:
+					process.off(
+						this.name as keyof ProcessEvents,
+						this.on as Parameters<typeof process.on>[1]
+					);
+					break;
 				default:
 			}
 		if (this.once)
@@ -143,7 +167,13 @@ export class Event<
 				case EventType.Rest:
 					this.client.rest.off(
 						this.name as keyof RestEvents,
-						this.on as Parameters<Client["rest"]["on"]>[1]
+						this.once as Parameters<Client["rest"]["on"]>[1]
+					);
+					break;
+				case EventType.Process:
+					process.off(
+						this.name as keyof ProcessEvents,
+						this.once as Parameters<typeof process.once>[1]
 					);
 					break;
 				default:

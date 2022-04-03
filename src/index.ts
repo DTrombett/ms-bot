@@ -1,10 +1,10 @@
 import { config } from "dotenv";
 import express from "express";
-import process, { env } from "node:process";
+import type { Server } from "node:http";
+import { env } from "node:process";
 import Constants, { CustomClient } from "./util";
 
 void CustomClient.printToStdout("Starting...");
-process.on("uncaughtException", CustomClient.printToStderr);
 if (env.DISCORD_TOKEN == null) config();
 console.time(Constants.clientOnlineLabel);
 await CustomClient.logToFile("\n");
@@ -21,9 +21,13 @@ const app = express();
 		app: typeof app;
 	}
 ).app = app;
+(
+	global as typeof globalThis & {
+		server: Server;
+	}
+).server = app.listen(3000);
 
 app.use((_, res) => {
 	res.sendStatus(204);
 });
-app.listen(3000);
 await client.login();

@@ -202,10 +202,14 @@ export type EventOptions<
 	T extends EventType = EventType,
 	K extends T extends EventType.Discord
 		? keyof ClientEvents
+		: T extends EventType.Process
+		? keyof ProcessEvents
 		: T extends EventType.Rest
 		? keyof RestEvents
 		: never = T extends EventType.Discord
 		? keyof ClientEvents
+		: T extends EventType.Process
+		? keyof ProcessEvents
 		: T extends EventType.Rest
 		? keyof RestEvents
 		: never
@@ -225,10 +229,18 @@ export type EventOptions<
 	 */
 	on?: (
 		this: Event<T, K>,
-		...args: K extends keyof ClientEvents
-			? ClientEvents[K]
-			: K extends keyof RestEvents
-			? RestEvents[K]
+		...args: T extends EventType.Discord
+			? K extends keyof ClientEvents
+				? ClientEvents[K]
+				: never
+			: T extends EventType.Process
+			? K extends keyof ProcessEvents
+				? ProcessEvents[K]
+				: never
+			: T extends EventType.Rest
+			? K extends keyof RestEvents
+				? RestEvents[K]
+				: never
 			: never
 	) => Awaitable<void>;
 
@@ -243,6 +255,7 @@ export type EventOptions<
  */
 export enum EventType {
 	Discord = "discord",
+	Process = "process",
 	Rest = "rest",
 }
 
@@ -263,182 +276,6 @@ export enum FaceEmojis {
 	":@" = "😡",
 	":^)" = "😛",
 	":\\" = "😕",
-}
-
-/**
- * A list of ISO 639-1 language codes
- */
-export enum LanguageCode {
-	"Abkhazian" = "ab",
-	"Afar" = "aa",
-	"Afrikaans" = "af",
-	"Akan" = "ak",
-	"Albanian" = "sq",
-	"Amharic" = "am",
-	"Arabic" = "ar",
-	"Aragonese" = "an",
-	"Armenian" = "hy",
-	"Assamese" = "as",
-	"Avestan" = "ae",
-	"Aymara" = "ay",
-	"Azerbaijani" = "az",
-	"Bambara" = "bm",
-	"Bashkir" = "ba",
-	"Basque" = "eu",
-	"Belarusian" = "be",
-	"Bengali" = "bn",
-	"Bosnian" = "bs",
-	"Breton" = "br",
-	"Bulgarian" = "bg",
-	"Burmese" = "my",
-	"Catalan" = "ca",
-	"Chamorro" = "ch",
-	"Chechen" = "ce",
-	"Chichewa" = "ny",
-	"Chinese" = "zh",
-	"Chuvash" = "cv",
-	"Cornish" = "kw",
-	"Corsican" = "co",
-	"Cree" = "cr",
-	"Croatian" = "hr",
-	"Czech" = "cs",
-	"Danish" = "da",
-	"Dutch" = "nl",
-	"English" = "en",
-	"Esperanto" = "eo",
-	"Estonian" = "et",
-	"Ewe" = "ee",
-	"Faroese" = "fo",
-	"Fijian" = "fj",
-	"Finnish" = "fi",
-	"French" = "fr",
-	"Galician" = "gl",
-	"Georgian" = "ka",
-	"German" = "de",
-	"Greek" = "el",
-	"Guarani" = "gn",
-	"Gujarati" = "gu",
-	"Haitian" = "ht",
-	"Hausa" = "ha",
-	"Hebrew" = "he",
-	"Herero" = "hz",
-	"Hindi" = "hi",
-	"Hungarian" = "hu",
-	"Indonesian" = "id",
-	"Irish" = "ga",
-	"Igbo" = "ig",
-	"Inupiaq" = "ik",
-	"Ido" = "io",
-	"Icelandic" = "is",
-	"Italian" = "it",
-	"Inuktitut" = "iu",
-	"Japanese" = "ja",
-	"Javanese" = "jv",
-	"Kannada" = "kn",
-	"Kashmiri" = "ks",
-	"Kazakh" = "kk",
-	"Central Khmer" = "km",
-	"Kikuyu" = "ki",
-	"Kirghiz" = "ky",
-	"Komi" = "kv",
-	"Kongo" = "kg",
-	"Korean" = "ko",
-	"Kurdish" = "ku",
-	"Latin" = "la",
-	"Luxembourgish" = "lb",
-	"Ganda" = "lg",
-	"Lao" = "lo",
-	"Lithuanian" = "lt",
-	"Latvian" = "lv",
-	"Manx" = "gv",
-	"Macedonian" = "mk",
-	"Malagasy" = "mg",
-	"Malay" = "ms",
-	"Malayalam" = "ml",
-	"Maltese" = "mt",
-	"Maori" = "mi",
-	"Marathi" = "mr",
-	"Marshallese" = "mh",
-	"Mongolian" = "mn",
-	"Nauru" = "na",
-	"Navajo" = "nv",
-	"North Ndebele" = "nd",
-	"Nepali" = "ne",
-	"Norwegian Bokmål" = "nb",
-	"Norwegian Nynorsk" = "nn",
-	"Norwegian" = "no",
-	"Sichuan Yi" = "ii",
-	"South Ndebele" = "nr",
-	"Occitan" = "oc",
-	"Ojibwa" = "oj",
-	"Church Slavic" = "cu",
-	"Oriya" = "or",
-	"Ossetian" = "os",
-	"Punjabi" = "pa",
-	"Pali" = "pi",
-	"Persian" = "fa",
-	"Polish" = "pl",
-	"Pashto" = "ps",
-	"Portuguese" = "pt",
-	"Quechua" = "qu",
-	"Romansh" = "rm",
-	"Romanian" = "ro",
-	"Russian" = "ru",
-	"Sanskrit" = "sa",
-	"Sardinian" = "sc",
-	"Sindhi" = "sd",
-	"Northern Sami" = "se",
-	"Samoan" = "sm",
-	"Serbian" = "sr",
-	"Gaelic" = "gd",
-	"Shona" = "sn",
-	"Slovak" = "sk",
-	"Slovenian" = "sl",
-	"Somali" = "so",
-	"Southern Sotho" = "st",
-	"Spanish" = "es",
-	"Sundanese" = "su",
-	"Swahili" = "sw",
-	"Swedish" = "sv",
-	"Tamil" = "ta",
-	"Telugu" = "te",
-	"Tajik" = "tg",
-	"Thai" = "th",
-	"Uighur" = "ug",
-	"Ukrainian" = "uk",
-	"Urdu" = "ur",
-	"Uzbek" = "uz",
-	"Venda" = "ve",
-	"Vietnamese" = "vi",
-	"Volapük" = "vo",
-	"Walloon" = "wa",
-	"Welsh" = "cy",
-	"Wolof" = "wo",
-	"Western Frisian" = "fy",
-	"Xhosa" = "xh",
-	"Yiddish" = "yi",
-	"Yoruba" = "yo",
-	"Zhuang" = "za",
-	"Zulu" = "zu",
-}
-
-/**
- * A list of locale codes
- */
-export enum LocaleCodes {
-	IT = "it",
-	GB = "en-US",
-	ES = "es-ES",
-	DE = "de",
-	FR = "fr",
-	NL = "nl",
-	NO = "no",
-	FI = "fi",
-	RU = "ru",
-	TR = "tr",
-	VI = "vi",
-	TH = "th",
-	TW = "zh-TW",
 }
 
 /**
@@ -471,6 +308,32 @@ export enum MatchLevel {
 	Full,
 }
 
+export type ProcessEvents = {
+	[K in Signals]: [signal: K];
+} & {
+	beforeExit: [code: number];
+	disconnect: [];
+	exit: [code: number];
+	message: [message: unknown, sendHandle: unknown];
+	multipleResolves: [
+		type: "reject" | "resolve",
+		promise: Promise<unknown>,
+		value: unknown
+	];
+	rejectionHandled: [promise: Promise<unknown>];
+	uncaughtException: [
+		error: Error,
+		origin: "uncaughtException" | "unhandledRejection"
+	];
+	uncaughtExceptionMonitor: [
+		error: Error,
+		origin: "uncaughtException" | "unhandledRejection"
+	];
+	unhandledRejection: [reason: unknown, promise: Promise<unknown>];
+	warning: [warning: Error];
+	worker: [worker: Worker];
+};
+
 /**
  * A promise for the queue
  */
@@ -486,6 +349,48 @@ export type RequestResponse<R> = {
 	statusCode: number;
 	statusMessage: string;
 };
+
+/**
+ * Nodejs signals
+ */
+export type Signals =
+	| "SIGABRT"
+	| "SIGALRM"
+	| "SIGBREAK"
+	| "SIGBUS"
+	| "SIGCHLD"
+	| "SIGCONT"
+	| "SIGFPE"
+	| "SIGHUP"
+	| "SIGILL"
+	| "SIGINFO"
+	| "SIGINT"
+	| "SIGIO"
+	| "SIGIOT"
+	| "SIGKILL"
+	| "SIGLOST"
+	| "SIGPIPE"
+	| "SIGPOLL"
+	| "SIGPROF"
+	| "SIGPWR"
+	| "SIGQUIT"
+	| "SIGSEGV"
+	| "SIGSTKFLT"
+	| "SIGSTOP"
+	| "SIGSYS"
+	| "SIGTERM"
+	| "SIGTRAP"
+	| "SIGTSTP"
+	| "SIGTTIN"
+	| "SIGTTOU"
+	| "SIGUNUSED"
+	| "SIGURG"
+	| "SIGUSR1"
+	| "SIGUSR2"
+	| "SIGVTALRM"
+	| "SIGWINCH"
+	| "SIGXCPU"
+	| "SIGXFSZ";
 
 /**
  * A timeout
