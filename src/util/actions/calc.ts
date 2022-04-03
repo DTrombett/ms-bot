@@ -8,9 +8,11 @@ import { join } from "node:path";
 import { cwd } from "node:process";
 import type { WorkerPool } from "workerpool";
 import { pool as workerpool } from "workerpool";
+import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
 
-let pool: WorkerPool;
+let pool: WorkerPool,
+	ready = false;
 
 /**
  * Calculate a mathematical expression.
@@ -22,7 +24,19 @@ export const calc: ActionMethod<
 	"calc",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
 > = async (_client, expr, fraction) => {
-	pool ??= workerpool(join(cwd(), "/dist/util/workers/math.js"));
+	if (!ready) {
+		void (pool ??= workerpool(join(cwd(), "dist/util/workers/math.js"), {
+			maxWorkers: 1,
+		}))
+			.exec("evaluate", ["0"])
+			.then(() => (ready = true))
+			.catch(CustomClient.printToStderr);
+		return {
+			content:
+				"La calcolatrice è in fase di inizializzazione, riprova tra qualche secondo...",
+		};
+	}
+
 	const result = await pool
 		.exec("evaluate", [expr, fraction === "true"])
 		.timeout(60_000)
