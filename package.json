@@ -38,6 +38,7 @@
     "ms": "^2.1.3",
     "node": "^17.7.2",
     "prettier": "^2.6.1",
+    "tsup": "^5.12.2",
     "typescript": "^4.6.3",
     "workerpool": "^6.2.0"
   },
@@ -53,8 +54,7 @@
     "@typescript-eslint/parser": "^5.17.0",
     "eslint": "^8.12.0",
     "eslint-plugin-node": "^11.1.0",
-    "husky": "^7.0.4",
-    "tsup": "^5.12.2"
+    "husky": "^7.0.4"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.6",
