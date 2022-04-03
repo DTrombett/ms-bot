@@ -74,7 +74,7 @@ export const emojiInfo: ActionMethod<
 			emoji.managed ?? false ? "Sì" : "No"
 		}**${
 			author
-				? `\nAutore: <@!${author.id}> (**${Util.escapeBold(author.tag)}**)`
+				? `\nAutore: <@${author.id}> (**${Util.escapeBold(author.tag)}**)`
 				: ""
 		}${
 			roles.cache.size > 0

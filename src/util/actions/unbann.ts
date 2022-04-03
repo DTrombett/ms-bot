@@ -84,7 +84,7 @@ export const unbann: ActionMethod<"unbann", WebhookEditMessageOptions> = async (
 	])
 		.then(
 			([unbanned]): WebhookEditMessageOptions => ({
-				content: `Ho revocato il bann per <@!${userId}> (${Util.escapeMarkdown(
+				content: `Ho revocato il bann per <@${userId}> (${Util.escapeMarkdown(
 					unbanned.tag
 				)} - ${userId})!${
 					reason == null

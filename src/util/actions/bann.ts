@@ -104,7 +104,7 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 	])
 		.then(
 			([banned]): WebhookEditMessageOptions => ({
-				content: `<@!${userId}> (${Util.escapeMarkdown(
+				content: `<@${userId}> (${Util.escapeMarkdown(
 					banned.tag
 				)} - ${userId}) è stato bannato dal server!${
 					reason == null
