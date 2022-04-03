@@ -6,6 +6,7 @@ enum Options {
 	user = "utente",
 	deleteMessageDays = "elimina-messaggi",
 	reason = "motivo",
+	duration = "durata",
 }
 
 export const command: CommandOptions = {
@@ -27,6 +28,11 @@ export const command: CommandOptions = {
 				.setMinValue(0)
 				.setMaxValue(7)
 		)
+		.addStringOption((duration) =>
+			duration
+				.setName(Options.duration)
+				.setDescription("Durata del bann. (Es: 1d)")
+		)
 		.addStringOption((reason) =>
 			reason
 				.setName(Options.reason)
@@ -47,7 +53,8 @@ export const command: CommandOptions = {
 				interaction.user.id,
 				interaction.options.getString(Options.reason) ?? undefined,
 				`${interaction.options.getInteger(Options.deleteMessageDays) ?? ""}` ||
-					undefined
+					undefined,
+				interaction.options.getString(Options.duration) ?? undefined
 			),
 			interaction.deferReply(),
 		]);

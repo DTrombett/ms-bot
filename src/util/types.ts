@@ -28,7 +28,8 @@ export type Actions = {
 		guild: Snowflake,
 		executor?: Snowflake,
 		reason?: string,
-		deleteMessageDays?: `${number}`
+		deleteMessageDays?: `${number}`,
+		duration?: string
 	];
 	banner: [user: Snowflake];
 	bannList: [
@@ -471,6 +472,11 @@ export enum MatchLevel {
 }
 
 /**
+ * A promise for the queue
+ */
+export type QueuePromise = { promise: Promise<void>; resolve(): void };
+
+/**
  * A response from a web request
  */
 export type RequestResponse<R> = {
@@ -487,7 +493,7 @@ export type RequestResponse<R> = {
 export type Timeout = {
 	date: number;
 	args: string[];
-	path: string;
+	name: string;
 };
 
 /**

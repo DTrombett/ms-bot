@@ -2,12 +2,12 @@ import { importVariable, writeVariable } from "./database";
 
 /**
  * Set a timeout that will be restored after the bot restarts.
- * @param path - The path to the file with the callback to be called after the timeout
+ * @param name - The file name with the callback to be called after the timeout
  * @param time - The time to wait before calling the callback
  * @param args - The arguments to pass to the callback
  */
 export const setPermanentTimeout = async (
-	path: string,
+	name: string,
 	time: number,
 	...args: string[]
 ): Promise<NodeJS.Timeout> => {
@@ -15,7 +15,7 @@ export const setPermanentTimeout = async (
 	const date = Date.now() + time;
 	const timeout = setTimeout(async () => {
 		await Promise.all([
-			import(path).then(
+			import(`./util/timeouts/${name}.js`).then(
 				(module: { default: (...funcArgs: typeof args) => unknown }) =>
 					module.default(...args)
 			),
@@ -32,7 +32,7 @@ export const setPermanentTimeout = async (
 		...timeouts,
 		{
 			date,
-			path,
+			name,
 			args,
 		},
 	]);

@@ -4,6 +4,7 @@
 		"src/commands/**/*.ts",
 		"src/events/**/*.ts",
 		"src/util/workers/**/*.ts",
+		"src/util/timeouts/**/*.ts",
 		"src/index.ts",
 		"src/registerCommands.ts"
 	],
