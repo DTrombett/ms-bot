@@ -105,7 +105,7 @@ export const kick: ActionMethod<"kick", WebhookEditMessageOptions> = async (
 		)
 		.then(
 			(): WebhookEditMessageOptions => ({
-				content: `<@!${userId}> (${Util.escapeMarkdown(
+				content: `<@${userId}> (${Util.escapeMarkdown(
 					member.user.tag
 				)} - ${userId}) è stato espulso dal server!${
 					reason == null
