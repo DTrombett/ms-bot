@@ -1,6 +1,7 @@
 import type { UnitDefinition } from "mathjs";
 import { all, create } from "mathjs";
 import { worker } from "workerpool";
+import CustomClient from "../CustomClient";
 
 const mathNumber = create(all, {
 	number: "BigNumber",
@@ -30,19 +31,31 @@ for (const math of [mathNumber, mathFraction]) {
 	math.import(
 		{
 			range: () => {
-				throw new Error("La funzione `range` è disattivata per motivi di sicurezza");
+				throw new Error(
+					"La funzione `range` è disattivata per motivi di sicurezza"
+				);
 			},
 			import: () => {
-				throw new Error("La funzione `import` è disattivata per motivi di sicurezza. Puoi suggerire nuove funzioni in <#816768278675849318>");
+				throw new Error(
+					"La funzione `import` è disattivata per motivi di sicurezza. Puoi suggerire nuove funzioni in <#816768278675849318>"
+				);
 			},
-			createUnit: () => {
-				throw new Error("La funzione `createUnit` è disattivata per motivi di sicurezza. Suggerisci unità di misura mancanti in <#816768278675849318>");
+			createUnit: (message: unknown) => {
+				void CustomClient.printToStdout("Suggested new unit:");
+				void CustomClient.printToStdout(message);
+				throw new Error(
+					"La funzione `createUnit` è disattivata per motivi di sicurezza. Suggerisci unità di misura mancanti in <#816768278675849318>"
+				);
 			},
 			simplify: () => {
-				throw new Error("La funzione `simplify` è disattivata per motivi di sicurezza");
+				throw new Error(
+					"La funzione `simplify` è disattivata per motivi di sicurezza"
+				);
 			},
 			derivative: () => {
-				throw new Error("La funzione `derivative` è disattivata per motivi di sicurezza");
+				throw new Error(
+					"La funzione `derivative` è disattivata per motivi di sicurezza"
+				);
 			},
 		},
 		{ override: true }
