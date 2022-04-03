@@ -39,7 +39,7 @@ export const calc: ActionMethod<
 
 	const result = await pool
 		.exec("evaluate", [expr, fraction === "true"])
-		.timeout(60_000)
+		.timeout(2_000)
 		.catch((err: unknown) => err);
 	const error = typeof result !== "string";
 

@@ -4,6 +4,7 @@ import { createWriteStream } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { stderr, stdout } from "node:process";
 import { inspect } from "node:util";
+import { calc } from "./actions";
 import color, { Color } from "./colors";
 import type Command from "./Command";
 import Constants from "./Constants";
@@ -204,6 +205,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 					}, date - Date.now()).unref();
 				return writeVariable("timeouts", timeouts);
 			}),
+			calc(this as CustomClient<true>, ""),
 		]);
 
 		return super.login();
