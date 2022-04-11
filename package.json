@@ -28,7 +28,7 @@
     "url": "https://github.com/DTrombett/ms-bot/issues"
   },
   "dependencies": {
-    "@discordjs/builders": "^0.13.0-dev.1649160523-402514f",
+    "@discordjs/builders": "^0.13.0-dev.1649505810-3c0bbac",
     "@discordjs/rest": "^0.4.0-dev.1649160494-402514f",
     "discord-api-types": "*",
     "discord.js": "^14.0.0-dev.1648515273-ac4bc3a",
@@ -40,7 +40,7 @@
     "prettier": "^2.6.1",
     "tsup": "^5.12.2",
     "typescript": "^4.6.3",
-    "workerpool": "^6.2.0"
+    "workerpool": "^6.2.1"
   },
   "devDependencies": {
     "@tsconfig/node17": "^1.0.0",
