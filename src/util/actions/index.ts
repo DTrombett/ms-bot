@@ -16,4 +16,5 @@ export * from "./icon";
 export * from "./kick";
 export * from "./love";
 export * from "./ping";
+export * from "./rps";
 export * from "./unbann";

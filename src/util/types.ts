@@ -85,6 +85,7 @@ export type Actions = {
 		discriminator2: string
 	];
 	ping: [];
+	rps: [choice: "paper" | "rock" | "scissors"];
 	unbann: [
 		user: Snowflake,
 		guild: Snowflake,
@@ -315,11 +316,6 @@ export type ProcessEvents = {
 	disconnect: [];
 	exit: [code: number];
 	message: [message: unknown, sendHandle: unknown];
-	multipleResolves: [
-		type: "reject" | "resolve",
-		promise: Promise<unknown>,
-		value: unknown
-	];
 	rejectionHandled: [promise: Promise<unknown>];
 	uncaughtException: [
 		error: Error,
@@ -349,6 +345,15 @@ export type RequestResponse<R> = {
 	statusCode: number;
 	statusMessage: string;
 };
+
+/**
+ * Emojis for Rock Paper Scissors
+ */
+export enum RPSEmojis {
+	rock = "✊",
+	paper = "✋",
+	scissors = "✌",
+}
 
 /**
  * Nodejs signals
