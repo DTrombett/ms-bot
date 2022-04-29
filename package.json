@@ -28,7 +28,7 @@
     "url": "https://github.com/DTrombett/ms-bot/issues"
   },
   "dependencies": {
-    "@discordjs/builders": "^0.14.0-dev.1650672503-3617093",
+    "@discordjs/builders": "^0.14.0-dev.1651147747-679dcda",
     "@discordjs/rest": "^0.4.1",
     "discord-api-types": "*",
     "discord.js": "^14.0.0-dev.1648515273-ac4bc3a",
@@ -50,7 +50,7 @@
     "@types/node-fetch": "^2.6.1",
     "@types/prettier": "^2.6.0",
     "@types/workerpool": "^6.1.0",
-    "@typescript-eslint/eslint-plugin": "^5.20.0",
+    "@typescript-eslint/eslint-plugin": "^5.21.0",
     "@typescript-eslint/parser": "^5.20.0",
     "eslint": "^8.14.0",
     "eslint-plugin-node": "^11.1.0",
