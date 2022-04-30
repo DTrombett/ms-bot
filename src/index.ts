@@ -6,6 +6,7 @@ import Constants, { CustomClient } from "./util";
 
 void CustomClient.printToStdout("Starting...");
 if (env.DISCORD_TOKEN == null) config();
+// eslint-disable-next-line no-console
 console.time(Constants.clientOnlineLabel);
 await CustomClient.logToFile("\n");
 

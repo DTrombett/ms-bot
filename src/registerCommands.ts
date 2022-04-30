@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { REST } from "@discordjs/rest";
 import type { APIApplicationCommand } from "discord-api-types/v10";
 import { APIVersion, Routes } from "discord-api-types/v10";
