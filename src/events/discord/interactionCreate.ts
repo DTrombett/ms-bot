@@ -28,6 +28,7 @@ import {
 	parseEval,
 	ping,
 	rps,
+	timeout,
 	unbann,
 } from "../../util";
 
@@ -248,6 +249,21 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					};
 
 					await interaction.reply(options);
+					break;
+				case "timeout":
+					[options] = await Promise.all([
+						timeout(
+							this.client,
+							args[0],
+							args[1],
+							args[2]! || null,
+							interaction.user.id,
+							args[4]
+						),
+						interaction.deferReply(),
+					]);
+
+					await interaction.editReply(options);
 					break;
 				case "unbann":
 					[options] = await Promise.all([

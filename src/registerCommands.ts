@@ -1,10 +1,6 @@
 import { REST } from "@discordjs/rest";
-import type {
-	APIApplicationCommand,
-	APIGuildApplicationCommandPermissions,
-} from "discord-api-types/v10";
+import type { APIApplicationCommand } from "discord-api-types/v10";
 import { APIVersion, Routes } from "discord-api-types/v10";
-import { EnumResolvers } from "discord.js";
 import { config } from "dotenv";
 import { promises } from "node:fs";
 import { env, exit } from "node:process";
@@ -60,26 +56,6 @@ const [privateAPICommands, publicAPICommands] = await Promise.all([
 		  }) as Promise<APIApplicationCommand[]>)
 		: [],
 ]);
-
-await rest.put(
-	Routes.guildApplicationCommandsPermissions(applicationId!, guildId!),
-	{
-		body: privateAPICommands.map<APIGuildApplicationCommandPermissions>(
-			(command) => ({
-				application_id: applicationId!,
-				guild_id: guildId!,
-				id: command.id,
-				permissions: [
-					{
-						id: env.OWNER_ID!,
-						type: EnumResolvers.resolveApplicationCommandPermissionType("USER"),
-						permission: true,
-					},
-				],
-			})
-		),
-	}
-);
 
 console.log("Public commands:", publicAPICommands);
 console.log("Private commands:", privateAPICommands);

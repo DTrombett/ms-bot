@@ -86,6 +86,13 @@ export type Actions = {
 	];
 	ping: [];
 	rps: [choice: "paper" | "rock" | "scissors"];
+	timeout: [
+		user: Snowflake,
+		guild: Snowflake,
+		timeout: string | null,
+		executor?: Snowflake,
+		reason?: string
+	];
 	unbann: [
 		user: Snowflake,
 		guild: Snowflake,
