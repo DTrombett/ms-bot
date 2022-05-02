@@ -1,24 +1,24 @@
 {
   "name": "ms-bot",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "A private Discord Bot for MS Gaming",
   "homepage": "https://github.com/DTrombett/ms-bot#readme",
   "exports": "./dist/index.js",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsup",
-    "commands": "node --experimental-specifier-resolution=node --enable-source-maps --trace-warnings ./dist/registerCommands.js",
+    "commands": "node --trace-warnings --experimental-fetch --enable-source-maps --experimental-specifier-resolution=node ./dist/registerCommands.js",
     "lint": "eslint src --fix",
     "prepare": "npm test && husky install",
     "prettier": "prettier --write src/**/*.ts",
-    "start": "node --experimental-specifier-resolution=node --enable-source-maps --trace-warnings .",
+    "start": "node --trace-warnings --experimental-fetch --enable-source-maps --experimental-specifier-resolution=node .",
     "test": "eslint src && tsc --noEmit"
   },
   "author": "DTrombett",
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=18.x"
+    "node": ">=17.x"
   },
   "repository": {
     "type": "git",
