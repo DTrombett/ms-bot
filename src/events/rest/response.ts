@@ -1,5 +1,5 @@
-import { stdout } from "process";
-import { clearLine, moveCursor } from "readline";
+import { stdout } from "node:process";
+import { clearLine, moveCursor } from "node:readline";
 import type { EventOptions } from "../../util";
 import { color, Color, CustomClient, EventType } from "../../util";
 import { requests } from "./request";

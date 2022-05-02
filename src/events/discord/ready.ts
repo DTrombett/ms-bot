@@ -1,4 +1,4 @@
-import { setInterval } from "timers/promises";
+import { setInterval } from "node:timers/promises";
 import type { EventOptions } from "../../util";
 import Constants, { calculateRam, CustomClient, EventType } from "../../util";
 

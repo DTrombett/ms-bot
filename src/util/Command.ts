@@ -3,7 +3,7 @@ import {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
 } from "discord.js";
-import { env } from "process";
+import { env } from "node:process";
 import type { CommandOptions } from ".";
 import CustomClient from "./CustomClient";
 

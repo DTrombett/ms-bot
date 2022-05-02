@@ -1,6 +1,6 @@
 import { codeBlock } from "@discordjs/builders";
 import { Colors, GuildChannel, Util } from "discord.js";
-import { readFile } from "fs/promises";
+import { readFile } from "node:fs/promises";
 import prettier from "prettier";
 import type { CompilerOptions } from "typescript";
 import ts from "typescript";

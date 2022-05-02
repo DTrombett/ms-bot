@@ -1,77 +1,63 @@
-{
-	"ignorePatterns": [
-		"dist/"
-	],
-	"env": {
-		"node": true
+const { builtinModules } = require("node:module");
+
+module.exports = {
+	ignorePatterns: ["dist/", "*.js"],
+	env: {
+		node: true,
 	},
-	"extends": [
+	extends: [
 		"eslint:recommended",
 		"plugin:@typescript-eslint/recommended",
 		"plugin:@typescript-eslint/recommended-requiring-type-checking",
-		"plugin:node/recommended"
+		"plugin:node/recommended",
 	],
-	"parser": "@typescript-eslint/parser",
-	"parserOptions": {
-		"ecmaVersion": "latest",
-		"sourceType": "module",
-		"project": "tsconfig.json",
-		"tsconfigRootDir": "."
+	parser: "@typescript-eslint/parser",
+	parserOptions: {
+		ecmaVersion: "latest",
+		sourceType: "module",
+		project: "tsconfig.json",
+		tsconfigRootDir: ".",
 	},
-	"plugins": [
-		"@typescript-eslint",
-		"node"
-	],
-	"rules": {
+	plugins: ["@typescript-eslint", "node"],
+	rules: {
 		"no-extend-native": "warn",
 		"no-iterator": "warn",
 		"no-lone-blocks": "warn",
 		"no-return-assign": "warn",
 		"no-useless-computed-key": "warn",
-		"curly": [
-			"warn",
-			"multi"
-		],
-		"dot-location": [
-			"warn",
-			"property"
-		],
-		"eqeqeq": [
-			"warn",
-			"smart"
-		],
+		"curly": ["warn", "multi"],
+		"dot-location": ["warn", "property"],
+		"eqeqeq": ["warn", "smart"],
 		"no-console": "warn",
 		"no-else-return": [
 			"warn",
 			{
-				"allowElseIf": false
-			}
+				allowElseIf: false,
+			},
 		],
 		"no-extra-bind": "warn",
 		"no-floating-decimal": "warn",
 		"no-implicit-coercion": "warn",
 		"no-multi-spaces": "warn",
-		"no-useless-return": "warn",
-		"wrap-iife": [
+		"no-restricted-imports": [
 			"warn",
-			"inside"
+			...builtinModules.map((name) => ({
+				name,
+				message: `Use the \`node:\` protocol to import a built-in module`,
+			})),
 		],
+		"no-useless-return": "warn",
+		"wrap-iife": ["warn", "inside"],
 		"yoda": [
 			"warn",
 			"never",
 			{
-				"exceptRange": true
-			}
+				exceptRange: true,
+			},
 		],
 		"no-undef-init": "warn",
-		"array-bracket-newline": [
-			"warn",
-			"consistent"
-		],
-		"array-element-newline": [
-			"warn",
-			"consistent"
-		],
+		"array-bracket-newline": ["warn", "consistent"],
+		"array-element-newline": ["warn", "consistent"],
 		"computed-property-spacing": "warn",
 		"new-parens": "warn",
 		"no-async-promise-executor": "off",
@@ -81,8 +67,8 @@
 		"no-unneeded-ternary": [
 			"warn",
 			{
-				"defaultAssignment": false
-			}
+				defaultAssignment: false,
+			},
 		],
 		"no-whitespace-before-property": "warn",
 		"one-var-declaration-per-line": "warn",
@@ -126,21 +112,12 @@
 		"node/no-unsupported-features/es-syntax": [
 			"error",
 			{
-				"ignores": [
-					"dynamicImport",
-					"modules"
-				]
-			}
+				ignores: ["dynamicImport", "modules"],
+			},
 		],
-		"node/prefer-global/buffer": [
-			"warn",
-			"never"
-		],
+		"node/prefer-global/buffer": ["warn", "never"],
 		"node/prefer-global/console": "warn",
-		"node/prefer-global/process": [
-			"warn",
-			"never"
-		],
+		"node/prefer-global/process": ["warn", "never"],
 		"node/prefer-global/text-decoder": "warn",
 		"node/prefer-global/text-encoder": "warn",
 		"node/prefer-global/url-search-params": "warn",
@@ -163,10 +140,7 @@
 		"symbol-description": "warn",
 		"@typescript-eslint/array-type": "warn",
 		"@typescript-eslint/consistent-type-assertions": "warn",
-		"@typescript-eslint/consistent-type-definitions": [
-			"warn",
-			"type"
-		],
+		"@typescript-eslint/consistent-type-definitions": ["warn", "type"],
 		"@typescript-eslint/consistent-type-imports": "warn",
 		"@typescript-eslint/class-literal-property-style": "warn",
 		"@typescript-eslint/member-ordering": "warn",
@@ -205,6 +179,6 @@
 		"@typescript-eslint/strict-boolean-expressions": "warn",
 		"@typescript-eslint/sort-type-union-intersection-members": "warn",
 		"@typescript-eslint/switch-exhaustiveness-check": "warn",
-		"@typescript-eslint/unified-signatures": "warn"
-	}
-}
+		"@typescript-eslint/unified-signatures": "warn",
+	},
+};

@@ -1,5 +1,4 @@
 import { TimestampStyles } from "@discordjs/builders";
-import { Buffer } from "buffer";
 import {
 	ButtonStyle,
 	ComponentType,
@@ -15,6 +14,7 @@ import type {
 	WebhookEditMessageOptions,
 } from "discord.js";
 import { GuildEmoji, Util } from "discord.js";
+import { Buffer } from "node:buffer";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
 import { createActionId } from "./actions";
