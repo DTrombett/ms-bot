@@ -32,7 +32,7 @@
     "@discordjs/rest": "^0.4.1",
     "@tsconfig/node17": "^1.0.0",
     "discord-api-types": "*",
-    "discord.js": "^14.0.0-dev.1648515273-ac4bc3a",
+    "discord.js": "^14.0.0-dev.1651493371-4ba0f56",
     "dotenv": "^16.0.0",
     "express": "^4.18.1",
     "mathjs": "^10.5.1",
