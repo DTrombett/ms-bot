@@ -35,12 +35,12 @@
     "discord.js": "^14.0.0-dev.1648515273-ac4bc3a",
     "dotenv": "^16.0.0",
     "express": "^4.18.1",
-    "mathjs": "^10.5.1",
+    "mathjs": "^10.6.1",
     "ms": "^2.1.3",
     "node": "^17.7.2",
     "prettier": "^2.6.1",
     "tsup": "^5.12.7",
-    "typescript": "^4.6.4",
+    "typescript": "^4.7.3",
     "workerpool": "^6.2.1"
   },
   "devDependencies": {
@@ -50,11 +50,11 @@
     "@types/node-fetch": "^2.6.1",
     "@types/prettier": "^2.6.0",
     "@types/workerpool": "^6.1.0",
-    "@typescript-eslint/eslint-plugin": "^5.22.0",
+    "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.23.0",
     "eslint": "^8.15.0",
     "eslint-plugin-node": "^11.1.0",
-    "husky": "^7.0.4"
+    "husky": "^8.0.1"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.6",
