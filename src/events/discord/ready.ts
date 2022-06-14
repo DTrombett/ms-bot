@@ -11,8 +11,8 @@ export const event: EventOptions<EventType.Discord, "ready"> = {
 		await discordClient.application.fetch();
 		// eslint-disable-next-line no-console
 		console.timeEnd(label);
-		void CustomClient.printToStdout(calculateRam(), true);
+		CustomClient.printToStdout(calculateRam(), true);
 		for await (const _ of setInterval(60_000))
-			void CustomClient.printToStdout(calculateRam(), true);
+			CustomClient.printToStdout(calculateRam(), true);
 	},
 };

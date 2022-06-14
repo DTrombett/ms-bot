@@ -33,12 +33,14 @@ export const command: CommandOptions = {
 
 		switch (interaction.options.getSubcommand()) {
 			case SubCommands.list:
-				if (!interaction.inCachedGuild())
-					return interaction.reply({
+				if (!interaction.inCachedGuild()) {
+					await interaction.reply({
 						content:
 							"Questo comando è disponibile solo all'interno dei server!",
 						ephemeral: true,
 					});
+					return;
+				}
 				const page = interaction.options.getInteger(Options.page);
 
 				options = await bannList(
@@ -50,8 +52,7 @@ export const command: CommandOptions = {
 				await interaction.reply(options);
 				break;
 			default:
-				return interaction.reply("Comando non riconosciuto.");
+				await interaction.reply("Comando non riconosciuto.");
 		}
-		return undefined;
 	},
 };

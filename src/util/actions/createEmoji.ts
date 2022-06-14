@@ -13,7 +13,7 @@ import type {
 	MessageOptions,
 	WebhookEditMessageOptions,
 } from "discord.js";
-import { GuildEmoji, Util } from "discord.js";
+import { escapeBold, GuildEmoji } from "discord.js";
 import { Buffer } from "node:buffer";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
@@ -78,7 +78,7 @@ export const createEmoji: ActionMethod<
 			content: `Limite emoji raggiunto (${emojiLimit[guild.premiumTier]})!`,
 			ephemeral: true,
 		};
-	const { me } = guild;
+	const { me } = guild.members;
 
 	if (!me!.permissions.has(PermissionFlagsBits.ManageEmojisAndStickers))
 		return {
@@ -104,14 +104,16 @@ export const createEmoji: ActionMethod<
 			],
 		};
 	const emoji = await guild.emojis
-		.create(attachment, name, {
+		.create({
+			attachment,
+			name,
 			reason: `${
 				executor ? `Aggiunta da ${executor.user.tag} (${executorId!})` : ""
 			}${reason == null ? "" : `${executor ? ": " : ""}${reason}`}`,
 			roles,
 		})
 		.catch((error: DiscordAPIError | Error) => {
-			void CustomClient.printToStderr(error);
+			CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
 				ephemeral: true,
@@ -150,7 +152,7 @@ export const createEmoji: ActionMethod<
 		}> (<t:${createdTimestamp}:${TimestampStyles.RelativeTime}>)${
 			allowedRoles.cache.size > 0
 				? `\nRuoli consentiti: ${allowedRoles.cache
-						.map((r) => `<@&${r.id}> (**${Util.escapeBold(r.name)}**)`)
+						.map((r) => `<@&${r.id}> (**${escapeBold(r.name)}**)`)
 						.join(", ")}`
 				: ""
 		}`,

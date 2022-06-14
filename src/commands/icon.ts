@@ -8,13 +8,15 @@ export const command: CommandOptions = {
 		.setDescription("Mostra l'icona del server"),
 	isPublic: true,
 	async run(interaction) {
-		if (!interaction.inCachedGuild())
-			return interaction.reply({
+		if (!interaction.inCachedGuild()) {
+			await interaction.reply({
 				content: "Questo comando è disponibile solo all'interno dei server!",
 				ephemeral: true,
 			});
+			return;
+		}
 		const options = await icon(this.client, interaction.guildId);
 
-		return interaction.reply(options);
+		await interaction.reply(options);
 	},
 };

@@ -1,5 +1,8 @@
-import type { CommandInteractionOption } from "discord.js";
-import { AutocompleteInteraction, CommandInteraction } from "discord.js";
+import type {
+	AutocompleteInteraction,
+	CommandInteraction,
+	CommandInteractionOption,
+} from "discord.js";
 
 /**
  * Get the command string from an interaction.
@@ -8,13 +11,6 @@ import { AutocompleteInteraction, CommandInteraction } from "discord.js";
 export const interactionCommand = (
 	interaction: AutocompleteInteraction | CommandInteraction
 ) => {
-	if (
-		!(interaction instanceof AutocompleteInteraction) &&
-		!(interaction instanceof CommandInteraction)
-	)
-		throw new TypeError(
-			`Argument 'interaction' must be an instance of AutocompleteInteraction or CommandInteraction`
-		);
 	let result = `/${interaction.commandName}`;
 	const resolveOption = (option: CommandInteractionOption) => {
 		result += ` ${option.name}`;

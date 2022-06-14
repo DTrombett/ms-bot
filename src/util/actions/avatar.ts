@@ -1,6 +1,6 @@
 import { ButtonStyle, ComponentType } from "discord-api-types/v10";
 import type { WebhookEditMessageOptions } from "discord.js";
-import { Util } from "discord.js";
+import { escapeBold } from "discord.js";
 import type { ActionMethod } from "../types";
 
 /**
@@ -27,7 +27,7 @@ export const avatar: ActionMethod<"avatar", WebhookEditMessageOptions> = async (
 	});
 
 	return {
-		content: `Avatar di **[${Util.escapeBold(
+		content: `Avatar di **[${escapeBold(
 			"nickname" in userOrMember
 				? userOrMember.nickname ?? userOrMember.user.username
 				: userOrMember.username

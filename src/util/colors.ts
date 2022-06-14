@@ -18,12 +18,7 @@ export enum Color {
  * @param code - The color to use
  * @returns The colored text
  */
-export const color = (text: string, code: Color): string => {
-	if (typeof text !== "string")
-		throw new TypeError("Argument 'text' must be a string");
-	if (typeof code !== "number")
-		throw new TypeError("Argument 'code' must be a number");
-	return `\x1b[${code}m${text}\x1b[m`;
-};
+export const color = (text: string, code: Color): string =>
+	`\x1b[${code}m${text}\x1b[m`;
 
 export default color;

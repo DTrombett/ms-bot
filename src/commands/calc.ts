@@ -24,7 +24,7 @@ export const command: CommandOptions = {
 		),
 	isPublic: true,
 	async run(interaction) {
-		return interaction.reply(
+		await interaction.reply(
 			await calc(
 				this.client,
 				interaction.options.getString(Options.expr, true),

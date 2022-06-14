@@ -8,10 +8,7 @@ export const event: EventOptions<EventType.Process, "exit"> = {
 	name: "exit",
 	type: EventType.Process,
 	once(code) {
-		void CustomClient.printToStderr(
-			`Process exiting with code ${code}...`,
-			true
-		);
+		CustomClient.printToStderr(`Process exiting with code ${code}...`, true);
 		this.client.destroy();
 		server.close();
 	},

@@ -5,7 +5,7 @@ import {
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
 import type { WebhookEditMessageOptions } from "discord.js";
-import { Util } from "discord.js";
+import { escapeMarkdown } from "discord.js";
 import ms from "ms";
 import CustomClient from "../CustomClient";
 import { setPermanentTimeout } from "../setPermanentTimeout";
@@ -74,7 +74,7 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 			content: "La durata deve essere maggiore di 1 minuto!",
 			ephemeral: true,
 		};
-	const { me } = guild;
+	const { me } = guild.members;
 
 	if (!me!.permissions.has(PermissionFlagsBits.BanMembers))
 		return {
@@ -122,7 +122,7 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 	])
 		.then(
 			([banned]): WebhookEditMessageOptions => ({
-				content: `<@${userId}> (${Util.escapeMarkdown(
+				content: `<@${userId}> (${escapeMarkdown(
 					banned.tag
 				)} - ${userId}) è stato bannato dal server${
 					noDuration ? "" : ` fino a <t:${timestamp!}:F> (<t:${timestamp!}:R>)`
@@ -154,7 +154,7 @@ export const bann: ActionMethod<"bann", WebhookEditMessageOptions> = async (
 			})
 		)
 		.catch((error: Error) => {
-			void CustomClient.printToStderr(error);
+			CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
 				ephemeral: true,

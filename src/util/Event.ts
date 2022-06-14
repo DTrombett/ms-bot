@@ -1,9 +1,6 @@
-import type { RestEvents } from "@discordjs/rest";
 import type { Client, ClientEvents as DiscordEvents } from "discord.js";
 import process from "node:process";
-import type { EventOptions } from ".";
-import CustomClient from "./CustomClient";
-import type { ProcessEvents } from "./types";
+import type { CustomClient, EventOptions, ProcessEvents, RestEvents } from ".";
 import { EventType } from "./types";
 
 /**
@@ -55,8 +52,6 @@ export class Event<
 	 * @param data - The data to use to create this event
 	 */
 	constructor(client: CustomClient, data: EventOptions<T, K>) {
-		if (!(client instanceof CustomClient))
-			throw new TypeError("'client' must be a CustomClient");
 		this.client = client;
 		this.name = data.name;
 		this.type = data.type;

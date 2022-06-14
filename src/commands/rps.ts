@@ -23,7 +23,7 @@ export const command: CommandOptions = {
 		),
 	isPublic: true,
 	async run(interaction) {
-		return interaction.reply(
+		await interaction.reply(
 			await rps(
 				this.client,
 				interaction.options.getString(Options.choice, true) as

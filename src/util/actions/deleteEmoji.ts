@@ -60,7 +60,7 @@ export const deleteEmoji: ActionMethod<
 				"Questa emoji è gestita da un'integrazione e non può essere eliminata. Rimuovi l'integrazione per cancellarla.",
 			ephemeral: true,
 		};
-	const { me } = guild;
+	const { me } = guild.members;
 
 	if (!me!.permissions.has(PermissionFlagsBits.ManageEmojisAndStickers))
 		return {
@@ -91,7 +91,7 @@ export const deleteEmoji: ActionMethod<
 			content: `Emoji \`:${emoji.name ?? "emoji"}:\` rimossa con successo!`,
 		}))
 		.catch((error: DiscordAPIError | Error) => {
-			void CustomClient.printToStderr(error);
+			CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
 				ephemeral: true,

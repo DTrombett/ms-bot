@@ -2,7 +2,10 @@ import type {
 	SlashCommandBuilder,
 	SlashCommandSubcommandsOnlyBuilder,
 } from "@discordjs/builders";
-import type { RestEvents } from "@discordjs/rest";
+import type {
+	InternalRequest,
+	RestEvents as DiscordRestEvents,
+} from "@discordjs/rest";
 import type { Snowflake } from "discord-api-types/v10";
 import type {
 	AutocompleteInteraction,
@@ -16,6 +19,7 @@ import type {
 } from "discord.js";
 import type { Buffer } from "node:buffer";
 import type { IncomingHttpHeaders } from "node:http";
+import type { URL } from "node:url";
 import type { Command, CustomClient, Event } from ".";
 
 /**
@@ -351,6 +355,13 @@ export type RequestResponse<R> = {
 	headers: IncomingHttpHeaders;
 	statusCode: number;
 	statusMessage: string;
+};
+
+/**
+ * Events for the rest
+ */
+export type RestEvents = DiscordRestEvents & {
+	request: [options: InternalRequest];
 };
 
 /**

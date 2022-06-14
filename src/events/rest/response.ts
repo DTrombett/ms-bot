@@ -1,5 +1,4 @@
-import { stdout } from "node:process";
-import { clearLine, moveCursor } from "node:readline";
+import { URLSearchParams } from "node:url";
 import type { EventOptions } from "../../util";
 import { color, Color, CustomClient, EventType } from "../../util";
 import { requests } from "./request";
@@ -16,22 +15,20 @@ export const event: EventOptions<EventType.Rest, "response"> = {
 	name: "response",
 	type: EventType.Rest,
 	on(request, response) {
-		const r = `${request.method.toUpperCase()} ${request.path}` as const;
-		const data = requests[r];
+		const r = `${request.method} ${request.path}` as const;
+		const time = requests[r];
 
-		if (!data) return;
-		const [lines, time] = data;
-		const timeout = Date.now() - time;
-
-		moveCursor(stdout, 0, lines - CustomClient.lines++);
-		clearLine(stdout, 0);
-		stdout.write(
-			`${r} - ${color(
-				`${response.status} ${response.statusText}`,
-				statusColor[Math.floor(response.status / 100) * 100]
-			)} (${timeout}ms)\n`
+		if (time === undefined) return;
+		CustomClient.printToStdout(
+			`${r}${
+				request.options.query
+					? `?${new URLSearchParams(request.options.query).toString()}`
+					: ""
+			} - ${color(
+				`${response.statusCode}`,
+				statusColor[Math.floor(response.statusCode / 100) * 100]
+			)} (${Date.now() - time}ms)`
 		);
-		moveCursor(stdout, 0, CustomClient.lines - lines);
-		requests[r] = undefined;
+		delete requests[r];
 	},
 };

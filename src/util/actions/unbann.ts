@@ -5,7 +5,7 @@ import {
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
 import type { DiscordAPIError, WebhookEditMessageOptions } from "discord.js";
-import { Util } from "discord.js";
+import { escapeMarkdown } from "discord.js";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
 import { createActionId } from "./actions";
@@ -41,7 +41,7 @@ export const unbann: ActionMethod<"unbann", WebhookEditMessageOptions> = async (
 				"Non hai abbastanza permessi per usare questo comando!\nPermessi richiesti: **Bannare i membri**",
 			ephemeral: true,
 		};
-	const { me } = guild;
+	const { me } = guild.members;
 
 	if (!me!.permissions.has(PermissionFlagsBits.BanMembers))
 		return {
@@ -84,7 +84,7 @@ export const unbann: ActionMethod<"unbann", WebhookEditMessageOptions> = async (
 	])
 		.then(
 			([unbanned]): WebhookEditMessageOptions => ({
-				content: `Ho revocato il bann per <@${userId}> (${Util.escapeMarkdown(
+				content: `Ho revocato il bann per <@${userId}> (${escapeMarkdown(
 					unbanned.tag
 				)} - ${userId})!${
 					reason == null
@@ -109,7 +109,7 @@ export const unbann: ActionMethod<"unbann", WebhookEditMessageOptions> = async (
 			})
 		)
 		.catch((error: DiscordAPIError | Error) => {
-			void CustomClient.printToStderr(error);
+			CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
 				ephemeral: true,

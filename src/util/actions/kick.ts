@@ -5,7 +5,7 @@ import {
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
 import type { WebhookEditMessageOptions } from "discord.js";
-import { Util } from "discord.js";
+import { escapeMarkdown } from "discord.js";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
 import { createActionId } from "./actions";
@@ -65,7 +65,7 @@ export const kick: ActionMethod<"kick", WebhookEditMessageOptions> = async (
 				"Non puoi espellere un membro con un ruolo superiore o uguale al tuo!",
 			ephemeral: true,
 		};
-	const { me } = guild;
+	const { me } = guild.members;
 
 	if (!me!.permissions.has(PermissionFlagsBits.KickMembers))
 		return {
@@ -105,7 +105,7 @@ export const kick: ActionMethod<"kick", WebhookEditMessageOptions> = async (
 		)
 		.then(
 			(): WebhookEditMessageOptions => ({
-				content: `<@${userId}> (${Util.escapeMarkdown(
+				content: `<@${userId}> (${escapeMarkdown(
 					member.user.tag
 				)} - ${userId}) è stato espulso dal server!${
 					reason == null
@@ -130,7 +130,7 @@ export const kick: ActionMethod<"kick", WebhookEditMessageOptions> = async (
 			})
 		)
 		.catch((error: Error) => {
-			void CustomClient.printToStderr(error);
+			CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
 				ephemeral: true,

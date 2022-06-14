@@ -70,7 +70,7 @@ export const editEmoji: ActionMethod<
 				"Questa emoji è gestita da un'integrazione e non può essere modificata.",
 			ephemeral: true,
 		};
-	const { me } = guild;
+	const { me } = guild.members;
 
 	if (!me!.permissions.has(PermissionFlagsBits.ManageEmojisAndStickers))
 		return {
@@ -96,14 +96,14 @@ export const editEmoji: ActionMethod<
 			],
 		};
 	return emoji
-		.edit({ roles, name }, reason)
+		.edit({ roles, name, reason })
 		.then((newEmoji) => ({
 			content: `Emoji \`:${
 				newEmoji.name ?? "emoji"
 			}:\` modificata con successo!`,
 		}))
 		.catch((error: DiscordAPIError | Error) => {
-			void CustomClient.printToStderr(error);
+			CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
 				ephemeral: true,

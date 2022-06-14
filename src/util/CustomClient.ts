@@ -1,3 +1,4 @@
+import type { REST } from "@discordjs/rest";
 import { ActivityType } from "discord-api-types/v10";
 import { Client, Options, Partials } from "discord.js";
 import { createWriteStream } from "node:fs";
@@ -12,19 +13,13 @@ import { importVariable, writeVariable } from "./database";
 import type Event from "./Event";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
-import occurrences from "./occurrences";
-import type { DatabaseVariables } from "./types";
+import type { DatabaseVariables, RestEvents } from "./types";
 import { EventType } from "./types";
 
 /**
  * A custom class to interact with Discord
  */
 export class CustomClient<T extends boolean = boolean> extends Client<T> {
-	/**
-	 * Number of logged lines
-	 */
-	static lines = 0;
-
 	/**
 	 * If the client is blocked and should not perform any action
 	 */
@@ -39,6 +34,24 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * Events of this client
 	 */
 	events = new Map<string, Event>();
+
+	/**
+	 * The rest of this client
+	 */
+	declare rest: REST & {
+		on: <K extends keyof RestEvents>(
+			event: K,
+			listener: (...args: RestEvents[K]) => void
+		) => REST;
+		once: <K extends keyof RestEvents>(
+			event: K,
+			listener: (...args: RestEvents[K]) => void
+		) => REST;
+		off: <K extends keyof RestEvents>(
+			event: K,
+			listener: (...args: RestEvents[K]) => void
+		) => REST;
+	};
 
 	constructor() {
 		super({
@@ -89,6 +102,11 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			waitGuildTimeout: 1_000,
 			ws: { large_threshold: 100 },
 		});
+
+		this.rest.raw = (options) => {
+			this.rest.emit("request", options);
+			return this.rest.requestManager.queueRequest(options);
+		};
 	}
 
 	/**
@@ -117,7 +135,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * @param message - The message to log
 	 * @returns A promise that resolves when the message is logged
 	 */
-	static async logToFile(message: string) {
+	static logToFile(message: string) {
 		return new Promise<void>((resolve) => {
 			try {
 				createWriteStream(`./debug.log`, { flags: "a" })
@@ -126,7 +144,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 					.setDefaultEncoding("utf8")
 					.end(message);
 			} catch (error) {
-				void CustomClient.printToStderr(error);
+				CustomClient.printToStderr(error);
 			}
 		});
 	}
@@ -136,12 +154,11 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * @param message - The string to print
 	 * @param log - If the message should be logged in the log file too
 	 */
-	static async printToStdout(this: void, message: unknown, log = false) {
+	static printToStdout(this: void, message: unknown, log = false) {
 		const formatted = CustomClient.format(message);
 
 		stdout.write(formatted);
-		CustomClient.lines += occurrences(formatted, "\n");
-		if (log) await CustomClient.logToFile(formatted);
+		if (log) void CustomClient.logToFile(formatted);
 	}
 
 	/**
@@ -149,12 +166,11 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * @param message - The string to print
 	 * @param log - If the message should be logged in the log file too
 	 */
-	static async printToStderr(this: void, message: unknown, log = false) {
+	static printToStderr(this: void, message: unknown, log = false) {
 		const formatted = CustomClient.format(message);
 
 		stderr.write(color(formatted, Color.Red));
-		CustomClient.lines += occurrences(formatted, "\n");
-		if (log) await CustomClient.logToFile(formatted);
+		if (log) void CustomClient.logToFile(formatted);
 	}
 
 	/**

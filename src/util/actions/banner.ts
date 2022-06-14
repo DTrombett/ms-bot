@@ -4,7 +4,7 @@ import type {
 	InteractionUpdateOptions,
 	WebhookEditMessageOptions,
 } from "discord.js";
-import { Util } from "discord.js";
+import { escapeBold } from "discord.js";
 import type { ActionMethod } from "../types";
 
 /**
@@ -29,9 +29,7 @@ export const banner: ActionMethod<
 				ephemeral: true,
 		  }
 		: {
-				content: `Banner di **[${Util.escapeBold(
-					user.username
-				)}](${bannerURL} )**:`,
+				content: `Banner di **[${escapeBold(user.username)}](${bannerURL} )**:`,
 				components: [
 					{
 						type: ComponentType.ActionRow,

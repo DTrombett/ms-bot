@@ -6,6 +6,6 @@ export const command: CommandOptions = {
 	data: new SlashCommandBuilder().setName("ping").setDescription("Pong!"),
 	isPublic: true,
 	async run(interaction) {
-		return interaction.reply(await ping(this.client));
+		await interaction.reply(await ping(this.client));
 	},
 };

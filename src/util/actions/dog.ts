@@ -43,7 +43,7 @@ export const dog: ActionMethod<"cat", WebhookEditMessageOptions> = () =>
 			],
 		}))
 		.catch((error) => {
-			void CustomClient.printToStderr(error);
+			CustomClient.printToStderr(error);
 			return {
 				content: "Errore nella richiesta.",
 				components: [

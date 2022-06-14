@@ -5,7 +5,7 @@ import {
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
 import type { WebhookEditMessageOptions } from "discord.js";
-import { Util } from "discord.js";
+import { escapeMarkdown } from "discord.js";
 import ms from "ms";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
@@ -64,7 +64,7 @@ export const timeout: ActionMethod<
 				"Non puoi applicare il Time out ad un membro con un ruolo superiore o uguale al tuo!",
 			ephemeral: true,
 		};
-	const { me } = guild;
+	const { me } = guild.members;
 
 	if (!me!.permissions.has(PermissionFlagsBits.ModerateMembers))
 		return {
@@ -129,7 +129,7 @@ export const timeout: ActionMethod<
 			(): WebhookEditMessageOptions =>
 				duration == null
 					? {
-							content: `Ho annullato il Time out a <@${userId}> (${Util.escapeMarkdown(
+							content: `Ho annullato il Time out a <@${userId}> (${escapeMarkdown(
 								member.user.tag
 							)} - ${userId})!`,
 							components: [
@@ -153,7 +153,7 @@ export const timeout: ActionMethod<
 							],
 					  }
 					: {
-							content: `<@${userId}> (${Util.escapeMarkdown(
+							content: `<@${userId}> (${escapeMarkdown(
 								member.user.tag
 							)} - ${userId}) è stato messo in timeout fino a <t:${timestamp!}:F> (<t:${timestamp!}:R>)!${
 								reason == null
@@ -186,7 +186,7 @@ export const timeout: ActionMethod<
 					  }
 		)
 		.catch((error: Error) => {
-			void CustomClient.printToStderr(error);
+			CustomClient.printToStderr(error);
 			return {
 				content: `Si è verificato un errore: \`${error.message}\``,
 				ephemeral: true,

@@ -6,7 +6,7 @@ import type {
 	MessageOptions,
 	WebhookEditMessageOptions,
 } from "discord.js";
-import { Util } from "discord.js";
+import { escapeBold } from "discord.js";
 import type { ActionMethod } from "../types";
 import { createActionId } from "./actions";
 
@@ -73,13 +73,11 @@ export const emojiInfo: ActionMethod<
 		}>))\nGestita da un integrazione: **${
 			emoji.managed ?? false ? "Sì" : "No"
 		}**${
-			author
-				? `\nAutore: <@${author.id}> (**${Util.escapeBold(author.tag)}**)`
-				: ""
+			author ? `\nAutore: <@${author.id}> (**${escapeBold(author.tag)}**)` : ""
 		}${
 			roles.cache.size > 0
 				? `\nRuoli consentiti: ${roles.cache
-						.map((r) => `<@&${r.id}> (**${Util.escapeBold(r.name)}**)`)
+						.map((r) => `<@&${r.id}> (**${escapeBold(r.name)}**)`)
 						.join(", ")}`
 				: ""
 		}`,

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/member-ordering */
-import {
+import type {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
 } from "discord.js";
@@ -40,8 +40,6 @@ export class Command {
 	 * @param options - Options for this command
 	 */
 	constructor(client: CustomClient, options: CommandOptions) {
-		if (!(client instanceof CustomClient))
-			throw new TypeError("Argument 'client' must be a CustomClient");
 		this.client = client;
 
 		this.patch(options);
@@ -54,8 +52,6 @@ export class Command {
 		return this.data.name;
 	}
 	set name(name) {
-		if (typeof name !== "string")
-			throw new TypeError("Property 'name' must be a string");
 		this.data.setName(name);
 	}
 
@@ -66,8 +62,6 @@ export class Command {
 		return this.data.description;
 	}
 	set description(description) {
-		if (typeof description !== "string")
-			throw new TypeError("Property 'description' must be a string");
 		this.data.setDescription(description);
 	}
 
@@ -76,15 +70,11 @@ export class Command {
 	 * @param interaction - The interaction received
 	 */
 	async autocomplete(interaction: AutocompleteInteraction) {
-		if (!(interaction instanceof AutocompleteInteraction))
-			throw new TypeError(
-				"Argument 'interaction' must be an AutocompleteInteraction"
-			);
 		try {
 			if (this.isPublic || interaction.user.id === env.OWNER_ID)
 				await this._autocomplete?.(interaction);
 		} catch (message) {
-			void CustomClient.printToStderr(message, true);
+			CustomClient.printToStderr(message, true);
 		}
 	}
 
@@ -107,15 +97,11 @@ export class Command {
 	 * @param interaction - The interaction received
 	 */
 	async run(interaction: ChatInputCommandInteraction) {
-		if (!(interaction instanceof ChatInputCommandInteraction))
-			throw new TypeError(
-				"Argument 'interaction' must be an ChatInputCommandInteraction"
-			);
 		try {
 			if (this.isPublic || interaction.user.id === env.OWNER_ID)
 				await this._execute(interaction);
 		} catch (message) {
-			void CustomClient.printToStderr(message, true);
+			CustomClient.printToStderr(message, true);
 		}
 	}
 }

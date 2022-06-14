@@ -30,11 +30,13 @@ export const command: CommandOptions = {
 		),
 	isPublic: true,
 	async run(interaction) {
-		if (!interaction.inCachedGuild())
-			return interaction.reply({
+		if (!interaction.inCachedGuild()) {
+			await interaction.reply({
 				content: "Questo comando è disponibile solo all'interno dei server!",
 				ephemeral: true,
 			});
+			return;
+		}
 		const [options] = await Promise.all([
 			timeout(
 				this.client,
@@ -47,6 +49,6 @@ export const command: CommandOptions = {
 			interaction.deferReply(),
 		]);
 
-		return void (await interaction.editReply(options));
+		await interaction.editReply(options);
 	},
 };

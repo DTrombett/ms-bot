@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import type { Snowflake } from "discord-api-types/v10";
 import type {
-	ApplicationCommandOptionChoice,
+	ApplicationCommandOptionChoiceData,
 	InteractionReplyOptions,
 	WebhookEditMessageOptions,
 } from "discord.js";
@@ -138,12 +138,14 @@ export const command: CommandOptions = {
 
 		switch (interaction.options.getSubcommand()) {
 			case SubCommands.list:
-				if (!interaction.inCachedGuild())
-					return interaction.reply({
+				if (!interaction.inCachedGuild()) {
+					await interaction.reply({
 						content:
 							"Questo comando è disponibile solo all'interno dei server!",
 						ephemeral: true,
 					});
+					return;
+				}
 				const page = interaction.options.getInteger(Options.page);
 
 				options = await emojiList(
@@ -164,12 +166,14 @@ export const command: CommandOptions = {
 				await interaction.reply(options);
 				break;
 			case SubCommands.create:
-				if (!interaction.inCachedGuild())
-					return interaction.reply({
+				if (!interaction.inCachedGuild()) {
+					await interaction.reply({
 						content:
 							"Questo comando è disponibile solo all'interno dei server!",
 						ephemeral: true,
 					});
+					return;
+				}
 				[options] = await Promise.all([
 					createEmoji(
 						this.client,
@@ -188,12 +192,14 @@ export const command: CommandOptions = {
 				await interaction.editReply(options);
 				break;
 			case SubCommands.delete:
-				if (!interaction.inCachedGuild())
-					return interaction.reply({
+				if (!interaction.inCachedGuild()) {
+					await interaction.reply({
 						content:
 							"Questo comando è disponibile solo all'interno dei server!",
 						ephemeral: true,
 					});
+					return;
+				}
 				[options] = await Promise.all([
 					deleteEmoji(
 						this.client,
@@ -208,12 +214,14 @@ export const command: CommandOptions = {
 				await interaction.editReply(options);
 				break;
 			case SubCommands.edit:
-				if (!interaction.inCachedGuild())
-					return interaction.reply({
+				if (!interaction.inCachedGuild()) {
+					await interaction.reply({
 						content:
 							"Questo comando è disponibile solo all'interno dei server!",
 						ephemeral: true,
 					});
+					return;
+				}
 				[options] = await Promise.all([
 					editEmoji(
 						this.client,
@@ -232,14 +240,13 @@ export const command: CommandOptions = {
 				await interaction.editReply(options);
 				break;
 			default:
-				return interaction.reply("Comando non riconosciuto.");
+				await interaction.reply("Comando non riconosciuto.");
 		}
-		return undefined;
 	},
 	async autocomplete(interaction) {
 		const option = interaction.options.getFocused(
 			true
-		) as ApplicationCommandOptionChoice & { name: Options };
+		) as ApplicationCommandOptionChoiceData & { name: Options };
 
 		switch (option.name) {
 			case Options.emoji:

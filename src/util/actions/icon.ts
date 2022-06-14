@@ -4,7 +4,7 @@ import type {
 	InteractionUpdateOptions,
 	WebhookEditMessageOptions,
 } from "discord.js";
-import { Util } from "discord.js";
+import { escapeBold } from "discord.js";
 import type { ActionMethod } from "../types";
 
 /**
@@ -29,7 +29,7 @@ export const icon: ActionMethod<
 				ephemeral: true,
 		  }
 		: {
-				content: `Icona di **[${Util.escapeBold(guild.name)}](${iconURL} )**:`,
+				content: `Icona di **[${escapeBold(guild.name)}](${iconURL} )**:`,
 				components: [
 					{
 						type: ComponentType.ActionRow,

@@ -1,5 +1,6 @@
 import { codeBlock } from "@discordjs/builders";
-import { Colors, GuildChannel, Util } from "discord.js";
+import { ApplicationCommandType, InteractionType } from "discord-api-types/v10";
+import { Colors, escapeCodeBlock, GuildChannel } from "discord.js";
 import { readFile } from "node:fs/promises";
 import prettier from "prettier";
 import type { CompilerOptions } from "typescript";
@@ -37,14 +38,17 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 	type: EventType.Discord,
 	async on(interaction) {
 		if (this.client.blocked) {
-			void CustomClient.printToStderr(
+			CustomClient.printToStderr(
 				"Received interactionCreate event, but client is blocked."
 			);
 			return;
 		}
-		if (interaction.isChatInputCommand()) {
+		if (
+			interaction.type === InteractionType.ApplicationCommand &&
+			interaction.commandType === ApplicationCommandType.ChatInput
+		) {
 			void this.client.commands.get(interaction.commandName)?.run(interaction);
-			void CustomClient.printToStdout(
+			CustomClient.printToStdout(
 				`Received command \`${interactionCommand(interaction)}\` from ${
 					interaction.user.tag
 				} (${interaction.user.id}) ${
@@ -60,11 +64,11 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 			);
 			return;
 		}
-		if (interaction.isAutocomplete()) {
+		if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
 			void this.client.commands
 				.get(interaction.commandName)
 				?.autocomplete(interaction);
-			void CustomClient.printToStdout(
+			CustomClient.printToStdout(
 				`Received autocomplete request for command ${interactionCommand(
 					interaction
 				)} from ${interaction.user.tag} (${interaction.user.id}) ${
@@ -80,7 +84,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 			);
 			return;
 		}
-		if (interaction.isButton()) {
+		if (interaction.type === InteractionType.MessageComponent) {
 			const { action, args } = parseActionId(interaction.customId);
 			let options;
 
@@ -274,13 +278,13 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					await interaction.editReply(options);
 					break;
 				default:
-					void CustomClient.printToStderr(
+					CustomClient.printToStderr(
 						`Received unknown button interaction ${interaction.customId}`
 					);
 			}
 			return;
 		}
-		if (interaction.isModalSubmit()) {
+		if (interaction.type === InteractionType.ModalSubmit) {
 			const [customId, ...args] = interaction.customId.split("-");
 			switch (customId) {
 				case "eval":
@@ -329,7 +333,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					} catch (e) {
 						result = CustomClient.inspect(e);
 					}
-					void CustomClient.printToStdout(result);
+					CustomClient.printToStdout(result);
 					await interaction.editReply({
 						content: `Eval elaborato in ${Date.now() - now}ms`,
 						embeds: [
@@ -340,7 +344,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 								},
 								title: "Eval output",
 								description: codeBlock(
-									Util.escapeCodeBlock(result).slice(0, 4096 - 9)
+									escapeCodeBlock(result).slice(0, 4096 - 9)
 								),
 								color: Colors.Blurple,
 								timestamp: new Date().toISOString(),
@@ -349,7 +353,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 										name: "Input",
 										value: codeBlock(
 											"js",
-											Util.escapeCodeBlock(code).slice(0, 1024 - 9)
+											escapeCodeBlock(code).slice(0, 1024 - 9)
 										),
 									},
 								],
@@ -358,7 +362,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					});
 					break;
 				default:
-					void CustomClient.printToStderr(
+					CustomClient.printToStderr(
 						`Received unknown modal interaction ${interaction.customId}`
 					);
 			}

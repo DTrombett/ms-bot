@@ -6,7 +6,7 @@ export const event: EventOptions<EventType.Rest, "invalidRequestWarning"> = {
 	name: "invalidRequestWarning",
 	type: EventType.Rest,
 	async on(data) {
-		void CustomClient.printToStderr(
+		CustomClient.printToStderr(
 			"Reaching the 10k invalid requests limit. Waiting for the count to reset before trying to do any action",
 			true
 		);

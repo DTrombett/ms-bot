@@ -1,7 +1,6 @@
 import { promises } from "node:fs";
 import { URL } from "node:url";
-import type { CommandOptions } from ".";
-import { CustomClient } from ".";
+import type { CommandOptions, CustomClient } from ".";
 import Command from "./Command";
 import Constants from "./Constants";
 
@@ -10,8 +9,6 @@ import Constants from "./Constants";
  * @param client - The client to load commands into
  */
 export const loadCommands = async (client: CustomClient) => {
-	if (!(client instanceof CustomClient))
-		throw new TypeError("Argument 'client' must be a CustomClient");
 	const fileNames = await promises.readdir(
 		new URL(Constants.commandsFolderName, import.meta.url)
 	);

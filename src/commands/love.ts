@@ -28,7 +28,7 @@ export const command: CommandOptions = {
 		const user2 =
 			interaction.options.getUser(Options.user2) ?? interaction.user;
 
-		return interaction.reply(
+		await interaction.reply(
 			await love(
 				this.client,
 				user1.id,

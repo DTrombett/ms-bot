@@ -7,7 +7,7 @@ import {
 	TimestampStyles,
 } from "@discordjs/builders";
 import { ComponentType, TextInputStyle } from "discord-api-types/v10";
-import { Colors, Util } from "discord.js";
+import { Colors, escapeCodeBlock, escapeInlineCode } from "discord.js";
 import type { Buffer } from "node:buffer";
 import type { ChildProcess } from "node:child_process";
 import { exec, execFile } from "node:child_process";
@@ -261,7 +261,7 @@ export const command: CommandOptions = {
 				});
 				await interaction.editReply({
 					content: `Comando eseguito in ${Date.now() - now}ms\n${inlineCode(
-						`${cwd()}> ${Util.escapeInlineCode(cmd.slice(0, 2000 - 100))}`
+						`${cwd()}> ${escapeInlineCode(cmd.slice(0, 2000 - 100))}`
 					)}`,
 					embeds: [
 						{
@@ -271,7 +271,7 @@ export const command: CommandOptions = {
 							},
 							title: "Output",
 							description: codeBlock(
-								Util.escapeCodeBlock(output.slice(0, 4096 - 7))
+								escapeCodeBlock(output.slice(0, 4096 - 7))
 							),
 							color: exitCode ? Colors.Red : Colors.Green,
 							timestamp: new Date().toISOString(),
@@ -329,7 +329,7 @@ export const command: CommandOptions = {
 				if (interaction.options.getBoolean(Options.process) ?? true) {
 					await interaction.editReply({
 						content: `Sto facendo ripartire il programma con i seguenti argv:\n${argv
-							.map((arg) => inlineCode(Util.escapeInlineCode(arg)))
+							.map((arg) => inlineCode(escapeInlineCode(arg)))
 							.join("\n")}`,
 					});
 					restart(this.client);
@@ -397,7 +397,7 @@ export const command: CommandOptions = {
 						.end(code);
 				});
 				if (error) {
-					void CustomClient.printToStderr(error);
+					CustomClient.printToStderr(error);
 					await interaction.editReply({
 						content: `Errore durante la creazione del file: ${CustomClient.inspect(
 							error
@@ -426,7 +426,7 @@ export const command: CommandOptions = {
 								},
 								title: "Output",
 								description: codeBlock(
-									Util.escapeCodeBlock(output.slice(0, 4096 - 7))
+									escapeCodeBlock(output.slice(0, 4096 - 7))
 								),
 								color: Colors.Red,
 								timestamp: new Date().toISOString(),
@@ -439,7 +439,7 @@ export const command: CommandOptions = {
 								title: "Codice C++",
 								description: codeBlock(
 									"cpp",
-									Util.escapeCodeBlock(code.slice(0, 4096 - 7))
+									escapeCodeBlock(code.slice(0, 4096 - 7))
 								),
 								color: Colors.Blurple,
 								timestamp: new Date().toISOString(),
@@ -522,7 +522,7 @@ export const command: CommandOptions = {
 							},
 							title: "Logs",
 							description: codeBlock(
-								Util.escapeCodeBlock(logs.slice(0, 4096 - 7).join("\n"))
+								escapeCodeBlock(logs.slice(0, 4096 - 7).join("\n"))
 							),
 							color: Colors.Blurple,
 							timestamp: new Date().toISOString(),

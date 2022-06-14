@@ -4,7 +4,7 @@ import type { Server } from "node:http";
 import { env } from "node:process";
 import Constants, { CustomClient } from "./util";
 
-void CustomClient.printToStdout("Starting...");
+CustomClient.printToStdout("Starting...");
 if (env.DISCORD_TOKEN == null) config();
 // eslint-disable-next-line no-console
 console.time(Constants.clientOnlineLabel);

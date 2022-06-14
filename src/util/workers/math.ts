@@ -41,8 +41,8 @@ for (const math of [mathNumber, mathFraction]) {
 				);
 			},
 			createUnit: (message: unknown) => {
-				void CustomClient.printToStdout("Suggested new unit:");
-				void CustomClient.printToStdout(message);
+				CustomClient.printToStdout("Suggested new unit:");
+				CustomClient.printToStdout(message);
 				throw new Error(
 					"La funzione `createUnit` è disattivata per motivi di sicurezza. Suggerisci unità di misura mancanti in <#816768278675849318>"
 				);

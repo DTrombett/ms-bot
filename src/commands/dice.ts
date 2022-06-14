@@ -19,7 +19,7 @@ export const command: CommandOptions = {
 	async run(interaction) {
 		const count = interaction.options.getInteger(Options.count);
 
-		return interaction.reply(
+		await interaction.reply(
 			await dice(this.client, `${count ?? ""}` || undefined)
 		);
 	},
