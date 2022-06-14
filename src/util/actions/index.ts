@@ -12,6 +12,7 @@ export * from "./dog";
 export * from "./editEmoji";
 export * from "./emojiInfo";
 export * from "./emojiList";
+export * from "./google";
 export * from "./icon";
 export * from "./kick";
 export * from "./love";

@@ -75,6 +75,7 @@ export type Actions = {
 		executor?: Snowflake,
 		update?: `${boolean}`
 	];
+	google: [query: string];
 	icon: [guild: Snowflake];
 	kick: [
 		user: Snowflake,

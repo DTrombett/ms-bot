@@ -35,20 +35,11 @@ const commands = await promises
 		)
 	);
 const [privateAPICommands, publicAPICommands] = await Promise.all([
-	rest
-		.put(Routes.applicationGuildCommands(applicationId!, guildId!), {
-			body: commands
-				.filter((c) => nodeEnv !== "production" || c.isPublic !== true)
-				.map((file) => file.data.toJSON()),
-		})
-		.then((registeredCommands) => {
-			if (nodeEnv === "production") return registeredCommands;
-			const privateCommands = commands.filter((c) => c.isPublic !== true);
-
-			return (registeredCommands as APIApplicationCommand[]).filter((cmd) =>
-				privateCommands.some((c) => c.data.name === cmd.name)
-			);
-		}) as Promise<APIApplicationCommand[]>,
+	rest.put(Routes.applicationGuildCommands(applicationId!, guildId!), {
+		body: commands
+			.filter((c) => nodeEnv !== "production" || c.isPublic !== true)
+			.map((file) => file.data.toJSON()),
+	}) as Promise<APIApplicationCommand[]>,
 	nodeEnv === "production"
 		? (rest.put(Routes.applicationCommands(applicationId!), {
 				body: commands

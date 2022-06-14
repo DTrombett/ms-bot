@@ -20,14 +20,17 @@ export const event: EventOptions<EventType.Rest, "response"> = {
 
 		if (time === undefined) return;
 		CustomClient.printToStdout(
-			`${r}${
-				request.options.query
-					? `?${new URLSearchParams(request.options.query).toString()}`
-					: ""
-			} - ${color(
-				`${response.statusCode}`,
-				statusColor[Math.floor(response.statusCode / 100) * 100]
-			)} (${Date.now() - time}ms)`
+			color(
+				`${r}${
+					request.options.query
+						? `?${new URLSearchParams(request.options.query).toString()}`
+						: ""
+				} - ${color(
+					`${response.statusCode}`,
+					statusColor[Math.floor(response.statusCode / 100) * 100]
+				)} (${Date.now() - time}ms)`,
+				Color.Cyan
+			)
 		);
 		delete requests[r];
 	},
