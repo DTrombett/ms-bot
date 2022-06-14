@@ -9,7 +9,7 @@ import type { Actions } from "../types";
 export const createActionId = <T extends keyof Actions>(
 	action: T,
 	...args: Actions[T]
-) => `${action}-${args.join("-")}`;
+) => `${action}${args.length ? `-${args.join("-")}` : ""}`;
 
 /**
  * Parse an action id.

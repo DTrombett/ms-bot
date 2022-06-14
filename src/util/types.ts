@@ -98,6 +98,15 @@ export type Actions = {
 		executor?: Snowflake,
 		reason?: string
 	];
+	timestamp:
+		| [
+				year?: number,
+				month?: number,
+				date?: number,
+				hours?: number,
+				minutes?: number,
+				seconds?: number
+		  ];
 	unbann: [
 		user: Snowflake,
 		guild: Snowflake,

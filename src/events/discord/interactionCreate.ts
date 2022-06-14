@@ -30,6 +30,7 @@ import {
 	ping,
 	rps,
 	timeout,
+	timestamp,
 	unbann,
 } from "../../util";
 
@@ -268,6 +269,14 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 					]);
 
 					await interaction.editReply(options);
+					break;
+				case "timestamp":
+					options = {
+						...(await timestamp(this.client, ...args)),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
 					break;
 				case "unbann":
 					[options] = await Promise.all([
