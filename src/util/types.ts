@@ -90,6 +90,7 @@ export type Actions = {
 		discriminator2: string
 	];
 	ping: [];
+	predict: [text: string];
 	rps: [choice: "paper" | "rock" | "scissors"];
 	timeout: [
 		user: Snowflake,

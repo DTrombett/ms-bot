@@ -13,6 +13,12 @@ const styles = Object.values(TimestampStyles);
 /**
  * Generate a Discord timestamp!
  * @param _client - The client
+ * @param year - The year
+ * @param month - The month
+ * @param date - The month date
+ * @param hours - The hour
+ * @param minutes - The minute
+ * @param seconds - The second
  */
 export const timestamp: ActionMethod<
 	"timestamp",

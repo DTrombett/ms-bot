@@ -28,6 +28,7 @@ import {
 	parseActionId,
 	parseEval,
 	ping,
+	predict,
 	rps,
 	timeout,
 	timestamp,
@@ -242,6 +243,14 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 				case "ping":
 					options = {
 						...(await ping(this.client)),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
+					break;
+				case "predict":
+					options = {
+						...(await predict(this.client, args[0])),
 						ephemeral: true,
 					};
 

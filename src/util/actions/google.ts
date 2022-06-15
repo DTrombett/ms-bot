@@ -9,6 +9,7 @@ import type { ActionMethod } from "../types";
 /**
  * Search something on Google!
  * @param _client - The client
+ * @param query - The query
  */
 export const google: ActionMethod<
 	"google",
