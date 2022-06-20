@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@discordjs/builders": "^0.16.0-dev.1655165432-b4e28a8",
-    "@discordjs/rest": "^0.6.0-dev.1655165427-b4e28a8",
+    "@discordjs/rest": "^0.6.0-dev.1655640258-358c3f4",
     "@tsconfig/node18": "^1.0.1",
     "discord-api-types": "*",
     "discord.js": "^14.0.0-dev.1655165434-b4e28a8",
