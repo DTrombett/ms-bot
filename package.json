@@ -28,7 +28,7 @@
     "url": "https://github.com/DTrombett/ms-bot/issues"
   },
   "dependencies": {
-    "@discordjs/builders": "^0.16.0-dev.1655165432-b4e28a8",
+    "@discordjs/builders": "^0.16.0-dev.1656677079-741b3c8",
     "@discordjs/rest": "^0.6.0-dev.1655165427-b4e28a8",
     "@tsconfig/node18": "^1.0.1",
     "discord-api-types": "*",
