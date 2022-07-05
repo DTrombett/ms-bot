@@ -7,11 +7,11 @@
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsup",
-    "commands": "node --trace-warnings --experimental-fetch --enable-source-maps --experimental-specifier-resolution=node ./dist/registerCommands.js",
+    "commands": "node --trace-warnings --enable-source-maps ./dist/registerCommands.js",
     "lint": "eslint src --fix",
     "prepare": "npm test && husky install",
     "prettier": "prettier --write src/**/*.ts",
-    "start": "node --trace-warnings --experimental-fetch --enable-source-maps --experimental-specifier-resolution=node .",
+    "start": "node --trace-warnings --enable-source-maps .",
     "test": "eslint src && tsc --noEmit"
   },
   "author": "DTrombett",
