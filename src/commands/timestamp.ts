@@ -11,6 +11,13 @@ enum Options {
 	seconds = "secondi",
 }
 
+declare global {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+	interface Number {
+		toString(): `${number}`;
+	}
+}
+
 export const command: CommandOptions = {
 	data: new SlashCommandBuilder()
 		.setName("timestamp")
@@ -66,12 +73,12 @@ export const command: CommandOptions = {
 		await interaction.reply(
 			await timestamp(
 				this.client,
-				interaction.options.getInteger(Options.year) ?? undefined,
-				interaction.options.getInteger(Options.month) ?? undefined,
-				interaction.options.getInteger(Options.date) ?? undefined,
-				interaction.options.getInteger(Options.hours) ?? undefined,
-				interaction.options.getInteger(Options.minutes) ?? undefined,
-				interaction.options.getInteger(Options.seconds) ?? undefined
+				interaction.options.getInteger(Options.year)?.toString(),
+				interaction.options.getInteger(Options.month)?.toString(),
+				interaction.options.getInteger(Options.date)?.toString(),
+				interaction.options.getInteger(Options.hours)?.toString(),
+				interaction.options.getInteger(Options.minutes)?.toString(),
+				interaction.options.getInteger(Options.seconds)?.toString()
 			)
 		);
 	},

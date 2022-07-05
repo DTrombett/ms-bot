@@ -91,6 +91,7 @@ export type Actions = {
 	];
 	ping: [];
 	predict: [text: string];
+	randomNumber: [min?: `${number}`, max?: `${number}`];
 	rps: [choice: "paper" | "rock" | "scissors"];
 	timeout: [
 		user: Snowflake,
@@ -99,15 +100,14 @@ export type Actions = {
 		executor?: Snowflake,
 		reason?: string
 	];
-	timestamp:
-		| [
-				year?: number,
-				month?: number,
-				date?: number,
-				hours?: number,
-				minutes?: number,
-				seconds?: number
-		  ];
+	timestamp: [
+		year?: `${number}`,
+		month?: `${number}`,
+		date?: `${number}`,
+		hours?: `${number}`,
+		minutes?: `${number}`,
+		seconds?: `${number}`
+	];
 	unbann: [
 		user: Snowflake,
 		guild: Snowflake,

@@ -23,15 +23,7 @@ const styles = Object.values(TimestampStyles);
 export const timestamp: ActionMethod<
 	"timestamp",
 	InteractionReplyOptions & InteractionUpdateOptions & WebhookEditMessageOptions
-> = async (
-	_client,
-	year,
-	month,
-	date = 1,
-	hours = 0,
-	minutes = 0,
-	seconds = 0
-) => {
+> = async (_client, year, month, date = "1", hours, minutes, seconds) => {
 	if (typeof year !== typeof month)
 		return {
 			ephemeral: true,
@@ -41,7 +33,14 @@ export const timestamp: ActionMethod<
 	const d = Math.round(
 		(year === undefined
 			? new Date()
-			: new Date(year, month! - 1, date, hours, minutes, seconds)
+			: new Date(
+					Number(year),
+					Number(month) - 1,
+					Number(date),
+					Number(hours ?? 0),
+					Number(minutes ?? 0),
+					Number(seconds ?? 0)
+			  )
 		).getTime() / 1000
 	);
 

@@ -4,7 +4,12 @@
  * @param max - The maximum number
  * @returns A random number between min and max
  */
-export const randomNumber = (min = 0, max = 1) =>
-	Math.floor(Math.random() * (max - min + 1)) + min;
+export const randomNumber: {
+	(min: number, max: number): number;
+	(): number;
+} = (min?: number, max?: number) =>
+	min === undefined
+		? Math.random()
+		: Math.floor(Math.random() * (max! - min + 1)) + min;
 
 export default randomNumber;

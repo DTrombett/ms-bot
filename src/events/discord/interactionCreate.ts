@@ -29,6 +29,7 @@ import {
 	parseEval,
 	ping,
 	predict,
+	random,
 	rps,
 	timeout,
 	timestamp,
@@ -256,6 +257,14 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 
 					await interaction.reply(options);
 					break;
+				case "randomNumber":
+					options = {
+						...(await random(this.client, args[0], args[1])),
+						ephemeral: true,
+					};
+
+					await interaction.reply(options);
+					break;
 				case "rps":
 					options = {
 						...(await rps(this.client, args[0])),
@@ -313,7 +322,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 						[result] = await Promise.all([
 							Promise.all([
 								readFile(
-									"./node_modules/@tsconfig/node16/tsconfig.json",
+									"./node_modules/@tsconfig/node18/tsconfig.json",
 									"utf8"
 								).then(JSON.parse) as Promise<{
 									compilerOptions: CompilerOptions;
@@ -352,7 +361,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 						result = CustomClient.inspect(e);
 					}
 					CustomClient.printToStdout(result);
-					await interaction.editReply({
+					await interaction[interaction.deferred ? "editReply" : "reply"]({
 						content: `Eval elaborato in ${Date.now() - now}ms`,
 						embeds: [
 							{
@@ -377,6 +386,7 @@ export const event: EventOptions<EventType.Discord, "interactionCreate"> = {
 								],
 							},
 						],
+						ephemeral: args[0] === "eph",
 					});
 					break;
 				default:
