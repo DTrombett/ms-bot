@@ -1,0 +1,2 @@
+import"../chunk-IFQFNU44.js";import{r as t}from"../chunk-XV3K5JED.js";import"../chunk-B7NPBJ6H.js";import{SlashCommandBuilder as o}from"@discordjs/builders";var a={data:new o().setName("google").setDescription("Cerca qualcosa su Google!").addStringOption(e=>e.setName("ricerca").setRequired(!0).setDescription("Il testo da cercare")),isPublic:!0,async run(e){await e.reply(await t(this.client,e.options.getString("ricerca",!0)))}};export{a as command};
+//# sourceMappingURL=google.js.map

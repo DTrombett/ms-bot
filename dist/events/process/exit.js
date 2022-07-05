@@ -1,0 +1,2 @@
+import"../../chunk-IFQFNU44.js";import{d as e}from"../../chunk-XV3K5JED.js";import"../../chunk-B7NPBJ6H.js";var n={name:"exit",type:"process",once(t){e.printToStderr(`Process exiting with code ${t}...`,!0),this.client.destroy(),server.close()}};export{n as event};
+//# sourceMappingURL=exit.js.map

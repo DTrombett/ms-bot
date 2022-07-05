@@ -1,0 +1,2 @@
+import"../chunk-IFQFNU44.js";import{g as t}from"../chunk-XV3K5JED.js";import"../chunk-B7NPBJ6H.js";import{SlashCommandBuilder as r}from"@discordjs/builders";var a={data:new r().setName("banner").setDescription("Mostra il banner di un utente").addUserOption(e=>e.setName("utente").setDescription("L'utente di cui mostrare il banner")),isPublic:!0,async run(e){let{id:n}=e.options.getUser("utente")??e.user,[s]=await Promise.all([t(this.client,n),e.deferReply()]);return void await e.editReply(s)}};export{a as command};
+//# sourceMappingURL=banner.js.map

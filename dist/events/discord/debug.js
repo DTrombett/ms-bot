@@ -1,0 +1,2 @@
+import"../../chunk-IFQFNU44.js";import{d as t}from"../../chunk-XV3K5JED.js";import"../../chunk-B7NPBJ6H.js";var p={name:"debug",type:"discord",on(e){t.printToStdout(e,!0)}};export{p as event};
+//# sourceMappingURL=debug.js.map

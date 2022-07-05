@@ -1,0 +1,2 @@
+import"../../chunk-IFQFNU44.js";import{d as e}from"../../chunk-XV3K5JED.js";import"../../chunk-B7NPBJ6H.js";var r={name:"worker",type:"process",on(){e.printToStdout("New worker created!",!0)}};export{r as event};
+//# sourceMappingURL=worker.js.map

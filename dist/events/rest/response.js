@@ -1,0 +1,2 @@
+import{a as n}from"../../chunk-U2M4UN4K.js";import"../../chunk-IFQFNU44.js";import{c as e,d as p}from"../../chunk-XV3K5JED.js";import"../../chunk-B7NPBJ6H.js";import{URLSearchParams as a}from"node:url";var i={100:36,200:32,300:33,400:31,500:35},l={name:"response",type:"rest",on(t,r){let o=`${t.method} ${t.path}`,s=n[o];s!==void 0&&(p.printToStdout(e(`${o}${t.options.query?`?${new a(t.options.query).toString()}`:""} - ${e(`${r.statusCode}`,i[Math.floor(r.statusCode/100)*100])} (${Date.now()-s}ms)`,36)),delete n[o])}};export{l as event};
+//# sourceMappingURL=response.js.map

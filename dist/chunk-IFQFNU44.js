@@ -1,0 +1,5 @@
+import{e as m}from"./chunk-XV3K5JED.js";import{a}from"./chunk-B7NPBJ6H.js";import{memoryUsage as i}from"node:process";var r=2,g=()=>{let t=i();return`RSS: ${(t.rss/1024/1024).toFixed(r)}MB
+Used: ${(t.heapUsed/1024/1024).toFixed(r)}MB
+Total: ${(t.heapTotal/1024/1024).toFixed(r)}MB
+External: ${(t.external/1024/1024).toFixed(r)}MB`};async function p(t){try{return await eval.call(null,t)}catch(o){return o}}var v=async t=>m.inspect(await p(t));var $=t=>{let o=`/${t.commandName}`,n=e=>{if(o+=` ${e.name}`,e.value!==void 0)try{o+=`:${e.value.toLocaleString()}`}catch{o+=`:${e.value.toString()}`}e.options&&e.options.forEach(n)};return t.options.data.forEach(n),o};import{spawn as c}from"node:child_process";import f,{argv as s,cwd as x,exit as l}from"node:process";var O=t=>{f.once("exit",()=>{c(s[0],s.slice(1),{cwd:x(),detached:!0,stdio:"inherit"}).unref()}),t.destroy(),l(0)};var T=a;export{g as a,v as b,$ as c,O as d,T as e};
+//# sourceMappingURL=chunk-IFQFNU44.js.map

@@ -1,0 +1,2 @@
+import"../chunk-IFQFNU44.js";import{j as a}from"../chunk-XV3K5JED.js";import"../chunk-B7NPBJ6H.js";import{SlashCommandBuilder as o}from"@discordjs/builders";var r={data:new o().setName("cat").setDescription("Guarda l'immagine di un adorabile gatto"),isPublic:!0,async run(t){let[i]=await Promise.all([a(this.client),t.deferReply()]);return void await t.editReply(i)}};export{r as command};
+//# sourceMappingURL=cat.js.map

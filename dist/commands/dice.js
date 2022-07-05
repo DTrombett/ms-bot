@@ -1,0 +1,2 @@
+import"../chunk-IFQFNU44.js";import{m as e}from"../chunk-XV3K5JED.js";import"../chunk-B7NPBJ6H.js";import{SlashCommandBuilder as i}from"@discordjs/builders";var d={data:new i().setName("dice").setDescription("Tira il dado!").addIntegerOption(t=>t.setName("count").setDescription("Numero di dadi da tirare (default: 1)")),isPublic:!0,async run(t){let o=t.options.getInteger("count");await t.reply(await e(this.client,`${o??""}`||void 0))}};export{d as command};
+//# sourceMappingURL=dice.js.map

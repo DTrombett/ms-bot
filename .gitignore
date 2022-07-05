@@ -1,9 +1,7 @@
 node_modules/
-*.map
 .env
 coverage/
 *.log
-dist/
 .vscode/
 database/
 tmp/
