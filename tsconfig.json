@@ -21,10 +21,5 @@
 		"resolveJsonModule": true,
 		"sourceMap": true,
 		"module": "ESNext",
-		"target": "ESNext",
-		"lib": [
-			"DOM",
-			"ESNext"
-		]
 	}
 }

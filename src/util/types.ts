@@ -20,6 +20,7 @@ import type {
 import type { Buffer } from "node:buffer";
 import type { IncomingHttpHeaders } from "node:http";
 import type { URL } from "node:url";
+import type { Worker } from "node:worker_threads";
 import type { Command, CustomClient, Event } from ".";
 
 /**

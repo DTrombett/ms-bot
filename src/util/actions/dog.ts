@@ -1,6 +1,7 @@
 import { ButtonStyle, ComponentType } from "discord-api-types/v10";
 import type { WebhookEditMessageOptions } from "discord.js";
 import { env } from "node:process";
+import { request } from "undici";
 import CustomClient from "../CustomClient";
 import type { ActionMethod, DogResponse } from "../types";
 import { createActionId } from "./actions";
@@ -9,7 +10,7 @@ import { createActionId } from "./actions";
  * Get a dog image.
  */
 export const dog: ActionMethod<"cat", WebhookEditMessageOptions> = () =>
-	fetch(
+	request(
 		"https://api.thedogapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
 		{
 			method: "GET",
@@ -18,7 +19,7 @@ export const dog: ActionMethod<"cat", WebhookEditMessageOptions> = () =>
 			},
 		}
 	)
-		.then<DogResponse>((res) => res.json())
+		.then<DogResponse>((res) => res.body.json())
 		.then<Awaited<ReturnType<typeof dog>>>(([{ url }]) => ({
 			content: `[Woof!](${url}) 🐶`,
 			components: [

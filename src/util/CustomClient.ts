@@ -66,8 +66,6 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			allowedMentions: { parse: [], repliedUser: false, roles: [], users: [] },
 			failIfNotExists: false,
 			rest: {
-				api: "https://canary.discord.com/api",
-				version: "10",
 				invalidRequestWarningInterval: 9_998,
 			},
 			makeCache: Options.cacheWithLimits({
@@ -100,7 +98,6 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 				Partials.ThreadMember,
 			],
 			waitGuildTimeout: 1_000,
-			ws: { large_threshold: 100 },
 		});
 
 		this.rest.raw = (options) => {
