@@ -1,3 +1,3 @@
-import{e}from"./chunk-IFQFNU44.js";import{d as t}from"./chunk-XV3K5JED.js";import"./chunk-B7NPBJ6H.js";import{config as n}from"dotenv";import p from"express";import{env as a}from"node:process";t.printToStdout("Starting...");a.DISCORD_TOKEN==null&&n();console.time(e.clientOnlineLabel);await t.logToFile(`
+import{e}from"./chunk-4KDV7KKW.js";import{d as t}from"./chunk-OT6DYTTJ.js";import"./chunk-B7NPBJ6H.js";import{config as n}from"dotenv";import p from"express";import{env as a}from"node:process";t.printToStdout("Starting...");a.DISCORD_TOKEN==null&&n();console.time(e.clientOnlineLabel);await t.logToFile(`
 `);var l=new t,o=p();global.client=l;global.app=o;global.server=o.listen(3e3);o.use((r,i)=>{i.sendStatus(204)});await l.login();
 //# sourceMappingURL=index.js.map
