@@ -20,4 +20,9 @@ export const Constants = {
 	eventsFolderName: "events",
 } as const;
 
+export const Emojis = {
+	kick: "994260465402253442",
+	bann: "994261301364801537",
+};
+
 export default Constants;

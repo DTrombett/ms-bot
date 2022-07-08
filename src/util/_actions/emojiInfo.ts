@@ -8,7 +8,7 @@ import type {
 } from "discord.js";
 import { escapeBold } from "discord.js";
 import type { ActionMethod } from "../types";
-import { createActionId } from "./actions";
+import { createActionId } from "../actions";
 
 /**
  * Get information about an emoji.

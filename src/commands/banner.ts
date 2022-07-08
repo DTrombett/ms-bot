@@ -1,29 +1,72 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import type { CommandOptions } from "../util";
-import { banner } from "../util";
+import {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+	ButtonStyle,
+	ComponentType,
+} from "discord-api-types/v10";
+import { escapeMarkdown } from "discord.js";
+import { createCommand } from "../util";
 
-enum Options {
-	user = "utente",
-}
-
-export const command: CommandOptions = {
-	data: new SlashCommandBuilder()
-		.setName("banner")
-		.setDescription("Mostra il banner di un utente")
-		.addUserOption((user) =>
-			user
-				.setName(Options.user)
-				.setDescription("L'utente di cui mostrare il banner")
-		),
-	isPublic: true,
+export const command = createCommand({
+	data: [
+		{
+			name: "banner",
+			description: "Mostra il banner di un utente",
+			type: ApplicationCommandType.ChatInput,
+			options: [
+				{
+					name: "user",
+					description: "L'utente di cui mostrare il banner",
+					type: ApplicationCommandOptionType.User,
+				},
+			],
+		},
+		{
+			name: "Banner",
+			type: ApplicationCommandType.User,
+		},
+	],
 	async run(interaction) {
-		const { id } =
-			interaction.options.getUser(Options.user) ?? interaction.user;
-		const [options] = await Promise.all([
-			banner(this.client, id),
-			interaction.deferReply(),
-		]);
+		const option = interaction.options.data.find(
+			(o) => o.type === ApplicationCommandOptionType.User
+		);
+		let user = option?.user;
 
-		return void (await interaction.editReply(options));
+		if (!user) {
+			await interaction.reply({
+				content: "Utente non trovato!",
+				ephemeral: true,
+			});
+			return;
+		}
+		if (user.banner === undefined) user = await user.fetch(true);
+		if (user.banner == null) {
+			await interaction.reply({
+				content: "L'utente non ha un banner!",
+				ephemeral: true,
+			});
+			return;
+		}
+		const url = user.bannerURL({
+			extension: "png",
+			size: 4096,
+		})!;
+
+		await interaction.reply({
+			content: `Banner di **[${escapeMarkdown(user.username)}](${url})**:`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							url,
+							style: ButtonStyle.Link,
+							label: "Apri l'originale",
+						},
+					],
+				},
+			],
+		});
 	},
-};
+});

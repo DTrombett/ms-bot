@@ -17,7 +17,7 @@ import { escapeBold, GuildEmoji } from "discord.js";
 import { Buffer } from "node:buffer";
 import CustomClient from "../CustomClient";
 import type { ActionMethod } from "../types";
-import { createActionId } from "./actions";
+import { createActionId } from "../actions";
 
 const emojiLimit: Record<GuildPremiumTier, number> = {
 	[GuildPremiumTier.None]: 50,

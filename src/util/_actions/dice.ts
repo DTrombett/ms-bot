@@ -6,7 +6,7 @@ import type {
 } from "discord.js";
 import randomNumber from "../randomNumber";
 import type { ActionMethod } from "../types";
-import { createActionId } from "./actions";
+import { createActionId } from "../actions";
 
 /**
  * Roll the dice!

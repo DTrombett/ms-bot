@@ -2,7 +2,6 @@ import { ActivityType } from "discord-api-types/v10";
 import { Client, Collection, Options, Partials } from "discord.js";
 import { stderr, stdout } from "node:process";
 import { inspect } from "node:util";
-import { calc } from "./actions";
 import color, { Colors } from "./colors";
 import type Command from "./Command";
 import { importVariable, writeVariable } from "./database";

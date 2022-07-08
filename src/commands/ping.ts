@@ -1,11 +1,49 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import type { CommandOptions } from "../util";
-import { ping } from "../util";
+import {
+	ApplicationCommandType,
+	ButtonStyle,
+	ComponentType,
+} from "discord-api-types/v10";
+import type {
+	Interaction,
+	InteractionReplyOptions,
+	InteractionUpdateOptions,
+} from "discord.js";
+import { createCommand } from "../util";
 
-export const command: CommandOptions = {
-	data: new SlashCommandBuilder().setName("ping").setDescription("Pong!"),
-	isPublic: true,
+const ping = (
+	interaction: Interaction
+): InteractionReplyOptions & InteractionUpdateOptions => ({
+	content: `WS: **${interaction.client.ws.ping}ms**\nRitardo totale: **${
+		Date.now() - interaction.createdTimestamp
+	}ms**`,
+	components: [
+		{
+			type: ComponentType.ActionRow,
+			components: [
+				{
+					type: ComponentType.Button,
+					custom_id: "ping",
+					label: "Pong!",
+					style: ButtonStyle.Success,
+					emoji: { name: "🏓" },
+				},
+			],
+		},
+	],
+});
+
+export const command = createCommand({
+	data: [
+		{
+			name: "ping",
+			description: "Pong!",
+			type: ApplicationCommandType.ChatInput,
+		},
+	],
 	async run(interaction) {
-		await interaction.reply(await ping(this.client));
+		await interaction.reply(ping(interaction));
 	},
-};
+	async component(interaction) {
+		await interaction.update(ping(interaction));
+	},
+});

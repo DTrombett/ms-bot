@@ -6,7 +6,7 @@ import type {
 	WebhookEditMessageOptions,
 } from "discord.js";
 import type { ActionMethod } from "../types";
-import { createActionId } from "./actions";
+import { createActionId } from "../actions";
 
 const styles = Object.values(TimestampStyles);
 

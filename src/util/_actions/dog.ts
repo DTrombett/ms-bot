@@ -4,7 +4,7 @@ import { env } from "node:process";
 import { request } from "undici";
 import CustomClient from "../CustomClient";
 import type { ActionMethod, DogResponse } from "../types";
-import { createActionId } from "./actions";
+import { createActionId } from "../actions";
 
 /**
  * Get a dog image.

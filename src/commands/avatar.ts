@@ -1,29 +1,88 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import type { CommandOptions } from "../util";
-import { avatar } from "../util";
+import {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+	ButtonStyle,
+	ComponentType,
+} from "discord-api-types/v10";
+import { escapeMarkdown, GuildMember } from "discord.js";
+import { createCommand } from "../util";
 
-enum Options {
-	user = "utente",
-}
-
-export const command: CommandOptions = {
-	data: new SlashCommandBuilder()
-		.setName("avatar")
-		.setDescription("Mostra l'avatar di un utente")
-		.addUserOption((user) =>
-			user
-				.setName(Options.user)
-				.setDescription("L'utente di cui mostrare l'avatar")
-		),
-	isPublic: true,
+export const command = createCommand({
+	data: [
+		{
+			name: "avatar",
+			description: "Mostra l'avatar di un utente",
+			type: ApplicationCommandType.ChatInput,
+			options: [
+				{
+					name: "user",
+					description: "L'utente di cui mostrare l'avatar",
+					type: ApplicationCommandOptionType.User,
+				},
+			],
+		},
+		{
+			name: "Avatar",
+			type: ApplicationCommandType.User,
+		},
+	],
 	async run(interaction) {
-		const { id } =
-			interaction.options.getUser(Options.user) ?? interaction.user;
-		const [options] = await Promise.all([
-			avatar(this.client, id, interaction.guildId ?? undefined),
-			interaction.deferReply(),
-		]);
+		const option = interaction.options.data.find(
+			(o) => o.type === ApplicationCommandOptionType.User
+		);
+		const user = option?.user;
 
-		return void (await interaction.editReply(options));
+		if (!user) {
+			await interaction.reply({
+				content: "Utente non trovato!",
+				ephemeral: true,
+			});
+			return;
+		}
+		const { guild } = interaction;
+		const member = option.member
+			? option.member
+			: guild
+			? await guild.members.fetch(user.id).catch(() => user)
+			: user;
+		const url =
+			"client" in member
+				? member.displayAvatarURL({
+						extension: "png",
+						size: 4096,
+				  })
+				: member.avatar != null
+				? this.client.rest.cdn.guildMemberAvatar(
+						guild!.id,
+						user.id,
+						member.avatar
+				  )
+				: user.displayAvatarURL({
+						extension: "png",
+						size: 4096,
+				  });
+
+		await interaction.reply({
+			content: `Avatar di **[${escapeMarkdown(
+				member instanceof GuildMember
+					? member.displayName
+					: "nick" in member && member.nick != null
+					? member.nick
+					: user.username
+			)}](${url})**:`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							url,
+							style: ButtonStyle.Link,
+							label: "Apri l'originale",
+						},
+					],
+				},
+			],
+		});
 	},
-};
+});
