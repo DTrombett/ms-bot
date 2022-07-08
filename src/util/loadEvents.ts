@@ -1,30 +1,23 @@
 import { promises } from "node:fs";
-import { join } from "node:path";
 import { URL } from "node:url";
-import type { CustomClient, EventOptions, EventType } from ".";
+import type { CustomClient, EventOptions } from ".";
 import Constants from "./Constants";
 import Event from "./Event";
 
 /**
  * Load events listeners for the client.
  * @param client - The client to load the events for
- * @param subfolder - The subfolder to load the events from
  */
-export const loadEvents = async (
-	client: CustomClient,
-	subfolder: EventType
-) => {
+export const loadEvents = async (client: CustomClient) => {
 	const fileNames = await promises.readdir(
-		new URL(join(Constants.eventsFolderName, subfolder), import.meta.url)
+		new URL(Constants.eventsFolderName, import.meta.url)
 	);
 	const files = await Promise.all(
 		fileNames
 			.filter((fileName) => fileName.endsWith(".js"))
 			.map(
 				(fileName) =>
-					import(
-						`./${Constants.eventsFolderName}/${subfolder}/${fileName}`
-					) as Promise<{
+					import(`./${Constants.eventsFolderName}/${fileName}`) as Promise<{
 						event: EventOptions;
 					}>
 			)

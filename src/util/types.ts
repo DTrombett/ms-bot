@@ -1,26 +1,21 @@
 import type {
-	SlashCommandBuilder,
-	SlashCommandSubcommandsOnlyBuilder,
-} from "@discordjs/builders";
+	APIApplicationCommandOption,
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+	InteractionType,
+	RESTPostAPIApplicationCommandsJSONBody,
+	Snowflake,
+} from "discord-api-types/v10";
 import type {
-	InternalRequest,
-	RestEvents as DiscordRestEvents,
-} from "@discordjs/rest";
-import type { Snowflake } from "discord-api-types/v10";
-import type {
-	AutocompleteInteraction,
 	Awaitable,
-	ChatInputCommandInteraction,
+	CacheType,
 	ClientEvents,
+	Interaction,
 	InteractionReplyOptions,
 	InteractionUpdateOptions,
-	MessageOptions,
 	WebhookEditMessageOptions,
 } from "discord.js";
 import type { Buffer } from "node:buffer";
-import type { IncomingHttpHeaders } from "node:http";
-import type { URL } from "node:url";
-import type { Worker } from "node:worker_threads";
 import type { Command, CustomClient, Event } from ".";
 
 /**
@@ -129,31 +124,49 @@ export type ActionMethod<
 		WebhookEditMessageOptions
 > = (this: void, client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
 
-/**
- * An action row to be sent to Discord
- */
-export type ActionRowType = NonNullable<
-	MessageOptions["components"]
-> extends (infer T)[]
-	? T
+export type InteractionByType<
+	T extends InteractionType,
+	C extends CacheType = CacheType,
+	I extends Interaction<C> = Interaction<C>
+> = I extends Interaction<C> & { type: T } ? I : never;
+export type CommandInteractionByType<
+	T extends ApplicationCommandType,
+	I extends InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>
+> = I extends InteractionByType<InteractionType.ApplicationCommand> & {
+	commandType: T;
+}
+	? I
 	: never;
+
+export type CommandData<
+	T extends ApplicationCommandType = ApplicationCommandType,
+	O extends ApplicationCommandOptionType = ApplicationCommandOptionType,
+	N extends string = string
+> = RESTPostAPIApplicationCommandsJSONBody & {
+	type: T;
+	options?: (APIApplicationCommandOption & {
+		type: O;
+	})[];
+	name: N;
+};
 
 /**
  * Options to create a command
  */
-export type CommandOptions = {
+export type CommandOptions<
+	T extends ApplicationCommandType = ApplicationCommandType,
+	O extends ApplicationCommandOptionType = ApplicationCommandOptionType,
+	N extends string = string
+> = {
 	/**
 	 * The data for this command
 	 */
-	data:
-		| Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">
-		| SlashCommandBuilder
-		| SlashCommandSubcommandsOnlyBuilder;
+	data: [CommandData<T, O, N>, ...CommandData<T, O, N>[]];
 
 	/**
-	 * If this command is public
+	 * If this command is private
 	 */
-	isPublic?: boolean;
+	isPrivate?: boolean;
 
 	/**
 	 * A functions to run when an autocomplete request is received by Discord.
@@ -162,25 +175,70 @@ export type CommandOptions = {
 	 */
 	autocomplete?(
 		this: Command,
-		interaction: AutocompleteInteraction
+		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>
 	): Awaitable<void>;
 
 	/**
-	 * A function to run when this command is received by Discord.
+	 * A function to run when an interaction from a message component with the custom_id of this command is received.
 	 * @param this - The command object that called this
 	 * @param interaction - The interaction received
 	 */
-	run(this: Command, interaction: ChatInputCommandInteraction): Awaitable<void>;
+	component?(
+		this: Command,
+		interaction: InteractionByType<InteractionType.MessageComponent>
+	): Awaitable<void>;
+
+	/**
+	 * A function to run when a modal is submitted with the custom_id of this command is received.
+	 * @param this - The command object that called this
+	 * @param interaction - The interaction received
+	 */
+	modalSubmit?(
+		this: Command,
+		interaction: InteractionByType<InteractionType.ModalSubmit>
+	): Awaitable<void>;
+
+	/**
+	 * A function to run when this command is received.
+	 * @param this - The command object that called this
+	 * @param interaction - The interaction received
+	 */
+	run(
+		this: Command,
+		interaction: CommandInteractionByType<T> & {
+			commandName: N;
+			commandType: T;
+		}
+	): Awaitable<void>;
 };
 
 /**
- * Type of content received from a web request
+ * The data for an event
  */
-export enum ContentType {
-	Json,
-	PlainText,
-	Buffer,
-}
+export type EventOptions<K extends keyof ClientEvents = keyof ClientEvents> = {
+	/**
+	 * The name of the event
+	 */
+	name: K;
+
+	/**
+	 * The function to execute when the event is received
+	 */
+	on?: (this: Event<K>, ...args: ClientEvents[K]) => Awaitable<void>;
+
+	/**
+	 * The function to execute when the event is received once
+	 */
+	once?: EventOptions<K>["on"];
+};
+
+export type ReceivedInteraction<C extends CacheType = CacheType> =
+	InteractionByType<
+		| InteractionType.ApplicationCommand
+		| InteractionType.MessageComponent
+		| InteractionType.ModalSubmit,
+		C
+	>;
 
 /**
  * A response from thecatapi.com
@@ -193,12 +251,6 @@ export type CatResponse = {
 	url: string;
 	width: number;
 }[];
-
-/**
- * Custom emojis for the bot
- */
-
-export enum CustomEmojis {}
 
 /**
  * Variables that can be stored in the database
@@ -220,161 +272,9 @@ export type DogResponse = {
 }[];
 
 /**
- * The data for an event
- */
-export type EventOptions<
-	T extends EventType = EventType,
-	K extends T extends EventType.Discord
-		? keyof ClientEvents
-		: T extends EventType.Process
-		? keyof ProcessEvents
-		: T extends EventType.Rest
-		? keyof RestEvents
-		: never = T extends EventType.Discord
-		? keyof ClientEvents
-		: T extends EventType.Process
-		? keyof ProcessEvents
-		: T extends EventType.Rest
-		? keyof RestEvents
-		: never
-> = {
-	/**
-	 * The name of the event
-	 */
-	name: K;
-
-	/**
-	 * The type of the event
-	 */
-	type: T;
-
-	/**
-	 * The function to execute when the event is received
-	 */
-	on?: (
-		this: Event<T, K>,
-		...args: T extends EventType.Discord
-			? K extends keyof ClientEvents
-				? ClientEvents[K]
-				: never
-			: T extends EventType.Process
-			? K extends keyof ProcessEvents
-				? ProcessEvents[K]
-				: never
-			: T extends EventType.Rest
-			? K extends keyof RestEvents
-				? RestEvents[K]
-				: never
-			: never
-	) => Awaitable<void>;
-
-	/**
-	 * The function to execute when the event is received once
-	 */
-	once?: EventOptions<T, K>["on"];
-};
-
-/**
- * The type for an event
- */
-export enum EventType {
-	Discord = "discord",
-	Process = "process",
-	Rest = "rest",
-}
-
-/**
- * All the face emojis
- */
-export enum FaceEmojis {
-	":)" = "😊",
-	":D" = "😀",
-	":P" = "😛",
-	":O" = "😮",
-	":*" = "😗",
-	";)" = "😉",
-	":|" = "😐",
-	":/" = "😕",
-	":S" = "😖",
-	":$" = "😳",
-	":@" = "😡",
-	":^)" = "😛",
-	":\\" = "😕",
-}
-
-/**
- * The match level from comparing 2 strings
- */
-export enum MatchLevel {
-	/**
-	 * The strings don't match at all
-	 */
-	None,
-
-	/**
-	 * The second string is a substring of the first one
-	 */
-	Partial,
-
-	/**
-	 * The second string is at the end of the first one
-	 */
-	End,
-
-	/**
-	 * The second string is at the beginning of the first one
-	 */
-	Start,
-
-	/**
-	 * The second string is the same as the first one
-	 */
-	Full,
-}
-
-export type ProcessEvents = {
-	[K in Signals]: [signal: K];
-} & {
-	beforeExit: [code: number];
-	disconnect: [];
-	exit: [code: number];
-	message: [message: unknown, sendHandle: unknown];
-	rejectionHandled: [promise: Promise<unknown>];
-	uncaughtException: [
-		error: Error,
-		origin: "uncaughtException" | "unhandledRejection"
-	];
-	uncaughtExceptionMonitor: [
-		error: Error,
-		origin: "uncaughtException" | "unhandledRejection"
-	];
-	unhandledRejection: [reason: unknown, promise: Promise<unknown>];
-	warning: [warning: Error];
-	worker: [worker: Worker];
-};
-
-/**
  * A promise for the queue
  */
 export type QueuePromise = { promise: Promise<void>; resolve(): void };
-
-/**
- * A response from a web request
- */
-export type RequestResponse<R> = {
-	data: R;
-	complete: boolean;
-	headers: IncomingHttpHeaders;
-	statusCode: number;
-	statusMessage: string;
-};
-
-/**
- * Events for the rest
- */
-export type RestEvents = DiscordRestEvents & {
-	request: [options: InternalRequest];
-};
 
 /**
  * Emojis for Rock Paper Scissors
@@ -386,48 +286,6 @@ export enum RPSEmojis {
 }
 
 /**
- * Nodejs signals
- */
-export type Signals =
-	| "SIGABRT"
-	| "SIGALRM"
-	| "SIGBREAK"
-	| "SIGBUS"
-	| "SIGCHLD"
-	| "SIGCONT"
-	| "SIGFPE"
-	| "SIGHUP"
-	| "SIGILL"
-	| "SIGINFO"
-	| "SIGINT"
-	| "SIGIO"
-	| "SIGIOT"
-	| "SIGKILL"
-	| "SIGLOST"
-	| "SIGPIPE"
-	| "SIGPOLL"
-	| "SIGPROF"
-	| "SIGPWR"
-	| "SIGQUIT"
-	| "SIGSEGV"
-	| "SIGSTKFLT"
-	| "SIGSTOP"
-	| "SIGSYS"
-	| "SIGTERM"
-	| "SIGTRAP"
-	| "SIGTSTP"
-	| "SIGTTIN"
-	| "SIGTTOU"
-	| "SIGUNUSED"
-	| "SIGURG"
-	| "SIGUSR1"
-	| "SIGUSR2"
-	| "SIGVTALRM"
-	| "SIGWINCH"
-	| "SIGXCPU"
-	| "SIGXFSZ";
-
-/**
  * A timeout
  */
 export type Timeout = {
@@ -435,11 +293,6 @@ export type Timeout = {
 	args: string[];
 	name: string;
 };
-
-/**
- * A valid url
- */
-export type Url = URL | `http${"" | "s"}://${string}`;
 
 /**
  * The json representation of a member warn

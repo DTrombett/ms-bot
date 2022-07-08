@@ -1,87 +1,51 @@
-import type { REST } from "@discordjs/rest";
 import { ActivityType } from "discord-api-types/v10";
-import { Client, Options, Partials } from "discord.js";
-import { createWriteStream } from "node:fs";
-import { readdir } from "node:fs/promises";
+import { Client, Collection, Options, Partials } from "discord.js";
 import { stderr, stdout } from "node:process";
 import { inspect } from "node:util";
 import { calc } from "./actions";
-import color, { Color } from "./colors";
+import color, { Colors } from "./colors";
 import type Command from "./Command";
-import Constants from "./Constants";
 import { importVariable, writeVariable } from "./database";
 import type Event from "./Event";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
-import type { DatabaseVariables, RestEvents } from "./types";
-import { EventType } from "./types";
 
 /**
  * A custom class to interact with Discord
  */
 export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	/**
-	 * If the client is blocked and should not perform any action
-	 */
-	blocked = false;
-
-	/**
 	 * Commands of this client
 	 */
-	commands = new Map<string, Command>();
+	commands = new Collection<string, Command>();
 
 	/**
 	 * Events of this client
 	 */
-	events = new Map<string, Event>();
-
-	/**
-	 * The rest of this client
-	 */
-	declare rest: REST & {
-		on: <K extends keyof RestEvents>(
-			event: K,
-			listener: (...args: RestEvents[K]) => void
-		) => REST;
-		once: <K extends keyof RestEvents>(
-			event: K,
-			listener: (...args: RestEvents[K]) => void
-		) => REST;
-		off: <K extends keyof RestEvents>(
-			event: K,
-			listener: (...args: RestEvents[K]) => void
-		) => REST;
-	};
+	events = new Collection<string, Event>();
 
 	constructor() {
 		super({
-			intents: [
-				"Guilds",
-				"GuildMessages",
-				"GuildBans",
-				"GuildEmojisAndStickers",
-				"GuildPresences",
-				"GuildMembers",
-			],
+			intents: ["GuildMembers", "Guilds"],
 			allowedMentions: { parse: [], repliedUser: false, roles: [], users: [] },
 			failIfNotExists: false,
 			rest: {
-				invalidRequestWarningInterval: 9_998,
+				invalidRequestWarningInterval: 9_999,
 			},
 			makeCache: Options.cacheWithLimits({
 				...Options.DefaultMakeCacheSettings,
 				BaseGuildEmojiManager: 0,
-				GuildBanManager: 100,
+				GuildBanManager: 0,
 				GuildInviteManager: 0,
 				GuildMemberManager: 1_000,
 				GuildStickerManager: 0,
 				MessageManager: 0,
-				PresenceManager: 10_000,
+				PresenceManager: 0,
 				ReactionManager: 0,
 				ReactionUserManager: 0,
 				StageInstanceManager: 0,
 				ThreadMemberManager: 0,
-				UserManager: 1_000_000,
+				UserManager: 1_000,
 				VoiceStateManager: 0,
 			}),
 			presence: {
@@ -99,11 +63,6 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			],
 			waitGuildTimeout: 1_000,
 		});
-
-		this.rest.raw = (options) => {
-			this.rest.emit("request", options);
-			return this.rest.requestManager.queueRequest(options);
-		};
 	}
 
 	/**
@@ -128,77 +87,30 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	}
 
 	/**
-	 * Logs a message in the log file.
-	 * @param message - The message to log
-	 * @returns A promise that resolves when the message is logged
-	 */
-	static logToFile(message: string) {
-		return new Promise<void>((resolve) => {
-			try {
-				createWriteStream(`./debug.log`, { flags: "a" })
-					.once("error", CustomClient.printToStderr)
-					.once("finish", resolve)
-					.setDefaultEncoding("utf8")
-					.end(message);
-			} catch (error) {
-				CustomClient.printToStderr(error);
-			}
-		});
-	}
-
-	/**
 	 * Prints a message to stdout.
 	 * @param message - The string to print
-	 * @param log - If the message should be logged in the log file too
 	 */
-	static printToStdout(this: void, message: unknown, log = false) {
-		const formatted = CustomClient.format(message);
-
-		stdout.write(formatted);
-		if (log) void CustomClient.logToFile(formatted);
+	static printToStdout(this: void, message: unknown) {
+		stdout.write(`${CustomClient.inspect(message)}\n`);
 	}
 
 	/**
 	 * Prints a message to stderr.
 	 * @param message - The string to print
-	 * @param log - If the message should be logged in the log file too
 	 */
-	static printToStderr(this: void, message: unknown, log = false) {
-		const formatted = CustomClient.format(message);
-
-		stderr.write(color(formatted, Color.Red));
-		if (log) void CustomClient.logToFile(formatted);
-	}
-
-	/**
-	 * Formats a string with the current time.
-	 * @param message - The message to format
-	 * @returns The formatted message
-	 */
-	private static format(this: void, message: unknown): string {
-		return `${CustomClient.inspect(message)} (${new Date().toLocaleString(
-			undefined,
-			{
-				timeZone: "Europe/Rome",
-			}
-		)})\n`;
+	static printToStderr(this: void, message: unknown) {
+		stderr.write(color(`${CustomClient.inspect(message)}\n`, Colors.FgRed));
 	}
 
 	/**
 	 * Loads commands and events, then logs in with Discord.
+	 * @param token - The token to log in with (defaults to process.env.DISCORD_TOKEN)
 	 * @returns A promise that resolves when the client is ready
 	 */
-	async login() {
+	async login(token?: string) {
 		await Promise.all([
 			loadCommands(this),
-			...Object.values(EventType).map((type) => loadEvents(this, type)),
-			readdir(`./${Constants.databaseFolderName}`).then((files) =>
-				Promise.all(
-					files.map((name) =>
-						importVariable(name.split(".")[0] as keyof DatabaseVariables)
-					)
-				)
-			),
+			loadEvents(this),
 			importVariable("timeouts").then((timeouts) => {
 				timeouts = timeouts.filter((timeout) => timeout.date > Date.now());
 				for (const { args, date, name } of timeouts)
@@ -221,7 +133,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			calc(this as CustomClient<true>, ""),
 		]);
 
-		return super.login();
+		return super.login(token);
 	}
 }
 

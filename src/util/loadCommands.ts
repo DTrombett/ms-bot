@@ -1,5 +1,5 @@
-import { promises } from "node:fs";
-import { URL } from "node:url";
+import { ApplicationCommandType } from "discord-api-types/v10";
+import { readdir } from "node:fs/promises";
 import type { CommandOptions, CustomClient } from ".";
 import Command from "./Command";
 import Constants from "./Constants";
@@ -9,7 +9,7 @@ import Constants from "./Constants";
  * @param client - The client to load commands into
  */
 export const loadCommands = async (client: CustomClient) => {
-	const fileNames = await promises.readdir(
+	const fileNames = await readdir(
 		new URL(Constants.commandsFolderName, import.meta.url)
 	);
 	const files = await Promise.all(
@@ -24,7 +24,11 @@ export const loadCommands = async (client: CustomClient) => {
 	);
 	const commands = files.map((file) => file.command);
 	for (const command of commands)
-		client.commands.set(command.data.name, new Command(client, command));
+		client.commands.set(
+			command.data.find(({ type }) => type === ApplicationCommandType.ChatInput)
+				?.name ?? command.data[0].name,
+			new Command(client, command)
+		);
 };
 
 export default loadCommands;

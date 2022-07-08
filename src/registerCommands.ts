@@ -7,11 +7,12 @@ import { promises } from "node:fs";
 import { env, exit } from "node:process";
 import { URL } from "node:url";
 import type { CommandOptions } from "./util";
-import Constants from "./util/Constants";
+import { Constants } from "./util";
 
-if (env.DISCORD_TOKEN == null) config();
+const label = "Register slash commands";
 
-console.time("Register slash commands");
+if (!("DISCORD_TOKEN" in env)) config();
+console.time(label);
 
 const {
 	DISCORD_CLIENT_ID: applicationId,
@@ -37,19 +38,20 @@ const commands = await promises
 const [privateAPICommands, publicAPICommands] = await Promise.all([
 	rest.put(Routes.applicationGuildCommands(applicationId!, guildId!), {
 		body: commands
-			.filter((c) => nodeEnv !== "production" || c.isPublic !== true)
-			.map((file) => file.data.toJSON()),
+			.filter((c) => nodeEnv !== "production" || c.isPrivate)
+			.map((file) => file.data)
+			.flat(),
 	}) as Promise<APIApplicationCommand[]>,
 	nodeEnv === "production"
 		? (rest.put(Routes.applicationCommands(applicationId!), {
 				body: commands
-					.filter((c) => c.isPublic)
-					.map((file) => file.data.toJSON()),
+					.filter((c) => c.isPrivate !== true)
+					.map((file) => file.data),
 		  }) as Promise<APIApplicationCommand[]>)
 		: [],
 ]);
 
 console.log("Public commands:", publicAPICommands);
 console.log("Private commands:", privateAPICommands);
-console.timeEnd("Register slash commands");
+console.timeEnd(label);
 exit(0);
