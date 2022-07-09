@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/events/error.ts"],"sourcesContent":["import { createEvent, CustomClient } from \"../util\";\r\n\r\nexport const event = createEvent({\r\n\tname: \"error\",\r\n\ton(error) {\r\n\t\tCustomClient.printToStderr(error);\r\n\t},\r\n});\r\n"],"mappings":"kFAEO,GAAM,GAAQ,EAAY,CAChC,KAAM,QACN,GAAG,EAAO,CACT,EAAa,cAAc,CAAK,CACjC,CACD,CAAC","names":[]}

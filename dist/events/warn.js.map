@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/events/warn.ts"],"sourcesContent":["import { createEvent, CustomClient } from \"../util\";\r\n\r\nexport const event = createEvent({\r\n\tname: \"warn\",\r\n\ton(warn) {\r\n\t\tCustomClient.printToStderr(warn);\r\n\t},\r\n});\r\n"],"mappings":"kFAEO,GAAM,GAAQ,EAAY,CAChC,KAAM,OACN,GAAG,EAAM,CACR,EAAa,cAAc,CAAI,CAChC,CACD,CAAC","names":[]}

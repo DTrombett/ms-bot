@@ -1,18 +1,70 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import type { CommandOptions } from "../util";
-import { dog } from "../util";
+import {
+	ApplicationCommandType,
+	ButtonStyle,
+	ComponentType,
+} from "discord-api-types/v10";
+import { env } from "node:process";
+import { request } from "undici";
+import type { DogResponse, ReceivedInteraction } from "../util";
+import { createCommand } from "../util";
 
-export const command: CommandOptions = {
-	data: new SlashCommandBuilder()
-		.setName("dog")
-		.setDescription("Guarda l'immagine di un adorabile cagnolino"),
-	isPublic: true,
-	async run(interaction) {
-		const [options] = await Promise.all([
-			dog(this.client),
-			interaction.deferReply(),
-		]);
+const dog = async (interaction: ReceivedInteraction, ephemeral?: boolean) => {
+	const data = await request(
+		"https://api.thedogapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
+		{
+			method: "GET",
+			headers: {
+				"x-api-key": env.DOG_API_KEY!,
+			},
+		}
+	).then<DogResponse | null>((res) => res.body.json());
 
-		return void (await interaction.editReply(options));
-	},
+	if (!data?.[0]) {
+		await interaction.reply({
+			content: "Si è verificato un errore nel caricamento dell'immagine!",
+		});
+		return;
+	}
+	const [{ url }] = data;
+
+	await interaction.reply({
+		content: `[Woof!](${url}) 🐶`,
+		ephemeral,
+		components: [
+			{
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						url,
+						style: ButtonStyle.Link,
+						label: "Apri l'originale",
+					},
+					{
+						type: ComponentType.Button,
+						style: ButtonStyle.Success,
+						label: "Un altro!",
+						custom_id: "dog",
+						emoji: { name: "🐶" },
+					},
+				],
+			},
+		],
+	});
 };
+
+export const command = createCommand({
+	data: [
+		{
+			name: "dog",
+			description: "Mostra la foto di un adorabile cagnolino",
+			type: ApplicationCommandType.ChatInput,
+		},
+	],
+	async run(interaction) {
+		await dog(interaction);
+	},
+	async component(interaction) {
+		await dog(interaction, true);
+	},
+});

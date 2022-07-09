@@ -32,14 +32,15 @@ const checkPerms = async (
 	if (interaction.user.id !== ownerId) {
 		if (!interaction.memberPermissions.has("ModerateMembers")) {
 			await interaction.reply({
-				content: "Non hai permessi per moderare i membri!",
+				content:
+					"Hai bisogno del permesso **Metti i membri in Time out** per eseguire questa azione!",
 				ephemeral: true,
 			});
 			return true;
 		}
 		if (id === ownerId) {
 			await interaction.reply({
-				content: "Non puoi assegnare il Time out al proprietario del server!",
+				content: "Non puoi eseguire questa azione sul proprietario del server!",
 				ephemeral: true,
 			});
 			return true;
@@ -51,7 +52,7 @@ const checkPerms = async (
 		) {
 			await interaction.reply({
 				content:
-					"Non puoi assegnare il Time out a un membro con una posizione superiore o uguale alla tua!",
+					"Non puoi eseguire questa azione su un membro con una posizione superiore o uguale alla tua!",
 				ephemeral: true,
 			});
 			return true;
@@ -266,10 +267,6 @@ export const command = createCommand({
 			type: ApplicationCommandType.User,
 			name: "Applica Time out",
 		},
-		{
-			type: ApplicationCommandType.User,
-			name: "Annulla Time out",
-		},
 	],
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
@@ -316,10 +313,7 @@ export const command = createCommand({
 		}
 		const reason = data.find((o) => o.name === "reason")?.value;
 
-		if (
-			interaction.commandName === "timeout" &&
-			interaction.options.data[0].name === "add"
-		) {
+		if (interaction.options.data[0].name === "add") {
 			const duration = data.find((o) => o.name === "duration")?.value;
 			const timeout = typeof duration === "string" ? ms(duration) : undefined;
 

@@ -1,2 +1,0 @@
-import"../chunk-4KDV7KKW.js";import{y as e}from"../chunk-OT6DYTTJ.js";import"../chunk-B7NPBJ6H.js";import{SlashCommandBuilder as s}from"@discordjs/builders";var o={data:new s().setName("rps").setDescription("Gioca a sasso, carta, forbici").addStringOption(a=>a.setName("scelta").setDescription("La tua scelta").setRequired(!0).addChoices({name:"Sasso",value:"rock"},{name:"Carta",value:"paper"},{name:"Forbici",value:"scissors"})),isPublic:!0,async run(a){await a.reply(await e(this.client,a.options.getString("scelta",!0)))}};export{o as command};
-//# sourceMappingURL=rps.js.map

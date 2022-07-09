@@ -1,2 +1,3 @@
-import"../chunk-4KDV7KKW.js";import{v as t}from"../chunk-OT6DYTTJ.js";import"../chunk-B7NPBJ6H.js";import{SlashCommandBuilder as o}from"@discordjs/builders";var a={data:new o().setName("ping").setDescription("Pong!"),isPublic:!0,async run(i){await i.reply(await t(this.client))}};export{a as command};
+import{a as n}from"../chunk-R2SJYMZV.js";import"../chunk-R24UT4ZV.js";import{ApplicationCommandType as p,ButtonStyle as a,ComponentType as o}from"discord-api-types/v10";var e=t=>({content:`WS: **${t.client.ws.ping}ms**
+Ritardo totale: **${Date.now()-t.createdTimestamp}ms**`,components:[{type:o.ActionRow,components:[{type:o.Button,custom_id:"ping",label:"Pong!",style:a.Success,emoji:{name:"\u{1F3D3}"}}]}]}),c=n({data:[{name:"ping",description:"Pong!",type:p.ChatInput}],async run(t){await t.reply(e(t))},async component(t){await t.update(e(t))}});export{c as command};
 //# sourceMappingURL=ping.js.map

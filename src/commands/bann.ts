@@ -19,21 +19,22 @@ import {
 
 const checkPerms = async (
 	interaction: ReceivedInteraction<"cached">,
-	id: Snowflake,
 	ownerId: Snowflake,
+	id?: Snowflake,
 	member?: GuildMember
 ) => {
 	if (interaction.user.id !== ownerId) {
 		if (!interaction.memberPermissions.has("BanMembers")) {
 			await interaction.reply({
-				content: "Non hai abbastanza permessi per bannare membri!",
+				content:
+					"Hai bisogno del permesso **Bannare i membri** per questa azione!",
 				ephemeral: true,
 			});
 			return true;
 		}
 		if (id === ownerId) {
 			await interaction.reply({
-				content: "Non puoi bannare il proprietario del server!",
+				content: "Non puoi eseguire questa azione sul proprietario del server!",
 				ephemeral: true,
 			});
 			return true;
@@ -256,10 +257,6 @@ export const command = createCommand({
 			type: ApplicationCommandType.User,
 			name: "Bann",
 		},
-		{
-			type: ApplicationCommandType.User,
-			name: "Revoca bann",
-		},
 	],
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
@@ -299,7 +296,7 @@ export const command = createCommand({
 				? option.member
 				: await guild.members.fetch(user.id).catch(() => undefined);
 
-		if (await checkPerms(interaction, user.id, guild.ownerId, member)) return;
+		if (await checkPerms(interaction, guild.ownerId, user.id, member)) return;
 		if (interaction.commandName === "Bann") {
 			await showModal(interaction, user);
 			return;
@@ -307,7 +304,6 @@ export const command = createCommand({
 		const reason = data.find((o) => o.name === "reason")?.value;
 
 		if (
-			interaction.commandName === "bann" &&
 			interaction.options.data[0].name === "add"
 		) {
 			const deleteMessages = data.find(
@@ -361,7 +357,7 @@ export const command = createCommand({
 		const { guild } = interaction;
 		const member = await guild.members.fetch(id).catch(() => undefined);
 
-		if (await checkPerms(interaction, id, guild.ownerId, member)) return;
+		if (await checkPerms(interaction, guild.ownerId, id, member)) return;
 		await executeBan(
 			interaction,
 			user,
@@ -397,7 +393,7 @@ export const command = createCommand({
 		const { guild } = interaction;
 		const member = await guild.members.fetch(id).catch(() => undefined);
 
-		if (await checkPerms(interaction, id, guild.ownerId, member)) return;
+		if (await checkPerms(interaction, guild.ownerId, id, member)) return;
 		if (action === "a") {
 			await showModal(interaction, user);
 			return;

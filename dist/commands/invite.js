@@ -1,2 +1,0 @@
-import{SlashCommandBuilder as e}from"@discordjs/builders";var o={data:new e().setName("invite").setDescription("Invita il bot nel tuo server"),async run(t){await t.reply({content:"Attualmente non \xE8 possibile invitare il bot nel tuo server!"})}};export{o as command};
-//# sourceMappingURL=invite.js.map

@@ -21,25 +21,14 @@ export const command = createCommand({
 				},
 			],
 		},
-		{
-			name: "Avatar",
-			type: ApplicationCommandType.User,
-		},
 	],
 	async run(interaction) {
-		const option = interaction.options.data.find(
-			(o) => o.type === ApplicationCommandOptionType.User
-		);
-		const user = option?.user;
-
-		if (!user) {
-			await interaction.reply({
-				content: "Utente non trovato!",
-				ephemeral: true,
-			});
-			return;
-		}
 		const { guild } = interaction;
+		const option =
+			interaction.options.data.find(
+				(o) => o.type === ApplicationCommandOptionType.User
+			) ?? interaction;
+		const user = option.user ?? interaction.user;
 		const member = option.member
 			? option.member
 			: guild
@@ -55,7 +44,8 @@ export const command = createCommand({
 				? this.client.rest.cdn.guildMemberAvatar(
 						guild!.id,
 						user.id,
-						member.avatar
+						member.avatar,
+						{ size: 4096, extension: "png" }
 				  )
 				: user.displayAvatarURL({
 						extension: "png",
@@ -69,7 +59,7 @@ export const command = createCommand({
 					: "nick" in member && member.nick != null
 					? member.nick
 					: user.username
-			)}](${url})**:`,
+			)}](${url} )**:`,
 			components: [
 				{
 					type: ComponentType.ActionRow,

@@ -21,24 +21,13 @@ export const command = createCommand({
 				},
 			],
 		},
-		{
-			name: "Banner",
-			type: ApplicationCommandType.User,
-		},
 	],
 	async run(interaction) {
-		const option = interaction.options.data.find(
-			(o) => o.type === ApplicationCommandOptionType.User
-		);
-		let user = option?.user;
-
-		if (!user) {
-			await interaction.reply({
-				content: "Utente non trovato!",
-				ephemeral: true,
-			});
-			return;
-		}
+		const option =
+			interaction.options.data.find(
+				(o) => o.type === ApplicationCommandOptionType.User
+			) ?? interaction;
+		let user = option.user ?? interaction.user;
 		if (user.banner === undefined) user = await user.fetch(true);
 		if (user.banner == null) {
 			await interaction.reply({
@@ -53,7 +42,7 @@ export const command = createCommand({
 		})!;
 
 		await interaction.reply({
-			content: `Banner di **[${escapeMarkdown(user.username)}](${url})**:`,
+			content: `Banner di **[${escapeMarkdown(user.username)}](${url} )**:`,
 			components: [
 				{
 					type: ComponentType.ActionRow,

@@ -1,2 +1,0 @@
-import"../../chunk-4KDV7KKW.js";import{d as t}from"../../chunk-OT6DYTTJ.js";import"../../chunk-B7NPBJ6H.js";var n={name:"error",type:"discord",on(e){t.printToStderr(e,!0)}};export{n as event};
-//# sourceMappingURL=error.js.map

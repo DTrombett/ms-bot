@@ -129,7 +129,6 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 					}, date - Date.now()).unref();
 				return writeVariable("timeouts", timeouts);
 			}),
-			calc(this as CustomClient<true>, ""),
 		]);
 
 		return super.login(token);
