@@ -1,2 +1,2 @@
-import{b as e}from"../chunk-R2SJYMZV.js";import{d as t}from"../chunk-R24UT4ZV.js";import{env as n}from"node:process";var r=n.NODE_ENV!=="production",m=e({name:"debug",on:r?o=>{t.printToStdout(o)}:void 0});export{m as event};
+import{b as e}from"../chunk-SIYDC5FB.js";import{d as t}from"../chunk-R24UT4ZV.js";import{env as n}from"node:process";var r=n.NODE_ENV!=="production",m=e({name:"debug",on:r?o=>{t.printToStdout(o)}:void 0});export{m as event};
 //# sourceMappingURL=debug.js.map

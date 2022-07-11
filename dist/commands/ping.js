@@ -1,3 +1,3 @@
-import{a as n}from"../chunk-R2SJYMZV.js";import"../chunk-R24UT4ZV.js";import{ApplicationCommandType as p,ButtonStyle as a,ComponentType as o}from"discord-api-types/v10";var e=t=>({content:`WS: **${t.client.ws.ping}ms**
+import{a as n}from"../chunk-SIYDC5FB.js";import"../chunk-R24UT4ZV.js";import{ApplicationCommandType as p,ButtonStyle as a,ComponentType as o}from"discord-api-types/v10";var e=t=>({content:`WS: **${t.client.ws.ping}ms**
 Ritardo totale: **${Date.now()-t.createdTimestamp}ms**`,components:[{type:o.ActionRow,components:[{type:o.Button,custom_id:"ping",label:"Pong!",style:a.Success,emoji:{name:"\u{1F3D3}"}}]}]}),c=n({data:[{name:"ping",description:"Pong!",type:p.ChatInput}],async run(t){await t.reply(e(t))},async component(t){await t.update(e(t))}});export{c as command};
 //# sourceMappingURL=ping.js.map

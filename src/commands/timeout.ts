@@ -271,7 +271,8 @@ export const command = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere solo usato in un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -348,7 +349,8 @@ export const command = createCommand({
 		}
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere solo usato in un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -367,7 +369,8 @@ export const command = createCommand({
 	async component(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere solo usato in un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;

@@ -5,8 +5,9 @@ import {
 	ComponentType,
 	GuildPremiumTier,
 } from "discord-api-types/v10";
-import type { Attachment } from "discord.js";
+import type { Attachment, Guild, GuildEmoji } from "discord.js";
 import { escapeMarkdown } from "discord.js";
+import type { ReceivedInteraction } from "../util";
 import {
 	createCommand,
 	CustomClient,
@@ -19,6 +20,111 @@ const emojiLimit: Record<GuildPremiumTier, number> = {
 	[GuildPremiumTier.Tier1]: 100,
 	[GuildPremiumTier.Tier2]: 150,
 	[GuildPremiumTier.Tier3]: 250,
+};
+const checkPerms = async (
+	interaction: ReceivedInteraction<"cached">,
+	ownerId: string
+) => {
+	if (
+		interaction.user.id !== ownerId &&
+		!interaction.memberPermissions.has("ManageEmojisAndStickers")
+	) {
+		await interaction.reply({
+			content: "Hai bisogno del permesso **Gestire emoji e adesivi**",
+			ephemeral: true,
+		});
+		return true;
+	}
+	return false;
+};
+const deleteEmoji = async (
+	interaction: ReceivedInteraction<"cached">,
+	guild: Guild,
+	emoji?: string,
+	reason?: string
+) => {
+	if (!emoji!) {
+		await interaction.reply({
+			content: "Emoji non valida!",
+			ephemeral: true,
+		});
+		return;
+	}
+	if (interaction.appPermissions?.has("ManageEmojisAndStickers") !== true) {
+		await interaction.reply({
+			content: "Ho bisogno del permesso **Gestire emoji e adesivi**!",
+			ephemeral: true,
+		});
+		return;
+	}
+	const result = await guild.emojis
+		.delete(emoji, reason! || undefined)
+		.catch(normalizeError);
+
+	if (result instanceof Error) {
+		await sendError(interaction, result);
+		return;
+	}
+	await interaction.reply({
+		content: "Emoji rimossa con successo!",
+	});
+};
+const emojiInfo = async (
+	interaction: ReceivedInteraction<"cached">,
+	emoji?: GuildEmoji,
+	ephemeral?: boolean
+) => {
+	if (!emoji) {
+		await interaction.reply({
+			content: "Non hai specificato un'emoji valida!",
+			ephemeral: true,
+		});
+		return;
+	}
+	const createdTimestamp = Math.round(emoji.createdTimestamp / 1000);
+	const { roles } = emoji;
+
+	await interaction.reply({
+		content: `${emoji.toString()} [${emoji.name ?? "emoji"}](${emoji.url}) (${
+			emoji.id
+		})\n\nAnimata: **${
+			emoji.animated ?? false ? "Sì" : "No"
+		}**\nCreata <t:${createdTimestamp}:F> (<t:${createdTimestamp}:R>)\nGestita da un integrazione: **${
+			emoji.managed === true ? "Sì" : "No"
+		}**${
+			emoji.author
+				? `\nAutore: <@${emoji.author.id}> (**${escapeMarkdown(
+						emoji.author.tag
+				  )}**)`
+				: ""
+		}${
+			roles.cache.size > 0
+				? `\nRuoli consentiti: ${roles.cache
+						.map((r) => `<@&${r.id}>`)
+						.join(", ")}`
+				: ""
+		}`,
+		ephemeral,
+		components: [
+			{
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						custom_id: `emoji-${emoji.id}-i`,
+						style: ButtonStyle.Primary,
+						label: "Info",
+					},
+					{
+						type: ComponentType.Button,
+						custom_id: `emoji-${emoji.id}-r`,
+						style: ButtonStyle.Danger,
+						label: "Rimuovi",
+					},
+				],
+			},
+		],
+	});
 };
 
 export const command = createCommand({
@@ -126,7 +232,8 @@ export const command = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere solo usato in un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -141,17 +248,9 @@ export const command = createCommand({
 			return;
 		}
 		const { guild } = interaction;
+
 		if (subcommand === "add") {
-			if (
-				interaction.user.id !== guild.ownerId &&
-				!interaction.memberPermissions.has("ManageEmojisAndStickers")
-			) {
-				await interaction.reply({
-					content: "Hai bisogno del permesso **Gestire emoji e adesivi**",
-					ephemeral: true,
-				});
-				return;
-			}
+			if (await checkPerms(interaction, guild.ownerId)) return;
 			let emoji: Attachment | undefined,
 				name: string | undefined,
 				reason: string | undefined,
@@ -270,6 +369,12 @@ export const command = createCommand({
 						components: [
 							{
 								type: ComponentType.Button,
+								custom_id: `emoji-${result.id}-i`,
+								style: ButtonStyle.Primary,
+								label: "Info",
+							},
+							{
+								type: ComponentType.Button,
 								custom_id: `emoji-${result.id}-r`,
 								style: ButtonStyle.Danger,
 								label: "Rimuovi",
@@ -281,16 +386,7 @@ export const command = createCommand({
 			return;
 		}
 		if (subcommand === "remove") {
-			if (
-				interaction.user.id !== guild.ownerId &&
-				!interaction.memberPermissions.has("ManageEmojisAndStickers")
-			) {
-				await interaction.reply({
-					content: "Hai bisogno del permesso **Gestire emoji e adesivi**",
-					ephemeral: true,
-				});
-				return;
-			}
+			if (await checkPerms(interaction, guild.ownerId)) return;
 			let emoji: string | undefined, reason: string | undefined;
 
 			for (const option of data)
@@ -307,43 +403,11 @@ export const command = createCommand({
 						  )?.id;
 				} else if (option.name === "reason")
 					reason = typeof option.value === "string" ? option.value : undefined;
-			if (!emoji!) {
-				await interaction.reply({
-					content: "Non hai specificato un'emoji valida!",
-					ephemeral: true,
-				});
-				return;
-			}
-			if (interaction.appPermissions?.has("ManageEmojisAndStickers") !== true) {
-				await interaction.reply({
-					content: "Ho bisogno del permesso **Gestire emoji e adesivi**!",
-					ephemeral: true,
-				});
-				return;
-			}
-			const result = await guild.emojis
-				.delete(emoji, reason! || undefined)
-				.catch(normalizeError);
-
-			if (result instanceof Error) {
-				await sendError(interaction, result);
-				return;
-			}
-			await interaction.reply({
-				content: "Emoji rimossa con successo!",
-			});
+			await deleteEmoji(interaction, guild, emoji, reason);
+			return;
 		}
 		if (subcommand === "edit") {
-			if (
-				interaction.user.id !== guild.ownerId &&
-				!interaction.memberPermissions.has("ManageEmojisAndStickers")
-			) {
-				await interaction.reply({
-					content: "Hai bisogno del permesso **Gestire emoji e adesivi**",
-					ephemeral: true,
-				});
-				return;
-			}
+			if (await checkPerms(interaction, guild.ownerId)) return;
 			let emoji: string | undefined,
 				name: string | undefined,
 				reason: string | undefined,
@@ -440,6 +504,12 @@ export const command = createCommand({
 						components: [
 							{
 								type: ComponentType.Button,
+								custom_id: `emoji-${result.id}-i`,
+								style: ButtonStyle.Primary,
+								label: "Info",
+							},
+							{
+								type: ComponentType.Button,
 								custom_id: `emoji-${result.id}-r`,
 								style: ButtonStyle.Danger,
 								label: "Rimuovi",
@@ -461,54 +531,98 @@ export const command = createCommand({
 				return;
 			}
 			value = value.trim().toLowerCase();
-			const emoji = await (/^\d{17,20}$/.test(value)
-				? guild.emojis.fetch(value)
-				: /^<a?:[a-zA-Z0-9-_]+:\d{17,20}>$/.test(value)
-				? guild.emojis.fetch(
-						value.replace(/^<:[a-zA-Z0-9-_]+:/, "").replace(/>$/, "")
-				  )
-				: guild.emojis.cache.find((e) => e.name?.toLowerCase() === value));
-
-			if (!emoji) {
-				await interaction.reply({
-					content: "Non hai specificato un'emoji valida!",
-					ephemeral: true,
-				});
-				return;
-			}
-			const createdTimestamp = Math.round(emoji.createdTimestamp / 1000);
-			const { roles } = emoji;
-
-			await interaction.reply({
-				content: `${emoji.toString()} [${emoji.name ?? "emoji"}](${
-					emoji.url
-				}) (${emoji.id})\n\nAnimata: **${
-					emoji.animated ?? false ? "Sì" : "No"
-				}**\nCreata <t:${createdTimestamp}:F> (<t:${createdTimestamp}:R>)\nGestita da un integrazione: **${
-					emoji.managed === true ? "Sì" : "No"
-				}**${
-					emoji.author
-						? `\nAutore: <@${emoji.author.id}> (**${escapeMarkdown(
-								emoji.author.tag
-						  )}**)`
-						: ""
-				}${
-					roles.cache.size > 0
-						? `\nRuoli consentiti: ${roles.cache
-								.map((r) => `<@&${r.id}>`)
-								.join(", ")}`
-						: ""
-				}`,
-			});
+			await emojiInfo(
+				interaction,
+				await (/^\d{17,20}$/.test(value)
+					? guild.emojis.fetch(value).catch(() => undefined)
+					: /^<a?:[a-zA-Z0-9-_]+:\d{17,20}>$/.test(value)
+					? guild.emojis
+							.fetch(value.replace(/(^<:[a-zA-Z0-9-_]+:)|(>$)/, ""))
+							.catch(() => undefined)
+					: guild.emojis.cache.find((e) => e.name?.toLowerCase() === value))
+			);
 		}
 	},
 	async component(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere solo usato in un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
+		}
+		const [, id, action] = interaction.customId.split("-");
+		const { guild } = interaction;
+
+		if (action === "r") {
+			if (await checkPerms(interaction, guild.ownerId)) return;
+			await deleteEmoji(interaction, guild, id);
+			return;
+		}
+		if (action === "i")
+			await emojiInfo(
+				interaction,
+				await guild.emojis.fetch(id).catch(() => undefined),
+				true
+			);
+	},
+	async autocomplete(interaction) {
+		if (!interaction.inCachedGuild()) return;
+		const { guild } = interaction;
+		const option = interaction.options.getFocused(true);
+
+		if (typeof option.value !== "string") return;
+		if (option.name === "emoji") {
+			option.value = option.value.trim().toLowerCase();
+			const emojis = option.value
+				? /^\d{2,20}$/.test(option.value)
+					? guild.emojis.cache.filter(
+							(e): e is typeof e & { name: string } =>
+								e.id.startsWith(option.value) && e.name != null
+					  )
+					: guild.emojis.cache.filter(
+							(e): e is typeof e & { name: string } =>
+								e.name?.toLowerCase().startsWith(option.value) ?? false
+					  )
+				: guild.emojis.cache.filter(
+						(e): e is typeof e & { name: string } => e.name != null
+				  );
+
+			await interaction.respond(
+				emojis.first(25).map((e) => ({
+					name: e.name,
+					value: e.id,
+				}))
+			);
+			return;
+		}
+		if (option.name === "roles") {
+			option.value = option.value.trim();
+			const split = option.value.split(/\s*,\s*/);
+			const old = split.slice(0, -1);
+			const value = split.at(-1)!.toLowerCase();
+			const roles = option.value
+				? /^\d{2,20}$/.test(value)
+					? guild.roles.cache.filter(
+							(r) => r.id.startsWith(value) && !old.includes(r.name)
+					  )
+					: guild.roles.cache.filter(
+							(r) =>
+								r.name.toLowerCase().startsWith(value) && !old.includes(r.name)
+					  )
+				: guild.roles.cache;
+
+			await interaction.respond(
+				roles.map((r) => {
+					const name = old.concat([r.name]).join(", ");
+
+					return {
+						name,
+						value: name,
+					};
+				})
+			);
 		}
 	},
 });

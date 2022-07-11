@@ -1,2 +1,0 @@
-import{c as o,e as n}from"./chunk-R24UT4ZV.js";var r=e=>e;var i=e=>e;var s=e=>(n.printToStderr(e),e instanceof Error?e:new Error(typeof e=="string"?e:"Unknown error"));var c=(e,t)=>e===void 0?Math.random():Math.floor(Math.random()*(t-e+1))+e;var u=(e,t)=>e[e.deferred?"editReply":"reply"]({content:`Couldn't unban user: \`${t.message.slice(0,1e3)}\``,ephemeral:!0});var v=o;export{r as a,i as b,s as c,c as d,u as e,v as f};
-//# sourceMappingURL=chunk-R2SJYMZV.js.map
