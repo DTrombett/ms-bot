@@ -25,7 +25,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 
 	constructor() {
 		super({
-			intents: ["GuildMembers", "Guilds"],
+			intents: ["GuildMembers", "Guilds", "GuildPresences"],
 			allowedMentions: { parse: [], repliedUser: false, roles: [], users: [] },
 			failIfNotExists: false,
 			rest: {
@@ -33,19 +33,21 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			},
 			makeCache: Options.cacheWithLimits({
 				...Options.DefaultMakeCacheSettings,
-				BaseGuildEmojiManager: 0,
-				GuildBanManager: 0,
+				BaseGuildEmojiManager: 100,
+				GuildBanManager: 10,
 				GuildInviteManager: 0,
 				GuildMemberManager: 1_000,
 				GuildStickerManager: 0,
 				MessageManager: 0,
-				PresenceManager: 0,
+				PresenceManager: 10,
 				ReactionManager: 0,
 				ReactionUserManager: 0,
 				StageInstanceManager: 0,
 				ThreadMemberManager: 0,
 				UserManager: 1_000,
 				VoiceStateManager: 0,
+				ApplicationCommandManager: 0,
+				GuildScheduledEventManager: 0,
 			}),
 			presence: {
 				activities: [{ name: "MS Gaming", type: ActivityType.Watching }],

@@ -1,2 +1,2 @@
-import{b as e}from"../chunk-SIYDC5FB.js";import{d as t}from"../chunk-R24UT4ZV.js";var o=e({name:"warn",on(n){t.printToStderr(n)}});export{o as event};
+import{b as e}from"../chunk-LPLALLEL.js";import{d as t}from"../chunk-X37ZX2WS.js";var o=e({name:"warn",on(n){t.printToStderr(n)}});export{o as event};
 //# sourceMappingURL=warn.js.map

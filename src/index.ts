@@ -27,11 +27,6 @@ process
 	.on("warning", (message) => {
 		CustomClient.printToStderr(message);
 	});
-(
-	global as typeof globalThis & {
-		client: typeof client;
-	}
-).client = client;
 app.use((_, res) => {
 	res.sendStatus(204);
 });

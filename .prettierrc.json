@@ -2,7 +2,6 @@
 	"arrowParens": "always",
 	"bracketSpacing": true,
 	"endOfLine": "crlf",
-	"parser": "typescript",
 	"printWidth": 80,
 	"quoteProps": "consistent",
 	"semi": true,
