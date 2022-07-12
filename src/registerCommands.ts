@@ -39,14 +39,13 @@ const [privateAPICommands, publicAPICommands] = await Promise.all([
 	rest.put(Routes.applicationGuildCommands(applicationId!, guildId!), {
 		body: commands
 			.filter((c) => nodeEnv !== "production" || c.isPrivate)
-			.map((file) => file.data)
-			.flat(),
+			.flatMap((file) => file.data),
 	}) as Promise<APIApplicationCommand[]>,
 	nodeEnv === "production"
 		? (rest.put(Routes.applicationCommands(applicationId!), {
 				body: commands
 					.filter((c) => c.isPrivate !== true)
-					.map((file) => file.data),
+					.flatMap((file) => file.data),
 		  }) as Promise<APIApplicationCommand[]>)
 		: [],
 ]);
