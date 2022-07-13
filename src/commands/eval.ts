@@ -10,10 +10,9 @@ import type {
 	Interaction,
 } from "discord.js";
 import { Colors, escapeCodeBlock } from "discord.js";
-import EventEmitter from "node:events";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import EventEmitter, { once } from "node:events";
 import { performance } from "node:perf_hooks";
+import { nextTick } from "node:process";
 import type { REPLServer, writer } from "node:repl";
 import { REPL_MODE_STRICT, start } from "node:repl";
 import { Readable, Writable } from "node:stream";
@@ -40,7 +39,7 @@ const replServer = start({
 	}),
 	prompt: "",
 	replMode: REPL_MODE_STRICT,
-}) as REPLServer & { writer: typeof writer };
+}) as REPLServer & { readonly writer: typeof writer };
 const addContext = (interaction: Interaction) => {
 	// eslint-disable-next-line @typescript-eslint/no-use-before-define
 	replServer.context.command = command;
@@ -65,10 +64,6 @@ const setInspectOptions = (
 		interaction.options.getInteger("max-string-length") ?? 1000;
 	options.breakLength = isPC ? 66 : 39;
 };
-
-replServer.setupHistory(join(homedir(), ".node_repl_history"), (err) => {
-	if (err) CustomClient.printToStderr(err);
-});
 
 export const command = createCommand({
 	data: [
@@ -122,21 +117,29 @@ export const command = createCommand({
 	],
 	isPrivate: true,
 	async run(interaction) {
-		let delay!: number;
 		const code = interaction.options.getString("code", true);
-		const previous = performance.now();
 		const ephemeral = interaction.options.getBoolean("ephemeral") ?? true;
+		let delay!: number;
+		const previous = performance.now();
 		const [result] = await Promise.all([
 			new Promise<string>((resolve) => {
-				output.once("data", (chunk) => {
+				let lastValue: string;
+				let lastId = 0;
+				const callback = (chunk: string) => {
+					chunk = chunk.trim();
+					if (!chunk) return;
 					delay = performance.now() - previous;
-					resolve(
-						typeof chunk === "string"
-							? chunk.slice(0, -1)
-							: CustomClient.inspect(chunk)
-					);
-					delete replServer.context.interaction;
-				});
+					lastId = Math.random();
+					lastValue = chunk;
+					setImmediate((oldId: number) => {
+						if (oldId !== lastId) return;
+						resolve(lastValue);
+						output.removeListener("data", callback);
+						delete replServer.context.interaction;
+					}, lastId);
+				};
+
+				output.on("data", callback);
 				setInspectOptions(interaction);
 				addContext(interaction);
 				input.push(`${code}\n`);
@@ -185,37 +188,73 @@ export const command = createCommand({
 		const split = option.value.split("\n");
 		const old = `${split.slice(0, -1).join(" ")} `.trim();
 		const last = split.at(-1)!;
-		const autocomplete = await new Promise<string[]>((resolve) => {
-			replServer.completer(last, (err, r) => {
-				if (err) {
-					CustomClient.printToStderr(err);
-					resolve([]);
-				} else resolve(r?.[0] ?? []);
-				delete replServer.context.interaction;
-			});
-		});
-
-		await interaction.respond(
-			autocomplete
-				.slice(0, 25)
-				.map<ApplicationCommandOptionChoiceData | null>((a) => {
-					let n = a;
-
-					for (let i = 0; i < last.length; i++)
-						if (a.startsWith(last.slice(i))) {
-							n = `${last.slice(0, i)}${a}`;
-							break;
-						}
-					if (!n) return null;
-					const value = `${old}${n}`;
-
-					if (value.length > 100) return null;
-					return {
-						name: value,
-						value,
-					};
-				})
-				.filter((v): v is ApplicationCommandOptionChoiceData => v != null)
+		const [autocomplete, sub] = await new Promise<[string[], string]>(
+			(resolve) => {
+				replServer.completer(last, (err, r) => {
+					if (err) CustomClient.printToStderr(err);
+					resolve(r ?? [[], ""]);
+				});
+			}
 		);
+		if (autocomplete.length === 0) {
+			await interaction.respond([]);
+			delete replServer.context.interaction;
+			return;
+		}
+		if (autocomplete.length === 1 && !old && sub === last) {
+			const { options } = replServer.writer;
+
+			nextTick(() => input.push(`${autocomplete[0]}\n`));
+			options.colors = false;
+			options.showHidden =
+				interaction.options.getBoolean("show-hidden") ?? false;
+			options.depth = interaction.options.getInteger("depth") ?? 2;
+			options.showProxy = interaction.options.getBoolean("show-proxy") ?? false;
+			options.maxArrayLength =
+				interaction.options.getInteger("max-array-length") ?? 100;
+			options.maxStringLength =
+				interaction.options.getInteger("max-string-length") ?? 1000;
+			options.breakLength = Infinity;
+			options.compact = true;
+			let [name]: string[] = await once(output, "data");
+
+			name = name.trim();
+			if (name.length > 100) name = `${name.slice(0, 97).trimEnd()}...`;
+			if (name) {
+				delete replServer.context.interaction;
+				autocomplete[0] = autocomplete[0].slice(0, 100);
+				await interaction.respond([
+					{
+						name: autocomplete[0],
+						value: autocomplete[0],
+					},
+					{
+						name,
+						value: autocomplete[0],
+					},
+				]);
+				return;
+			}
+		}
+		const options: ApplicationCommandOptionChoiceData[][] = [];
+		let tempArray: ApplicationCommandOptionChoiceData[] = [];
+
+		for (const a of autocomplete) {
+			if (!a || tempArray.length >= 25) {
+				options.push(tempArray);
+				tempArray = [];
+				continue;
+			}
+			const value = `${old}${last.replace(new RegExp(`${sub}$`), a)}`;
+
+			if (value.length > 100) continue;
+			tempArray.push({
+				name: value,
+				value,
+			});
+		}
+		options.push(tempArray);
+		delete replServer.context.interaction;
+		await interaction.respond(options.reverse().flat().slice(0, 25));
 	},
 });

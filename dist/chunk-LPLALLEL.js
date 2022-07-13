@@ -1,2 +1,0 @@
-import{c as n,e as o}from"./chunk-X37ZX2WS.js";var r=e=>e;var a=e=>e;var s=e=>(o.printToStderr(e),e instanceof Error?e:new Error(typeof e=="string"?e:"Unknown error"));var c=(e,t)=>e===void 0?Math.random():Math.floor(Math.random()*(t-e+1))+e;var u=(e,t)=>e[e.deferred?"editReply":"reply"]({content:`Si \xE8 verificato un errore: \`${t.message.slice(0,1e3)}\``,ephemeral:!0});var v=n;export{r as a,a as b,s as c,c as d,u as e,v as f};
-//# sourceMappingURL=chunk-LPLALLEL.js.map

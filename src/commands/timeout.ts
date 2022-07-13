@@ -128,9 +128,13 @@ const showModal = (
 		InteractionType.ApplicationCommand | InteractionType.MessageComponent
 	>,
 	member: GuildMember
-) =>
-	interaction.showModal({
-		title: `Applica Time out a ${member.displayName}`,
+) => {
+	const { displayName } = member;
+
+	return interaction.showModal({
+		title: `Applica Time out a ${
+			displayName.length > 26 ? `${displayName.slice(0, 23)}...` : displayName
+		}`,
 		custom_id: `timeout-${member.id}`,
 		components: [
 			{
@@ -165,6 +169,7 @@ const showModal = (
 			},
 		],
 	});
+};
 const removeTimeout = async (
 	interaction: ReceivedInteraction,
 	member: GuildMember,
