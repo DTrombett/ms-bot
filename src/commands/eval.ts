@@ -202,59 +202,19 @@ export const command = createCommand({
 			delete replServer.context.interaction;
 			return;
 		}
-		let only: string;
-		if (
-			(autocomplete.length === 1 ||
-				(only = autocomplete.find((a) =>
-					autocomplete.every((b) => b.startsWith(a))
-				)!)) &&
-			!old &&
-			sub === last
-		) {
-			const { options } = replServer.writer;
-
-			only ??= autocomplete[0];
-			nextTick(() => input.push(`${only}\n`));
-			options.colors = false;
-			options.showHidden =
-				interaction.options.getBoolean("show-hidden") ?? false;
-			options.depth = interaction.options.getInteger("depth") ?? 2;
-			options.showProxy = interaction.options.getBoolean("show-proxy") ?? false;
-			options.maxArrayLength =
-				interaction.options.getInteger("max-array-length") ?? 100;
-			options.maxStringLength =
-				interaction.options.getInteger("max-string-length") ?? 1000;
-			options.breakLength = Infinity;
-			options.compact = true;
-			let [name]: string[] = await once(output, "data");
-
-			name = name.trim();
-			if (name.length > 100) name = `${name.slice(0, 97).trimEnd()}...`;
-			if (name) {
-				delete replServer.context.interaction;
-				only = only.slice(0, 100);
-				await interaction.respond([
-					{
-						name: only,
-						value: only,
-					},
-					{
-						name,
-						value: only,
-					},
-				]);
-				return;
-			}
-		}
-		const options: ApplicationCommandOptionChoiceData[][] = [];
+		const nestedOptions: ApplicationCommandOptionChoiceData[][] = [];
 		let tempArray: ApplicationCommandOptionChoiceData[] = [];
+		let only = autocomplete.find((a) =>
+			autocomplete.every((b) => b.startsWith(a))
+		)!;
 
 		for (const a of autocomplete) {
 			if (!a || tempArray.length >= 25) {
-				options.push(tempArray);
+				nestedOptions.push(tempArray);
 				tempArray = [];
 				continue;
 			}
+			if (only && only === a) continue;
 			const value = `${old}${last.replace(new RegExp(`${sub}$`), a)}`;
 
 			if (value.length > 100) continue;
@@ -263,8 +223,43 @@ export const command = createCommand({
 				value,
 			});
 		}
-		options.push(tempArray);
+		nestedOptions.push(tempArray);
+		const options = nestedOptions.reverse().flat().slice(0, 25);
+
+		if (only && !old && sub === last) {
+			const { options: writerOptions } = replServer.writer;
+
+			writerOptions.colors = false;
+			writerOptions.showHidden = false;
+			writerOptions.depth = 2;
+			writerOptions.showProxy = false;
+			writerOptions.maxArrayLength = 10;
+			writerOptions.maxStringLength = 100;
+			writerOptions.breakLength = Infinity;
+			writerOptions.compact = true;
+			nextTick(() => input.push(`${only}\n`));
+			let [name] = (await once(output, "data")) as string[];
+
+			name = name.trim();
+			if (name.length > 100) name = `${name.slice(0, 97).trimEnd()}...`;
+			if (name) {
+				delete replServer.context.interaction;
+				only = only.slice(0, 100);
+				await interaction.respond([
+					{
+						name,
+						value: only,
+					},
+					{
+						name: only,
+						value: only,
+					},
+					...options,
+				]);
+				return;
+			}
+		}
 		delete replServer.context.interaction;
-		await interaction.respond(options.reverse().flat().slice(0, 25));
+		await interaction.respond(options);
 	},
 });
