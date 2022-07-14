@@ -24,7 +24,7 @@ const checkPerms = async (
 ) => {
 	if (!member) {
 		await interaction.reply({
-			content: "L'utente non è nel server.",
+			content: "L'utente non è nel server!",
 			ephemeral: true,
 		});
 		return true;
