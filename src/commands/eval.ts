@@ -51,8 +51,10 @@ const setInspectOptions = (
 	interaction: AutocompleteInteraction | ChatInputCommandInteraction
 ) => {
 	const { options } = replServer.writer;
-	const isPC = !interaction.guild?.presences.cache.get(interaction.user.id)
-		?.clientStatus?.mobile;
+	const clientStatus = interaction.guild?.presences.cache.get(
+		interaction.user.id
+	)?.clientStatus;
+	const isPC = clientStatus?.desktop != null && clientStatus.mobile == null;
 
 	options.colors = isPC;
 	options.showHidden = interaction.options.getBoolean("show-hidden") ?? false;
@@ -123,20 +125,19 @@ export const command = createCommand({
 		const previous = performance.now();
 		const [result] = await Promise.all([
 			new Promise<string>((resolve) => {
-				let lastValue: string;
-				let lastId = 0;
+				let value = "";
+				let immediateId: NodeJS.Immediate;
 				const callback = (chunk: string) => {
 					chunk = chunk.trim();
 					if (!chunk) return;
+					clearImmediate(immediateId);
 					delay = performance.now() - previous;
-					lastId = Math.random();
-					lastValue = chunk;
-					setImmediate((oldId: number) => {
-						if (oldId !== lastId) return;
-						resolve(lastValue);
+					value += `\n${chunk}`;
+					immediateId = setImmediate(() => {
+						resolve(value);
 						output.removeListener("data", callback);
 						delete replServer.context.interaction;
-					}, lastId);
+					});
 				};
 
 				output.on("data", callback);
@@ -201,10 +202,19 @@ export const command = createCommand({
 			delete replServer.context.interaction;
 			return;
 		}
-		if (autocomplete.length === 1 && !old && sub === last) {
+		let only: string;
+		if (
+			(autocomplete.length === 1 ||
+				(only = autocomplete.find((a) =>
+					autocomplete.every((b) => b.startsWith(a))
+				)!)) &&
+			!old &&
+			sub === last
+		) {
 			const { options } = replServer.writer;
 
-			nextTick(() => input.push(`${autocomplete[0]}\n`));
+			only ??= autocomplete[0];
+			nextTick(() => input.push(`${only}\n`));
 			options.colors = false;
 			options.showHidden =
 				interaction.options.getBoolean("show-hidden") ?? false;
@@ -222,15 +232,15 @@ export const command = createCommand({
 			if (name.length > 100) name = `${name.slice(0, 97).trimEnd()}...`;
 			if (name) {
 				delete replServer.context.interaction;
-				autocomplete[0] = autocomplete[0].slice(0, 100);
+				only = only.slice(0, 100);
 				await interaction.respond([
 					{
-						name: autocomplete[0],
-						value: autocomplete[0],
+						name: only,
+						value: only,
 					},
 					{
 						name,
-						value: autocomplete[0],
+						value: only,
 					},
 				]);
 				return;
