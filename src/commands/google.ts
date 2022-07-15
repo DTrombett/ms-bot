@@ -4,6 +4,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 } from "discord-api-types/v10";
+import { escapeMarkdown } from "discord.js";
 import { createCommand } from "../util";
 
 export const command = createCommand({
@@ -31,10 +32,8 @@ export const command = createCommand({
 			});
 			return;
 		}
-		const url = `https://google.com/search?q=${encodeURIComponent(query)}`;
-
 		await interaction.reply({
-			content: url,
+			content: `Risultati per la ricerca "**${escapeMarkdown(query)}**":`,
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -44,7 +43,7 @@ export const command = createCommand({
 							label: "Apri nel browser!",
 							style: ButtonStyle.Link,
 							emoji: { name: "🔍" },
-							url,
+							url: `https://google.com/search?q=${encodeURIComponent(query)}`,
 						},
 					],
 				},

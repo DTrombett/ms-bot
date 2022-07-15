@@ -43,7 +43,7 @@ const timestamp = async (
 						options.hours ?? 0,
 						options.minutes ?? 0,
 						options.seconds ?? 0
-					).toLocaleString("it-IT", {
+					).toLocaleString("en-US", {
 						timeZone: "Europe/Rome",
 					})
 			  )

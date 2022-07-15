@@ -10,6 +10,7 @@ import type {
 	Interaction,
 } from "discord.js";
 import { Colors, escapeCodeBlock } from "discord.js";
+import { Buffer } from "node:buffer";
 import EventEmitter, { once } from "node:events";
 import { performance } from "node:perf_hooks";
 import { nextTick } from "node:process";
@@ -54,9 +55,10 @@ const setInspectOptions = (
 	const clientStatus = interaction.guild?.presences.cache.get(
 		interaction.user.id
 	)?.clientStatus;
-	const isPC = clientStatus?.desktop != null && clientStatus.mobile == null;
+	const isPC = clientStatus?.mobile == null;
 
-	options.colors = isPC;
+	options.colors =
+		interaction.options.getBoolean("file") === true ? false : isPC;
 	options.showHidden = interaction.options.getBoolean("show-hidden") ?? false;
 	options.depth = interaction.options.getInteger("depth") ?? 3;
 	options.showProxy = interaction.options.getBoolean("show-proxy") ?? true;
@@ -80,6 +82,18 @@ export const command = createCommand({
 					description: "Codice da eseguire",
 					required: true,
 					autocomplete: true,
+				},
+				{
+					type: ApplicationCommandOptionType.Boolean,
+					name: "ephemeral",
+					description:
+						"Se il risultato può essere visto solo da te (default: true)",
+				},
+				{
+					type: ApplicationCommandOptionType.Boolean,
+					name: "file",
+					description:
+						"Se il risultato deve essere inviato come file (default: false)",
 				},
 				{
 					type: ApplicationCommandOptionType.Boolean,
@@ -108,12 +122,6 @@ export const command = createCommand({
 					description:
 						"Il numero massimo di caratteri da mostrare in una stringa (default: 1000)",
 				},
-				{
-					type: ApplicationCommandOptionType.Boolean,
-					name: "ephemeral",
-					description:
-						"Se il risultato può essere visto solo da te (default: true)",
-				},
 			],
 		},
 	],
@@ -128,13 +136,11 @@ export const command = createCommand({
 				let value = "";
 				let immediateId: NodeJS.Immediate;
 				const callback = (chunk: string) => {
-					chunk = chunk.trim();
-					if (!chunk) return;
 					clearImmediate(immediateId);
 					delay = performance.now() - previous;
-					value += `\n${chunk}`;
+					value += chunk;
 					immediateId = setImmediate(() => {
-						resolve(value);
+						resolve(value.trim());
 						output.removeListener("data", callback);
 						delete replServer.context.interaction;
 					});
@@ -152,30 +158,45 @@ export const command = createCommand({
 				.catch(CustomClient.printToStderr),
 		]);
 
-		await interaction.editReply({
-			content: `Eval elaborato in ${delay}ms`,
-			embeds: [
-				{
-					author: {
-						name: interaction.user.tag,
-						icon_url: interaction.user.displayAvatarURL(),
-					},
-					title: "Eval output",
-					description: codeBlock(
-						"ansi",
-						escapeCodeBlock(result).slice(0, 4096 - 11)
-					),
-					color: Colors.Blurple,
-					timestamp: new Date().toISOString(),
-					fields: [
-						{
-							name: "Input",
-							value: codeBlock("js", escapeCodeBlock(code).slice(0, 1024 - 9)),
-						},
-					],
-				},
-			],
-		});
+		await interaction.editReply(
+			interaction.options.getBoolean("file") ?? false
+				? {
+						files: [
+							{
+								attachment: Buffer.from(result, "utf8"),
+								name: "eval.txt",
+								description: `Eval elaborato in ${delay}ms`,
+							},
+						],
+				  }
+				: {
+						content: `Eval elaborato in ${delay}ms`,
+						embeds: [
+							{
+								author: {
+									name: interaction.user.tag,
+									icon_url: interaction.user.displayAvatarURL(),
+								},
+								title: "Eval output",
+								description: codeBlock(
+									"ansi",
+									escapeCodeBlock(result).slice(0, 4096 - 11)
+								),
+								color: Colors.Blurple,
+								timestamp: new Date().toISOString(),
+								fields: [
+									{
+										name: "Input",
+										value: codeBlock(
+											"js",
+											escapeCodeBlock(code).slice(0, 1024 - 9)
+										),
+									},
+								],
+							},
+						],
+				  }
+		);
 	},
 	async autocomplete(interaction) {
 		const option = interaction.options.getFocused(true);
@@ -186,12 +207,9 @@ export const command = createCommand({
 			return;
 		}
 		addContext(interaction);
-		const split = option.value.split("\n");
-		const old = `${split.slice(0, -1).join(" ")} `.trim();
-		const last = split.at(-1)!;
 		const [autocomplete, sub] = await new Promise<[string[], string]>(
 			(resolve) => {
-				replServer.completer(last, (err, r) => {
+				replServer.completer(option.value, (err, r) => {
 					if (err) CustomClient.printToStderr(err);
 					resolve(r ?? [[], ""]);
 				});
@@ -215,7 +233,7 @@ export const command = createCommand({
 				continue;
 			}
 			if (only && only === a) continue;
-			const value = `${old}${last.replace(new RegExp(`${sub}$`), a)}`;
+			const value = option.value.replace(new RegExp(`${sub}$`), a);
 
 			if (value.length > 100) continue;
 			tempArray.push({
@@ -226,7 +244,7 @@ export const command = createCommand({
 		nestedOptions.push(tempArray);
 		const options = nestedOptions.reverse().flat().slice(0, 25);
 
-		if (only && !old && sub === last) {
+		if (only && sub === option.value) {
 			const { options: writerOptions } = replServer.writer;
 
 			writerOptions.colors = false;
