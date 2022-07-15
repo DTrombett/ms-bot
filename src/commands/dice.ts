@@ -63,7 +63,6 @@ export const command = createCommand({
 					type: ApplicationCommandOptionType.Integer,
 					min_value: 1,
 					max_value: 100,
-					required: false,
 				},
 			],
 		},
