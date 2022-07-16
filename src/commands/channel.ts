@@ -2,7 +2,9 @@ import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
+	ChannelType,
 	ComponentType,
+	VideoQualityMode,
 } from "discord-api-types/v10";
 import type {
 	GuildBasedChannel,
@@ -13,7 +15,7 @@ import type {
 } from "discord.js";
 import ms from "ms";
 import type { ReceivedInteraction } from "../util";
-import { createCommand, normalizeError, sendError } from "../util";
+import { createCommand, formatBytes, normalizeError, sendError } from "../util";
 
 type CheckSlowmodeOptions = {
 	channel: GuildBasedChannel | null | undefined;
@@ -153,6 +155,18 @@ export const command = createCommand({
 						},
 					],
 				},
+				{
+					type: ApplicationCommandOptionType.Subcommand,
+					name: "info",
+					description: "Mostra le informazioni sul canale",
+					options: [
+						{
+							name: "channel",
+							description: "Il canale da mostrare (default: questo canale)",
+							type: ApplicationCommandOptionType.Channel,
+						},
+					],
+				},
 			],
 		},
 	],
@@ -220,6 +234,194 @@ export const command = createCommand({
 								channel.rateLimitPerUser! * 1000
 						  )}**.`
 						: `Slowmode non attiva in <#${channel.id}>.`,
+			});
+			return;
+		}
+		if (interaction.options.data[0].name === "info") {
+			const channel =
+				interaction.options.getChannel("channel") ?? interaction.channel;
+
+			if (!(channel && "client" in channel)) {
+				await interaction.reply({
+					content: "Canale non valido!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const createdAt =
+				channel.createdTimestamp != null
+					? Math.round(channel.createdTimestamp / 1000)
+					: 0;
+			const lastPinTimestamp =
+				"lastPinTimestamp" in channel && channel.lastPinTimestamp != null
+					? Math.round(channel.lastPinTimestamp / 1000)
+					: 0;
+			const archiveTimestamp =
+				"archiveTimestamp" in channel && channel.archiveTimestamp != null
+					? Math.round(channel.archiveTimestamp / 1000)
+					: 0;
+			const fields = [
+				{
+					name: "ID",
+					value: channel.id,
+					inline: true,
+				},
+				{
+					name: "Tipo",
+					value: ChannelType[channel.type],
+					inline: true,
+				},
+				{
+					name: "NSFW",
+					value: "nsfw" in channel && channel.nsfw ? "Sì" : "No",
+					inline: true,
+				},
+				{
+					name: "Slowmode",
+					value:
+						"rateLimitPerUser" in channel && channel.rateLimitPerUser!
+							? ms(channel.rateLimitPerUser * 1000)
+							: "Non attiva",
+					inline: true,
+				},
+				{
+					name: "Ultimo messaggio attaccato",
+					value: lastPinTimestamp
+						? `<t:${lastPinTimestamp}:F> (<t:${lastPinTimestamp}:R>)`
+						: "*Nessun messaggio attaccato*",
+					inline: true,
+				},
+				{
+					name: "Creato",
+					value: createdAt
+						? `<t:${createdAt}:F> (<t:${createdAt}:R>)`
+						: "Non disponibile",
+					inline: true,
+				},
+			];
+
+			if ("position" in channel)
+				fields.push({
+					name: "Posizione",
+					value: `${channel.position}`,
+					inline: true,
+				});
+			if ("bitrate" in channel)
+				fields.push({
+					name: "Bitrate",
+					value: `${formatBytes(channel.bitrate)}/s`,
+					inline: true,
+				});
+			if ("userLimit" in channel)
+				fields.push({
+					name: "Limite utenti",
+					value: `${channel.userLimit}`,
+					inline: true,
+				});
+			if ("parentId" in channel && channel.parentId != null)
+				fields.push({
+					name: "Categoria",
+					value: `<#${channel.parentId}>`,
+					inline: true,
+				});
+			if ("rtcRegion" in channel)
+				fields.push({
+					name: "Regione",
+					value: channel.rtcRegion ?? "Automatica",
+					inline: true,
+				});
+			if ("videoQualityMode" in channel)
+				fields.push({
+					name: "Qualità video",
+					value:
+						channel.videoQualityMode === VideoQualityMode.Full
+							? "720p"
+							: "Auto",
+					inline: true,
+				});
+			if ("messageCount" in channel && channel.messageCount != null)
+				fields.push({
+					name: "Messaggi",
+					value: `${channel.messageCount >= 50 ? "50+" : channel.messageCount}`,
+					inline: true,
+				});
+			if ("memberCount" in channel && channel.memberCount != null)
+				fields.push({
+					name: "Membri",
+					value: `${channel.memberCount >= 50 ? "50+" : channel.memberCount}`,
+					inline: true,
+				});
+			if ("defaultAutoArchiveDuration" in channel)
+				fields.push({
+					name: "Durata di autoarchiviazione dei thread predefinita",
+					value:
+						channel.defaultAutoArchiveDuration == null
+							? "Non presente"
+							: ms(channel.defaultAutoArchiveDuration * 60 * 1000),
+					inline: true,
+				});
+			if ("archived" in channel)
+				fields.push({
+					name: "Archiviato",
+					value: channel.archived! ? "Sì" : "No",
+					inline: true,
+				});
+			if ("autoArchiveDuration" in channel)
+				fields.push({
+					name: "Autoarchiviazione dopo",
+					value:
+						channel.autoArchiveDuration == null
+							? "Non attiva"
+							: ms(channel.autoArchiveDuration * 60 * 1000),
+					inline: true,
+				});
+			if (archiveTimestamp)
+				fields.push({
+					name:
+						"archived" in channel
+							? channel.archived!
+								? "Archiviato"
+								: "Aperto"
+							: "Archiviato/Aperto",
+					value: `<t:${archiveTimestamp}:F> (<t:${archiveTimestamp}:R>)`,
+					inline: true,
+				});
+			if ("locked" in channel)
+				fields.push({
+					name: "Bloccato",
+					value: channel.locked! ? "Sì" : "No",
+					inline: true,
+				});
+			if ("invitable" in channel && channel.invitable != null)
+				fields.push({
+					name: "Si può invitare",
+					value: channel.invitable ? "Sì" : "No",
+					inline: true,
+				});
+			await interaction.reply({
+				embeds: [
+					{
+						url: channel.url,
+						title: `#${channel.name}`,
+						author: {
+							name: channel.guild.name,
+							icon_url:
+								channel.guild.iconURL({ extension: "png", size: 4096 }) ??
+								undefined,
+							url: `https://discord.com/channels/${channel.guildId}`,
+						},
+						color: interaction.member.roles.highest.color,
+						description:
+							"topic" in channel && channel.topic!
+								? `> ${channel.topic}`
+								: undefined,
+						footer: {
+							text: "Ultimo aggiornamento",
+						},
+						timestamp: new Date().toISOString(),
+						fields: fields.slice(0, 25),
+					},
+				],
 			});
 		}
 	},
