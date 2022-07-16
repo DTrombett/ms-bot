@@ -136,6 +136,7 @@ export const command = createCommand({
 					name: "reason",
 					description: "Il motivo dell'espulsione, se presente",
 					type: ApplicationCommandOptionType.String,
+					max_length: 512,
 				},
 			],
 		},

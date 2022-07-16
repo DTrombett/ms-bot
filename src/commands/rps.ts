@@ -49,7 +49,7 @@ export const command = createCommand({
 		},
 	],
 	async run(interaction) {
-		const choice = interaction.options.getString("choice") as PossibleChoice;
+		const choice = interaction.options.data[0].value as PossibleChoice;
 
 		if (!choices.includes(choice)) {
 			await interaction.reply({

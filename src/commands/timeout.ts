@@ -244,6 +244,7 @@ export const command = createCommand({
 							name: "reason",
 							description: "Il motivo del Time out, se presente",
 							type: ApplicationCommandOptionType.String,
+							max_length: 512,
 						},
 					],
 				},
@@ -263,6 +264,7 @@ export const command = createCommand({
 							description:
 								"Il motivo dell'annullamento del Time out, se presente",
 							type: ApplicationCommandOptionType.String,
+							max_length: 512,
 						},
 					],
 				},

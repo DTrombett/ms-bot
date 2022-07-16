@@ -4,7 +4,6 @@ import { env, stderr, stdout } from "node:process";
 import { inspect } from "node:util";
 import color, { Colors } from "./colors";
 import type Command from "./Command";
-import { importVariable, writeVariable } from "./database";
 import type Event from "./Event";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
@@ -112,29 +111,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * @returns A promise that resolves when the client is ready
 	 */
 	async login(token?: string) {
-		await Promise.all([
-			loadCommands(this),
-			loadEvents(this),
-			importVariable("timeouts").then((timeouts) => {
-				timeouts = timeouts.filter((timeout) => timeout.date > Date.now());
-				for (const { args, date, name } of timeouts)
-					setTimeout(async () => {
-						await Promise.all([
-							import(`./util/timeouts/${name}.js`).then(
-								(module: { default: (...funcArgs: typeof args) => unknown }) =>
-									module.default(...args)
-							),
-							importVariable("timeouts").then((newTimeouts) =>
-								writeVariable(
-									"timeouts",
-									newTimeouts.filter((t) => t.date !== date)
-								)
-							),
-						]);
-					}, date - Date.now()).unref();
-				return writeVariable("timeouts", timeouts);
-			}),
-		]);
+		await Promise.all([loadCommands(this), loadEvents(this)]);
 
 		return super.login(token);
 	}

@@ -8,7 +8,6 @@ export * from "./Constants";
 export * from "./createCommand";
 export * from "./createEvent";
 export * from "./CustomClient";
-export * from "./database";
 export * from "./eval";
 export * from "./Event";
 export * from "./interactions";
@@ -18,7 +17,6 @@ export * from "./normalizeError";
 export * from "./Queue";
 export * from "./randomNumber";
 export * from "./sendError";
-export * from "./setPermanentTimeout";
 export * from "./types";
 
 export default Constants;

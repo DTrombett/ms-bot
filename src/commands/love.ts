@@ -2,7 +2,6 @@ import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 } from "discord-api-types/v10";
-import type { User } from "discord.js";
 import { createCommand } from "../util";
 
 const emojis = [
@@ -41,11 +40,9 @@ export const command = createCommand({
 		},
 	],
 	async run(interaction) {
-		let user1: User | undefined, user2: User | undefined;
+		// eslint-disable-next-line prefer-const
+		let [{ user: user1 }, { user: user2 }] = interaction.options.data;
 
-		for (const option of interaction.options.data)
-			if (option.name === "user1") user1 = option.user;
-			else user2 = option.user;
 		user2 ??= interaction.user;
 		if (!user1) {
 			await interaction.reply({

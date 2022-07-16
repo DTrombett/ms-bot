@@ -253,14 +253,6 @@ export type CatResponse = {
 }[];
 
 /**
- * Variables that can be stored in the database
- */
-export type DatabaseVariables = {
-	timeouts: Timeout[];
-	warns: Partial<Record<string, Record<string, Warn[]>>>;
-};
-
-/**
  * A response from thedogapi.com
  */
 export type DogResponse = {

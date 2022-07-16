@@ -1,2 +1,2 @@
-import{b as n}from"../chunk-L6YZVJZB.js";import{a as e}from"../chunk-UUWUPXYS.js";var o=n({name:"ready",async once(t){await t.application.fetch(),console.timeEnd(e.clientOnlineLabel)}});export{o as event};
+import{b as n}from"../chunk-CQOFJXOB.js";import{a as e}from"../chunk-5WKV4B45.js";var o=n({name:"ready",async once(t){await t.application.fetch(),console.timeEnd(e.clientOnlineLabel)}});export{o as event};
 //# sourceMappingURL=ready.js.map
