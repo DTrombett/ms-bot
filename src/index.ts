@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import express from "express";
 import process, { env } from "node:process";
-import Constants, { CustomClient } from "./util";
+import Constants, { CustomClient, watchChanges } from "./util";
 
 CustomClient.printToStdout("Starting...");
 if (!("DISCORD_TOKEN" in env)) config();
@@ -31,4 +31,5 @@ app.use((_, res) => {
 	res.sendStatus(204);
 });
 
+if (env.NODE_ENV === "development") void watchChanges(client);
 await client.login();

@@ -18,5 +18,6 @@ export * from "./Queue";
 export * from "./randomNumber";
 export * from "./sendError";
 export * from "./types";
+export * from "./watchChanges";
 
 export default Constants;
