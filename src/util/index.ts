@@ -1,6 +1,7 @@
 import Constants from "./Constants";
 
 export * from "./calculateRam";
+export * from "./capitalize";
 export * from "./cast";
 export * from "./colors";
 export * from "./Command";

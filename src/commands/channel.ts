@@ -15,7 +15,13 @@ import type {
 } from "discord.js";
 import ms from "ms";
 import type { ReceivedInteraction } from "../util";
-import { createCommand, formatBytes, normalizeError, sendError } from "../util";
+import {
+	capitalize,
+	createCommand,
+	formatBytes,
+	normalizeError,
+	sendError,
+} from "../util";
 
 type CheckSlowmodeOptions = {
 	channel: GuildBasedChannel | null | undefined;
@@ -62,7 +68,7 @@ const checkOptions = async (
 	}
 	if (isNaN(options.rateLimitPerUser)) {
 		await interaction.reply({
-			content: "Hai inserito un valore non valido per la slowmode!",
+			content: "Hai inserito un valore non valido per lo slowmode!",
 			ephemeral: true,
 		});
 		return true;
@@ -70,14 +76,14 @@ const checkOptions = async (
 	if (options.rateLimitPerUser < 0 || options.rateLimitPerUser > 21600) {
 		await interaction.reply({
 			content:
-				"La durata della slowmode deve essere compresa tra 0 secondi e 6 ore!",
+				"La durata dello slowmode deve essere compresa tra 0 secondi e 6 ore!",
 			ephemeral: true,
 		});
 		return true;
 	}
 	if (options.rateLimitPerUser === options.channel.rateLimitPerUser) {
 		await interaction.reply({
-			content: "La slowmode è già impostata a questo valore!",
+			content: "Lo slowmode è già impostata a questo valore!",
 			ephemeral: true,
 		});
 		return true;
@@ -100,8 +106,8 @@ const slowmode = async (
 	await interaction.reply({
 		content: `Slowmode ${
 			options.rateLimitPerUser
-				? `impostata a **${ms(options.rateLimitPerUser * 1000)}**`
-				: "disattivata"
+				? `impostato a **${ms(options.rateLimitPerUser * 1000)}**`
+				: "disattivato"
 		} in <#${options.channel.id}> con successo!`,
 		components: [
 			{
@@ -134,17 +140,17 @@ export const command = createCommand({
 				{
 					type: ApplicationCommandOptionType.Subcommand,
 					name: "slowmode",
-					description: "Imposta o mostra la slowmode",
+					description: "Imposta o mostra lo slowmode",
 					options: [
 						{
 							name: "duration",
 							description:
-								"La nuova slowmode (0 per disattivarla, vuoto per mostrare quella attuale)",
+								"Il nuovo slowmode (0 per disattivarlo, vuoto per mostrare quella attuale)",
 							type: ApplicationCommandOptionType.String,
 						},
 						{
 							name: "reason",
-							description: "Il motivo della modifica della slowmode",
+							description: "Il motivo della modifica dello slowmode",
 							type: ApplicationCommandOptionType.String,
 							max_length: 512,
 						},
@@ -230,10 +236,10 @@ export const command = createCommand({
 			await interaction.reply({
 				content:
 					channel.rateLimitPerUser ?? 0
-						? `Slowmode attiva in <#${channel.id}> ogni **${ms(
+						? `Slowmode attivo in <#${channel.id}> ogni **${ms(
 								channel.rateLimitPerUser! * 1000
 						  )}**.`
-						: `Slowmode non attiva in <#${channel.id}>.`,
+						: `Slowmode non attivo in <#${channel.id}>.`,
 			});
 			return;
 		}
@@ -281,7 +287,7 @@ export const command = createCommand({
 					value:
 						"rateLimitPerUser" in channel && channel.rateLimitPerUser!
 							? ms(channel.rateLimitPerUser * 1000)
-							: "Non attiva",
+							: "*Non attivo*",
 					inline: true,
 				},
 				{
@@ -295,7 +301,7 @@ export const command = createCommand({
 					name: "Creato",
 					value: createdAt
 						? `<t:${createdAt}:F> (<t:${createdAt}:R>)`
-						: "Non disponibile",
+						: "*Non disponibile*",
 					inline: true,
 				},
 			];
@@ -303,19 +309,19 @@ export const command = createCommand({
 			if ("position" in channel)
 				fields.push({
 					name: "Posizione",
-					value: `${channel.position}`,
+					value: `${channel.position + 1}`,
 					inline: true,
 				});
 			if ("bitrate" in channel)
 				fields.push({
 					name: "Bitrate",
-					value: `${formatBytes(channel.bitrate)}/s`,
+					value: `${formatBytes(channel.bitrate, 1000, false).toLowerCase()}ps`,
 					inline: true,
 				});
 			if ("userLimit" in channel)
 				fields.push({
 					name: "Limite utenti",
-					value: `${channel.userLimit}`,
+					value: `${channel.userLimit || "*Nessun limite*"}`,
 					inline: true,
 				});
 			if ("parentId" in channel && channel.parentId != null)
@@ -327,7 +333,7 @@ export const command = createCommand({
 			if ("rtcRegion" in channel)
 				fields.push({
 					name: "Regione",
-					value: channel.rtcRegion ?? "Automatica",
+					value: capitalize(channel.rtcRegion ?? "*Automatica*"),
 					inline: true,
 				});
 			if ("videoQualityMode" in channel)
@@ -356,7 +362,7 @@ export const command = createCommand({
 					name: "Durata di autoarchiviazione dei thread predefinita",
 					value:
 						channel.defaultAutoArchiveDuration == null
-							? "Non presente"
+							? "*Non attiva*"
 							: ms(channel.defaultAutoArchiveDuration * 60 * 1000),
 					inline: true,
 				});
@@ -371,7 +377,7 @@ export const command = createCommand({
 					name: "Autoarchiviazione dopo",
 					value:
 						channel.autoArchiveDuration == null
-							? "Non attiva"
+							? "*Non attiva*"
 							: ms(channel.autoArchiveDuration * 60 * 1000),
 					inline: true,
 				});
@@ -410,10 +416,10 @@ export const command = createCommand({
 								undefined,
 							url: `https://discord.com/channels/${channel.guildId}`,
 						},
-						color: interaction.member.roles.highest.color,
+						color: interaction.member.roles.color?.color,
 						description:
 							"topic" in channel && channel.topic!
-								? `> ${channel.topic}`
+								? `>>> ${channel.topic}`
 								: undefined,
 						footer: {
 							text: "Ultimo aggiornamento",
