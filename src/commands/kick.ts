@@ -3,6 +3,7 @@ import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ComponentType,
+	PermissionFlagsBits,
 	TextInputStyle,
 } from "discord-api-types/v10";
 import { escapeMarkdown, GuildMember } from "discord.js";
@@ -29,14 +30,6 @@ const checkPerms = async (
 		return true;
 	}
 	if (interaction.user.id !== ownerId) {
-		if (!interaction.memberPermissions.has("KickMembers")) {
-			await interaction.reply({
-				content:
-					"Hai bisogno del permesso **Espelli membri** per eseguire questa azione!",
-				ephemeral: true,
-			});
-			return true;
-		}
 		if (id === ownerId) {
 			await interaction.reply({
 				content: "Non puoi eseguire questa azione sul proprietario del server!",
@@ -125,6 +118,7 @@ export const command = createCommand({
 			type: ApplicationCommandType.ChatInput,
 			name: "kick",
 			description: "Espelli utente",
+			default_member_permissions: String(PermissionFlagsBits.KickMembers),
 			options: [
 				{
 					name: "member",
@@ -143,6 +137,7 @@ export const command = createCommand({
 		{
 			type: ApplicationCommandType.User,
 			name: "Espelli",
+			default_member_permissions: String(PermissionFlagsBits.KickMembers),
 		},
 	],
 	async run(interaction) {

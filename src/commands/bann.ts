@@ -4,6 +4,7 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	PermissionFlagsBits,
 	TextInputStyle,
 } from "discord-api-types/v10";
 import type { User } from "discord.js";
@@ -24,14 +25,6 @@ const checkPerms = async (
 	member?: GuildMember
 ) => {
 	if (interaction.user.id !== ownerId) {
-		if (!interaction.memberPermissions.has("BanMembers")) {
-			await interaction.reply({
-				content:
-					"Hai bisogno del permesso **Bannare i membri** per questa azione!",
-				ephemeral: true,
-			});
-			return true;
-		}
 		if (id === ownerId) {
 			await interaction.reply({
 				content: "Non puoi eseguire questa azione sul proprietario del server!",
@@ -206,6 +199,7 @@ export const command = createCommand({
 			type: ApplicationCommandType.ChatInput,
 			name: "bann",
 			description: "Banna utente o revoca un bann",
+			default_member_permissions: String(PermissionFlagsBits.BanMembers),
 			options: [
 				{
 					name: "add",
@@ -258,6 +252,7 @@ export const command = createCommand({
 		{
 			type: ApplicationCommandType.User,
 			name: "Bann",
+			default_member_permissions: String(PermissionFlagsBits.BanMembers),
 		},
 	],
 	async run(interaction) {

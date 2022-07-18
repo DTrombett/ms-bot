@@ -42,8 +42,6 @@ const replServer = start({
 	replMode: REPL_MODE_STRICT,
 }) as REPLServer & { readonly writer: typeof writer };
 const addContext = (interaction: Interaction) => {
-	// eslint-disable-next-line @typescript-eslint/no-use-before-define
-	replServer.context.command = command;
 	replServer.context.replServer = replServer;
 	replServer.context.interaction = interaction;
 	replServer.context.client = interaction.client;
@@ -55,7 +53,7 @@ const setInspectOptions = (
 	const clientStatus = interaction.guild?.presences.cache.get(
 		interaction.user.id
 	)?.clientStatus;
-	const isPC = clientStatus?.mobile == null;
+	const isPC = clientStatus?.mobile == null && clientStatus?.desktop != null;
 
 	options.colors =
 		interaction.options.getBoolean("file") === true ? false : isPC;
