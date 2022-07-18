@@ -108,7 +108,9 @@ const slowmode = async (
 			options.rateLimitPerUser
 				? `impostato a **${ms(options.rateLimitPerUser * 1000)}**`
 				: "disattivato"
-		} in <#${options.channel.id}> con successo!`,
+		} in <#${options.channel.id}> con successo!\n\nMotivo: ${
+			options.reason?.length ?? 0 ? options.reason! : "*Nessun motivo*"
+		}`,
 		components: [
 			{
 				type: ComponentType.ActionRow,

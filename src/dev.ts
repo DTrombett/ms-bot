@@ -2,7 +2,8 @@
 import { ApplicationCommandType } from "discord.js";
 import { unlink, watch } from "node:fs/promises";
 import { join } from "node:path";
-import { cwd } from "node:process";
+import { cwd, memoryUsage } from "node:process";
+import { setInterval } from "node:timers/promises";
 import type { build as Build } from "tsup";
 import type { CommandOptions, EventOptions } from "./util";
 import Command from "./util/Command";
@@ -162,6 +163,21 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 			CustomClient.printToStderr(`Cannot find new event ${event.filename}`);
 	}
 };
+const logMemoryUsage = async () => {
+	for await (const _ of setInterval(60_000)) {
+		const memory = memoryUsage();
+
+		CustomClient.printToStdout(
+			`RSS: ${(memory.rss / 1024 / 1024).toFixed(2)}MB\nHeap Used: ${(
+				memory.heapUsed /
+				1024 /
+				1024
+			).toFixed(2)}MB\nHeap Total: ${(memory.heapTotal / 1024 / 1024).toFixed(
+				2
+			)}MB\nExternal: ${(memory.external / 1024 / 1024).toFixed(2)}MB`
+		);
+	}
+};
 
 export const configureDev = async (client: CustomClient) => {
 	const tsup = await import("tsup").catch(() => {
@@ -175,6 +191,10 @@ export const configureDev = async (client: CustomClient) => {
 			watchCommands(client, tsup.build),
 			watchEvents(client, tsup.build),
 		]).catch(CustomClient.printToStderr);
+	client.on("debug", (info) => {
+		CustomClient.printToStdout(info);
+	});
+	logMemoryUsage().catch(CustomClient.printToStderr);
 };
 
 export default configureDev;
