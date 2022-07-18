@@ -17,7 +17,7 @@
 	"license": "MIT",
 	"type": "module",
 	"engines": {
-		"node": ">=18"
+		"node": ">=16"
 	},
 	"repository": {
 		"type": "git",
@@ -30,17 +30,16 @@
 		"@discordjs/builders": "*",
 		"@discordjs/rest": "*",
 		"discord-api-types": "*",
-		"discord.js": "^14.0.0-dev.1657239101-e78c9c9",
+		"discord.js": "^14.0.1",
 		"dotenv": "^16.0.1",
 		"express": "^4.18.1",
 		"mathjs": "^10.6.1",
 		"ms": "^2.1.3",
-		"node": "^18.4.0",
 		"undici": "^5.5.1",
 		"workerpool": "^6.2.1"
 	},
 	"devDependencies": {
-		"@tsconfig/node18": "^1.0.1",
+		"@tsconfig/node16": "^1.0.3",
 		"@types/express": "^4.17.13",
 		"@types/ms": "^0.7.31",
 		"@types/node": "^18.0.3",
@@ -56,6 +55,7 @@
 	"optionalDependencies": {
 		"bufferutil": "^4.0.6",
 		"erlpack": "github:discord/erlpack",
+		"node": "^16.13.2",
 		"utf-8-validate": "^5.0.9",
 		"zlib-sync": "^0.1.7"
 	}

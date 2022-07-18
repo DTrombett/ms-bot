@@ -1,4 +1,0 @@
-import{b as n}from"../chunk-HUHUXK6N.js";import"../chunk-NJIM6YGF.js";import{ApplicationCommandOptionType as o,ApplicationCommandType as r}from"discord-api-types/v10";var m=n({data:[{name:"poll",description:"Crea un sondaggio",type:r.ChatInput,options:[{name:"question",description:"La domanda da porre",type:o.String,required:!0,min_length:1,max_length:256}]}],async run(e){let t=e.options.data[0].value;if(typeof t!="string"){await e.reply({content:"Domanda non valida!"});return}await e.reply({embeds:[{title:t,author:{name:e.user.tag,icon_url:e.user.avatarURL({extension:"png"})??void 0},color:16606464,description:`\u2705 **S\xEC**
-
-\u274C **No**`,timestamp:new Date().toISOString()}],fetchReply:!0}).then(a=>Promise.all([a.react("\u2705"),a.react("\u274C")]))}});export{m as command};
-//# sourceMappingURL=poll.js.map

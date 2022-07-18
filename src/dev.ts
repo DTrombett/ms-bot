@@ -4,11 +4,11 @@ import { unlink, watch } from "node:fs/promises";
 import { join } from "node:path";
 import { cwd } from "node:process";
 import type { build as Build } from "tsup";
-import type { CommandOptions, EventOptions } from ".";
-import Command from "./Command";
-import Constants from "./Constants";
-import CustomClient from "./CustomClient";
-import Event from "./Event";
+import type { CommandOptions, EventOptions } from "./util";
+import Command from "./util/Command";
+import Constants from "./util/Constants";
+import CustomClient from "./util/CustomClient";
+import Event from "./util/Event";
 
 const commandsFolder = join(cwd(), `src/${Constants.commandsFolderName}`);
 const eventsFolder = join(cwd(), `src/${Constants.eventsFolderName}`);
@@ -163,7 +163,7 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 	}
 };
 
-export const watchChanges = async (client: CustomClient) => {
+export const configureDev = async (client: CustomClient) => {
 	const tsup = await import("tsup").catch(() => {
 		CustomClient.printToStderr(
 			"Failed to load tsup, not watching for changes..."
@@ -177,4 +177,4 @@ export const watchChanges = async (client: CustomClient) => {
 		]).catch(CustomClient.printToStderr);
 };
 
-export default watchChanges;
+export default configureDev;
