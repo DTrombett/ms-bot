@@ -1,6 +1,6 @@
 import { ActivityType } from "discord-api-types/v10";
 import { Client, Collection, Options, Partials } from "discord.js";
-import { env, stderr, stdout } from "node:process";
+import { stderr, stdout } from "node:process";
 import { inspect } from "node:util";
 import color, { Colors } from "./colors";
 import type Command from "./Command";
@@ -38,10 +38,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 				GuildMemberManager: 1_000,
 				GuildStickerManager: 0,
 				MessageManager: 0,
-				PresenceManager: {
-					maxSize: 0,
-					keepOverLimit: (_, id) => env.OWNER_IDS?.includes(id) === true,
-				},
+				PresenceManager: 1_000,
 				ReactionManager: 0,
 				ReactionUserManager: 0,
 				StageInstanceManager: 0,

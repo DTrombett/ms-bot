@@ -215,7 +215,6 @@ export const command = createCommand({
 			name: "channel",
 			description: "Gestisci i canali",
 			type: ApplicationCommandType.ChatInput,
-			default_member_permissions: String(PermissionFlagsBits.ManageChannels),
 			options: [
 				{
 					type: ApplicationCommandOptionType.Subcommand,
