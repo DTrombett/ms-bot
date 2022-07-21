@@ -264,33 +264,20 @@ export type DogResponse = {
 }[];
 
 /**
- * A promise for the queue
+ * A response from api.urbandictionary.com
  */
-export type QueuePromise = { promise: Promise<void>; resolve(): void };
-
-/**
- * Emojis for Rock Paper Scissors
- */
-export enum RPSEmojis {
-	rock = "✊",
-	paper = "✋",
-	scissors = "✌",
-}
-
-/**
- * A timeout
- */
-export type Timeout = {
-	date: number;
-	args: string[];
-	name: string;
-};
-
-/**
- * The json representation of a member warn
- */
-export type Warn = {
-	createdAt: number;
-	executor: Snowflake;
-	reason: string;
+export type UrbanResponse = {
+	list: {
+		definition: string;
+		permalink: string;
+		thumbs_up: number;
+		sound_urls: string[];
+		author: string;
+		word: string;
+		defid: number;
+		current_vote: "";
+		written_on: string;
+		example: string;
+		thumbs_down: number;
+	}[];
 };

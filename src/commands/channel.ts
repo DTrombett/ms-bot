@@ -392,53 +392,51 @@ export const command = createCommand({
 			let channel = interaction.channelId;
 
 			for (const option of options)
-				if (option.name === "name" && typeof option.value === "string")
-					editOptions.name = option.value;
-				else if (option.name === "type" && typeof option.value === "number")
-					editOptions.type = option.value;
-				else if (option.name === "position" && typeof option.value === "number")
-					editOptions.position = option.value - 1;
-				else if (option.name === "topic" && typeof option.value === "string")
-					editOptions.topic = option.value;
-				else if (option.name === "nsfw" && typeof option.value === "boolean")
-					editOptions.nsfw = option.value;
-				else if (option.name === "bitrate" && typeof option.value === "number")
-					editOptions.bitrate = option.value;
-				else if (
-					option.name === "user-limit" &&
-					typeof option.value === "number"
-				)
-					editOptions.userLimit = option.value;
-				else if (
-					option.name === "parent" &&
-					option.channel?.type === ChannelType.GuildCategory
-				)
-					editOptions.parent = option.channel.id;
-				else if (option.name === "slowmode" && typeof option.value === "string")
-					editOptions.rateLimitPerUser = Math.round(ms(option.value) / 1000);
-				else if (
-					option.name === "lock-permissions" &&
-					typeof option.value === "boolean"
-				)
-					editOptions.lockPermissions = option.value;
-				else if (
-					option.name === "autoarchive" &&
-					typeof option.value === "number"
-				)
-					editOptions.defaultAutoArchiveDuration = option.value;
-				else if (
-					option.name === "rtc-region" &&
+				if (option.name === "name") {
+					if (typeof option.value === "string") editOptions.name = option.value;
+				} else if (option.name === "type") {
+					if (typeof option.value === "number") editOptions.type = option.value;
+				} else if (option.name === "position") {
+					if (typeof option.value === "number")
+						editOptions.position = option.value - 1;
+				} else if (option.name === "topic") {
+					if (typeof option.value === "string")
+						editOptions.topic = option.value;
+				} else if (option.name === "nsfw") {
+					if (typeof option.value === "boolean")
+						editOptions.nsfw = option.value;
+				} else if (option.name === "bitrate") {
+					if (typeof option.value === "number")
+						editOptions.bitrate = option.value;
+				} else if (option.name === "user-limit") {
+					if (typeof option.value === "number")
+						editOptions.userLimit = option.value;
+				} else if (option.name === "parent") {
+					if (option.channel?.type === ChannelType.GuildCategory)
+						editOptions.parent = option.channel.id;
+				} else if (option.name === "slowmode") {
+					if (typeof option.value === "string")
+						editOptions.rateLimitPerUser = Math.round(ms(option.value) / 1000);
+				} else if (option.name === "lock-permissions") {
+					if (typeof option.value === "boolean")
+						editOptions.lockPermissions = option.value;
+				} else if (option.name === "autoarchive") {
+					if (typeof option.value === "number")
+						editOptions.defaultAutoArchiveDuration = option.value;
+				} else if (option.name === "rtc-region") {
+					if (typeof option.value === "string")
+						editOptions.rtcRegion =
+							option.value === "auto" ? null : option.value;
+				} else if (option.name === "video-quality") {
+					if (typeof option.value === "number")
+						editOptions.videoQualityMode = option.value;
+				} else if (option.name === "reason") {
+					if (typeof option.value === "string")
+						editOptions.reason = option.value;
+				} else if (
+					option.name === "channel" &&
 					typeof option.value === "string"
 				)
-					editOptions.rtcRegion = option.value === "auto" ? null : option.value;
-				else if (
-					option.name === "video-quality" &&
-					typeof option.value === "number"
-				)
-					editOptions.videoQualityMode = option.value;
-				else if (option.name === "reason" && typeof option.value === "string")
-					editOptions.reason = option.value;
-				else if (option.name === "channel" && typeof option.value === "string")
 					channel = option.value;
 			if (
 				Object.keys(editOptions).length - (editOptions.reason! ? 1 : 0) ===

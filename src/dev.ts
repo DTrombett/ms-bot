@@ -186,15 +186,11 @@ export const configureDev = async (client: CustomClient) => {
 		);
 	});
 
-	if (tsup)
-		Promise.all([
-			watchCommands(client, tsup.build),
-			watchEvents(client, tsup.build),
-		]).catch(CustomClient.printToStderr);
-	client.on("debug", (info) => {
-		CustomClient.printToStdout(info);
-	});
-	logMemoryUsage().catch(CustomClient.printToStderr);
+	Promise.all([
+		tsup ? watchCommands(client, tsup.build) : undefined,
+		tsup ? watchEvents(client, tsup.build) : undefined,
+		logMemoryUsage(),
+	]).catch(CustomClient.printToStderr);
 };
 
 export default configureDev;
