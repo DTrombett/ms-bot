@@ -8,9 +8,12 @@ import { request } from "undici";
 import type { ReceivedInteraction, UrbanResponse } from "../util";
 import { createCommand } from "../util";
 
+let updateDay = 0;
+let wordsOfTheDay: string[] | undefined;
+
 const replacer = (s: string) =>
 	`${s}(https://urbandictionary.com/define.php?term=${encodeURIComponent(
-		s
+		s.slice(1, -1)
 	)})` as const;
 const urban = async (
 	interaction: ReceivedInteraction,
@@ -59,7 +62,7 @@ const urban = async (
 				],
 				url: `https://urbandictionary.com/define.php?term=${encodeURIComponent(
 					def.word
-				)})`,
+				)}`,
 				timestamp: def.written_on,
 				title: `Definizione di "${
 					def.word.length > 83 ? `${def.word.slice(0, 80)}...` : def.word
@@ -141,7 +144,20 @@ export const command = createCommand({
 		const query = interaction.options.data[0].value;
 
 		if (typeof query !== "string" || !query) {
-			await interaction.respond([]);
+			const date = new Date().getDate();
+
+			if (updateDay !== date || !wordsOfTheDay) {
+				const { body } = await request(
+					"https://api.urbandictionary.com/v0/words_of_the_day"
+				);
+				const data: UrbanResponse | undefined = await body.json();
+
+				wordsOfTheDay = data?.list.slice(0, 25).map((x) => x.word);
+				updateDay = date;
+			}
+			await interaction.respond(
+				wordsOfTheDay!.map((value) => ({ name: value, value }))
+			);
 			return;
 		}
 		const { body } = await request(
@@ -154,7 +170,7 @@ export const command = createCommand({
 			return;
 		}
 		await interaction.respond(
-			list.map((value) => ({
+			list.slice(0, 25).map((value) => ({
 				name: value,
 				value,
 			}))
