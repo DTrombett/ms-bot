@@ -1,6 +1,8 @@
+import { config } from "dotenv";
 import { env } from "process";
 import { defineConfig, Options } from "tsup";
 
+if (!("DISCORD_TOKEN" in env)) config();
 const options: Options = {
 	clean: true,
 	entry: [
@@ -22,4 +24,5 @@ if (env.NODE_ENV === "production") {
 	(options.entry as string[]).push("src/dev.ts");
 	options.minify = false;
 }
+
 export default defineConfig(options);
