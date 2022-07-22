@@ -8,7 +8,12 @@ import {
 	ThreadAutoArchiveDuration,
 	VideoQualityMode,
 } from "discord-api-types/v10";
-import type { GuildBasedChannel, GuildChannelEditOptions } from "discord.js";
+import type {
+	GuildBasedChannel,
+	GuildChannelCreateOptions,
+	GuildChannelEditOptions,
+} from "discord.js";
+import { escapeMarkdown } from "discord.js";
 import ms from "ms";
 import type { ReceivedInteraction } from "../util";
 import {
@@ -184,7 +189,8 @@ const channelInfo = async (
 						undefined,
 					url: `https://discord.com/channels/${channel.guildId}`,
 				},
-				color: interaction.member.roles.color?.color,
+				color:
+					interaction.user.accentColor ?? interaction.member.roles.color?.color,
 				description:
 					"topic" in channel && channel.topic!
 						? `>>> ${channel.topic}`
@@ -203,11 +209,15 @@ const channelInfo = async (
 const autoArchiveChoices: { name: string; value: ThreadAutoArchiveDuration }[] =
 	[];
 const videoQualityChoices: { name: string; value: VideoQualityMode }[] = [];
+const channelTypeChoices: { name: string; value: ChannelType }[] = [];
 
 for (const [name, value] of Object.entries(ThreadAutoArchiveDuration))
 	if (typeof value === "number") autoArchiveChoices.push({ name, value });
 for (const [name, value] of Object.entries(VideoQualityMode))
 	if (typeof value === "number") videoQualityChoices.push({ name, value });
+for (const [name, value] of Object.entries(ChannelType))
+	if (typeof value === "number" && [0, 2, 4, 5, 6, 13, 14, 15].includes(value))
+		channelTypeChoices.push({ name: name.slice(5), value });
 
 export const command = createCommand({
 	data: [
@@ -352,6 +362,151 @@ export const command = createCommand({
 						},
 					],
 				},
+				{
+					type: ApplicationCommandOptionType.Subcommand,
+					name: "delete",
+					description: "Elimina il canale",
+					options: [
+						{
+							name: "channel",
+							description: "Il canale da eliminare",
+							type: ApplicationCommandOptionType.Channel,
+							required: true,
+						},
+						{
+							name: "reason",
+							description: "Il motivo della cancellazione del canale",
+							type: ApplicationCommandOptionType.String,
+							max_length: 512,
+						},
+					],
+				},
+				{
+					type: ApplicationCommandOptionType.Subcommand,
+					name: "clone",
+					description: "Clona un canale",
+					options: [
+						{
+							name: "channel",
+							description: "Il canale da clonare (default: questo canale)",
+							type: ApplicationCommandOptionType.Channel,
+						},
+						{
+							name: "reason",
+							description: "Il motivo della clonazione del canale",
+							type: ApplicationCommandOptionType.String,
+							max_length: 512,
+						},
+					],
+				},
+				{
+					type: ApplicationCommandOptionType.Subcommand,
+					name: "create",
+					description: "Crea un canale",
+					options: [
+						{
+							name: "name",
+							description: "Il nome del canale",
+							type: ApplicationCommandOptionType.String,
+							min_length: 1,
+							max_length: 100,
+							required: true,
+						},
+						{
+							name: "type",
+							description: "Il tipo",
+							type: ApplicationCommandOptionType.Number,
+							choices: channelTypeChoices,
+						},
+						{
+							name: "position",
+							description: "La posizione del canale",
+							type: ApplicationCommandOptionType.Number,
+							min_value: 1,
+						},
+						{
+							name: "topic",
+							description: "L'argomento canale",
+							type: ApplicationCommandOptionType.String,
+							min_length: 0,
+							max_length: 1024,
+						},
+						{
+							name: "nsfw",
+							description: "Lo stato NSFW",
+							type: ApplicationCommandOptionType.Boolean,
+						},
+						{
+							name: "bitrate",
+							description:
+								"Il bitrate in kbps (applicabile solo per i canali vocali)",
+							type: ApplicationCommandOptionType.Number,
+							min_value: 8,
+							max_value: 96,
+						},
+						{
+							name: "user-limit",
+							description:
+								"Il limite utenti (applicabile solo per i canali vocali)",
+							type: ApplicationCommandOptionType.Number,
+							min_value: 0,
+							max_value: 99,
+						},
+						{
+							name: "parent",
+							description: "La categoria",
+							type: ApplicationCommandOptionType.Channel,
+							channel_types: [ChannelType.GuildCategory],
+						},
+						{
+							name: "slowmode",
+							description: "Lo slowmode",
+							type: ApplicationCommandOptionType.String,
+						},
+						{
+							name: "autoarchive",
+							description:
+								"Il tempo di inattività dopo il quale i nuovi thread saranno archiviati",
+							type: ApplicationCommandOptionType.Number,
+							choices: autoArchiveChoices,
+						},
+						{
+							name: "rtc-region",
+							description:
+								"La regione RTC (applicabile solo per i canali vocali)",
+							type: ApplicationCommandOptionType.String,
+							choices: [
+								{ name: "Brazil", value: "brazil" },
+								{ name: "Hong Kong", value: "hongkong" },
+								{ name: "India", value: "india" },
+								{ name: "Japan", value: "japan" },
+								{ name: "Rotterdam", value: "rotterdam" },
+								{ name: "Russia", value: "russia" },
+								{ name: "Singapore", value: "singapore" },
+								{ name: "South Korea", value: "south-korea" },
+								{ name: "South Africa", value: "southafrica" },
+								{ name: "Sydney", value: "sydney" },
+								{ name: "US Central", value: "us-central" },
+								{ name: "US East", value: "us-east" },
+								{ name: "US South", value: "us-south" },
+								{ name: "US West", value: "us-west" },
+							],
+						},
+						{
+							name: "video-quality",
+							description:
+								"La qualità video (applicabile solo per i canali vocali)",
+							type: ApplicationCommandOptionType.Number,
+							choices: videoQualityChoices,
+						},
+						{
+							name: "reason",
+							description: "Il motivo della creazione del canale",
+							type: ApplicationCommandOptionType.String,
+							max_length: 512,
+						},
+					],
+				},
 			],
 		},
 	],
@@ -388,7 +543,7 @@ export const command = createCommand({
 				return;
 			}
 			const editOptions: GuildChannelEditOptions = {};
-			let channel = interaction.channelId;
+			let { channel }: { channel: GuildBasedChannel | null } = interaction;
 
 			for (const option of options)
 				if (option.name === "name") {
@@ -432,11 +587,18 @@ export const command = createCommand({
 				} else if (option.name === "reason") {
 					if (typeof option.value === "string")
 						editOptions.reason = option.value;
-				} else if (
-					option.name === "channel" &&
-					typeof option.value === "string"
-				)
-					channel = option.value;
+				} else if (option.name === "channel" && option.channel)
+					channel =
+						"client" in option.channel
+							? option.channel
+							: guild.channels.cache.get(option.channel.id) ?? null;
+			if (!channel) {
+				await interaction.reply({
+					content: "Canale non valido!",
+					ephemeral: true,
+				});
+				return;
+			}
 			if (
 				Object.keys(editOptions).length - (editOptions.reason! ? 1 : 0) ===
 				0
@@ -460,6 +622,13 @@ export const command = createCommand({
 				});
 				return;
 			}
+			if (!channel.manageable) {
+				await interaction.reply({
+					content: "Non ho abbastanza permessi per gestire questo canale!",
+					ephemeral: true,
+				});
+				return;
+			}
 			const result = await guild.channels
 				.edit(channel, editOptions)
 				.catch(normalizeError);
@@ -469,7 +638,7 @@ export const command = createCommand({
 				return;
 			}
 			await interaction.reply({
-				content: `Canale modificato con successo!\n\nMotivo: ${
+				content: `Canale ${channel.toString()} modificato con successo!\n\nMotivo: ${
 					editOptions.reason ?? "*Nessun motivo*"
 				}`,
 				components: [
@@ -478,7 +647,245 @@ export const command = createCommand({
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `channel-i-${channel}`,
+								custom_id: `channel-i-${channel.id}`,
+								label: "Info",
+								style: ButtonStyle.Success,
+								emoji: { name: "ℹ️" },
+							},
+						],
+					},
+				],
+			});
+			return;
+		}
+		if (interaction.options.data[0].name === "delete") {
+			const { guild } = interaction;
+
+			if (
+				guild.ownerId !== interaction.user.id &&
+				!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
+			) {
+				await interaction.reply({
+					content:
+						"Hai bisogno del permesso **Gestisci canali** per usare questo comando!",
+					ephemeral: true,
+				});
+				return;
+			}
+			let channel: GuildBasedChannel | undefined;
+			let reason: string | undefined;
+
+			for (const option of options)
+				if (option.name === "reason") {
+					if (typeof option.value === "string") reason = option.value;
+				} else if (option.name === "channel" && option.channel)
+					channel =
+						"client" in option.channel
+							? option.channel
+							: guild.channels.cache.get(option.channel.id);
+			if (!channel) {
+				await interaction.reply({
+					content: "Canale non valido!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (!channel.manageable) {
+				await interaction.reply({
+					content: "Non ho abbastanza permessi per eliminare questo canale!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const result = await guild.channels
+				.delete(channel, reason)
+				.catch(normalizeError);
+
+			if (result instanceof Error) {
+				await sendError(interaction, result);
+				return;
+			}
+			await interaction.reply({
+				content: `Canale **${escapeMarkdown(
+					channel.name
+				)}** eliminato con successo!\n\nMotivo: ${reason ?? "*Nessun motivo*"}`,
+			});
+			return;
+		}
+		if (interaction.options.data[0].name === "clone") {
+			const { guild } = interaction;
+
+			if (
+				guild.ownerId !== interaction.user.id &&
+				!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
+			) {
+				await interaction.reply({
+					content:
+						"Hai bisogno del permesso **Gestisci canali** per usare questo comando!",
+					ephemeral: true,
+				});
+				return;
+			}
+			let { channel }: { channel: GuildBasedChannel | null } = interaction;
+			let reason: string | undefined;
+
+			for (const option of options)
+				if (option.name === "reason") {
+					if (typeof option.value === "string") reason = option.value;
+				} else if (option.name === "channel" && option.channel)
+					channel =
+						"client" in option.channel
+							? option.channel
+							: guild.channels.cache.get(option.channel.id) ?? null;
+			if (!channel) {
+				await interaction.reply({
+					content: "Canale non valido!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (!("clone" in channel)) {
+				await interaction.reply({
+					content: "Questo canale non può essere clonato!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (interaction.appPermissions?.has("ManageChannels") === false) {
+				await interaction.reply({
+					content: "Non ho abbastanza permessi per eliminare questo canale!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const result = await channel.clone({ reason }).catch(normalizeError);
+
+			if (result instanceof Error) {
+				await sendError(interaction, result);
+				return;
+			}
+			await interaction.reply({
+				content: `Canale ${result.toString()} clonato con successo!\n\nMotivo: ${
+					reason ?? "*Nessun motivo*"
+				}`,
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								custom_id: `channel-i-${result.id}`,
+								label: "Info",
+								style: ButtonStyle.Success,
+								emoji: { name: "ℹ️" },
+							},
+						],
+					},
+				],
+			});
+			return;
+		}
+		if (interaction.options.data[0].name === "create") {
+			const { guild } = interaction;
+
+			if (
+				guild.ownerId !== interaction.user.id &&
+				!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
+			) {
+				await interaction.reply({
+					content:
+						"Hai bisogno del permesso **Gestisci canali** per usare questo comando!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const createOptions: GuildChannelCreateOptions = { name: "" };
+
+			for (const option of options)
+				if (option.name === "name") {
+					if (typeof option.value === "string")
+						createOptions.name = option.value;
+				} else if (option.name === "type") {
+					if (typeof option.value === "number")
+						createOptions.type = option.value;
+				} else if (option.name === "position") {
+					if (typeof option.value === "number")
+						createOptions.position = option.value - 1;
+				} else if (option.name === "topic") {
+					if (typeof option.value === "string")
+						createOptions.topic = option.value;
+				} else if (option.name === "nsfw") {
+					if (typeof option.value === "boolean")
+						createOptions.nsfw = option.value;
+				} else if (option.name === "bitrate") {
+					if (typeof option.value === "number")
+						createOptions.bitrate = option.value;
+				} else if (option.name === "user-limit") {
+					if (typeof option.value === "number")
+						createOptions.userLimit = option.value;
+				} else if (option.name === "parent") {
+					if (option.channel?.type === ChannelType.GuildCategory)
+						createOptions.parent = option.channel.id;
+				} else if (option.name === "slowmode") {
+					if (typeof option.value === "string")
+						createOptions.rateLimitPerUser = Math.round(
+							ms(option.value) / 1000
+						);
+				} else if (option.name === "rtc-region") {
+					if (typeof option.value === "string")
+						createOptions.rtcRegion = option.value;
+				} else if (option.name === "video-quality") {
+					if (typeof option.value === "number")
+						createOptions.videoQualityMode = option.value;
+				} else if (option.name === "reason")
+					if (typeof option.value === "string")
+						createOptions.reason = option.value;
+			if (!createOptions.name) {
+				await interaction.reply({
+					content: "Nome canale non valido!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (
+				createOptions.rateLimitPerUser !== undefined &&
+				(isNaN(createOptions.rateLimitPerUser) ||
+					createOptions.rateLimitPerUser <= 0 ||
+					createOptions.rateLimitPerUser > 21_600)
+			) {
+				await interaction.reply({
+					content:
+						"Il valore della slowmode non è valido o non è compreso tra 1 secondo e 6 ore!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (interaction.appPermissions?.has("ManageChannels") === false) {
+				await interaction.reply({
+					content: "Non ho abbastanza permessi per creare canali!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const result = await guild.channels
+				.create(createOptions)
+				.catch(normalizeError);
+
+			if (result instanceof Error) {
+				await sendError(interaction, result);
+				return;
+			}
+			await interaction.reply({
+				content: `Canale ${result.toString()} creato con successo!\n\nMotivo: ${
+					createOptions.reason ?? "*Nessun motivo*"
+				}`,
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								custom_id: `channel-i-${result.id}`,
 								label: "Info",
 								style: ButtonStyle.Success,
 								emoji: { name: "ℹ️" },
@@ -513,7 +920,7 @@ export const command = createCommand({
 			return;
 		}
 		const [, action, ...args] = interaction.customId.split("-");
-		if (!action || !["i"].includes(action)) {
+		if (!["i"].includes(action)) {
 			await interaction.reply({
 				content: "Azione non valida!",
 				ephemeral: true,

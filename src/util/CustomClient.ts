@@ -24,7 +24,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 
 	constructor() {
 		super({
-			intents: ["GuildMembers", "Guilds", "GuildPresences"],
+			intents: ["GuildMembers", "Guilds", "GuildPresences", "GuildVoiceStates"],
 			allowedMentions: { parse: [], repliedUser: false, roles: [], users: [] },
 			failIfNotExists: false,
 			rest: {
@@ -44,7 +44,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 				StageInstanceManager: 0,
 				ThreadMemberManager: 0,
 				UserManager: 1_000,
-				VoiceStateManager: 0,
+				VoiceStateManager: 1_000,
 				ApplicationCommandManager: 0,
 				GuildScheduledEventManager: 0,
 			}),

@@ -3,14 +3,41 @@ import {
 	ActivityType,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
+	ButtonStyle,
+	ChannelType,
+	ComponentType,
 	ThreadAutoArchiveDuration,
 	VideoQualityMode,
 } from "discord-api-types/v10";
-import type { User } from "discord.js";
+import type {
+	GuildMember,
+	GuildMemberEditData,
+	RoleManager,
+	User,
+	VoiceChannel,
+} from "discord.js";
 import { escapeMarkdown } from "discord.js";
 import type { ReceivedInteraction } from "../util";
-import { capitalize, createCommand, CustomClient } from "../util";
+import {
+	capitalize,
+	createCommand,
+	CustomClient,
+	normalizeError,
+	sendError,
+} from "../util";
 
+const normalizeRoles = (value: string, roles: RoleManager) =>
+	value
+		.split(/\s*,\s*/)
+		.map((r) => {
+			r = r.toLowerCase();
+			return /^\d{17,20}$/.test(r)
+				? r
+				: /^<@&\d{17,20}>$/.test(r)
+				? r.slice(3, -1)
+				: roles.cache.find((role) => role.name.toLowerCase().startsWith(r))?.id;
+		})
+		.filter((r): r is string => r !== undefined);
 const userInfo = async (
 	interaction: ReceivedInteraction,
 	user: User,
@@ -111,7 +138,7 @@ const userInfo = async (
 				inline: true,
 			},
 			{
-				name: "Boostando il server",
+				name: "Potenziando il server",
 				value: boostTimestamp
 					? `Da <t:${boostTimestamp}:F> (<t:${boostTimestamp}:R>)`
 					: "No",
@@ -153,7 +180,7 @@ const userInfo = async (
 					icon_url: url,
 					url,
 				},
-				color: member?.roles.color?.color ?? user.accentColor ?? undefined,
+				color: user.accentColor ?? member?.roles.color?.color,
 				footer: {
 					text: "Ultimo aggiornamento",
 				},
@@ -182,14 +209,58 @@ export const command = createCommand({
 			description: "Gestisci i membri e gli utenti",
 			type: ApplicationCommandType.ChatInput,
 			options: [
-				// TODO
-				// {
-				// 	type: ApplicationCommandOptionType.Subcommand,
-				// 	name: "edit",
-				// 	description: "Modifica un membro",
-				// 	options: [
-				// 	],
-				// },
+				{
+					type: ApplicationCommandOptionType.Subcommand,
+					name: "edit",
+					description: "Modifica un membro",
+					options: [
+						{
+							type: ApplicationCommandOptionType.User,
+							name: "member",
+							description: "Il membro da modificare",
+						},
+						{
+							type: ApplicationCommandOptionType.String,
+							name: "nick",
+							description: "Il nuovo nickname",
+							max_length: 32,
+						},
+						{
+							type: ApplicationCommandOptionType.String,
+							name: "new-roles",
+							description: "Lista di ruoli da aggiungere al membro",
+							autocomplete: true,
+						},
+						{
+							type: ApplicationCommandOptionType.String,
+							name: "remove-roles",
+							description: "Lista di ruoli da rimuovere dal membro",
+							autocomplete: true,
+						},
+						{
+							type: ApplicationCommandOptionType.Boolean,
+							name: "mute",
+							description: "Se il membro deve essere mutato nei canali vocali",
+						},
+						{
+							type: ApplicationCommandOptionType.Boolean,
+							name: "deaf",
+							description: "Se il membro non può ascoltare nei canali vocali",
+						},
+						{
+							type: ApplicationCommandOptionType.Channel,
+							name: "voice-channel",
+							description: "Il canale vocale da assegnare al membro",
+							channel_types: [ChannelType.GuildVoice],
+						},
+						{
+							type: ApplicationCommandOptionType.String,
+							name: "reason",
+							description: "La motivazione della modifica",
+							max_length: 512,
+						},
+					],
+				},
 				{
 					type: ApplicationCommandOptionType.Subcommand,
 					name: "info",
@@ -223,122 +294,215 @@ export const command = createCommand({
 			});
 			return;
 		}
-		if (interaction.options.data[0].name === "edit")
-			// 			const { guild } = interaction;
-			//
-			// 			if (
-			// 				guild.ownerId !== interaction.user.id &&
-			// 				!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
-			// 			) {
-			// 				await interaction.reply({
-			// 					content:
-			// 						"Hai bisogno del permesso **Gestisci canali** per usare questo comando!",
-			// 					ephemeral: true,
-			// 				});
-			// 				return;
-			// 			}
-			// 			const editOptions: GuildChannelEditOptions = {};
-			// 			let channel = interaction.channelId;
-			//
-			// 			for (const option of options)
-			// 				if (option.name === "name") {
-			// 					if (typeof option.value === "string") editOptions.name = option.value;
-			// 				} else if (option.name === "type") {
-			// 					if (typeof option.value === "number") editOptions.type = option.value;
-			// 				} else if (option.name === "position") {
-			// 					if (typeof option.value === "number")
-			// 						editOptions.position = option.value - 1;
-			// 				} else if (option.name === "topic") {
-			// 					if (typeof option.value === "string")
-			// 						editOptions.topic = option.value;
-			// 				} else if (option.name === "nsfw") {
-			// 					if (typeof option.value === "boolean")
-			// 						editOptions.nsfw = option.value;
-			// 				} else if (option.name === "bitrate") {
-			// 					if (typeof option.value === "number")
-			// 						editOptions.bitrate = option.value;
-			// 				} else if (option.name === "user-limit") {
-			// 					if (typeof option.value === "number")
-			// 						editOptions.userLimit = option.value;
-			// 				} else if (option.name === "parent") {
-			// 					if (option.channel?.type === ChannelType.GuildCategory)
-			// 						editOptions.parent = option.channel.id;
-			// 				} else if (option.name === "slowmode") {
-			// 					if (typeof option.value === "string")
-			// 						editOptions.rateLimitPerUser = Math.round(ms(option.value) / 1000);
-			// 				} else if (option.name === "lock-permissions") {
-			// 					if (typeof option.value === "boolean")
-			// 						editOptions.lockPermissions = option.value;
-			// 				} else if (option.name === "autoarchive") {
-			// 					if (typeof option.value === "number")
-			// 						editOptions.defaultAutoArchiveDuration = option.value;
-			// 				} else if (option.name === "rtc-region") {
-			// 					if (typeof option.value === "string")
-			// 						editOptions.rtcRegion =
-			// 							option.value === "auto" ? null : option.value;
-			// 				} else if (option.name === "video-quality") {
-			// 					if (typeof option.value === "number")
-			// 						editOptions.videoQualityMode = option.value;
-			// 				} else if (option.name === "reason") {
-			// 					if (typeof option.value === "string")
-			// 						editOptions.reason = option.value;
-			// 				} else if (
-			// 					option.name === "channel" &&
-			// 					typeof option.value === "string"
-			// 				)
-			// 					channel = option.value;
-			// 			if (
-			// 				Object.keys(editOptions).length - (editOptions.reason! ? 1 : 0) ===
-			// 				0
-			// 			) {
-			// 				await interaction.reply({
-			// 					content: "Non hai specificato alcuna modifica!",
-			// 					ephemeral: true,
-			// 				});
-			// 				return;
-			// 			}
-			// 			if (
-			// 				editOptions.rateLimitPerUser !== undefined &&
-			// 				(isNaN(editOptions.rateLimitPerUser) ||
-			// 					editOptions.rateLimitPerUser <= 0 ||
-			// 					editOptions.rateLimitPerUser > 21_600)
-			// 			) {
-			// 				await interaction.reply({
-			// 					content:
-			// 						"Il valore della slowmode non è valido o non è compreso tra 1 secondo e 6 ore!",
-			// 					ephemeral: true,
-			// 				});
-			// 				return;
-			// 			}
-			// 			const result = await guild.channels
-			// 				.edit(channel, editOptions)
-			// 				.catch(normalizeError);
-			//
-			// 			if (result instanceof Error) {
-			// 				await sendError(interaction, result);
-			// 				return;
-			// 			}
-			// 			await interaction.reply({
-			// 				content: `Canale modificato con successo!\n\nMotivo: ${
-			// 					editOptions.reason ?? "*Nessun motivo*"
-			// 				}`,
-			// 				components: [
-			// 					{
-			// 						type: ComponentType.ActionRow,
-			// 						components: [
-			// 							{
-			// 								type: ComponentType.Button,
-			// 								custom_id: `channel-i-${channel}`,
-			// 								label: "Info",
-			// 								style: ButtonStyle.Success,
-			// 								emoji: { name: "ℹ️" },
-			// 							},
-			// 						],
-			// 					},
-			// 				],
-			// 			});
-			return;
+		if (interaction.options.data[0].name === "edit") {
+			const { guild } = interaction;
+			const editOptions: GuildMemberEditData = {};
+			let { member } = interaction as { member?: GuildMember },
+				newRoles: string[] | undefined,
+				removeRoles: string[] | undefined;
 
+			for (const option of options)
+				if (option.name === "nick") {
+					if (typeof option.value === "string") editOptions.nick = option.value;
+				} else if (option.name === "new-roles") {
+					if (typeof option.value === "string")
+						newRoles = normalizeRoles(option.value, guild.roles);
+				} else if (option.name === "remove-roles") {
+					if (typeof option.value === "string")
+						removeRoles = normalizeRoles(option.value, guild.roles);
+				} else if (option.name === "mute") {
+					if (typeof option.value === "boolean")
+						editOptions.mute = option.value;
+				} else if (option.name === "deaf") {
+					if (typeof option.value === "boolean")
+						editOptions.deaf = option.value;
+				} else if (option.name === "voice-channel") {
+					if (option.channel?.type === ChannelType.GuildVoice)
+						editOptions.channel =
+							"client" in option.channel
+								? option.channel
+								: // eslint-disable-next-line no-await-in-loop
+								  ((await guild.channels
+										.fetch(option.channel.id)
+										.catch(() => undefined)) as VoiceChannel);
+				} else if (option.name === "reason") {
+					if (typeof option.value === "string")
+						editOptions.reason = option.value;
+				} else if (option.name === "member" && typeof option.value === "string")
+					member =
+						option.member && "client" in option.member
+							? option.member
+							: // eslint-disable-next-line no-await-in-loop
+							  await guild.members.fetch(option.value).catch(() => undefined);
+			if (member === undefined) {
+				await interaction.reply({
+					content: "Membro non trovato!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (newRoles || removeRoles) {
+				editOptions.roles = member.roles.cache.map((r) => r.id);
+				if (newRoles) editOptions.roles = editOptions.roles.concat(newRoles);
+				if (removeRoles)
+					editOptions.roles = editOptions.roles.filter(
+						(r) => !removeRoles!.includes(r as string)
+					);
+			}
+			if (
+				Object.keys(editOptions).length - (editOptions.reason! ? 1 : 0) ===
+				0
+			) {
+				await interaction.reply({
+					content: "Non hai specificato alcuna modifica!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (interaction.user.id !== guild.ownerId) {
+				const self = member.id === interaction.user.id;
+
+				if (
+					!self &&
+					member.roles.highest.comparePositionTo(
+						interaction.member.roles.highest
+					) >= 0
+				) {
+					await interaction.reply({
+						content:
+							"Non puoi modificare un membro con un ruolo superiore o uguale a quello del tuo!",
+						ephemeral: true,
+					});
+					return;
+				}
+				if (editOptions.nick !== undefined)
+					if (self) {
+						if (!interaction.memberPermissions.has("ChangeNickname")) {
+							await interaction.reply({
+								content:
+									"Hai bisogno del permesso **Cambia nickname** per modificare il tuo nickname!",
+								ephemeral: true,
+							});
+							return;
+						}
+					} else if (!interaction.memberPermissions.has("ManageNicknames")) {
+						await interaction.reply({
+							content:
+								"Hai bisogno del permesso **Gestisci nickname** per modificare i nickname degli altri membri!",
+							ephemeral: true,
+						});
+						return;
+					}
+				if (editOptions.roles !== undefined) {
+					if (self) {
+						await interaction.reply({
+							content: "Non puoi modificare i tuoi ruoli!",
+							ephemeral: true,
+						});
+						return;
+					}
+					if (!interaction.memberPermissions.has("ManageRoles")) {
+						await interaction.reply({
+							content:
+								"Hai bisogno del permesso **Gestisci ruoli** per modificare i ruoli degli altri membri!",
+							ephemeral: true,
+						});
+						return;
+					}
+				}
+				if (editOptions.mute !== undefined) {
+					if (self) {
+						await interaction.reply({
+							content: "Non puoi modificare il tuo stato vocale!",
+							ephemeral: true,
+						});
+						return;
+					}
+					if (!interaction.memberPermissions.has("MuteMembers")) {
+						await interaction.reply({
+							content:
+								"Hai bisogno del permesso **Silenzia membri** per eseguire questa azione!",
+							ephemeral: true,
+						});
+						return;
+					}
+				}
+				if (editOptions.deaf !== undefined) {
+					if (self) {
+						await interaction.reply({
+							content: "Non puoi modificare il tuo stato vocale!",
+							ephemeral: true,
+						});
+						return;
+					}
+					if (!interaction.memberPermissions.has("DeafenMembers")) {
+						await interaction.reply({
+							content:
+								"Hai bisogno del permesso **Silenzia l'audio degli altri** per eseguire questa azione!",
+							ephemeral: true,
+						});
+						return;
+					}
+				}
+				if (editOptions.channel !== undefined)
+					if (self) {
+						if (
+							!(editOptions.channel as VoiceChannel)
+								.permissionsFor(member)
+								.has("Connect")
+						) {
+							await interaction.reply({
+								content:
+									"Non puoi hai abbastanza permessi per connetterti a questo canale!",
+								ephemeral: true,
+							});
+							return;
+						}
+					} else if (!interaction.memberPermissions.has("MoveMembers")) {
+						await interaction.reply({
+							content:
+								"Hai bisogno del permesso **Sposta membri** per eseguire questa azione!",
+							ephemeral: true,
+						});
+						return;
+					}
+			}
+			if (member.id !== interaction.client.user!.id && !member.manageable) {
+				await interaction.reply({
+					content: "Non ho abbastanza permessi per gestire questo membro!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const result = await guild.members
+				.edit(member, editOptions)
+				.catch(normalizeError);
+
+			if (result instanceof Error) {
+				await sendError(interaction, result);
+				return;
+			}
+			await interaction.reply({
+				content: `Membro modificato con successo!\n\nMotivo: ${
+					editOptions.reason ?? "*Nessun motivo*"
+				}`,
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								custom_id: `user-i-${member.id}`,
+								label: "Info",
+								style: ButtonStyle.Success,
+								emoji: { name: "ℹ️" },
+							},
+						],
+					},
+				],
+			});
+			return;
+		}
 		if (interaction.options.data[0].name === "info") {
 			let user = interaction.options.getUser("user") ?? interaction.user;
 
@@ -356,7 +520,8 @@ export const command = createCommand({
 			return;
 		}
 		const [, action, ...args] = interaction.customId.split("-");
-		if (!action || !["i"].includes(action)) {
+
+		if (!["i"].includes(action)) {
 			await interaction.reply({
 				content: "Azione non valida!",
 				ephemeral: true,
@@ -372,5 +537,46 @@ export const command = createCommand({
 			if (user.banner === undefined) user = await user.fetch();
 			await userInfo(interaction, user, true);
 		}
+	},
+	async autocomplete(interaction) {
+		if (!interaction.inCachedGuild()) return;
+		const { guild } = interaction;
+		const option = interaction.options.getFocused(true);
+
+		if (typeof option.value !== "string") return;
+		const oldRoles = guild.members.cache.get(
+			interaction.options.get("member")?.value as string
+		)?.roles.cache;
+		const { cache } = guild.roles;
+		const startRoles =
+			option.name === "new-roles"
+				? oldRoles
+					? cache.difference(oldRoles)
+					: cache
+				: oldRoles ?? cache;
+		const split = option.value.split(/\s*,\s*/);
+		const old = split.slice(0, -1);
+		const value = split.at(-1)!.toLowerCase();
+		const roles = option.value
+			? /^\d{2,20}$/.test(value)
+				? startRoles.filter(
+						(r) => r.id.startsWith(value) && !old.includes(r.name)
+				  )
+				: startRoles.filter(
+						(r) =>
+							r.name.toLowerCase().startsWith(value) && !old.includes(r.name)
+				  )
+			: startRoles;
+
+		await interaction.respond(
+			roles.map((r) => {
+				const name = old.concat([r.name]).join(", ");
+
+				return {
+					name,
+					value: name,
+				};
+			})
+		);
 	},
 });
