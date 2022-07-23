@@ -4,7 +4,6 @@ import {
 	ButtonStyle,
 	ChannelType,
 	ComponentType,
-	PermissionFlagsBits,
 	ThreadAutoArchiveDuration,
 	VideoQualityMode,
 } from "discord-api-types/v10";
@@ -210,6 +209,22 @@ const autoArchiveChoices: { name: string; value: ThreadAutoArchiveDuration }[] =
 	[];
 const videoQualityChoices: { name: string; value: VideoQualityMode }[] = [];
 const channelTypeChoices: { name: string; value: ChannelType }[] = [];
+const regions = [
+	{ name: "Brazil", value: "brazil" },
+	{ name: "Hong Kong", value: "hongkong" },
+	{ name: "India", value: "india" },
+	{ name: "Japan", value: "japan" },
+	{ name: "Rotterdam", value: "rotterdam" },
+	{ name: "Russia", value: "russia" },
+	{ name: "Singapore", value: "singapore" },
+	{ name: "South Korea", value: "south-korea" },
+	{ name: "South Africa", value: "southafrica" },
+	{ name: "Sydney", value: "sydney" },
+	{ name: "US Central", value: "us-central" },
+	{ name: "US East", value: "us-east" },
+	{ name: "US South", value: "us-south" },
+	{ name: "US West", value: "us-west" },
+];
 
 for (const [name, value] of Object.entries(ThreadAutoArchiveDuration))
 	if (typeof value === "number") autoArchiveChoices.push({ name, value });
@@ -312,23 +327,7 @@ export const command = createCommand({
 							description:
 								"La nuova regione RTC (applicabile solo per i canali vocali)",
 							type: ApplicationCommandOptionType.String,
-							choices: [
-								{ name: "Automatico", value: "auto" },
-								{ name: "Brazil", value: "brazil" },
-								{ name: "Hong Kong", value: "hongkong" },
-								{ name: "India", value: "india" },
-								{ name: "Japan", value: "japan" },
-								{ name: "Rotterdam", value: "rotterdam" },
-								{ name: "Russia", value: "russia" },
-								{ name: "Singapore", value: "singapore" },
-								{ name: "South Korea", value: "south-korea" },
-								{ name: "South Africa", value: "southafrica" },
-								{ name: "Sydney", value: "sydney" },
-								{ name: "US Central", value: "us-central" },
-								{ name: "US East", value: "us-east" },
-								{ name: "US South", value: "us-south" },
-								{ name: "US West", value: "us-west" },
-							],
+							choices: [{ name: "Automatico", value: "auto" }, ...regions],
 						},
 						{
 							name: "video-quality",
@@ -475,22 +474,7 @@ export const command = createCommand({
 							description:
 								"La regione RTC (applicabile solo per i canali vocali)",
 							type: ApplicationCommandOptionType.String,
-							choices: [
-								{ name: "Brazil", value: "brazil" },
-								{ name: "Hong Kong", value: "hongkong" },
-								{ name: "India", value: "india" },
-								{ name: "Japan", value: "japan" },
-								{ name: "Rotterdam", value: "rotterdam" },
-								{ name: "Russia", value: "russia" },
-								{ name: "Singapore", value: "singapore" },
-								{ name: "South Korea", value: "south-korea" },
-								{ name: "South Africa", value: "southafrica" },
-								{ name: "Sydney", value: "sydney" },
-								{ name: "US Central", value: "us-central" },
-								{ name: "US East", value: "us-east" },
-								{ name: "US South", value: "us-south" },
-								{ name: "US West", value: "us-west" },
-							],
+							choices: regions,
 						},
 						{
 							name: "video-quality",
@@ -530,18 +514,6 @@ export const command = createCommand({
 		}
 		if (interaction.options.data[0].name === "edit") {
 			const { guild } = interaction;
-
-			if (
-				guild.ownerId !== interaction.user.id &&
-				!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
-			) {
-				await interaction.reply({
-					content:
-						"Hai bisogno del permesso **Gestisci canali** per usare questo comando!",
-					ephemeral: true,
-				});
-				return;
-			}
 			const editOptions: GuildChannelEditOptions = {};
 			let { channel }: { channel: GuildBasedChannel | null } = interaction;
 
@@ -600,6 +572,21 @@ export const command = createCommand({
 				return;
 			}
 			if (
+				guild.ownerId !== interaction.user.id &&
+				!(
+					channel.id === interaction.channelId
+						? interaction.memberPermissions
+						: channel.permissionsFor(interaction.member)
+				).has("ManageChannels")
+			) {
+				await interaction.reply({
+					content:
+						"Hai bisogno del permesso **Gestisci canali** per usare questo comando!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (
 				Object.keys(editOptions).length - (editOptions.reason! ? 1 : 0) ===
 				0
 			) {
@@ -612,12 +599,12 @@ export const command = createCommand({
 			if (
 				editOptions.rateLimitPerUser !== undefined &&
 				(isNaN(editOptions.rateLimitPerUser) ||
-					editOptions.rateLimitPerUser <= 0 ||
+					editOptions.rateLimitPerUser < 0 ||
 					editOptions.rateLimitPerUser > 21_600)
 			) {
 				await interaction.reply({
 					content:
-						"Il valore della slowmode non è valido o non è compreso tra 1 secondo e 6 ore!",
+						"Il valore della slowmode non è valido o non è minore di 6 ore!",
 					ephemeral: true,
 				});
 				return;
@@ -660,18 +647,6 @@ export const command = createCommand({
 		}
 		if (interaction.options.data[0].name === "delete") {
 			const { guild } = interaction;
-
-			if (
-				guild.ownerId !== interaction.user.id &&
-				!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
-			) {
-				await interaction.reply({
-					content:
-						"Hai bisogno del permesso **Gestisci canali** per usare questo comando!",
-					ephemeral: true,
-				});
-				return;
-			}
 			let channel: GuildBasedChannel | undefined;
 			let reason: string | undefined;
 
@@ -686,6 +661,17 @@ export const command = createCommand({
 			if (!channel) {
 				await interaction.reply({
 					content: "Canale non valido!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (
+				guild.ownerId !== interaction.user.id &&
+				!channel.permissionsFor(interaction.member).has("ManageChannels")
+			) {
+				await interaction.reply({
+					content:
+						"Hai bisogno del permesso **Gestisci canali** per usare questo comando!",
 					ephemeral: true,
 				});
 				return;
@@ -717,7 +703,7 @@ export const command = createCommand({
 
 			if (
 				guild.ownerId !== interaction.user.id &&
-				!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
+				!interaction.member.permissions.has("ManageChannels")
 			) {
 				await interaction.reply({
 					content:
@@ -790,7 +776,7 @@ export const command = createCommand({
 
 			if (
 				guild.ownerId !== interaction.user.id &&
-				!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
+				!interaction.member.permissions.has("ManageChannels")
 			) {
 				await interaction.reply({
 					content:
@@ -850,12 +836,12 @@ export const command = createCommand({
 			if (
 				createOptions.rateLimitPerUser !== undefined &&
 				(isNaN(createOptions.rateLimitPerUser) ||
-					createOptions.rateLimitPerUser <= 0 ||
+					createOptions.rateLimitPerUser < 0 ||
 					createOptions.rateLimitPerUser > 21_600)
 			) {
 				await interaction.reply({
 					content:
-						"Il valore della slowmode non è valido o non è compreso tra 1 secondo e 6 ore!",
+						"Il valore della slowmode non è valido o non è minore di 6 ore!",
 					ephemeral: true,
 				});
 				return;
