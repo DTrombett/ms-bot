@@ -56,7 +56,6 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 			entry: [`src/${Constants.commandsFolderName}/${event.filename}`],
 			format: "esm",
 			external: ["tsup"],
-			minify: true,
 			platform: "node",
 			sourcemap: true,
 			target: "ESNext",
