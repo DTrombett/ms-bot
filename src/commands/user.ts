@@ -44,7 +44,7 @@ const userInfo = async (
 	ephemeral?: boolean
 ) => {
 	const createdAt = Math.round(user.createdTimestamp / 1000);
-	const accentColor = user.accentColor?.toString(16);
+	const accentColor = user.accentColor?.toString(16).padStart(6, "0");
 	const fields: APIEmbedField[] = [
 		{
 			name: "ID",
@@ -99,12 +99,15 @@ const userInfo = async (
 			: "";
 		const activities =
 			presence?.activities
-				.map((a) =>
-					a.type === ActivityType.Custom
-						? `${a.emoji ? `${a.emoji.toString()} ` : ""}${a.state ?? ""}`
-						: `${ActivityType[a.type]} **${a.name}**${
-								a.details == null ? "" : `: ${a.details}`
-						  }${a.state == null ? "" : ` (${a.state})`}`
+				.map(
+					(a) =>
+						`${
+							a.type === ActivityType.Custom
+								? `${a.emoji ? `${a.emoji.toString()} ` : ""}${a.state ?? ""}`
+								: `${ActivityType[a.type]} **${a.name}**${
+										a.details == null ? "" : `: ${a.details}`
+								  }${a.state == null ? "" : ` (${a.state})`}`
+						} (aggiornato <t:${Math.round(a.createdTimestamp / 1000)}:R>)`
 				)
 				.join("\n") ?? "";
 
@@ -503,12 +506,11 @@ export const command = createCommand({
 			});
 			return;
 		}
-		if (interaction.options.data[0].name === "info") {
-			let user = interaction.options.getUser("user") ?? interaction.user;
-
-			if (user.banner === undefined) user = await user.fetch();
-			await userInfo(interaction, user);
-		}
+		if (interaction.options.data[0].name === "info")
+			await userInfo(
+				interaction,
+				await (interaction.options.getUser("user") ?? interaction.user).fetch()
+			);
 	},
 	async component(interaction) {
 		if (!interaction.inCachedGuild()) {
