@@ -13,7 +13,7 @@
 		"prettier": "prettier --write src/**/*.ts",
 		"start": "npm run build && node --trace-warnings --enable-source-maps --experimental-specifier-resolution=node .",
 		"start:prod": "node .",
-		"test": "eslint src && tsc --noEmit"
+		"test": "tsc --noEmit && eslint src"
 	},
 	"author": "DTrombett",
 	"license": "MIT",
