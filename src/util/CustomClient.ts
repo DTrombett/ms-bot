@@ -49,7 +49,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 				GuildScheduledEventManager: 0,
 			}),
 			presence: {
-				activities: [{ name: "MS Gaming", type: ActivityType.Watching }],
+				activities: [{ name: "MS Community", type: ActivityType.Watching }],
 			},
 			shards: "auto",
 			partials: [
