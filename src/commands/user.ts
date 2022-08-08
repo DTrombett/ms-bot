@@ -278,6 +278,10 @@ export const command = createCommand({
 				},
 			],
 		},
+		{
+			name: "Info Utente",
+			type: ApplicationCommandType.User,
+		},
 	],
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
@@ -288,16 +292,16 @@ export const command = createCommand({
 			});
 			return;
 		}
-		const [{ options }] = interaction.options.data;
-
-		if (!options) {
-			await interaction.reply({
-				content: "Questo comando non è attualmente disponibile!",
-				ephemeral: true,
-			});
-			return;
-		}
 		if (interaction.options.data[0].name === "edit") {
+			const [{ options }] = interaction.options.data;
+
+			if (!options) {
+				await interaction.reply({
+					content: "Questo comando non è attualmente disponibile!",
+					ephemeral: true,
+				});
+				return;
+			}
 			const { guild } = interaction;
 			const editOptions: GuildMemberEditData = {};
 			let { member } = interaction as { member?: GuildMember },
@@ -506,11 +510,10 @@ export const command = createCommand({
 			});
 			return;
 		}
-		if (interaction.options.data[0].name === "info")
-			await userInfo(
-				interaction,
-				await (interaction.options.getUser("user") ?? interaction.user).fetch()
-			);
+		await userInfo(
+			interaction,
+			await (interaction.options.getUser("user") ?? interaction.user).fetch()
+		);
 	},
 	async component(interaction) {
 		if (!interaction.inCachedGuild()) {
