@@ -1,3 +1,4 @@
+import type { Snowflake } from "discord-api-types/v10";
 import { ActivityType } from "discord-api-types/v10";
 import { Client, Collection, Options, Partials } from "discord.js";
 import { stderr, stdout } from "node:process";
@@ -21,6 +22,11 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * Events of this client
 	 */
 	events = new Collection<string, Event>();
+
+	/**
+	 * Quotes loaded from the channel specified in the env
+	 */
+	quotes = new Collection<Snowflake, string>();
 
 	constructor() {
 		super({

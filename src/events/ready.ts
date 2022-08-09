@@ -1,9 +1,9 @@
-import { Constants, createEvent } from "../util";
+import { Constants, createEvent, loadQuotes } from "../util";
 
 export const event = createEvent({
 	name: "ready",
-	async once(discordClient) {
-		await discordClient.application.fetch();
+	async once(client) {
+		await Promise.all([client.application.fetch(), loadQuotes(this.client)]);
 		// eslint-disable-next-line no-console
 		console.timeEnd(Constants.clientOnlineLabel);
 	},
