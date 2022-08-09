@@ -201,6 +201,19 @@ const channelInfo = async (
 				fields: fields.slice(0, 25),
 			},
 		],
+		components: [
+			{
+				components: [
+					{
+						type: ComponentType.Button,
+						style: ButtonStyle.Link,
+						label: "Apri nell'app",
+						url: `discord://-/channels/${channel.guildId}/${channel.id}`,
+					},
+				],
+				type: ComponentType.ActionRow,
+			},
+		],
 		ephemeral,
 	});
 };

@@ -166,10 +166,6 @@ const userInfo = async (
 			}
 		);
 	}
-	const url = (member ?? user).displayAvatarURL({
-		extension: "png",
-		size: 4096,
-	});
 	const thumbnailUrl = user.bannerURL({
 		extension: "png",
 		size: 4096,
@@ -180,8 +176,11 @@ const userInfo = async (
 			{
 				author: {
 					name: user.tag,
-					icon_url: url,
-					url,
+					icon_url: (member ?? user).displayAvatarURL({
+						extension: "png",
+						size: 4096,
+					}),
+					url: `https://discord.com/users/${user.id}`,
 				},
 				color: user.accentColor ?? member?.roles.color?.color,
 				footer: {
@@ -190,6 +189,19 @@ const userInfo = async (
 				timestamp: new Date().toISOString(),
 				fields: fields.slice(0, 25),
 				thumbnail: thumbnailUrl! ? { url: thumbnailUrl } : undefined,
+			},
+		],
+		components: [
+			{
+				components: [
+					{
+						type: ComponentType.Button,
+						style: ButtonStyle.Link,
+						label: "Apri nell'app",
+						url: `discord://-/users/${user.id}`,
+					},
+				],
+				type: ComponentType.ActionRow,
 			},
 		],
 		ephemeral,
