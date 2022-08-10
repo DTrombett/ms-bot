@@ -1,15 +1,21 @@
-import type { Snowflake } from "discord-api-types/v10";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 } from "discord-api-types/v10";
+import type { Collection, Message } from "discord.js";
+import { env } from "node:process";
 import { createCommand } from "../util";
 
-const formatQuote = ([id, q]: [id: Snowflake, quote: string]): {
+let messages: Collection<string, Message> | null = null;
+
+const formatQuote = ({
+	content,
+	id,
+}: Message): {
 	name: string;
 	value: string;
 } => {
-	const [, , quote] = q.split(/(> )|\n/);
+	const [, , quote] = content.split(/(> )|\n/);
 
 	return {
 		name: quote.length > 100 ? `${quote.slice(0, 97).trimEnd()}...` : quote,
@@ -35,12 +41,28 @@ export const command = createCommand({
 		},
 	],
 	async run(interaction) {
-		if (!this.client.quotes.size) {
-			await interaction.reply({
-				content: "Comando non disponibile!",
-				ephemeral: true,
-			});
-			return;
+		if (!messages) {
+			const channel = interaction.client.channels.cache.get(
+				env.QUOTES_CHANNEL!
+			);
+
+			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+			if (!channel?.isTextBased()) {
+				await interaction.reply({
+					content: "Comando non disponibile!",
+					ephemeral: true,
+				});
+				return;
+			}
+			messages = channel.messages.cache;
+			if (!messages.size) {
+				await interaction.reply({
+					content: "Nessuna citazione disponibile!",
+					ephemeral: true,
+				});
+				messages = null;
+				return;
+			}
 		}
 		const option = interaction.options.data[0]?.value;
 
@@ -52,10 +74,8 @@ export const command = createCommand({
 			return;
 		}
 		const quote = option!
-			? this.client.quotes.get(option)
-			: [...this.client.quotes][
-					Math.floor(Math.random() * this.client.quotes.size)
-			  ][1];
+			? messages.get(option)?.content
+			: messages.random()?.content;
 
 		if (!quote!) {
 			await interaction.reply({
@@ -70,25 +90,39 @@ export const command = createCommand({
 		});
 	},
 	async autocomplete(interaction) {
+		if (!messages) {
+			const channel = interaction.client.channels.cache.get(
+				env.QUOTES_CHANNEL!
+			);
+
+			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+			if (!channel?.isTextBased()) {
+				await interaction.respond([]);
+				return;
+			}
+			messages = channel.messages.cache;
+			if (!messages.size) {
+				await interaction.respond([]);
+				messages = null;
+				return;
+			}
+		}
 		let option = interaction.options.getFocused();
 
 		if (!option) {
-			await interaction.respond(
-				[...this.client.quotes].slice(0, 25).map(formatQuote)
-			);
+			await interaction.respond(messages.first(25).map(formatQuote));
 			return;
 		}
 		option = option.toLowerCase();
 		await interaction.respond(
-			[
-				...this.client.quotes.filter((q) =>
-					q
+			messages
+				.filter((q) =>
+					q.content
 						.split(/(> )|\n/)[2]
 						.toLowerCase()
 						.includes(option)
-				),
-			]
-				.slice(0, 25)
+				)
+				.first(25)
 				.map(formatQuote)
 		);
 	},
