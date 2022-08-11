@@ -247,6 +247,19 @@ export const command = createCommand({
 						},
 					],
 				},
+				{
+					name: "check",
+					description: "Controlla se un utente è bannato",
+					type: ApplicationCommandOptionType.Subcommand,
+					options: [
+						{
+							name: "user",
+							description: "L'utente da controllare",
+							type: ApplicationCommandOptionType.User,
+							required: true,
+						},
+					],
+				},
 			],
 		},
 		{
@@ -289,6 +302,58 @@ export const command = createCommand({
 			return;
 		}
 		const { guild } = interaction;
+
+		if (interaction.options.data[0].name === "check") {
+			const bannData = await guild.bans.fetch(user.id).catch(() => undefined);
+
+			if (!bannData) {
+				await interaction.reply({
+					content: "L'utente non è bannato!",
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `bann-${user.id}-a`,
+									label: "Bann",
+									style: ButtonStyle.Success,
+									emoji: {
+										animated: false,
+										id: Emojis.bann,
+										name: "bann",
+									},
+								},
+							],
+						},
+					],
+				});
+				return;
+			}
+			await interaction.reply({
+				content: `<@${user.id}> (${escapeMarkdown(user.tag)} - ${
+					user.id
+				}) è bannato dal server!\n\nMotivo: ${
+					bannData.reason != null
+						? bannData.reason.slice(0, 1_000)
+						: "*Nessun motivo*"
+				}`,
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								custom_id: `bann-${user.id}-r`,
+								style: ButtonStyle.Danger,
+								label: "Revoca bann",
+							},
+						],
+					},
+				],
+			});
+			return;
+		}
 		const member =
 			option.member instanceof GuildMember
 				? option.member
@@ -316,11 +381,12 @@ export const command = createCommand({
 			);
 			return;
 		}
-		await unban(
-			interaction,
-			user,
-			typeof reason === "string" ? reason : undefined
-		);
+		if (interaction.options.data[0].name === "remove")
+			await unban(
+				interaction,
+				user,
+				typeof reason === "string" ? reason : undefined
+			);
 	},
 	async modalSubmit(interaction) {
 		const deleteMessageDays =
