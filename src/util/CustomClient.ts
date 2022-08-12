@@ -31,9 +31,9 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			},
 			makeCache: Options.cacheWithLimits({
 				...Options.DefaultMakeCacheSettings,
-				BaseGuildEmojiManager: 100,
+				BaseGuildEmojiManager: 25,
 				GuildBanManager: 10,
-				GuildInviteManager: 0,
+				GuildInviteManager: 25,
 				GuildMemberManager: 1_000,
 				GuildStickerManager: 0,
 				MessageManager: 100,

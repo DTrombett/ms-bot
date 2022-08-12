@@ -2,8 +2,6 @@ import type { APIEmbedField } from "discord-api-types/v10";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	ButtonStyle,
-	ComponentType,
 	GuildScheduledEventEntityType,
 	PermissionFlagsBits,
 } from "discord-api-types/v10";
@@ -36,6 +34,7 @@ export const command = createCommand({
 							description: "L'invito da controllare (il codice o il link)",
 							type: ApplicationCommandOptionType.String,
 							required: true,
+							autocomplete: true,
 						},
 					],
 				},
@@ -49,6 +48,7 @@ export const command = createCommand({
 							description: "L'invito da revocare (il codice o il link)",
 							type: ApplicationCommandOptionType.String,
 							required: true,
+							autocomplete: true,
 						},
 					],
 				},
@@ -221,19 +221,6 @@ export const command = createCommand({
 						fields: fields.slice(0, 25),
 					},
 				],
-				components: [
-					{
-						components: [
-							{
-								type: ComponentType.Button,
-								style: ButtonStyle.Link,
-								label: "Apri nell'app",
-								url: `discord://-/invite/${invite.code}`,
-							},
-						],
-						type: ComponentType.ActionRow,
-					},
-				],
 			});
 			return;
 		}
@@ -261,5 +248,23 @@ export const command = createCommand({
 				content: "Invito revocato con successo!",
 			});
 		}
+	},
+	async autocomplete(interaction) {
+		if (!interaction.inCachedGuild()) return;
+		const invites = interaction.guild.invites.cache;
+		const option = interaction.options
+			.getFocused()
+			.split("/")
+			.at(-1)!
+			.toLowerCase();
+
+		await interaction.respond(
+			invites
+				.filter((i) => i.deletable && i.code.toLowerCase().includes(option))
+				.map((i) => ({
+					value: i.code,
+					name: `${i.code}${i.inviter ? ` (${i.inviter.tag})` : ""}`,
+				}))
+		);
 	},
 });
