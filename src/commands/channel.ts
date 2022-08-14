@@ -1,3 +1,4 @@
+import type { APIInteractionDataResolvedChannel } from "discord-api-types/v10";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -6,11 +7,15 @@ import {
 	ComponentType,
 	ThreadAutoArchiveDuration,
 	VideoQualityMode,
+	WebhookType,
 } from "discord-api-types/v10";
 import type {
+	ChannelWebhookCreateOptions,
 	GuildBasedChannel,
 	GuildChannelCreateOptions,
 	GuildChannelEditOptions,
+	GuildTextBasedChannel,
+	TextChannel,
 } from "discord.js";
 import { escapeMarkdown } from "discord.js";
 import ms from "ms";
@@ -18,6 +23,7 @@ import type { ReceivedInteraction } from "../util";
 import {
 	capitalize,
 	createCommand,
+	CustomClient,
 	formatBytes,
 	normalizeError,
 	sendError,
@@ -504,6 +510,57 @@ export const command = createCommand({
 						},
 					],
 				},
+				{
+					name: "webhook",
+					description: "Gestisci i webhook di un canale",
+					type: ApplicationCommandOptionType.SubcommandGroup,
+					options: [
+						{
+							type: ApplicationCommandOptionType.Subcommand,
+							name: "create",
+							description: "Crea un webhook",
+							options: [
+								{
+									name: "name",
+									description: "Il nome del webhook",
+									type: ApplicationCommandOptionType.String,
+									min_length: 1,
+									max_length: 80,
+									required: true,
+								},
+								{
+									name: "channel",
+									description: "Il canale in cui creare il webhook",
+									type: ApplicationCommandOptionType.Channel,
+								},
+								{
+									name: "avatar",
+									description: "L'avatar del webhook",
+									type: ApplicationCommandOptionType.Attachment,
+								},
+								{
+									name: "reason",
+									description: "Il motivo della creazione del webhook",
+									type: ApplicationCommandOptionType.String,
+									max_length: 512,
+								},
+							],
+						},
+						{
+							type: ApplicationCommandOptionType.Subcommand,
+							name: "info",
+							description: "Mostra le informazioni di un webhook",
+							options: [
+								{
+									name: "webhook",
+									description: "L'id o link del webhook",
+									type: ApplicationCommandOptionType.String,
+									required: true,
+								},
+							],
+						},
+					],
+				},
 			],
 		},
 	],
@@ -907,6 +964,186 @@ export const command = createCommand({
 				return;
 			}
 			await channelInfo(channel, interaction);
+		}
+		if (interaction.options.data[0].name === "webhook") {
+			if (!interaction.memberPermissions.has("ManageWebhooks")) {
+				await interaction.reply({
+					content: "Non hai abbastanza permessi per creare webhook!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const subOptions = options[0].options;
+
+			if (!subOptions) {
+				await interaction.reply({
+					content: "Comando non disponibile!",
+					ephemeral: true,
+				});
+				return;
+			}
+			if (options[0].name === "create") {
+				let {
+					channel,
+				}: {
+					channel:
+						| APIInteractionDataResolvedChannel
+						| GuildTextBasedChannel
+						| TextChannel
+						| null;
+				} = interaction;
+				const webhookOptions: ChannelWebhookCreateOptions = { name: "" };
+
+				for (const option of subOptions)
+					if (
+						option.name === "avatar" &&
+						(
+							["image/png", "image/jpeg", "image/jpg"] as (
+								| string
+								| null
+								| undefined
+							)[]
+						).includes(option.attachment?.contentType)
+					)
+						webhookOptions.avatar = option.attachment!.url;
+					else if (option.name === "name" && typeof option.value === "string")
+						webhookOptions.name = option.value;
+					else if (
+						option.name === "channel" &&
+						option.channel?.type === ChannelType.GuildText
+					)
+						({ channel } = option);
+					else if (option.name === "reason")
+						webhookOptions.reason =
+							typeof option.value === "string" ? option.value : undefined;
+				if (interaction.appPermissions?.has("ManageWebhooks") !== true) {
+					await interaction.reply({
+						content: "Ho bisogno del permesso **Gestire i webhook**!",
+						ephemeral: true,
+					});
+					return;
+				}
+				if (!channel || !("createWebhook" in channel)) {
+					await interaction.reply({
+						content: "In questo canale non è possibile creare webhook!",
+						ephemeral: true,
+					});
+					return;
+				}
+				const [webhook] = await Promise.all([
+					channel.createWebhook(webhookOptions).catch(normalizeError),
+					interaction
+						.deferReply({ ephemeral: true })
+						.catch(CustomClient.printToStderr),
+				]);
+
+				if (webhook instanceof Error) {
+					await sendError(interaction, webhook);
+					return;
+				}
+				await interaction.editReply({
+					content: `Webhook [${webhook.name}](${
+						webhook.url
+					}) creato con successo!\n\nMotivo: ${
+						webhookOptions.reason ?? "*Nessun motivo*"
+					}`,
+				});
+				return;
+			}
+			if (options[0].name === "info") {
+				if (!interaction.memberPermissions.has("ManageWebhooks")) {
+					await interaction.reply({
+						content: "Non hai abbastanza permessi per gestire i webhook!",
+						ephemeral: true,
+					});
+					return;
+				}
+				const id = interaction.options.getString("webhook", true).split("/");
+				const webhook = await this.client
+					.fetchWebhook(
+						...((id.length > 5 ? [id[5], id[6]] : [id[0]]) as [string])
+					)
+					.catch(() => null);
+
+				if (!webhook) {
+					await interaction.reply({
+						content: "Webhook non valido!",
+						ephemeral: true,
+					});
+					return;
+				}
+				await interaction.reply({
+					embeds: [
+						{
+							author: webhook.owner
+								? {
+										name:
+											"tag" in webhook.owner
+												? webhook.owner.tag
+												: `${webhook.owner.username}#${webhook.owner.discriminator}`,
+										icon_url:
+											webhook.owner.avatar == null
+												? interaction.client.rest.cdn.defaultAvatar(
+														Number(webhook.owner.discriminator) % 5
+												  )
+												: interaction.client.rest.cdn.avatar(
+														webhook.owner.id,
+														webhook.owner.avatar
+												  ),
+								  }
+								: undefined,
+							color:
+								(webhook.owner && "accentColor" in webhook.owner
+									? webhook.owner.accentColor
+									: webhook.owner?.accent_color) ?? undefined,
+							footer: {
+								text: "Creato",
+							},
+							timestamp: webhook.createdAt.toISOString(),
+							title: webhook.name,
+							url: webhook.url,
+							thumbnail: {
+								url:
+									webhook.avatarURL({
+										extension: "png",
+										size: 4096,
+									}) ?? "https://cdn.discordapp.com/embed/avatars/0.png",
+							},
+							fields: [
+								{
+									name: "Applicazione",
+									value: webhook.applicationId ?? "*Nessuna*",
+									inline: true,
+								},
+								{
+									name: "Canale",
+									value: `<#${webhook.channelId}>`,
+									inline: true,
+								},
+								{
+									name: "ID",
+									value: webhook.id,
+									inline: true,
+								},
+								{
+									name: "Token",
+									value:
+										webhook.token == null
+											? "*Sconosciuto*"
+											: `\`${webhook.token}\``,
+									inline: true,
+								},
+								{
+									name: "Tipo",
+									value: WebhookType[webhook.type],
+									inline: true,
+								},
+							],
+						},
+					],
+					ephemeral: true,
+				});
+			}
 		}
 	},
 	async component(interaction) {
