@@ -1257,7 +1257,7 @@ export const command = createCommand({
 						const name = guild.channels.cache.get(w.channelId)?.name;
 
 						return {
-							name: `${w.name}${name == null ? "" : ` (#${name})`}`,
+							name: `${w.name}${name == null ? "" : ` (${name})`}`,
 							value: `${w.id}${w.token == null ? "" : `/${w.token}`}`,
 						};
 					})
