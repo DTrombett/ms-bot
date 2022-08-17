@@ -240,9 +240,11 @@ export const command = createCommand({
 				.filter((p) => p.toLowerCase().includes(option))
 				.slice(0, 25)
 				.map((p) => {
-					p = p.replaceAll("\n", " ");
+					const name = p.replaceAll("\n", " ");
+
 					return {
-						name: p.length > 100 ? `${p.slice(0, 97).trimEnd()}...` : p,
+						name:
+							name.length > 100 ? `${name.slice(0, 97).trimEnd()}...` : name,
 						value: p.slice(0, 100),
 					};
 				})
