@@ -1,3 +1,4 @@
+import type { APIMessageActionRowComponent } from "discord-api-types/v10";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -8,9 +9,9 @@ import type { ReceivedInteraction } from "../util";
 import { createCommand } from "../util";
 
 const queloAnswers = [
-	["C'è grossa grisi!", "https://youtu.be/lpYSFPO7pqw?t=13"],
-	["La seconda che hai detto!", "https://youtu.be/lpYSFPO7pqw?t=20"],
-	["Te c'hai grossa grisi!", "https://youtu.be/lpYSFPO7pqw?t=178"],
+	["La seconda che hai detto!"],
+	["Te c'hai grossa grisi!"],
+	["C'è grossa grisi, c'è molta violenza, c'è molto egoismo!"],
 	[
 		"Qua la gente non sa più quando stiamo andando su questa terra!\nQua la gente non sa più quando stiamo facendo su questa terra!",
 		"https://youtu.be/lpYSFPO7pqw?t=20",
@@ -152,7 +153,7 @@ const queloAnswers = [
 		"https://youtu.be/MwfY552THjo?t=856",
 	],
 	[
-		"- Quando ci si reincarna, si ricorda qualcosa della vita precedente o si dimentica tutto?\n- La seconda che hai detto, si dimentica tutto.\n- E di noi come siamo adesso non rimane niente?\n- No.\n- Ma allora se noi non saremo più noi, che senso ha parlare di reincarnazione?\n- E che ne so, sei te che hai chiamato eh!",
+		"- Quando ci si reincarna, si ricorda qualcosa della vita precedente o si dimentica tutto?\n- La seconda che hai detto! Si dimentica tutto.\n- E di noi come siamo adesso non rimane niente?\n- No.\n- Ma allora se noi non saremo più noi, che senso ha parlare di reincarnazione?\n- E che ne so, sei te che hai chiamato eh!",
 		"https://youtu.be/zCbmW_wV_Do?t=496",
 	],
 	[
@@ -180,26 +181,29 @@ const quelo = async (
 		});
 		return;
 	}
+	const components: APIMessageActionRowComponent[] = [
+		{
+			type: ComponentType.Button,
+			label: "Un'altra",
+			style: ButtonStyle.Primary,
+			emoji: { name: "💬" },
+			custom_id: "quelo",
+		},
+	];
+
+	if (answer[1])
+		components.push({
+			type: ComponentType.Button,
+			label: "Guarda la scena",
+			style: ButtonStyle.Link,
+			url: answer[1],
+		});
 	await interaction.reply({
 		content: answer[0],
 		components: [
 			{
 				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.Button,
-						label: "Un'altra",
-						style: ButtonStyle.Primary,
-						emoji: { name: "💬" },
-						custom_id: "quelo",
-					},
-					{
-						type: ComponentType.Button,
-						label: "Guarda la scena",
-						style: ButtonStyle.Link,
-						url: answer[1],
-					},
-				],
+				components,
 			},
 		],
 		ephemeral,
