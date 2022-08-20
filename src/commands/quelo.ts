@@ -11,10 +11,9 @@ import { createCommand } from "../util";
 const queloAnswers = [
 	["La seconda che hai detto!"],
 	["Te c'hai grossa grisi!"],
-	["C'è grossa grisi, c'è molta violenza, c'è molto egoismo!"],
 	[
-		"Qua la gente non sa più quando stiamo andando su questa terra!\nQua la gente non sa più quando stiamo facendo su questa terra!",
-		"https://youtu.be/lpYSFPO7pqw?t=20",
+		"C'è grossa grisi, c'è molta violenza, c'è molto egoismo! Qua la gente non sa più quando stiamo andando su questa terra!\nQua la gente non sa più quando stiamo facendo su questa terra!",
+		"https://youtu.be/lpYSFPO7pqw?t=13",
 	],
 	[
 		"- Cosa c'è in questa religione?\n- Per adesso c'è Quelo!",
@@ -69,7 +68,7 @@ const queloAnswers = [
 		"https://youtu.be/MwfY552THjo?t=320",
 	],
 	[
-		"Ti chiedi di come mai, di come dove nel mondo, di dove chi, perché quando? Dov'è la risposta? Ti chiedi quasi quasi e miagoli nel buio. Te ne vai a tentoni nel buio. Ma la risposta non la devi cercare fuori. La risposta è dentro di te. E però, è sbagliata!",
+		"Ti chiedi di come mai, di come dove nel mondo. Dove chi, perché quando? Dov'è la risposta? Ti chiedi quasi quasi e miagoli nel buio. Te ne vai a tentoni nel buio. Ma la risposta non la devi cercare fuori. La risposta è dentro di te. E però, è sbagliata!",
 		"https://youtu.be/MwfY552THjo?t=73",
 	],
 	[
