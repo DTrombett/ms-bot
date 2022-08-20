@@ -148,7 +148,7 @@ const queloAnswers = [
 		"https://youtu.be/MwfY552THjo?t=848",
 	],
 	[
-		"Se fossi cane, bau, se fossi gatto miao, se fosse tardi, ciao.",
+		"Se fossi cane, bau, se fossi gatto, miao, se fosse tardi, ciao.",
 		"https://youtu.be/MwfY552THjo?t=856",
 	],
 	[
