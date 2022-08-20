@@ -132,7 +132,7 @@ const queloAnswers = [
 		"https://youtu.be/MwfY552THjo?t=776",
 	],
 	[
-		"S'i' fossi foco, bruciare, s'i' fossi acqua, bagnare, s'i fossi saponetta, strofinare, s'i' fossi acqua un'altra volta, sciacquare.",
+		"S'i' fossi foco, bruciare, s'i' fossi acqua, bagnare, s'i' fossi saponetta, strofinare, s'i' fossi acqua un'altra volta, sciacquare.",
 		"https://youtu.be/MwfY552THjo?t=811",
 	],
 	[
