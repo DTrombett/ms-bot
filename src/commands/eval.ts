@@ -178,7 +178,7 @@ export const command = createCommand({
 								title: "Eval output",
 								description: codeBlock(
 									"ansi",
-									escapeCodeBlock(result).slice(0, 4096 - 11)
+									escapeCodeBlock(result).slice(0, 4096 - 12)
 								),
 								color: Colors.Blurple,
 								timestamp: new Date().toISOString(),
