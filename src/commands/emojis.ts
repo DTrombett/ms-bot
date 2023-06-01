@@ -291,15 +291,7 @@ export const command = createCommand({
 				});
 				return;
 			}
-			name ||= emoji.name?.split(".")[0];
-			if (!name!) {
-				await interaction.reply({
-					content:
-						"Non hai specificato un nome per l'emoji e l'immagine non ha un nome valido!",
-					ephemeral: true,
-				});
-				return;
-			}
+			name ||= emoji.name.split(".")[0];
 			if (name.length < 2 || name.length > 32) {
 				await interaction.reply({
 					content:

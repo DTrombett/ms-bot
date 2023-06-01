@@ -11,9 +11,9 @@ import type {
 	CacheType,
 	ClientEvents,
 	Interaction,
+	InteractionEditReplyOptions,
 	InteractionReplyOptions,
 	InteractionUpdateOptions,
-	WebhookEditMessageOptions,
 } from "discord.js";
 import type { Buffer } from "node:buffer";
 import type { Command, CustomClient, Event } from ".";
@@ -118,10 +118,10 @@ export type Actions = {
 export type ActionMethod<
 	T extends keyof Actions,
 	R extends
+		| InteractionEditReplyOptions
 		| InteractionReplyOptions
-		| InteractionUpdateOptions
-		| WebhookEditMessageOptions = InteractionUpdateOptions &
-		WebhookEditMessageOptions
+		| InteractionUpdateOptions = InteractionEditReplyOptions &
+		InteractionUpdateOptions
 > = (this: void, client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
 
 export type InteractionByType<
