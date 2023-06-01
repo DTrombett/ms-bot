@@ -11,7 +11,7 @@ import {
 } from "discord-api-types/v10";
 import type {
 	GuildMember,
-	GuildMemberEditData,
+	GuildMemberEditOptions,
 	RoleManager,
 	User,
 	VoiceChannel,
@@ -315,7 +315,7 @@ export const command = createCommand({
 				return;
 			}
 			const { guild } = interaction;
-			const editOptions: GuildMemberEditData = {};
+			const editOptions: GuildMemberEditOptions = {};
 			let { member } = interaction as { member?: GuildMember },
 				newRoles: string[] | undefined,
 				removeRoles: string[] | undefined;
@@ -486,7 +486,7 @@ export const command = createCommand({
 						return;
 					}
 			}
-			if (member.id !== interaction.client.user!.id && !member.manageable) {
+			if (member.id !== interaction.client.user.id && !member.manageable) {
 				await interaction.reply({
 					content: "Non ho abbastanza permessi per gestire questo membro!",
 					ephemeral: true,

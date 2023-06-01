@@ -1169,8 +1169,7 @@ export const command = createCommand({
 					});
 					return;
 				}
-				const attachment =
-					interaction.options.getAttachment("file")?.attachment;
+				const attachment = interaction.options.getAttachment("file")?.url;
 				const error = await new WebhookClient(
 					url.length > 5
 						? { id: url[5], token: url[6] }
