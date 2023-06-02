@@ -31,7 +31,7 @@
 	"dependencies": {
 		"@discordjs/builders": "*",
 		"@discordjs/rest": "*",
-		"@tsconfig/node16": "^1.0.3",
+		"@tsconfig/node16": "^1.0.4",
 		"discord-api-types": "*",
 		"discord.js": "^14.11.0",
 		"dotenv": "^16.1.1",
