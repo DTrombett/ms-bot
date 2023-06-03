@@ -58,7 +58,7 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 			external: ["tsup"],
 			platform: "node",
 			sourcemap: true,
-			target: "ESNext",
+			target: "esnext",
 			outDir: join(cwd(), "dist/commands"),
 		}).catch(() => {
 			CustomClient.printToStderr(`Failed to build command ${event.filename}`);
@@ -133,7 +133,7 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 			minify: true,
 			platform: "node",
 			sourcemap: true,
-			target: "ESNext",
+			target: "esnext",
 			outDir: join(cwd(), "dist/events"),
 		}).catch(() => {
 			CustomClient.printToStderr(`Failed to build event ${event.filename}`);
