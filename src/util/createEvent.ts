@@ -6,8 +6,6 @@ import type { EventOptions } from "./types";
  * @param event - The event data
  * @returns The event data
  */
-export const createEvent = <K extends keyof ClientEvents>(
-	event: EventOptions<K>
-) => event;
+export const createEvent = <K extends keyof ClientEvents>(event: EventOptions<K>) => event;
 
 export default createEvent;

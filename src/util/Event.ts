@@ -41,10 +41,8 @@ export class Event<K extends keyof ClientEvents = keyof ClientEvents> {
 	 */
 	patch(data: Partial<EventOptions<K>>) {
 		this.removeListeners();
-		if (data.on !== undefined)
-			this.on = data.on.bind<EventOptions<K>["on"]>(this);
-		if (data.once !== undefined)
-			this.once = data.once.bind<EventOptions<K>["once"]>(this);
+		if (data.on !== undefined) this.on = data.on.bind<EventOptions<K>["on"]>(this);
+		if (data.once !== undefined) this.once = data.once.bind<EventOptions<K>["once"]>(this);
 		this.addListeners();
 		return this;
 	}

@@ -9,9 +9,7 @@ import Event from "./Event";
  * @param client - The client to load the events for
  */
 export const loadEvents = async (client: CustomClient) => {
-	const fileNames = await promises.readdir(
-		new URL(Constants.eventsFolderName, import.meta.url)
-	);
+	const fileNames = await promises.readdir(new URL(Constants.eventsFolderName, import.meta.url));
 	const files = await Promise.all(
 		fileNames
 			.filter((fileName) => fileName.endsWith(".js"))
@@ -23,8 +21,7 @@ export const loadEvents = async (client: CustomClient) => {
 			)
 	);
 	const events = files.map((file) => file.event);
-	for (const event of events)
-		client.events.set(event.name, new Event(client, event));
+	for (const event of events) client.events.set(event.name, new Event(client, event));
 };
 
 export default loadEvents;

@@ -27,10 +27,7 @@ const replies = [
 	"Non ne ho la più pallida idea",
 ];
 
-const predict = async (
-	interaction: ReceivedInteraction,
-	ephemeral?: boolean
-) => {
+const predict = async (interaction: ReceivedInteraction, ephemeral?: boolean) => {
 	await interaction.reply({
 		content:
 			Math.random() < 0.95

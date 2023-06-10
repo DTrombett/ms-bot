@@ -1,8 +1,5 @@
 import { codeBlock } from "@discordjs/builders";
-import {
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-} from "discord-api-types/v10";
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import type {
 	ApplicationCommandOptionChoiceData,
 	AutocompleteInteraction,
@@ -46,24 +43,17 @@ const addContext = (interaction: Interaction) => {
 	replServer.context.interaction = interaction;
 	replServer.context.client = interaction.client;
 };
-const setInspectOptions = (
-	interaction: AutocompleteInteraction | ChatInputCommandInteraction
-) => {
+const setInspectOptions = (interaction: AutocompleteInteraction | ChatInputCommandInteraction) => {
 	const { options } = replServer.writer;
-	const clientStatus = interaction.guild?.presences.cache.get(
-		interaction.user.id
-	)?.clientStatus;
+	const clientStatus = interaction.guild?.presences.cache.get(interaction.user.id)?.clientStatus;
 	const isPC = clientStatus?.mobile == null && clientStatus?.desktop != null;
 
-	options.colors =
-		interaction.options.getBoolean("file") === true ? false : isPC;
+	options.colors = interaction.options.getBoolean("file") === true ? false : isPC;
 	options.showHidden = interaction.options.getBoolean("show-hidden") ?? false;
 	options.depth = interaction.options.getInteger("depth") ?? 3;
 	options.showProxy = interaction.options.getBoolean("show-proxy") ?? true;
-	options.maxArrayLength =
-		interaction.options.getInteger("max-array-length") ?? 100;
-	options.maxStringLength =
-		interaction.options.getInteger("max-string-length") ?? 1000;
+	options.maxArrayLength = interaction.options.getInteger("max-array-length") ?? 100;
+	options.maxStringLength = interaction.options.getInteger("max-string-length") ?? 1000;
 	options.breakLength = isPC ? 66 : 39;
 };
 
@@ -84,14 +74,12 @@ export const command = createCommand({
 				{
 					type: ApplicationCommandOptionType.Boolean,
 					name: "ephemeral",
-					description:
-						"Se il risultato può essere visto solo da te (default: true)",
+					description: "Se il risultato può essere visto solo da te (default: true)",
 				},
 				{
 					type: ApplicationCommandOptionType.Boolean,
 					name: "file",
-					description:
-						"Se il risultato deve essere inviato come file (default: false)",
+					description: "Se il risultato deve essere inviato come file (default: false)",
 				},
 				{
 					type: ApplicationCommandOptionType.Boolean,
@@ -111,14 +99,12 @@ export const command = createCommand({
 				{
 					type: ApplicationCommandOptionType.Integer,
 					name: "max-array-length",
-					description:
-						"Il numero massimo di elementi da mostrare in un array (default: 100)",
+					description: "Il numero massimo di elementi da mostrare in un array (default: 100)",
 				},
 				{
 					type: ApplicationCommandOptionType.Integer,
 					name: "max-string-length",
-					description:
-						"Il numero massimo di caratteri da mostrare in una stringa (default: 1000)",
+					description: "Il numero massimo di caratteri da mostrare in una stringa (default: 1000)",
 				},
 			],
 		},
@@ -176,19 +162,13 @@ export const command = createCommand({
 									icon_url: interaction.user.displayAvatarURL(),
 								},
 								title: "Eval output",
-								description: codeBlock(
-									"ansi",
-									escapeCodeBlock(result).slice(0, 4096 - 12)
-								),
+								description: codeBlock("ansi", escapeCodeBlock(result).slice(0, 4096 - 12)),
 								color: Colors.Blurple,
 								timestamp: new Date().toISOString(),
 								fields: [
 									{
 										name: "Input",
-										value: codeBlock(
-											"js",
-											escapeCodeBlock(code).slice(0, 1024 - 9)
-										),
+										value: codeBlock("js", escapeCodeBlock(code).slice(0, 1024 - 9)),
 									},
 								],
 							},
@@ -205,14 +185,12 @@ export const command = createCommand({
 			return;
 		}
 		addContext(interaction);
-		const [autocomplete, sub] = await new Promise<[string[], string]>(
-			(resolve) => {
-				replServer.completer(option.value, (err, r) => {
-					if (err) CustomClient.printToStderr(err);
-					resolve(r ?? [[], ""]);
-				});
-			}
-		);
+		const [autocomplete, sub] = await new Promise<[string[], string]>((resolve) => {
+			replServer.completer(option.value, (err, r) => {
+				if (err) CustomClient.printToStderr(err);
+				resolve(r ?? [[], ""]);
+			});
+		});
 		if (autocomplete.length === 0) {
 			await interaction.respond([]);
 			delete replServer.context.interaction;
@@ -220,9 +198,7 @@ export const command = createCommand({
 		}
 		const nestedOptions: ApplicationCommandOptionChoiceData[][] = [];
 		let tempArray: ApplicationCommandOptionChoiceData[] = [];
-		let only = autocomplete.find((a) =>
-			autocomplete.every((b) => b.startsWith(a))
-		)!;
+		let only = autocomplete.find((a) => autocomplete.every((b) => b.startsWith(a)))!;
 
 		for (const a of autocomplete) {
 			if (!a || tempArray.length >= 25) {

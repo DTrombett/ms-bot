@@ -1,7 +1,4 @@
-import {
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-} from "discord-api-types/v10";
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import { escapeMarkdown } from "discord.js";
 import { Buffer } from "node:buffer";
 import { createCommand } from "../util";

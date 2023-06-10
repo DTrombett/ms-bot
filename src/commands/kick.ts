@@ -8,13 +8,7 @@ import {
 } from "discord-api-types/v10";
 import { escapeMarkdown, GuildMember } from "discord.js";
 import type { InteractionByType, ReceivedInteraction } from "../util";
-import {
-	createCommand,
-	CustomClient,
-	Emojis,
-	normalizeError,
-	sendError,
-} from "../util";
+import { createCommand, CustomClient, Emojis, normalizeError, sendError } from "../util";
 
 const checkPerms = async (
 	interaction: ReceivedInteraction<"cached">,
@@ -37,11 +31,7 @@ const checkPerms = async (
 			});
 			return true;
 		}
-		if (
-			member.roles.highest.comparePositionTo(
-				interaction.member.roles.highest
-			) >= 0
-		) {
+		if (member.roles.highest.comparePositionTo(interaction.member.roles.highest) >= 0) {
 			await interaction.reply({
 				content:
 					"Non puoi eseguire questa azione su un membro con una posizione superiore o uguale alla tua!",
@@ -77,11 +67,9 @@ const executeKick = async (
 		return;
 	}
 	await interaction.editReply({
-		content: `<:kick:${Emojis.kick}> <@${member.user.id}> (${escapeMarkdown(
-			member.user.tag
-		)} - ${member.user.id}) è stato espulso!\n\nMotivo: ${
-			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
-		}`,
+		content: `<:kick:${Emojis.kick}> <@${member.user.id}> (${escapeMarkdown(member.user.tag)} - ${
+			member.user.id
+		}) è stato espulso!\n\nMotivo: ${reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"}`,
 	});
 };
 const showModal = (
@@ -143,8 +131,7 @@ export const command = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
+				content: "Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -172,15 +159,9 @@ export const command = createCommand({
 			await showModal(interaction, member!);
 			return;
 		}
-		const reason = interaction.options.data.find(
-			(o) => o.name === "reason"
-		)?.value;
+		const reason = interaction.options.data.find((o) => o.name === "reason")?.value;
 
-		await executeKick(
-			interaction,
-			member!,
-			typeof reason === "string" ? reason : undefined
-		);
+		await executeKick(interaction, member!, typeof reason === "string" ? reason : undefined);
 	},
 	async modalSubmit(interaction) {
 		const [, id] = interaction.customId.split("-");
@@ -194,8 +175,7 @@ export const command = createCommand({
 		}
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
+				content: "Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -204,10 +184,6 @@ export const command = createCommand({
 		const member = await guild.members.fetch(id).catch(() => undefined);
 
 		if (await checkPerms(interaction, id, guild.ownerId, member)) return;
-		await executeKick(
-			interaction,
-			member!,
-			interaction.fields.fields.get("reason")?.value
-		);
+		await executeKick(interaction, member!, interaction.fields.fields.get("reason")?.value);
 	},
 });

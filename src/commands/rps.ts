@@ -1,10 +1,7 @@
-import {
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-} from "discord-api-types/v10";
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import { createCommand, randomNumber } from "../util";
 
-type PossibleChoice = typeof choices[number];
+type PossibleChoice = (typeof choices)[number];
 
 const choices = ["rock", "paper", "scissors"] as const;
 const emojis: Record<PossibleChoice, string> = {
@@ -61,14 +58,8 @@ export const command = createCommand({
 		const myChoice = choices[randomNumber(0, 2)];
 
 		await interaction.reply({
-			content: `Hai scelto ${emojis[choice]}\nLa mia scelta è ${
-				emojis[myChoice]
-			}\n\n**${
-				myChoice === choice
-					? "Pareggio"
-					: winners[myChoice] === choice
-					? "Hai vinto"
-					: "Hai perso"
+			content: `Hai scelto ${emojis[choice]}\nLa mia scelta è ${emojis[myChoice]}\n\n**${
+				myChoice === choice ? "Pareggio" : winners[myChoice] === choice ? "Hai vinto" : "Hai perso"
 			}**!`,
 		});
 	},

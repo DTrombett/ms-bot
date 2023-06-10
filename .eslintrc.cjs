@@ -147,6 +147,7 @@ module.exports = {
 		"@typescript-eslint/no-confusing-non-null-assertion": "warn",
 		"@typescript-eslint/no-confusing-void-expression": "warn",
 		"@typescript-eslint/no-duplicate-imports": "warn",
+		"@typescript-eslint/no-empty-function": "warn",
 		"@typescript-eslint/no-explicit-any": "off",
 		"@typescript-eslint/no-extraneous-class": "warn",
 		"@typescript-eslint/no-implied-eval": "off",

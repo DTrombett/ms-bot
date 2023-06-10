@@ -1,18 +1,8 @@
-import {
-	ApplicationCommandType,
-	ButtonStyle,
-	ComponentType,
-} from "discord-api-types/v10";
-import type {
-	Interaction,
-	InteractionReplyOptions,
-	InteractionUpdateOptions,
-} from "discord.js";
+import { ApplicationCommandType, ButtonStyle, ComponentType } from "discord-api-types/v10";
+import type { Interaction, InteractionReplyOptions, InteractionUpdateOptions } from "discord.js";
 import { createCommand } from "../util";
 
-const ping = (
-	interaction: Interaction
-): InteractionReplyOptions & InteractionUpdateOptions => ({
+const ping = (interaction: Interaction): InteractionReplyOptions & InteractionUpdateOptions => ({
 	content: `WS: **${interaction.client.ws.ping}ms**\nRitardo totale: **${
 		Date.now() - interaction.createdTimestamp
 	}ms**`,

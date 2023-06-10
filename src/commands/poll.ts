@@ -1,7 +1,4 @@
-import {
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-} from "discord-api-types/v10";
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import { createCommand } from "../util";
 
 export const command = createCommand({
@@ -38,8 +35,7 @@ export const command = createCommand({
 						title,
 						author: {
 							name: interaction.user.tag,
-							icon_url:
-								interaction.user.avatarURL({ extension: "png" }) ?? undefined,
+							icon_url: interaction.user.avatarURL({ extension: "png" }) ?? undefined,
 						},
 						color: 0xfd6500,
 						description: "✅ **Sì**\n\n❌ **No**",

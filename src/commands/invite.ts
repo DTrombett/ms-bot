@@ -7,20 +7,13 @@ import {
 } from "discord-api-types/v10";
 import { escapeMarkdown } from "discord.js";
 import ms from "ms";
-import {
-	createCommand,
-	CustomClient,
-	Emojis,
-	normalizeError,
-	sendError,
-} from "../util";
+import { createCommand, CustomClient, Emojis, normalizeError, sendError } from "../util";
 
 export const command = createCommand({
 	data: [
 		{
 			name: "invite",
-			description:
-				"Controlla i dettagli riguardo un invito al server o revocalo",
+			description: "Controlla i dettagli riguardo un invito al server o revocalo",
 			type: ApplicationCommandType.ChatInput,
 			default_member_permissions: String(PermissionFlagsBits.ManageGuild),
 			options: [
@@ -58,8 +51,7 @@ export const command = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
+				content: "Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -83,10 +75,7 @@ export const command = createCommand({
 			const fields: APIEmbedField[] = [
 				{
 					name: "Canale di arrivo",
-					value:
-						invite.channelId == null
-							? "*Non specificato*"
-							: `<#${invite.channelId}>`,
+					value: invite.channelId == null ? "*Non specificato*" : `<#${invite.channelId}>`,
 					inline: true,
 				},
 				{
@@ -124,16 +113,13 @@ export const command = createCommand({
 					inline: true,
 				});
 			if (invite.guildScheduledEvent != null) {
-				let value = `**${escapeMarkdown(
-					invite.guildScheduledEvent.name
-				)}** (<:location:${Emojis.location}> ${
-					invite.guildScheduledEvent.entityType ===
-					GuildScheduledEventEntityType.External
+				let value = `**${escapeMarkdown(invite.guildScheduledEvent.name)}** (<:location:${
+					Emojis.location
+				}> ${
+					invite.guildScheduledEvent.entityType === GuildScheduledEventEntityType.External
 						? invite.guildScheduledEvent.entityMetadata?.location == null
 							? "*Nessuna posizione*"
-							: escapeMarkdown(
-									invite.guildScheduledEvent.entityMetadata.location
-							  )
+							: escapeMarkdown(invite.guildScheduledEvent.entityMetadata.location)
 						: invite.guildScheduledEvent.entityId == null
 						? "*Nessun canale*"
 						: `<#${invite.guildScheduledEvent.entityId}>`
@@ -144,10 +130,7 @@ export const command = createCommand({
 
 					value += `\n${
 						invite.guildScheduledEvent.description.length > maxLength
-							? `${invite.guildScheduledEvent.description.slice(
-									0,
-									maxLength - 3
-							  )}...`
+							? `${invite.guildScheduledEvent.description.slice(0, maxLength - 3)}...`
 							: invite.guildScheduledEvent.description
 					}`;
 				}
@@ -252,11 +235,7 @@ export const command = createCommand({
 	async autocomplete(interaction) {
 		if (!interaction.inCachedGuild()) return;
 		const invites = interaction.guild.invites.cache;
-		const option = interaction.options
-			.getFocused()
-			.split("/")
-			.at(-1)!
-			.toLowerCase();
+		const option = interaction.options.getFocused().split("/").at(-1)!.toLowerCase();
 
 		await interaction.respond(
 			invites

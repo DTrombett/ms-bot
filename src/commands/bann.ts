@@ -10,13 +10,7 @@ import {
 import type { User } from "discord.js";
 import { escapeMarkdown, GuildMember } from "discord.js";
 import type { InteractionByType, ReceivedInteraction } from "../util";
-import {
-	createCommand,
-	CustomClient,
-	Emojis,
-	normalizeError,
-	sendError,
-} from "../util";
+import { createCommand, CustomClient, Emojis, normalizeError, sendError } from "../util";
 
 const checkPerms = async (
 	interaction: ReceivedInteraction<"cached">,
@@ -32,15 +26,9 @@ const checkPerms = async (
 			});
 			return true;
 		}
-		if (
-			member &&
-			member.roles.highest.comparePositionTo(
-				interaction.member.roles.highest
-			) >= 0
-		) {
+		if (member && member.roles.highest.comparePositionTo(interaction.member.roles.highest) >= 0) {
 			await interaction.reply({
-				content:
-					"Non puoi bannare un membro con una posizione superiore o uguale alla tua!",
+				content: "Non puoi bannare un membro con una posizione superiore o uguale alla tua!",
 				ephemeral: true,
 			});
 			return true;
@@ -77,11 +65,9 @@ const executeBan = async (
 		return;
 	}
 	await interaction.editReply({
-		content: `<:bann:${Emojis.bann}> <@${user.id}> (${escapeMarkdown(
-			user.tag
-		)} - ${user.id}) è stato bannato!\n\nMotivo: ${
-			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
-		}`,
+		content: `<:bann:${Emojis.bann}> <@${user.id}> (${escapeMarkdown(user.tag)} - ${
+			user.id
+		}) è stato bannato!\n\nMotivo: ${reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"}`,
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -140,11 +126,7 @@ const showModal = (
 			},
 		],
 	});
-const unban = async (
-	interaction: ReceivedInteraction<"cached">,
-	user: User,
-	reason = ""
-) => {
+const unban = async (interaction: ReceivedInteraction<"cached">, user: User, reason = "") => {
 	const { guild } = interaction;
 
 	if (!(await guild.bans.fetch(user.id).catch(() => undefined))) {
@@ -167,11 +149,9 @@ const unban = async (
 		return;
 	}
 	await interaction.editReply({
-		content: `Ho revocato il bann da <@${user.id}> (${escapeMarkdown(
-			user.tag
-		)} - ${user.id})!\n\nMotivo: ${
-			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
-		}`,
+		content: `Ho revocato il bann da <@${user.id}> (${escapeMarkdown(user.tag)} - ${
+			user.id
+		})!\n\nMotivo: ${reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"}`,
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -214,8 +194,7 @@ export const command = createCommand({
 						},
 						{
 							name: "delete-messages",
-							description:
-								"Quanto eliminare della sua cronologia dei messaggi recenti",
+							description: "Quanto eliminare della sua cronologia dei messaggi recenti",
 							type: ApplicationCommandOptionType.Number,
 							min_value: 0,
 							max_value: 7,
@@ -271,8 +250,7 @@ export const command = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
+				content: "Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -289,9 +267,7 @@ export const command = createCommand({
 			});
 			return;
 		}
-		const option = data.find(
-			(o) => o.type === ApplicationCommandOptionType.User
-		);
+		const option = data.find((o) => o.type === ApplicationCommandOptionType.User);
 		const user = option?.user;
 
 		if (!user) {
@@ -334,9 +310,7 @@ export const command = createCommand({
 				content: `<@${user.id}> (${escapeMarkdown(user.tag)} - ${
 					user.id
 				}) è bannato dal server!\n\nMotivo: ${
-					bannData.reason != null
-						? bannData.reason.slice(0, 1_000)
-						: "*Nessun motivo*"
+					bannData.reason != null ? bannData.reason.slice(0, 1_000) : "*Nessun motivo*"
 				}`,
 				components: [
 					{
@@ -367,11 +341,8 @@ export const command = createCommand({
 		const reason = data.find((o) => o.name === "reason")?.value;
 
 		if (interaction.options.data[0].name === "add") {
-			const deleteMessages = data.find(
-				(o) => o.name === "delete-messages"
-			)?.value;
-			const deleteMessageDays =
-				typeof deleteMessages === "number" ? deleteMessages : 0;
+			const deleteMessages = data.find((o) => o.name === "delete-messages")?.value;
+			const deleteMessageDays = typeof deleteMessages === "number" ? deleteMessages : 0;
 
 			await executeBan(
 				interaction,
@@ -382,11 +353,7 @@ export const command = createCommand({
 			return;
 		}
 		if (interaction.options.data[0].name === "remove")
-			await unban(
-				interaction,
-				user,
-				typeof reason === "string" ? reason : undefined
-			);
+			await unban(interaction, user, typeof reason === "string" ? reason : undefined);
 	},
 	async modalSubmit(interaction) {
 		const deleteMessageDays =
@@ -411,8 +378,7 @@ export const command = createCommand({
 		}
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
+				content: "Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -431,8 +397,7 @@ export const command = createCommand({
 	async component(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
+				content: "Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;

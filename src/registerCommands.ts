@@ -28,9 +28,9 @@ const commands = await promises
 			fileNames
 				.filter((file): file is `${string}.js` => file.endsWith(".js"))
 				.map(async (file) => {
-					const fileData = (await import(
-						`./${Constants.commandsFolderName}/${file}`
-					)) as { command: CommandOptions };
+					const fileData = (await import(`./${Constants.commandsFolderName}/${file}`)) as {
+						command: CommandOptions;
+					};
 					return fileData.command;
 				})
 		)
@@ -43,9 +43,7 @@ const [privateAPICommands, publicAPICommands] = await Promise.all([
 	}) as Promise<APIApplicationCommand[]>,
 	nodeEnv === "production"
 		? (rest.put(Routes.applicationCommands(applicationId!), {
-				body: commands
-					.filter((c) => c.isPrivate !== true)
-					.flatMap((file) => file.data),
+				body: commands.filter((c) => c.isPrivate !== true).flatMap((file) => file.data),
 		  }) as Promise<APIApplicationCommand[]>)
 		: [],
 ]);

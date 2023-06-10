@@ -32,12 +32,7 @@ export type Actions = {
 		duration?: string
 	];
 	banner: [user: Snowflake];
-	bannList: [
-		guild: Snowflake,
-		page?: `${number}`,
-		executor?: Snowflake,
-		update?: `${boolean}`
-	];
+	bannList: [guild: Snowflake, page?: `${number}`, executor?: Snowflake, update?: `${boolean}`];
 	calc: [expr: string, fraction?: `${boolean}`];
 	cat: [];
 	createEmoji: [
@@ -48,12 +43,7 @@ export type Actions = {
 		reason?: string,
 		...roles: Snowflake[]
 	];
-	deleteEmoji: [
-		emoji: Snowflake | string,
-		guild: Snowflake,
-		executor?: Snowflake,
-		reason?: string
-	];
+	deleteEmoji: [emoji: Snowflake | string, guild: Snowflake, executor?: Snowflake, reason?: string];
 	dice: [count?: `${number}`];
 	dog: [];
 	editEmoji: [
@@ -65,26 +55,11 @@ export type Actions = {
 		...roles: Snowflake[]
 	];
 	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
-	emojiList: [
-		guild: Snowflake,
-		page?: `${number}`,
-		executor?: Snowflake,
-		update?: `${boolean}`
-	];
+	emojiList: [guild: Snowflake, page?: `${number}`, executor?: Snowflake, update?: `${boolean}`];
 	google: [query: string];
 	icon: [guild: Snowflake];
-	kick: [
-		user: Snowflake,
-		guild: Snowflake,
-		executor?: Snowflake,
-		reason?: string
-	];
-	love: [
-		user1: Snowflake,
-		user2: Snowflake,
-		discriminator1: string,
-		discriminator2: string
-	];
+	kick: [user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string];
+	love: [user1: Snowflake, user2: Snowflake, discriminator1: string, discriminator2: string];
 	ping: [];
 	predict: [text: string];
 	randomNumber: [min?: `${number}`, max?: `${number}`];
@@ -104,12 +79,7 @@ export type Actions = {
 		minutes?: `${number}`,
 		seconds?: `${number}`
 	];
-	unbann: [
-		user: Snowflake,
-		guild: Snowflake,
-		executor?: Snowflake,
-		reason?: string
-	];
+	unbann: [user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string];
 };
 
 /**
@@ -120,8 +90,7 @@ export type ActionMethod<
 	R extends
 		| InteractionEditReplyOptions
 		| InteractionReplyOptions
-		| InteractionUpdateOptions = InteractionEditReplyOptions &
-		InteractionUpdateOptions
+		| InteractionUpdateOptions = InteractionEditReplyOptions & InteractionUpdateOptions
 > = (this: void, client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
 
 export type InteractionByType<
@@ -232,13 +201,12 @@ export type EventOptions<K extends keyof ClientEvents = keyof ClientEvents> = {
 	once?: EventOptions<K>["on"];
 };
 
-export type ReceivedInteraction<C extends CacheType = CacheType> =
-	InteractionByType<
-		| InteractionType.ApplicationCommand
-		| InteractionType.MessageComponent
-		| InteractionType.ModalSubmit,
-		C
-	>;
+export type ReceivedInteraction<C extends CacheType = CacheType> = InteractionByType<
+	| InteractionType.ApplicationCommand
+	| InteractionType.MessageComponent
+	| InteractionType.ModalSubmit,
+	C
+>;
 
 /**
  * A response from thecatapi.com

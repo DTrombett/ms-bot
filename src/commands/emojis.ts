@@ -8,12 +8,7 @@ import {
 import type { Attachment, Guild, GuildEmoji } from "discord.js";
 import { escapeMarkdown } from "discord.js";
 import type { ReceivedInteraction } from "../util";
-import {
-	createCommand,
-	CustomClient,
-	normalizeError,
-	sendError,
-} from "../util";
+import { CustomClient, createCommand, normalizeError, sendError } from "../util";
 
 const emojiLimit: Record<GuildPremiumTier, number> = {
 	[GuildPremiumTier.None]: 50,
@@ -21,10 +16,7 @@ const emojiLimit: Record<GuildPremiumTier, number> = {
 	[GuildPremiumTier.Tier2]: 150,
 	[GuildPremiumTier.Tier3]: 250,
 };
-const checkPerms = async (
-	interaction: ReceivedInteraction<"cached">,
-	ownerId: string
-) => {
+const checkPerms = async (interaction: ReceivedInteraction<"cached">, ownerId: string) => {
 	if (
 		interaction.user.id !== ownerId &&
 		!interaction.memberPermissions.has("ManageEmojisAndStickers")
@@ -57,9 +49,7 @@ const deleteEmoji = async (
 		});
 		return;
 	}
-	const result = await guild.emojis
-		.delete(emoji, reason! || undefined)
-		.catch(normalizeError);
+	const result = await guild.emojis.delete(emoji, reason! || undefined).catch(normalizeError);
 
 	if (result instanceof Error) {
 		await sendError(interaction, result);
@@ -93,15 +83,11 @@ const emojiInfo = async (
 			emoji.managed === true ? "Sì" : "No"
 		}**${
 			emoji.author
-				? `\nAutore: <@${emoji.author.id}> (**${escapeMarkdown(
-						emoji.author.tag
-				  )}**)`
+				? `\nAutore: <@${emoji.author.id}> (**${escapeMarkdown(emoji.author.tag)}**)`
 				: ""
 		}${
 			roles.cache.size > 0
-				? `\nRuoli consentiti: ${roles.cache
-						.map((r) => `<@&${r.id}>`)
-						.join(", ")}`
+				? `\nRuoli consentiti: ${roles.cache.map((r) => `<@&${r.id}>`).join(", ")}`
 				: ""
 		}`,
 		ephemeral,
@@ -235,8 +221,7 @@ export const command = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
+				content: "Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -272,18 +257,14 @@ export const command = createCommand({
 								? r
 								: /^<@&\d{17,20}>$/.test(r)
 								? r.slice(3, -1)
-								: guild.roles.cache.find((role) =>
-										role.name.toLowerCase().startsWith(r)
-								  )?.id;
+								: guild.roles.cache.find((role) => role.name.toLowerCase().startsWith(r))?.id;
 						})
 						.filter((r): r is string => r !== undefined);
 				else if (option.name === "reason")
 					reason = typeof option.value === "string" ? option.value : undefined;
 			if (
 				!emoji ||
-				!["image/png", "image/jpeg", "image/jpg", "image/gif"].includes(
-					emoji.contentType!
-				)
+				!["image/png", "image/jpeg", "image/jpg", "image/gif"].includes(emoji.contentType!)
 			) {
 				await interaction.reply({
 					content: "Emoji non valida!",
@@ -294,8 +275,7 @@ export const command = createCommand({
 			name ||= emoji.name.split(".")[0];
 			if (name.length < 2 || name.length > 32) {
 				await interaction.reply({
-					content:
-						"Il nome dell'emoji deve essere compreso tra 2 e 32 caratteri!",
+					content: "Il nome dell'emoji deve essere compreso tra 2 e 32 caratteri!",
 					ephemeral: true,
 				});
 				return;
@@ -307,7 +287,7 @@ export const command = createCommand({
 				});
 				return;
 			}
-			if (emoji.size >= 256 * 1024) {
+			if (emoji.size >= 256 * 1000) {
 				await interaction.reply({
 					content: "L'emoji deve essere più piccola di 256kb!",
 					ephemeral: true,
@@ -349,9 +329,9 @@ export const command = createCommand({
 			const createdTimestamp = Math.round(result.createdTimestamp / 1000);
 
 			await interaction.editReply({
-				content: `${result.toString()} Emoji [${result.name!}](${
-					result.url
-				}) (${result.id}) aggiunta con successo!\n\nAnimata: **${
+				content: `${result.toString()} Emoji [${result.name!}](${result.url}) (${
+					result.id
+				}) aggiunta con successo!\n\nAnimata: **${
 					result.animated ?? false ? "Sì" : "No"
 				}**\nCreata <t:${createdTimestamp}:F> (<t:${createdTimestamp}:R>)${
 					roles && roles.length > 0
@@ -393,9 +373,7 @@ export const command = createCommand({
 						? v
 						: /^<a?:[a-zA-Z0-9-_]+:\d{17,20}>$/.test(v)
 						? v.replace(/^<:[a-zA-Z0-9-_]+:/, "").replace(/>$/, "")
-						: guild.emojis.cache.find(
-								(e) => e.deletable && e.name?.toLowerCase() === v
-						  )?.id;
+						: guild.emojis.cache.find((e) => e.deletable && e.name?.toLowerCase() === v)?.id;
 				} else if (option.name === "reason")
 					reason = typeof option.value === "string" ? option.value : undefined;
 			await deleteEmoji(interaction, guild, emoji, reason);
@@ -417,9 +395,7 @@ export const command = createCommand({
 						? v
 						: /^<a?:[a-zA-Z0-9-_]+:\d{17,20}>$/.test(v)
 						? v.replace(/^<:[a-zA-Z0-9-_]+:/, "").replace(/>$/, "")
-						: guild.emojis.cache.find(
-								(e) => e.deletable && e.name?.toLowerCase() === v
-						  )?.id;
+						: guild.emojis.cache.find((e) => e.deletable && e.name?.toLowerCase() === v)?.id;
 				} else if (option.name === "name")
 					name = typeof option.value === "string" ? option.value : undefined;
 				else if (option.name === "roles")
@@ -431,9 +407,7 @@ export const command = createCommand({
 								? r
 								: /^<@&\d{17,20}>$/.test(r)
 								? r.slice(3, -1)
-								: guild.roles.cache.find((role) =>
-										role.name.toLowerCase().startsWith(r)
-								  )?.id;
+								: guild.roles.cache.find((role) => role.name.toLowerCase().startsWith(r))?.id;
 						})
 						.filter((r): r is string => r !== undefined);
 				else if (option.name === "reason")
@@ -448,8 +422,7 @@ export const command = createCommand({
 			if (name!) {
 				if (name.length < 2 || name.length > 32) {
 					await interaction.reply({
-						content:
-							"Il nome dell'emoji deve essere compreso tra 2 e 32 caratteri!",
+						content: "Il nome dell'emoji deve essere compreso tra 2 e 32 caratteri!",
 						ephemeral: true,
 					});
 					return;
@@ -484,9 +457,9 @@ export const command = createCommand({
 			const createdTimestamp = Math.round(result.createdTimestamp / 1000);
 
 			await interaction.reply({
-				content: `${result.toString()} Emoji [${result.name!}](${
-					result.url
-				}) (${result.id}) modificata con successo!\n\nAnimata: **${
+				content: `${result.toString()} Emoji [${result.name!}](${result.url}) (${
+					result.id
+				}) modificata con successo!\n\nAnimata: **${
 					result.animated ?? false ? "Sì" : "No"
 				}**\nCreata <t:${createdTimestamp}:F> (<t:${createdTimestamp}:R>)${
 					roles && roles.length > 0
@@ -541,8 +514,7 @@ export const command = createCommand({
 	async component(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
+				content: "Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -556,11 +528,7 @@ export const command = createCommand({
 			return;
 		}
 		if (action === "i")
-			await emojiInfo(
-				interaction,
-				await guild.emojis.fetch(id).catch(() => undefined),
-				true
-			);
+			await emojiInfo(interaction, await guild.emojis.fetch(id).catch(() => undefined), true);
 	},
 	async autocomplete(interaction) {
 		if (!interaction.inCachedGuild()) return;
@@ -580,9 +548,7 @@ export const command = createCommand({
 							(e): e is typeof e & { name: string } =>
 								e.name?.toLowerCase().startsWith(option.value) ?? false
 					  )
-				: guild.emojis.cache.filter(
-						(e): e is typeof e & { name: string } => e.name != null
-				  );
+				: guild.emojis.cache.filter((e): e is typeof e & { name: string } => e.name != null);
 
 			await interaction.respond(
 				emojis.first(25).map((e) => ({
@@ -599,12 +565,9 @@ export const command = createCommand({
 			const value = split.at(-1)!.toLowerCase();
 			const roles = option.value
 				? /^\d{2,20}$/.test(value)
-					? guild.roles.cache.filter(
-							(r) => r.id.startsWith(value) && !old.includes(r.name)
-					  )
+					? guild.roles.cache.filter((r) => r.id.startsWith(value) && !old.includes(r.name))
 					: guild.roles.cache.filter(
-							(r) =>
-								r.name.toLowerCase().startsWith(value) && !old.includes(r.name)
+							(r) => r.name.toLowerCase().startsWith(value) && !old.includes(r.name)
 					  )
 				: guild.roles.cache;
 

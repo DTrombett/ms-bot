@@ -1,8 +1,6 @@
 {
-	"include": [
-		"src/**/*"
-	],
-	"extends": "@tsconfig/node16/tsconfig.json",
+	"include": ["src/**/*"],
+	"extends": "@tsconfig/node20/tsconfig.json",
 	"compilerOptions": {
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
@@ -20,6 +18,6 @@
 		"pretty": true,
 		"resolveJsonModule": true,
 		"sourceMap": true,
-		"module": "ESNext",
+		"module": "ESNext"
 	}
 }

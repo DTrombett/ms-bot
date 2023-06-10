@@ -1,7 +1,4 @@
-import type {
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-} from "discord-api-types/v10";
+import type { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import type { CommandOptions } from "./types";
 
 /**

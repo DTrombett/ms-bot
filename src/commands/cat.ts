@@ -1,8 +1,4 @@
-import {
-	ApplicationCommandType,
-	ButtonStyle,
-	ComponentType,
-} from "discord-api-types/v10";
+import { ApplicationCommandType, ButtonStyle, ComponentType } from "discord-api-types/v10";
 import { env } from "node:process";
 import { request } from "undici";
 import type { CatResponse, ReceivedInteraction } from "../util";

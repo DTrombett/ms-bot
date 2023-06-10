@@ -4,7 +4,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 } from "discord-api-types/v10";
-import { escapeMarkdown, GuildMember } from "discord.js";
+import { GuildMember, escapeMarkdown } from "discord.js";
 import { createCommand } from "../util";
 
 export const command = createCommand({
@@ -25,9 +25,8 @@ export const command = createCommand({
 	async run(interaction) {
 		const { guild } = interaction;
 		const option =
-			interaction.options.data.find(
-				(o) => o.type === ApplicationCommandOptionType.User
-			) ?? interaction;
+			interaction.options.data.find((o) => o.type === ApplicationCommandOptionType.User) ??
+			interaction;
 		const user = option.user ?? interaction.user;
 		const member = option.member
 			? option.member
@@ -41,12 +40,10 @@ export const command = createCommand({
 						size: 4096,
 				  })
 				: member.avatar != null
-				? this.client.rest.cdn.guildMemberAvatar(
-						guild!.id,
-						user.id,
-						member.avatar,
-						{ size: 4096, extension: "png" }
-				  )
+				? this.client.rest.cdn.guildMemberAvatar(guild!.id, user.id, member.avatar, {
+						size: 4096,
+						extension: "png",
+				  })
 				: user.displayAvatarURL({
 						extension: "png",
 						size: 4096,

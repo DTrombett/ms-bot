@@ -7,11 +7,7 @@ import {
 import type { ReceivedInteraction } from "../util";
 import { createCommand, randomNumber } from "../util";
 
-const dice = async (
-	interaction: ReceivedInteraction,
-	count: number,
-	ephemeral?: boolean
-) => {
+const dice = async (interaction: ReceivedInteraction, count: number, ephemeral?: boolean) => {
 	if (count < 1 || count > 100) {
 		await interaction.reply({
 			content: "Il numero dei dadi deve essere compreso tra 1 e 100!",

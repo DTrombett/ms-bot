@@ -33,7 +33,6 @@ export enum Colors {
  * @param code - The color to use
  * @returns The colored text
  */
-export const color = (text: string, code: Colors): string =>
-	`\x1b[${code}m${text}\x1b[m`;
+export const color = (text: string, code: Colors): string => `\x1b[${code}m${text}\x1b[m`;
 
 export default color;

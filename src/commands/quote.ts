@@ -1,7 +1,4 @@
-import {
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-} from "discord-api-types/v10";
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import type { Collection, Message } from "discord.js";
 import { env } from "node:process";
 import { createCommand } from "../util";
@@ -27,8 +24,7 @@ export const command = createCommand({
 	data: [
 		{
 			name: "quote",
-			description:
-				"Invia una citazione di Trombett. Non fornire nessuna opzione per una casuale",
+			description: "Invia una citazione di Trombett. Non fornire nessuna opzione per una casuale",
 			type: ApplicationCommandType.ChatInput,
 			options: [
 				{
@@ -42,9 +38,7 @@ export const command = createCommand({
 	],
 	async run(interaction) {
 		if (!messages) {
-			const channel = interaction.client.channels.cache.get(
-				env.QUOTES_CHANNEL!
-			);
+			const channel = interaction.client.channels.cache.get(env.QUOTES_CHANNEL!);
 
 			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 			if (!channel?.isTextBased()) {
@@ -73,9 +67,7 @@ export const command = createCommand({
 			});
 			return;
 		}
-		const quote = option!
-			? messages.get(option)?.content
-			: messages.random()?.content;
+		const quote = option! ? messages.get(option)?.content : messages.random()?.content;
 
 		if (!quote!) {
 			await interaction.reply({
@@ -91,9 +83,7 @@ export const command = createCommand({
 	},
 	async autocomplete(interaction) {
 		if (!messages) {
-			const channel = interaction.client.channels.cache.get(
-				env.QUOTES_CHANNEL!
-			);
+			const channel = interaction.client.channels.cache.get(env.QUOTES_CHANNEL!);
 
 			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 			if (!channel?.isTextBased()) {

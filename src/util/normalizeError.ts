@@ -7,9 +7,7 @@ import CustomClient from "./CustomClient";
  */
 export const normalizeError = (err: unknown) => {
 	CustomClient.printToStderr(err);
-	return err instanceof Error
-		? err
-		: new Error(typeof err === "string" ? err : "Unknown error");
+	return err instanceof Error ? err : new Error(typeof err === "string" ? err : "Unknown error");
 };
 
 export default normalizeError;

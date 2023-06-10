@@ -14,9 +14,7 @@ import Event from "./util/Event";
 const commandsFolder = join(cwd(), `src/${Constants.commandsFolderName}`);
 const eventsFolder = join(cwd(), `src/${Constants.eventsFolderName}`);
 const freshImport = <T>(path: string) =>
-	(import(`${path.replace(/\.ts$/, ".js")}?${Date.now()}`) as Promise<T>).catch(
-		() => undefined
-	);
+	(import(`${path.replace(/\.ts$/, ".js")}?${Date.now()}`) as Promise<T>).catch(() => undefined);
 const watchCommands = async (client: CustomClient, build: typeof Build) => {
 	for await (const event of watch(commandsFolder, {
 		encoding: "utf8",
@@ -24,7 +22,7 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 	})) {
 		const { filename } = event;
 
-		if (!filename) continue;
+		if (filename == null) continue;
 		const oldCommand = (
 			await freshImport<{
 				command: CommandOptions;
@@ -33,9 +31,8 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 
 		if (event.eventType === "rename" && oldCommand) {
 			const { name } =
-				oldCommand.data.find(
-					({ type }) => type === ApplicationCommandType.ChatInput
-				) ?? oldCommand.data[0];
+				oldCommand.data.find(({ type }) => type === ApplicationCommandType.ChatInput) ??
+				oldCommand.data[0];
 			const ok = client.commands.delete(name);
 
 			unlink(
@@ -45,9 +42,7 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 				)
 			).catch(CustomClient.printToStderr);
 			CustomClient.printToStdout(
-				ok
-					? `Deleted command ${name} (${filename})`
-					: `Couldn't find command ${name} (${filename})`
+				ok ? `Deleted command ${name} (${filename})` : `Couldn't find command ${name} (${filename})`
 			);
 			continue;
 		}
@@ -75,14 +70,12 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 		if (newCommand) {
 			if (oldCommand)
 				client.commands.delete(
-					oldCommand.data.find(
-						({ type }) => type === ApplicationCommandType.ChatInput
-					)?.name ?? oldCommand.data[0].name
+					oldCommand.data.find(({ type }) => type === ApplicationCommandType.ChatInput)?.name ??
+						oldCommand.data[0].name
 				);
 			const { name } =
-				newCommand.data.find(
-					({ type }) => type === ApplicationCommandType.ChatInput
-				) ?? newCommand.data[0];
+				newCommand.data.find(({ type }) => type === ApplicationCommandType.ChatInput) ??
+				newCommand.data[0];
 
 			client.commands.set(name, new Command(client, newCommand));
 			CustomClient.printToStdout(
@@ -98,7 +91,7 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 	})) {
 		const { filename } = event;
 
-		if (!filename) continue;
+		if (filename == null) continue;
 		const oldEvent = (
 			await freshImport<{
 				event: EventOptions;
@@ -110,10 +103,7 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 			const ok = client.events.delete(oldEvent.name);
 
 			unlink(
-				new URL(
-					`${Constants.eventsFolderName}/${filename.replace(/\.ts/, ".js")}`,
-					import.meta.url
-				)
+				new URL(`${Constants.eventsFolderName}/${filename.replace(/\.ts/, ".js")}`, import.meta.url)
 			).catch(CustomClient.printToStderr);
 			CustomClient.printToStdout(
 				ok
@@ -151,9 +141,7 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 			}
 			client.events.set(newEvent.name, new Event(client, newEvent));
 			CustomClient.printToStdout(
-				`${oldEvent ? "Reloaded" : "Added"} event ${
-					newEvent.name
-				} (${filename})`
+				`${oldEvent ? "Reloaded" : "Added"} event ${newEvent.name} (${filename})`
 			);
 		} else CustomClient.printToStderr(`Cannot find new event ${filename}`);
 	}
@@ -163,22 +151,22 @@ const logMemoryUsage = async () => {
 		const memory = memoryUsage();
 
 		CustomClient.printToStdout(
-			`RSS: ${(memory.rss / 1024 / 1024).toFixed(2)}MB\nHeap Used: ${(
+			`RSS: ${(memory.rss / 1000 / 1000).toFixed(2)}MB\nHeap Used: ${(
 				memory.heapUsed /
-				1024 /
-				1024
-			).toFixed(2)}MB\nHeap Total: ${(memory.heapTotal / 1024 / 1024).toFixed(
-				2
-			)}MB\nExternal: ${(memory.external / 1024 / 1024).toFixed(2)}MB`
+				1000 /
+				1000
+			).toFixed(2)}MB\nHeap Total: ${(memory.heapTotal / 1000 / 1000).toFixed(2)}MB\nExternal: ${(
+				memory.external /
+				1000 /
+				1000
+			).toFixed(2)}MB`
 		);
 	}
 };
 
 export const configureDev = async (client: CustomClient) => {
 	const tsup = await import("tsup").catch(() => {
-		CustomClient.printToStderr(
-			"Failed to load tsup, not watching for changes..."
-		);
+		CustomClient.printToStderr("Failed to load tsup, not watching for changes...");
 	});
 
 	Promise.all([

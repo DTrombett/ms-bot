@@ -15,10 +15,7 @@ const queloAnswers = [
 		"C'è grossa grisi, c'è molta violenza, c'è molto egoismo! Qua la gente non sa più quando stiamo andando su questa terra!\nQua la gente non sa più quando stiamo facendo su questa terra!",
 		"https://youtu.be/lpYSFPO7pqw?t=13",
 	],
-	[
-		"- Cosa c'è in questa religione?\n- Per adesso c'è Quelo!",
-		"https://youtu.be/lpYSFPO7pqw?t=55",
-	],
+	["- Cosa c'è in questa religione?\n- Per adesso c'è Quelo!", "https://youtu.be/lpYSFPO7pqw?t=55"],
 	[
 		"- Cosa fa questo dio? Aiuta a risolvere i problemi, oppure dà una speranza al genere umano o ci rende più partecipi della vita degli altri...\n- La seconda che hai detto! Com'è? L'hai detto te.\n- Dà una speranza al genere umano...\n- Ecco, sai che fa Quelo? Dà una speranza al genere umano!",
 		"https://youtu.be/lpYSFPO7pqw?t=71",
@@ -162,11 +159,7 @@ const queloAnswers = [
 ];
 const phrases = queloAnswers.map(([phrase]) => phrase);
 
-const quelo = async (
-	interaction: ReceivedInteraction,
-	phrase?: string,
-	ephemeral?: boolean
-) => {
+const quelo = async (interaction: ReceivedInteraction, phrase?: string, ephemeral?: boolean) => {
 	const s = phrase?.toLowerCase();
 	const answer =
 		s === undefined
@@ -227,10 +220,7 @@ export const command = createCommand({
 		},
 	],
 	async run(interaction) {
-		await quelo(
-			interaction,
-			interaction.options.getString("phrase") ?? undefined
-		);
+		await quelo(interaction, interaction.options.getString("phrase") ?? undefined);
 	},
 	async component(interaction) {
 		await quelo(interaction, undefined, true);
@@ -246,8 +236,7 @@ export const command = createCommand({
 					const name = p.replaceAll("\n", " ");
 
 					return {
-						name:
-							name.length > 100 ? `${name.slice(0, 97).trimEnd()}...` : name,
+						name: name.length > 100 ? `${name.slice(0, 97).trimEnd()}...` : name,
 						value: p.slice(0, 100),
 					};
 				})
