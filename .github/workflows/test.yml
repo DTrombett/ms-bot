@@ -1,17 +1,15 @@
-name: Typescript, eslint and tsup tests
+name: Run tests
 on: [push]
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16.x]
     steps:
-      - uses: actions/checkout@v2
-      - name: Tests with Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - name: Install dependencies with Node.js lts
+        uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "lts/*"
           cache: "npm"
       - run: npm ci
-      - run: npm test
+      - name: Run tests
+        run: npm test

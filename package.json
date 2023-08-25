@@ -19,7 +19,7 @@
 	"license": "MIT",
 	"type": "module",
 	"engines": {
-		"node": ">=20"
+		"node": ">=18"
 	},
 	"repository": {
 		"type": "git",
@@ -31,7 +31,7 @@
 	"dependencies": {
 		"@discordjs/builders": "*",
 		"@discordjs/rest": "*",
-		"@tsconfig/node20": "^20.1.2",
+		"@tsconfig/node-lts": "^18.12.4",
 		"discord-api-types": "*",
 		"discord.js": "^14.11.0",
 		"dotenv": "^16.3.1",
@@ -43,7 +43,7 @@
 	"devDependencies": {
 		"@types/express": "^4.17.17",
 		"@types/ms": "^0.7.31",
-		"@types/node": "^20.3.2",
+		"@types/node": "^18.17.11",
 		"@types/workerpool": "^6.4.0",
 		"@typescript-eslint/eslint-plugin": "^5.59.9",
 		"@typescript-eslint/parser": "^5.62.0",
@@ -55,7 +55,7 @@
 	"optionalDependencies": {
 		"bufferutil": "^4.0.7",
 		"erlpack": "github:discord/erlpack",
-		"node": "^20.3.1",
+		"node": "lts",
 		"utf-8-validate": "^6.0.3",
 		"zlib-sync": "^0.1.8"
 	}
