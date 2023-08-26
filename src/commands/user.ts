@@ -18,7 +18,7 @@ import type {
 } from "discord.js";
 import { escapeMarkdown } from "discord.js";
 import type { ReceivedInteraction } from "../util";
-import { capitalize, createCommand, CustomClient, normalizeError, sendError } from "../util";
+import { CustomClient, capitalize, createCommand, normalizeError, sendError } from "../util";
 
 const normalizeRoles = (value: string, roles: RoleManager) =>
 	value
@@ -58,10 +58,10 @@ const userInfo = async (interaction: ReceivedInteraction, user: User, ephemeral?
 					? "*Nessuno*"
 					: `Hex: #${accentColor.toUpperCase()}\nRGB: ${parseInt(
 							accentColor.slice(0, 2),
-							16
+							16,
 					  )}, ${parseInt(accentColor.slice(2, 4), 16)}, ${parseInt(
 							accentColor.slice(4, 6),
-							16
+							16,
 					  )}\nDecimal: ${user.accentColor!}`,
 			inline: true,
 		},
@@ -97,7 +97,7 @@ const userInfo = async (interaction: ReceivedInteraction, user: User, ephemeral?
 								: `${ActivityType[a.type]} **${a.name}**${
 										a.details == null ? "" : `: ${a.details}`
 								  }${a.state == null ? "" : ` (${a.state})`}`
-						} (aggiornato <t:${Math.round(a.createdTimestamp / 1000)}:R>)`
+						} (aggiornato <t:${Math.round(a.createdTimestamp / 1000)}:R>)`,
 				)
 				.join("\n") ?? "";
 
@@ -145,7 +145,7 @@ const userInfo = async (interaction: ReceivedInteraction, user: User, ephemeral?
 				name: "Canale vocale",
 				value: member.voice.channelId == null ? "*Nessuno*" : `<#${member.voice.channelId}>`,
 				inline: true,
-			}
+			},
 		);
 	}
 	const thumbnailUrl = user.bannerURL({
@@ -198,7 +198,7 @@ for (const [name, value] of Object.entries(ThreadAutoArchiveDuration))
 for (const [name, value] of Object.entries(VideoQualityMode))
 	if (typeof value === "number") videoQualityChoices.push({ name, value });
 
-export const command = createCommand({
+export const userCommand = createCommand({
 	data: [
 		{
 			name: "user",
@@ -485,7 +485,7 @@ export const command = createCommand({
 		}
 		await userInfo(
 			interaction,
-			await (interaction.options.getUser("user") ?? interaction.user).fetch()
+			await (interaction.options.getUser("user") ?? interaction.user).fetch(),
 		);
 	},
 	async component(interaction) {
@@ -546,7 +546,7 @@ export const command = createCommand({
 					name,
 					value: name,
 				};
-			})
+			}),
 		);
 	},
 });

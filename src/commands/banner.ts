@@ -7,7 +7,7 @@ import {
 import { escapeMarkdown } from "discord.js";
 import { createCommand } from "../util";
 
-export const command = createCommand({
+export const bannerCommand = createCommand({
 	data: [
 		{
 			name: "banner",

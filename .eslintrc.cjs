@@ -25,9 +25,9 @@ module.exports = {
 		"no-lone-blocks": "warn",
 		"no-return-assign": "warn",
 		"no-useless-computed-key": "warn",
-		"curly": ["warn", "multi"],
+		curly: ["warn", "multi"],
 		"dot-location": ["warn", "property"],
-		"eqeqeq": ["warn", "smart"],
+		eqeqeq: ["warn", "smart"],
 		"no-console": "warn",
 		"no-else-return": [
 			"warn",
@@ -48,7 +48,7 @@ module.exports = {
 		],
 		"no-useless-return": "warn",
 		"wrap-iife": ["warn", "inside"],
-		"yoda": [
+		yoda: [
 			"warn",
 			"never",
 			{
@@ -141,7 +141,6 @@ module.exports = {
 		"@typescript-eslint/array-type": "warn",
 		"@typescript-eslint/consistent-type-assertions": "warn",
 		"@typescript-eslint/consistent-type-definitions": ["warn", "type"],
-		"@typescript-eslint/consistent-type-imports": "warn",
 		"@typescript-eslint/class-literal-property-style": "warn",
 		"@typescript-eslint/member-ordering": "warn",
 		"@typescript-eslint/no-confusing-non-null-assertion": "warn",

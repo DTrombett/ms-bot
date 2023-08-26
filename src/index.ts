@@ -32,5 +32,7 @@ app.use((_, res) => {
 });
 
 if (env.NODE_ENV === "development")
-	void import("./dev").then(({ configureDev }) => configureDev(client));
+	import(`./dev.js?${Date.now()}`)
+		.then(({ configureDev }: typeof import("./dev")) => configureDev(client))
+		.catch(CustomClient.printToStderr);
 await client.login();

@@ -22,7 +22,7 @@ const ping = (interaction: Interaction): InteractionReplyOptions & InteractionUp
 	],
 });
 
-export const command = createCommand({
+export const pingCommand = createCommand({
 	data: [
 		{
 			name: "ping",

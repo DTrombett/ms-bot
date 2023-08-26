@@ -113,7 +113,7 @@ const emojiInfo = async (
 	});
 };
 
-export const command = createCommand({
+export const emojisCommand = createCommand({
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,

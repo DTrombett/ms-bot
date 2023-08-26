@@ -193,7 +193,7 @@ const removeTimeout = async (
 	});
 };
 
-export const command = createCommand({
+export const timeoutCommand = createCommand({
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,

@@ -9,7 +9,7 @@ import { escapeMarkdown } from "discord.js";
 import ms from "ms";
 import { createCommand, CustomClient, Emojis, normalizeError, sendError } from "../util";
 
-export const command = createCommand({
+export const inviteCommand = createCommand({
 	data: [
 		{
 			name: "invite",
@@ -243,7 +243,7 @@ export const command = createCommand({
 				.map((i) => ({
 					value: i.code,
 					name: `${i.code}${i.inviter ? ` (${i.inviter.tag})` : ""}`,
-				}))
+				})),
 		);
 	},
 });

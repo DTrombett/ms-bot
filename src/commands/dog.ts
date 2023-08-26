@@ -49,7 +49,7 @@ const dog = async (interaction: ReceivedInteraction, ephemeral?: boolean) => {
 	});
 };
 
-export const command = createCommand({
+export const dogCommand = createCommand({
 	data: [
 		{
 			name: "dog",

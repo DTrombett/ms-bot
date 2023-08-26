@@ -51,7 +51,7 @@ const predict = async (interaction: ReceivedInteraction, ephemeral?: boolean) =>
 	});
 };
 
-export const command = createCommand({
+export const predictCommand = createCommand({
 	data: [
 		{
 			name: "predict",

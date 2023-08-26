@@ -57,7 +57,7 @@ const setInspectOptions = (interaction: AutocompleteInteraction | ChatInputComma
 	options.breakLength = isPC ? 66 : 39;
 };
 
-export const command = createCommand({
+export const evalCommand = createCommand({
 	data: [
 		{
 			name: "eval",

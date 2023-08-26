@@ -15,7 +15,7 @@ const winners: Record<PossibleChoice, PossibleChoice> = {
 	scissors: "rock",
 };
 
-export const command = createCommand({
+export const rpsCommand = createCommand({
 	data: [
 		{
 			name: "rps",

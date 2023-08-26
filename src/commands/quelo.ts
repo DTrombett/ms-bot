@@ -202,7 +202,7 @@ const quelo = async (interaction: ReceivedInteraction, phrase?: string, ephemera
 	});
 };
 
-export const command = createCommand({
+export const queloCommand = createCommand({
 	data: [
 		{
 			name: "quelo",

@@ -71,7 +71,7 @@ const timestamp = async (
 	});
 };
 
-export const command = createCommand({
+export const timestampCommand = createCommand({
 	data: [
 		{
 			name: "timestamp",

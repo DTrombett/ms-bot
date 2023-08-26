@@ -87,7 +87,7 @@ const encodeMorse = async (text: string) =>
 		})
 		.join(" ");
 
-export const command = createCommand({
+export const translateCommand = createCommand({
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,

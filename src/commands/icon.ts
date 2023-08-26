@@ -2,7 +2,7 @@ import { ApplicationCommandType, ButtonStyle, ComponentType } from "discord-api-
 import { escapeMarkdown } from "discord.js";
 import { createCommand } from "../util";
 
-export const command = createCommand({
+export const iconCommand = createCommand({
 	data: [
 		{
 			name: "icon",

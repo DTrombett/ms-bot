@@ -7,7 +7,7 @@ import {
 import { GuildMember, escapeMarkdown } from "discord.js";
 import { createCommand } from "../util";
 
-export const command = createCommand({
+export const avatarCommand = createCommand({
 	data: [
 		{
 			name: "avatar",

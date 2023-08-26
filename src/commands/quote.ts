@@ -20,7 +20,7 @@ const formatQuote = ({
 	};
 };
 
-export const command = createCommand({
+export const quoteCommand = createCommand({
 	data: [
 		{
 			name: "quote",

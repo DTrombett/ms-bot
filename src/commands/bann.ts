@@ -173,7 +173,7 @@ const unban = async (interaction: ReceivedInteraction<"cached">, user: User, rea
 	});
 };
 
-export const command = createCommand({
+export const bannCommand = createCommand({
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,

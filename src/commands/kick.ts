@@ -100,7 +100,7 @@ const showModal = (
 		],
 	});
 
-export const command = createCommand({
+export const kickCommand = createCommand({
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,

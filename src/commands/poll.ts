@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import { createCommand } from "../util";
 
-export const command = createCommand({
+export const pollCommand = createCommand({
 	data: [
 		{
 			name: "poll",

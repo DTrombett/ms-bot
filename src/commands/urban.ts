@@ -89,7 +89,7 @@ const urban = async (interaction: ReceivedInteraction, query: string, i = 0, eph
 	});
 };
 
-export const command = createCommand({
+export const urbanCommand = createCommand({
 	data: [
 		{
 			name: "urban",

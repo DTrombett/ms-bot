@@ -46,7 +46,7 @@ const dice = async (interaction: ReceivedInteraction, count: number, ephemeral?:
 	});
 };
 
-export const command = createCommand({
+export const diceCommand = createCommand({
 	data: [
 		{
 			name: "dice",

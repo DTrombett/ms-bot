@@ -15,7 +15,7 @@ const emojis = [
 	":heart_on_fire:",
 ];
 
-export const command = createCommand({
+export const loveCommand = createCommand({
 	data: [
 		{
 			name: "love",

@@ -237,7 +237,7 @@ for (const [name, value] of Object.entries(ChannelType))
 	if (typeof value === "number" && [0, 2, 4, 5, 6, 13, 14, 15].includes(value))
 		channelTypeChoices.push({ name: name.slice(5), value });
 
-export const command = createCommand({
+export const channelCommand = createCommand({
 	data: [
 		{
 			name: "channel",

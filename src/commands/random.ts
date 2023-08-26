@@ -45,7 +45,7 @@ const random = async (
 	});
 };
 
-export const command = createCommand({
+export const randomCommand = createCommand({
 	data: [
 		{
 			name: "random",
