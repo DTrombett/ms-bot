@@ -19,6 +19,7 @@ type TextPoint = {
 	bold?: boolean;
 	italic?: boolean;
 	borderColor?: string;
+	text?: number;
 };
 
 const memes: Record<string, { dimensions: Coord; textPoints: TextPoint[] } | undefined> = {
@@ -37,6 +38,134 @@ const memes: Record<string, { dimensions: Coord; textPoints: TextPoint[] } | und
 			{
 				coord: [308, 807],
 				dimensions: [546, 113],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+		],
+	},
+	"Distracted Boyfriend": {
+		dimensions: [1200, 800],
+		textPoints: [
+			{
+				coord: [350, 550],
+				dimensions: [340, 200],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+			{
+				coord: [770, 400],
+				dimensions: [250, 166],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+			{
+				coord: [1030, 500],
+				dimensions: [250, 200],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+		],
+	},
+	"Running Away Balloon": {
+		dimensions: [761, 1024],
+		textPoints: [
+			{
+				coord: [170, 370],
+				dimensions: [280, 130],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+			{
+				coord: [605, 210],
+				dimensions: [310, 130],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+			{
+				coord: [110, 830],
+				dimensions: [200, 170],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+			{
+				coord: [360, 840],
+				dimensions: [220, 140],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+				text: 0,
+			},
+			{
+				coord: [675, 690],
+				dimensions: [170, 130],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+				text: 1,
+			},
+		],
+	},
+	"UNO Draw 25 Cards": {
+		dimensions: [500, 494],
+		textPoints: [
+			{ coord: [150, 200], dimensions: [180, 80], fontFamily: "Comic Sans MS" },
+			{ coord: [385, 40], dimensions: [240, 80] },
+		],
+	},
+	"Left Exit 12 Off Ramp": {
+		dimensions: [804, 767],
+		textPoints: [
+			{ coord: [255, 185], dimensions: [120, 130], color: "#ffffff" },
+			{ coord: [505, 185], dimensions: [170, 130], color: "#ffffff" },
+			{ coord: [410, 600], dimensions: [320, 100], color: "#ffffff", rotate: -Math.PI / 36 },
+		],
+	},
+	"Bernie I Am Once Again Asking For Your Support": {
+		dimensions: [750, 750],
+		textPoints: [
+			{ coord: [380, 665], dimensions: [500, 40], color: "#ffffff", fontSize: 40, bold: true },
+		],
+	},
+	"Change My Mind": {
+		dimensions: [482, 361],
+		textPoints: [{ coord: [320, 258], dimensions: [210, 90], fontSize: 32, rotate: -Math.PI / 24 }],
+	},
+	"Buff Doge vs. Cheems": {
+		dimensions: [937, 720],
+		textPoints: [
+			{ coord: [250, 40], dimensions: [410, 70] },
+			{ coord: [760, 80], dimensions: [350, 70] },
+			{ coord: [230, 600], dimensions: [400, 180] },
+			{ coord: [725, 620], dimensions: [350, 180] },
+		],
+	},
+	"Sad Pablo Escobar": {
+		dimensions: [720, 709],
+		textPoints: [
+			{
+				coord: [330, 290],
+				dimensions: [500, 120],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+			{
+				coord: [180, 650],
+				dimensions: [340, 100],
+				fontFamily: "Impact",
+				color: "#ffffff",
+				borderColor: "black",
+			},
+			{
+				coord: [540, 650],
+				dimensions: [340, 100],
 				fontFamily: "Impact",
 				color: "#ffffff",
 				borderColor: "black",
@@ -67,6 +196,7 @@ const drawTextInBox = (
 	const lines: string[] = [];
 	const lineBreaks = text.split("\n");
 
+	if (fontSize > height) fontSize = height;
 	buildFont();
 	context.translate(x, y);
 	context.fillStyle = color;
@@ -109,7 +239,7 @@ const drawTextInBox = (
 
 		context.fillText(lines[i], 0, newY);
 		if (borderColor) {
-			context.lineWidth = fontSize / 30;
+			context.lineWidth = fontSize / 25;
 			context.strokeText(lines[i], 0, newY);
 		}
 	}
@@ -143,6 +273,11 @@ export const memeCommand = createCommand({
 				{
 					name: "testo3",
 					description: "Il terzo testo del meme",
+					type: ApplicationCommandOptionType.String,
+				},
+				{
+					name: "testo4",
+					description: "Il quarto testo del meme",
 					type: ApplicationCommandOptionType.String,
 				},
 				{
@@ -208,11 +343,15 @@ export const memeCommand = createCommand({
 		context.drawImage(background, 0, 0);
 		context.textAlign = "center";
 		context.textBaseline = "middle";
-		for (let i = 0; i < meme.textPoints.length; i++) {
-			const text = interaction.options.getString(`testo${i + 1}`) ?? "";
+		for (let i = 0, j = 0; i < meme.textPoints.length; i++) {
+			const text =
+				(meme.textPoints[i].text === undefined
+					? interaction.options.getString(`testo${j + 1}`)
+					: interaction.options.getString(`testo${meme.textPoints[i].text! + 1}`)) ?? "";
 
 			if (text)
 				drawTextInBox(context, meme.textPoints[i], text, fontSize, fontFamily, bold, italic);
+			if (meme.textPoints[i].text === undefined) j++;
 		}
 		const [attachment] = await Promise.all([
 			canvas.encode("png").catch(normalizeError),
