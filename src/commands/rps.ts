@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
 import { createCommand, randomNumber } from "../util";
 
 type PossibleChoice = (typeof choices)[number];

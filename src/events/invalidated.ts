@@ -1,13 +1,13 @@
 import { exit, nextTick } from "node:process";
-import { createEvent, CustomClient } from "../util";
+import { CustomClient, createEvent } from "../util";
 
 export const event = createEvent({
 	name: "invalidated",
-	once() {
+	async once() {
 		CustomClient.printToStderr(
-			"Client session became invalidated.\nClosing the process gracefully..."
+			"Client session became invalidated.\nClosing the process gracefully...",
 		);
-		this.client.destroy();
+		await this.client.destroy();
 		nextTick(exit, 1);
 	},
 });

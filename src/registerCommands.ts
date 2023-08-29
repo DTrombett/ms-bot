@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
-import { REST } from "@discordjs/rest";
-import type { APIApplicationCommand } from "discord-api-types/v10";
-import { APIVersion, Routes } from "discord-api-types/v10";
+import type { APIApplicationCommand } from "discord.js";
+import { APIVersion, REST, Routes } from "discord.js";
 import { config } from "dotenv";
 import { env, exit } from "node:process";
 import * as commandsObject from "./commands";

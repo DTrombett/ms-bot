@@ -1,3 +1,10 @@
+import type {
+	ChannelWebhookCreateOptions,
+	GuildBasedChannel,
+	GuildChannelCreateOptions,
+	GuildChannelEditOptions,
+	Webhook,
+} from "discord.js";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -7,22 +14,16 @@ import {
 	Routes,
 	ThreadAutoArchiveDuration,
 	VideoQualityMode,
+	WebhookClient,
 	WebhookType,
-} from "discord-api-types/v10";
-import type {
-	ChannelWebhookCreateOptions,
-	GuildBasedChannel,
-	GuildChannelCreateOptions,
-	GuildChannelEditOptions,
-	Webhook,
+	escapeMarkdown,
 } from "discord.js";
-import { escapeMarkdown, WebhookClient } from "discord.js";
 import ms from "ms";
 import type { ReceivedInteraction } from "../util";
 import {
+	CustomClient,
 	capitalize,
 	createCommand,
-	CustomClient,
 	formatBytes,
 	normalizeError,
 	sendError,
@@ -31,7 +32,7 @@ import {
 const channelInfo = async (
 	channel: GuildBasedChannel,
 	interaction: ReceivedInteraction<"cached">,
-	ephemeral?: boolean
+	ephemeral?: boolean,
 ) => {
 	const createdAt =
 		channel.createdTimestamp != null ? Math.round(channel.createdTimestamp / 1000) : 0;
@@ -790,7 +791,7 @@ export const channelCommand = createCommand({
 				});
 				return;
 			}
-			if (interaction.appPermissions?.has("ManageChannels") === false) {
+			if (!interaction.appPermissions.has("ManageChannels")) {
 				await interaction.reply({
 					content: "Non ho abbastanza permessi per eliminare questo canale!",
 					ephemeral: true,
@@ -863,7 +864,7 @@ export const channelCommand = createCommand({
 				});
 				return;
 			}
-			if (interaction.appPermissions?.has("ManageChannels") === false) {
+			if (!interaction.appPermissions.has("ManageChannels")) {
 				await interaction.reply({
 					content: "Non ho abbastanza permessi per creare canali!",
 					ephemeral: true,
@@ -942,7 +943,7 @@ export const channelCommand = createCommand({
 					reason: interaction.options.getString("reason") ?? undefined,
 				};
 
-				if (interaction.appPermissions?.has("ManageWebhooks") !== true) {
+				if (!interaction.appPermissions.has("ManageWebhooks")) {
 					await interaction.reply({
 						content: "Ho bisogno del permesso **Gestire i webhook**!",
 						ephemeral: true,
@@ -970,7 +971,7 @@ export const channelCommand = createCommand({
 				const id = interaction.options.getString("webhook", true).split("/");
 				const webhook = await this.client
 					.fetchWebhook(
-						...((id.length > 5 ? [id[5], id[6]] : [id[0], id[1]]) as [string, string | undefined])
+						...((id.length > 5 ? [id[5], id[6]] : [id[0], id[1]]) as [string, string | undefined]),
 					)
 					.catch(normalizeError);
 
@@ -993,11 +994,11 @@ export const channelCommand = createCommand({
 										icon_url:
 											webhook.owner.avatar == null
 												? interaction.client.rest.cdn.defaultAvatar(
-														Number(webhook.owner.discriminator) % 5
+														Number(webhook.owner.discriminator) % 5,
 												  )
 												: interaction.client.rest.cdn.avatar(
 														webhook.owner.id,
-														webhook.owner.avatar
+														webhook.owner.avatar,
 												  ),
 								  }
 								: undefined,
@@ -1053,9 +1054,8 @@ export const channelCommand = createCommand({
 			}
 			if (options[0].name === "delete") {
 				const id = interaction.options.getString("webhook", true).split("/");
-				const channelId = webhooksCache[interaction.guildId]?.find(
-					(w) => w.id === (id[5] ?? id[0])
-				)?.channelId;
+				const channelId = webhooksCache[interaction.guildId]?.find((w) => w.id === (id[5] ?? id[0]))
+					?.channelId;
 
 				if (
 					!(
@@ -1073,12 +1073,15 @@ export const channelCommand = createCommand({
 				const error = await interaction.client.rest
 					.delete(
 						Routes.webhook(
-							...((id.length > 5 ? [id[5], id[6]] : [id[0], id[1]]) as [string, string | undefined])
-						)
+							...((id.length > 5 ? [id[5], id[6]] : [id[0], id[1]]) as [
+								string,
+								string | undefined,
+							]),
+						),
 					)
 					.then(() => {
 						webhooksCache[interaction.guildId] = webhooksCache[interaction.guildId]?.filter(
-							(webhook) => webhook.id !== (id[5] ?? id[0])
+							(webhook) => webhook.id !== (id[5] ?? id[0]),
 						);
 					})
 					.catch(normalizeError);
@@ -1104,7 +1107,7 @@ export const channelCommand = createCommand({
 				}
 				const attachment = interaction.options.getAttachment("file")?.url;
 				const error = await new WebhookClient(
-					url.length > 5 ? { id: url[5], token: url[6] } : { id: url[0], token: url[1] }
+					url.length > 5 ? { id: url[5], token: url[6] } : { id: url[0], token: url[1] },
 				)
 					.send({
 						content: interaction.options.getString("content") ?? undefined,
@@ -1176,7 +1179,7 @@ export const channelCommand = createCommand({
 					.filter(
 						(w) =>
 							interaction.member.permissionsIn(w.channelId).has("ManageWebhooks") &&
-							(w.token != null || subcommand !== "execute")
+							(w.token != null || subcommand !== "execute"),
 					)
 					.slice(0, 25)
 					.map((w) => {
@@ -1186,7 +1189,7 @@ export const channelCommand = createCommand({
 							name: `${w.name}${name == null ? "" : ` (${name})`}`,
 							value: `${w.id}${w.token == null ? "" : `/${w.token}`}`,
 						};
-					})
+					}),
 			);
 		}
 	},

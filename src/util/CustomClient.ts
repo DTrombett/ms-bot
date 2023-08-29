@@ -1,10 +1,9 @@
-import { ActivityType } from "discord-api-types/v10";
-import { Client, Collection, Options, Partials } from "discord.js";
+import { ActivityType, Client, Collection, Options, Partials } from "discord.js";
 import { stderr, stdout } from "node:process";
 import { inspect } from "node:util";
-import color, { Colors } from "./colors";
 import type Command from "./Command";
 import type Event from "./Event";
+import color, { Colors } from "./colors";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
 

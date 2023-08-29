@@ -1,20 +1,21 @@
-import type { InteractionType, Snowflake } from "discord-api-types/v10";
+import type { InteractionType, Snowflake } from "discord.js";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ComponentType,
+	GuildMember,
 	PermissionFlagsBits,
 	TextInputStyle,
-} from "discord-api-types/v10";
-import { escapeMarkdown, GuildMember } from "discord.js";
+	escapeMarkdown,
+} from "discord.js";
 import type { InteractionByType, ReceivedInteraction } from "../util";
-import { createCommand, CustomClient, Emojis, normalizeError, sendError } from "../util";
+import { CustomClient, Emojis, createCommand, normalizeError, sendError } from "../util";
 
 const checkPerms = async (
 	interaction: ReceivedInteraction<"cached">,
 	id: Snowflake,
 	ownerId: Snowflake,
-	member?: GuildMember
+	member?: GuildMember,
 ) => {
 	if (!member) {
 		await interaction.reply({
@@ -52,7 +53,7 @@ const checkPerms = async (
 const executeKick = async (
 	interaction: ReceivedInteraction<"cached">,
 	member: GuildMember,
-	reason = ""
+	reason = "",
 ) => {
 	const [error] = await Promise.all([
 		member
@@ -76,7 +77,7 @@ const showModal = (
 	interaction: InteractionByType<
 		InteractionType.ApplicationCommand | InteractionType.MessageComponent
 	>,
-	member: GuildMember
+	member: GuildMember,
 ) =>
 	interaction.showModal({
 		title: `Espelli ${member.user.username} dal server`,
@@ -137,7 +138,7 @@ export const kickCommand = createCommand({
 			return;
 		}
 		const option = interaction.options.data.find(
-			(o) => o.type === ApplicationCommandOptionType.User
+			(o) => o.type === ApplicationCommandOptionType.User,
 		);
 		const user = option?.user;
 

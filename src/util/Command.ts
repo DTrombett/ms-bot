@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/member-ordering */
-import type { InteractionType, RESTPutAPIApplicationCommandsJSONBody } from "discord-api-types/v10";
+import type { InteractionType, RESTPutAPIApplicationCommandsJSONBody } from "discord.js";
 import { env } from "node:process";
 import type { CommandOptions, InteractionByType } from ".";
 import CustomClient from "./CustomClient";
@@ -56,7 +56,7 @@ export class Command {
 	 * @param interaction - The interaction received
 	 */
 	async autocomplete(
-		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>
+		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
 	) {
 		try {
 			if (!this.isPrivate || env.OWNER_IDS?.includes(interaction.user.id) === true)

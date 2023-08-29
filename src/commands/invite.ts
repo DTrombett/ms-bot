@@ -1,13 +1,13 @@
-import type { APIEmbedField } from "discord-api-types/v10";
+import type { APIEmbedField } from "discord.js";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	GuildScheduledEventEntityType,
 	PermissionFlagsBits,
-} from "discord-api-types/v10";
-import { escapeMarkdown } from "discord.js";
+	escapeMarkdown,
+} from "discord.js";
 import ms from "ms";
-import { createCommand, CustomClient, Emojis, normalizeError, sendError } from "../util";
+import { CustomClient, Emojis, createCommand, normalizeError, sendError } from "../util";
 
 export const inviteCommand = createCommand({
 	data: [

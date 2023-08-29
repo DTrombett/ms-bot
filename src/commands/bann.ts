@@ -1,22 +1,22 @@
-import type { InteractionType, Snowflake } from "discord-api-types/v10";
+import type { InteractionType, Snowflake, User } from "discord.js";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	GuildMember,
 	PermissionFlagsBits,
 	TextInputStyle,
-} from "discord-api-types/v10";
-import type { User } from "discord.js";
-import { escapeMarkdown, GuildMember } from "discord.js";
+	escapeMarkdown,
+} from "discord.js";
 import type { InteractionByType, ReceivedInteraction } from "../util";
-import { createCommand, CustomClient, Emojis, normalizeError, sendError } from "../util";
+import { CustomClient, Emojis, createCommand, normalizeError, sendError } from "../util";
 
 const checkPerms = async (
 	interaction: ReceivedInteraction<"cached">,
 	ownerId: Snowflake,
 	id?: Snowflake,
-	member?: GuildMember
+	member?: GuildMember,
 ) => {
 	if (interaction.user.id !== ownerId) {
 		if (id === ownerId) {
@@ -47,7 +47,7 @@ const executeBan = async (
 	interaction: ReceivedInteraction<"cached">,
 	user: User,
 	deleteMessageDays: number,
-	reason = ""
+	reason = "",
 ) => {
 	const [error] = await Promise.all([
 		interaction.guild.members
@@ -87,7 +87,7 @@ const showModal = (
 	interaction: InteractionByType<
 		InteractionType.ApplicationCommand | InteractionType.MessageComponent
 	>,
-	user: User
+	user: User,
 ) =>
 	interaction.showModal({
 		title: `Vuoi bannare "@${user.username}"?`,
@@ -348,7 +348,7 @@ export const bannCommand = createCommand({
 				interaction,
 				user,
 				deleteMessageDays,
-				typeof reason === "string" ? reason : undefined
+				typeof reason === "string" ? reason : undefined,
 			);
 			return;
 		}
@@ -391,7 +391,7 @@ export const bannCommand = createCommand({
 			interaction,
 			user,
 			deleteMessageDays,
-			interaction.fields.fields.get("reason")?.value
+			interaction.fields.fields.get("reason")?.value,
 		);
 	},
 	async component(interaction) {

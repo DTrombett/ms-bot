@@ -1,10 +1,10 @@
-import { TimestampStyles } from "@discordjs/builders";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord-api-types/v10";
+	TimestampStyles,
+} from "discord.js";
 import type { ReceivedInteraction } from "../util";
 import { createCommand } from "../util";
 
@@ -22,7 +22,7 @@ type TimestampOptions = {
 const timestamp = async (
 	interaction: ReceivedInteraction,
 	options: TimestampOptions = {},
-	ephemeral?: boolean
+	ephemeral?: boolean,
 ) => {
 	if (typeof options.year !== typeof options.month) {
 		await interaction.reply({
@@ -42,12 +42,12 @@ const timestamp = async (
 						options.date ?? 1,
 						options.hours ?? 0,
 						options.minutes ?? 0,
-						options.seconds ?? 0
+						options.seconds ?? 0,
 					).toLocaleString("en-US", {
 						timeZone: "Europe/Rome",
-					})
+					}),
 			  )
-		).getTime() / 1000
+		).getTime() / 1000,
 	);
 	await interaction.reply({
 		content: `<t:${d}> (\`<t:${d}>\`)\n\n${styles

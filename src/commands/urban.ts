@@ -3,7 +3,7 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord-api-types/v10";
+} from "discord.js";
 import { request } from "undici";
 import type { ReceivedInteraction, UrbanResponse } from "../util";
 import { createCommand } from "../util";
