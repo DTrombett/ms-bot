@@ -13,7 +13,7 @@ let wordsOfTheDay: string[] | undefined;
 
 const replacer = (s: string) =>
 	`${s}(https://urbandictionary.com/define.php?term=${encodeURIComponent(
-		s.slice(1, -1)
+		s.slice(1, -1),
 	)})` as const;
 const urban = async (interaction: ReceivedInteraction, query: string, i = 0, ephemeral = false) => {
 	if (Number.isNaN(i)) {
@@ -24,7 +24,7 @@ const urban = async (interaction: ReceivedInteraction, query: string, i = 0, eph
 		return;
 	}
 	const { body } = await request(`https://api.urbandictionary.com/v0/define?term=${query}`);
-	const data: UrbanResponse | undefined = await body.json();
+	const data = (await body.json()) as UrbanResponse | undefined;
 	const def = data?.list[i];
 
 	if (!def) {
@@ -137,7 +137,7 @@ export const urbanCommand = createCommand({
 
 			if (updateDay !== date || !wordsOfTheDay) {
 				const { body } = await request("https://api.urbandictionary.com/v0/words_of_the_day");
-				const data: UrbanResponse | undefined = await body.json();
+				const data = (await body.json()) as UrbanResponse | undefined;
 
 				wordsOfTheDay = data?.list.slice(0, 25).map((x) => x.word);
 				updateDay = date;
@@ -146,7 +146,7 @@ export const urbanCommand = createCommand({
 			return;
 		}
 		const { body } = await request(`https://api.urbandictionary.com/v0/autocomplete?term=${query}`);
-		const list: string[] = await body.json();
+		const list = (await body.json()) as string[];
 
 		if (!Array.isArray(list)) {
 			await interaction.respond([]);
@@ -156,7 +156,7 @@ export const urbanCommand = createCommand({
 			list.slice(0, 25).map((value) => ({
 				name: value,
 				value,
-			}))
+			})),
 		);
 	},
 });

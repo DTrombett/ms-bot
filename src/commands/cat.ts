@@ -12,8 +12,8 @@ const sendCat = async (interaction: ReceivedInteraction, ephemeral?: boolean) =>
 			headers: {
 				"x-api-key": env.CAT_API_KEY!,
 			},
-		}
-	).then<CatResponse | null>((res) => res.body.json());
+		},
+	).then((res) => res.body.json() as Promise<CatResponse | null>);
 
 	if (!data?.[0]) {
 		await interaction.reply({
