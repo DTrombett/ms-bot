@@ -31,6 +31,7 @@
 	"dependencies": {
 		"@discordjs/builders": "*",
 		"@discordjs/rest": "*",
+		"@napi-rs/canvas": "^0.1.44",
 		"@tsconfig/node-lts": "^18.12.4",
 		"discord-api-types": "*",
 		"discord.js": "^14.11.0",

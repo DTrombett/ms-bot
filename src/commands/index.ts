@@ -11,6 +11,7 @@ export * from "./icon";
 export * from "./invite";
 export * from "./kick";
 export * from "./love";
+export * from "./meme";
 export * from "./ping";
 export * from "./poll";
 export * from "./predict";
