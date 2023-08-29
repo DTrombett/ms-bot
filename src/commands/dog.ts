@@ -12,8 +12,8 @@ const dog = async (interaction: ReceivedInteraction, ephemeral?: boolean) => {
 			headers: {
 				"x-api-key": env.DOG_API_KEY!,
 			},
-		}
-	).then<DogResponse | null>((res) => res.body.json());
+		},
+	).then((res) => res.body.json() as Promise<DogResponse | null>);
 
 	if (!data?.[0]) {
 		await interaction.reply({
