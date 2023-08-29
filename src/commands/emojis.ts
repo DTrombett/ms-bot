@@ -1,12 +1,12 @@
+import type { Attachment, Guild, GuildEmoji } from "discord.js";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
 	GuildPremiumTier,
-} from "discord-api-types/v10";
-import type { Attachment, Guild, GuildEmoji } from "discord.js";
-import { escapeMarkdown } from "discord.js";
+	escapeMarkdown,
+} from "discord.js";
 import type { ReceivedInteraction } from "../util";
 import { CustomClient, createCommand, normalizeError, sendError } from "../util";
 
@@ -33,7 +33,7 @@ const deleteEmoji = async (
 	interaction: ReceivedInteraction<"cached">,
 	guild: Guild,
 	emoji?: string,
-	reason?: string
+	reason?: string,
 ) => {
 	if (!emoji!) {
 		await interaction.reply({
@@ -42,7 +42,7 @@ const deleteEmoji = async (
 		});
 		return;
 	}
-	if (interaction.appPermissions?.has("ManageEmojisAndStickers") !== true) {
+	if (!interaction.appPermissions.has("ManageEmojisAndStickers")) {
 		await interaction.reply({
 			content: "Ho bisogno del permesso **Gestire emoji e adesivi**!",
 			ephemeral: true,
@@ -62,7 +62,7 @@ const deleteEmoji = async (
 const emojiInfo = async (
 	interaction: ReceivedInteraction<"cached">,
 	emoji?: GuildEmoji,
-	ephemeral?: boolean
+	ephemeral?: boolean,
 ) => {
 	if (!emoji) {
 		await interaction.reply({
@@ -303,7 +303,7 @@ export const emojisCommand = createCommand({
 				});
 				return;
 			}
-			if (interaction.appPermissions?.has("ManageEmojisAndStickers") !== true) {
+			if (!interaction.appPermissions.has("ManageEmojisAndStickers")) {
 				await interaction.reply({
 					content: "Ho bisogno del permesso **Gestire emoji e adesivi**!",
 					ephemeral: true,
@@ -435,7 +435,7 @@ export const emojisCommand = createCommand({
 					return;
 				}
 			}
-			if (interaction.appPermissions?.has("ManageEmojisAndStickers") !== true) {
+			if (!interaction.appPermissions.has("ManageEmojisAndStickers")) {
 				await interaction.reply({
 					content: "Ho bisogno del permesso **Gestire emoji e adesivi**!",
 					ephemeral: true,
@@ -507,7 +507,7 @@ export const emojisCommand = createCommand({
 					? guild.emojis
 							.fetch(value.replace(/(^<:[a-zA-Z0-9-_]+:)|(>$)/, ""))
 							.catch(() => undefined)
-					: guild.emojis.cache.find((e) => e.name?.toLowerCase() === value))
+					: guild.emojis.cache.find((e) => e.name?.toLowerCase() === value)),
 			);
 		}
 	},
@@ -542,11 +542,11 @@ export const emojisCommand = createCommand({
 				? /^\d{2,20}$/.test(option.value)
 					? guild.emojis.cache.filter(
 							(e): e is typeof e & { name: string } =>
-								e.id.startsWith(option.value) && e.name != null
+								e.id.startsWith(option.value) && e.name != null,
 					  )
 					: guild.emojis.cache.filter(
 							(e): e is typeof e & { name: string } =>
-								e.name?.toLowerCase().startsWith(option.value) ?? false
+								e.name?.toLowerCase().startsWith(option.value) ?? false,
 					  )
 				: guild.emojis.cache.filter((e): e is typeof e & { name: string } => e.name != null);
 
@@ -554,7 +554,7 @@ export const emojisCommand = createCommand({
 				emojis.first(25).map((e) => ({
 					name: e.name,
 					value: e.id,
-				}))
+				})),
 			);
 			return;
 		}
@@ -567,7 +567,7 @@ export const emojisCommand = createCommand({
 				? /^\d{2,20}$/.test(value)
 					? guild.roles.cache.filter((r) => r.id.startsWith(value) && !old.includes(r.name))
 					: guild.roles.cache.filter(
-							(r) => r.name.toLowerCase().startsWith(value) && !old.includes(r.name)
+							(r) => r.name.toLowerCase().startsWith(value) && !old.includes(r.name),
 					  )
 				: guild.roles.cache;
 
@@ -579,7 +579,7 @@ export const emojisCommand = createCommand({
 						name,
 						value: name,
 					};
-				})
+				}),
 			);
 		}
 	},

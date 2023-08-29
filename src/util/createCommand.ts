@@ -1,4 +1,4 @@
-import type { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
+import type { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
 import type { CommandOptions } from "./types";
 
 /**
@@ -9,9 +9,9 @@ import type { CommandOptions } from "./types";
 export const createCommand = <
 	T extends ApplicationCommandType,
 	O extends ApplicationCommandOptionType,
-	N extends string = string
+	N extends string = string,
 >(
-	command: CommandOptions<T, O, N>
+	command: CommandOptions<T, O, N>,
 ) => command;
 
 export default createCommand;

@@ -1,5 +1,4 @@
-import { ApplicationCommandType, ButtonStyle, ComponentType } from "discord-api-types/v10";
-import { escapeMarkdown } from "discord.js";
+import { ApplicationCommandType, ButtonStyle, ComponentType, escapeMarkdown } from "discord.js";
 import { createCommand } from "../util";
 
 export const iconCommand = createCommand({

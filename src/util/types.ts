@@ -2,18 +2,16 @@ import type {
 	APIApplicationCommandOption,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	InteractionType,
-	RESTPostAPIApplicationCommandsJSONBody,
-	Snowflake,
-} from "discord-api-types/v10";
-import type {
 	Awaitable,
 	CacheType,
 	ClientEvents,
 	Interaction,
 	InteractionEditReplyOptions,
 	InteractionReplyOptions,
+	InteractionType,
 	InteractionUpdateOptions,
+	RESTPostAPIApplicationCommandsJSONBody,
+	Snowflake,
 } from "discord.js";
 import type { Buffer } from "node:buffer";
 import type { Command, CustomClient, Event } from ".";
@@ -29,7 +27,7 @@ export type Actions = {
 		executor?: Snowflake,
 		reason?: string,
 		deleteMessageDays?: `${number}`,
-		duration?: string
+		duration?: string,
 	];
 	banner: [user: Snowflake];
 	bannList: [guild: Snowflake, page?: `${number}`, executor?: Snowflake, update?: `${boolean}`];
@@ -41,7 +39,7 @@ export type Actions = {
 		name: string,
 		executor?: Snowflake,
 		reason?: string,
-		...roles: Snowflake[]
+		...roles: Snowflake[],
 	];
 	deleteEmoji: [emoji: Snowflake | string, guild: Snowflake, executor?: Snowflake, reason?: string];
 	dice: [count?: `${number}`];
@@ -52,7 +50,7 @@ export type Actions = {
 		name?: string,
 		executor?: Snowflake,
 		reason?: string,
-		...roles: Snowflake[]
+		...roles: Snowflake[],
 	];
 	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
 	emojiList: [guild: Snowflake, page?: `${number}`, executor?: Snowflake, update?: `${boolean}`];
@@ -69,7 +67,7 @@ export type Actions = {
 		guild: Snowflake,
 		timeout: string | null,
 		executor?: Snowflake,
-		reason?: string
+		reason?: string,
 	];
 	timestamp: [
 		year?: `${number}`,
@@ -77,7 +75,7 @@ export type Actions = {
 		date?: `${number}`,
 		hours?: `${number}`,
 		minutes?: `${number}`,
-		seconds?: `${number}`
+		seconds?: `${number}`,
 	];
 	unbann: [user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string];
 };
@@ -90,17 +88,18 @@ export type ActionMethod<
 	R extends
 		| InteractionEditReplyOptions
 		| InteractionReplyOptions
-		| InteractionUpdateOptions = InteractionEditReplyOptions & InteractionUpdateOptions
+		| InteractionUpdateOptions = InteractionEditReplyOptions & InteractionUpdateOptions,
 > = (this: void, client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
 
 export type InteractionByType<
 	T extends InteractionType,
 	C extends CacheType = CacheType,
-	I extends Interaction<C> = Interaction<C>
+	I extends Interaction<C> = Interaction<C>,
 > = I extends Interaction<C> & { type: T } ? I : never;
 export type CommandInteractionByType<
 	T extends ApplicationCommandType,
-	I extends InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>
+	I extends
+		InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>,
 > = I extends InteractionByType<InteractionType.ApplicationCommand> & {
 	commandType: T;
 }
@@ -110,7 +109,7 @@ export type CommandInteractionByType<
 export type CommandData<
 	T extends ApplicationCommandType = ApplicationCommandType,
 	O extends ApplicationCommandOptionType = ApplicationCommandOptionType,
-	N extends string = string
+	N extends string = string,
 > = RESTPostAPIApplicationCommandsJSONBody & {
 	type: T;
 	options?: (APIApplicationCommandOption & {
@@ -125,7 +124,7 @@ export type CommandData<
 export type CommandOptions<
 	T extends ApplicationCommandType = ApplicationCommandType,
 	O extends ApplicationCommandOptionType = ApplicationCommandOptionType,
-	N extends string = string
+	N extends string = string,
 > = {
 	/**
 	 * The data for this command
@@ -144,7 +143,7 @@ export type CommandOptions<
 	 */
 	autocomplete?(
 		this: Command,
-		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>
+		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
 	): Awaitable<void>;
 
 	/**
@@ -154,7 +153,7 @@ export type CommandOptions<
 	 */
 	component?(
 		this: Command,
-		interaction: InteractionByType<InteractionType.MessageComponent>
+		interaction: InteractionByType<InteractionType.MessageComponent>,
 	): Awaitable<void>;
 
 	/**
@@ -164,7 +163,7 @@ export type CommandOptions<
 	 */
 	modalSubmit?(
 		this: Command,
-		interaction: InteractionByType<InteractionType.ModalSubmit>
+		interaction: InteractionByType<InteractionType.ModalSubmit>,
 	): Awaitable<void>;
 
 	/**
@@ -177,7 +176,7 @@ export type CommandOptions<
 		interaction: CommandInteractionByType<T> & {
 			commandName: N;
 			commandType: T;
-		}
+		},
 	): Awaitable<void>;
 };
 

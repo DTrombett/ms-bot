@@ -1,5 +1,5 @@
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import type { Collection, Message } from "discord.js";
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
 import { env } from "node:process";
 import { createCommand } from "../util";
 
@@ -110,10 +110,10 @@ export const quoteCommand = createCommand({
 					q.content
 						.split(/(> )|\n/)[2]
 						.toLowerCase()
-						.includes(option)
+						.includes(option),
 				)
 				.first(25)
-				.map(formatQuote)
+				.map(formatQuote),
 		);
 	},
 });

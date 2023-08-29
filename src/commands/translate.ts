@@ -1,5 +1,4 @@
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
-import { escapeMarkdown } from "discord.js";
+import { ApplicationCommandOptionType, ApplicationCommandType, escapeMarkdown } from "discord.js";
 import { Buffer } from "node:buffer";
 import { createCommand } from "../util";
 
@@ -73,7 +72,7 @@ const decodeMorse = async (morse: string) =>
 					if (char === undefined) throw new Error(letter);
 					return char;
 				})
-				.join("")
+				.join(""),
 		)
 		.join(" ");
 const encodeMorse = async (text: string) =>

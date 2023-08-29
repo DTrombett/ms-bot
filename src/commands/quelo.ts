@@ -1,10 +1,10 @@
-import type { APIMessageActionRowComponent } from "discord-api-types/v10";
+import type { APIMessageActionRowComponent } from "discord.js";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord-api-types/v10";
+} from "discord.js";
 import type { ReceivedInteraction } from "../util";
 import { createCommand } from "../util";
 
@@ -239,7 +239,7 @@ export const queloCommand = createCommand({
 						name: name.length > 100 ? `${name.slice(0, 97).trimEnd()}...` : name,
 						value: p.slice(0, 100),
 					};
-				})
+				}),
 		);
 	},
 });

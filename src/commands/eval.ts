@@ -1,12 +1,16 @@
-import { codeBlock } from "@discordjs/builders";
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import type {
 	ApplicationCommandOptionChoiceData,
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
 	Interaction,
 } from "discord.js";
-import { Colors, escapeCodeBlock } from "discord.js";
+import {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+	Colors,
+	codeBlock,
+	escapeCodeBlock,
+} from "discord.js";
 import { Buffer } from "node:buffer";
 import EventEmitter, { once } from "node:events";
 import { performance } from "node:perf_hooks";
@@ -14,7 +18,7 @@ import { nextTick } from "node:process";
 import type { REPLServer, writer } from "node:repl";
 import { REPL_MODE_STRICT, start } from "node:repl";
 import { Readable, Writable } from "node:stream";
-import { createCommand, CustomClient } from "../util";
+import { CustomClient, createCommand } from "../util";
 
 const input = new Readable({
 	highWaterMark: 1e6,
@@ -173,7 +177,7 @@ export const evalCommand = createCommand({
 								],
 							},
 						],
-				  }
+				  },
 		);
 	},
 	async autocomplete(interaction) {

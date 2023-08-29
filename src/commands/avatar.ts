@@ -3,8 +3,9 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord-api-types/v10";
-import { GuildMember, escapeMarkdown } from "discord.js";
+	GuildMember,
+	escapeMarkdown,
+} from "discord.js";
 import { createCommand } from "../util";
 
 export const avatarCommand = createCommand({
@@ -55,7 +56,7 @@ export const avatarCommand = createCommand({
 					? member.displayName
 					: "nick" in member && member.nick != null
 					? member.nick
-					: user.username
+					: user.username,
 			)}](${url} )**:`,
 			components: [
 				{

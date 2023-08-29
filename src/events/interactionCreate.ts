@@ -1,4 +1,4 @@
-import { InteractionType } from "discord-api-types/v10";
+import { InteractionType } from "discord.js";
 import { createEvent } from "../util";
 
 export const event = createEvent({
@@ -11,8 +11,8 @@ export const event = createEvent({
 				void this.client.commands
 					.find((c) =>
 						c.data.some(
-							(d) => d.type === interaction.commandType && d.name === interaction.commandName
-						)
+							(d) => d.type === interaction.commandType && d.name === interaction.commandName,
+						),
 					)
 					?.run(interaction);
 				break;

@@ -14,7 +14,6 @@ const server = app.listen(3000);
 process
 	.on("exit", (code) => {
 		CustomClient.printToStdout(`Process exiting with code ${code}...`);
-		client.destroy();
 		server.close();
 	})
 	.on("uncaughtException", (error) => {

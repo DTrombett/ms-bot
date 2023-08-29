@@ -3,7 +3,7 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord-api-types/v10";
+} from "discord.js";
 import type { ReceivedInteraction } from "../util";
 import { createCommand, randomNumber } from "../util";
 
@@ -15,7 +15,7 @@ type RandomOptions = {
 const random = async (
 	interaction: ReceivedInteraction,
 	options: RandomOptions = {},
-	ephemeral?: boolean
+	ephemeral?: boolean,
 ) => {
 	if (typeof options.min !== typeof options.max) {
 		await interaction.reply({
@@ -84,7 +84,7 @@ export const randomCommand = createCommand({
 		await random(
 			interaction,
 			{ min: Number(min) || undefined, max: Number(max) || undefined },
-			true
+			true,
 		);
 	},
 });

@@ -1,4 +1,4 @@
-import { ApplicationCommandType } from "discord-api-types/v10";
+import { ApplicationCommandType } from "discord.js";
 import type { CommandOptions, CustomClient } from ".";
 import * as commands from "../commands";
 import Command from "./Command";

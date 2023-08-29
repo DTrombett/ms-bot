@@ -1,22 +1,23 @@
-import type { InteractionType, Snowflake } from "discord-api-types/v10";
+import type { InteractionType, Snowflake } from "discord.js";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	GuildMember,
 	PermissionFlagsBits,
 	TextInputStyle,
-} from "discord-api-types/v10";
-import { escapeMarkdown, GuildMember } from "discord.js";
+	escapeMarkdown,
+} from "discord.js";
 import ms from "ms";
 import type { InteractionByType, ReceivedInteraction } from "../util";
-import { createCommand, CustomClient, normalizeError, sendError } from "../util";
+import { CustomClient, createCommand, normalizeError, sendError } from "../util";
 
 const checkPerms = async (
 	interaction: ReceivedInteraction<"cached">,
 	id: Snowflake,
 	ownerId: Snowflake,
-	member?: GuildMember
+	member?: GuildMember,
 ) => {
 	if (!member) {
 		await interaction.reply({
@@ -55,7 +56,7 @@ const executeTimeout = async (
 	interaction: ReceivedInteraction,
 	member: GuildMember,
 	timeout: number,
-	reason = ""
+	reason = "",
 ) => {
 	const [error] = await Promise.all([
 		member
@@ -73,7 +74,7 @@ const executeTimeout = async (
 
 	await interaction.editReply({
 		content: `Ho applicato il Time out a <@${member.user.id}> (${escapeMarkdown(
-			member.user.tag
+			member.user.tag,
 		)} - ${member.user.id}) fino a <t:${timestamp}:F> (<t:${timestamp}:R>)!\n\nMotivo: ${
 			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
 		}`,
@@ -106,7 +107,7 @@ const showModal = (
 	interaction: InteractionByType<
 		InteractionType.ApplicationCommand | InteractionType.MessageComponent
 	>,
-	member: GuildMember
+	member: GuildMember,
 ) => {
 	const { displayName } = member;
 
@@ -152,7 +153,7 @@ const showModal = (
 const removeTimeout = async (
 	interaction: ReceivedInteraction,
 	member: GuildMember,
-	reason = ""
+	reason = "",
 ) => {
 	if (!member.isCommunicationDisabled()) {
 		await interaction.reply({
@@ -305,7 +306,7 @@ export const timeoutCommand = createCommand({
 				interaction,
 				member!,
 				timeout!,
-				typeof reason === "string" ? reason : undefined
+				typeof reason === "string" ? reason : undefined,
 			);
 			return;
 		}
@@ -340,7 +341,7 @@ export const timeoutCommand = createCommand({
 			interaction,
 			member!,
 			timeout!,
-			interaction.fields.fields.get("reason")?.value
+			interaction.fields.fields.get("reason")?.value,
 		);
 	},
 	async component(interaction) {

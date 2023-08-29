@@ -1,4 +1,11 @@
-import type { APIEmbedField } from "discord-api-types/v10";
+import type {
+	APIEmbedField,
+	GuildMember,
+	GuildMemberEditOptions,
+	RoleManager,
+	User,
+	VoiceChannel,
+} from "discord.js";
 import {
 	ActivityType,
 	ApplicationCommandOptionType,
@@ -8,15 +15,8 @@ import {
 	ComponentType,
 	ThreadAutoArchiveDuration,
 	VideoQualityMode,
-} from "discord-api-types/v10";
-import type {
-	GuildMember,
-	GuildMemberEditOptions,
-	RoleManager,
-	User,
-	VoiceChannel,
+	escapeMarkdown,
 } from "discord.js";
-import { escapeMarkdown } from "discord.js";
 import type { ReceivedInteraction } from "../util";
 import { CustomClient, capitalize, createCommand, normalizeError, sendError } from "../util";
 
