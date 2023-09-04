@@ -6,6 +6,7 @@ import type Event from "./Event";
 import color, { Colors } from "./colors";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
+import { loadTimeouts } from "./permanentTimeouts";
 
 /**
  * A custom class to interact with Discord
@@ -106,7 +107,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * @returns A promise that resolves when the client is ready
 	 */
 	async login(token?: string) {
-		await Promise.all([loadCommands(this), loadEvents(this)]);
+		await Promise.all([loadCommands(this), loadEvents(this), loadTimeouts(this)]);
 
 		return super.login(token);
 	}
