@@ -1,6 +1,7 @@
 import { GlobalFonts } from "@napi-rs/canvas";
 import { config } from "dotenv";
 import express from "express";
+import mongoose from "mongoose";
 import { join } from "node:path";
 import process, { cwd, env } from "node:process";
 import Constants, { CustomClient } from "./util";
@@ -50,4 +51,5 @@ if (env.NODE_ENV === "development")
 for (const font in fonts)
 	if (Object.hasOwn(fonts, font))
 		GlobalFonts.registerFromPath(join(cwd(), "fonts", `${font}.ttf`), fonts[font]);
+await mongoose.connect(env["MONGODB_URL"]!);
 await client.login();
