@@ -1,7 +1,7 @@
 import { InteractionType } from "discord.js";
 import { createEvent } from "../util";
 
-export const event = createEvent({
+export const interactionCreateEvent = createEvent({
 	name: "interactionCreate",
 	async on(interaction) {
 		let action: string | undefined;

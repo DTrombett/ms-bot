@@ -1,6 +1,6 @@
 import { Constants, createEvent, loadQuotes } from "../util";
 
-export const event = createEvent({
+export const readyEvent = createEvent({
 	name: "ready",
 	async once(client) {
 		await Promise.all([client.application.fetch(), loadQuotes(this.client)]);

@@ -1,18 +1,15 @@
 /* eslint-disable node/no-unpublished-import */
-import { unlink, watch } from "node:fs/promises";
+import { watch } from "node:fs/promises";
 import { join } from "node:path";
 import { cwd, memoryUsage } from "node:process";
 import { setInterval } from "node:timers/promises";
 import type { build as Build } from "tsup";
-import { loadCommands, type EventOptions } from "./util";
+import { loadCommands, loadEvents } from "./util";
 import Constants from "./util/Constants";
 import CustomClient from "./util/CustomClient";
-import Event from "./util/Event";
 
 const commandsFolder = join(cwd(), `src/${Constants.commandsFolderName}`);
 const eventsFolder = join(cwd(), `src/${Constants.eventsFolderName}`);
-const freshImport = <T>(path: string) =>
-	(import(`${path.replace(/\.ts$/, ".js")}?${Date.now()}`) as Promise<T>).catch(() => undefined);
 const watchCommands = async (client: CustomClient, build: typeof Build) => {
 	for await (const { filename } of watch(commandsFolder)) {
 		if (filename == null) continue;
@@ -31,75 +28,34 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 			})
 		)
 			continue;
-		await loadCommands(client, true);
+		await loadCommands(client);
 		CustomClient.printToStdout(
 			`Fast reloaded commands in ${(performance.now() - now).toFixed(2)}ms!`,
 		);
 	}
 };
 const watchEvents = async (client: CustomClient, build: typeof Build) => {
-	for await (const event of watch(eventsFolder, {
-		encoding: "utf8",
-		persistent: false,
-	})) {
-		const { filename } = event;
-
+	for await (const { filename } of watch(eventsFolder)) {
 		if (filename == null) continue;
-		const oldEvent = (
-			await freshImport<{
-				event: EventOptions;
-			}>(`./${Constants.eventsFolderName}/${filename}`)
-		)?.event;
+		const now = performance.now();
 
-		if (event.eventType === "rename" && oldEvent) {
-			client.events.get(oldEvent.name)?.removeListeners();
-			const ok = client.events.delete(oldEvent.name);
-
-			unlink(
-				new URL(
-					`${Constants.eventsFolderName}/${filename.replace(/\.ts/, ".js")}`,
-					import.meta.url,
-				),
-			).catch(CustomClient.printToStderr);
-			CustomClient.printToStdout(
-				ok
-					? `Deleted event ${oldEvent.name} (${filename})`
-					: `Couldn't find event ${oldEvent.name} (${filename})`,
-			);
+		CustomClient.printToStdout(`File change detected: ${filename}`);
+		if (
+			await build({
+				entry: [`src/${Constants.eventsFolderName}/index.ts`],
+				outDir: `dist/${Constants.eventsFolderName}`,
+				silent: true,
+			}).catch((err) => {
+				CustomClient.printToStderr("Failed to build new events:");
+				CustomClient.printToStderr(err);
+				return true as const;
+			})
+		)
 			continue;
-		}
-		const failed = await build({
-			config: false,
-			entry: [`src/${Constants.eventsFolderName}/${filename}`],
-			format: "esm",
-			external: ["tsup"],
-			minify: true,
-			platform: "node",
-			sourcemap: true,
-			target: "esnext",
-			outDir: join(cwd(), "dist/events"),
-		}).catch(() => {
-			CustomClient.printToStderr(`Failed to build event ${filename}`);
-			return true as const;
-		});
-
-		if (failed) continue;
-		const newEvent = (
-			await freshImport<{
-				event: EventOptions;
-			}>(`./${Constants.eventsFolderName}/${filename}`)
-		)?.event;
-
-		if (newEvent) {
-			if (oldEvent) {
-				client.events.get(oldEvent.name)?.removeListeners();
-				client.events.delete(oldEvent.name);
-			}
-			client.events.set(newEvent.name, new Event(client, newEvent));
-			CustomClient.printToStdout(
-				`${oldEvent ? "Reloaded" : "Added"} event ${newEvent.name} (${filename})`,
-			);
-		} else CustomClient.printToStderr(`Cannot find new event ${filename}`);
+		await loadEvents(client);
+		CustomClient.printToStdout(
+			`Fast reloaded events in ${(performance.now() - now).toFixed(2)}ms!`,
+		);
 	}
 };
 const logMemoryUsage = async () => {

@@ -1,6 +1,6 @@
 import { createEvent, CustomClient } from "../util";
 
-export const event = createEvent({
+export const debugEvent = createEvent({
 	name: "debug",
 	on(info) {
 		CustomClient.printToStdout(info);

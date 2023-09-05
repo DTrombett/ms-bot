@@ -1,7 +1,7 @@
 import { exit, nextTick } from "node:process";
 import { CustomClient, createEvent } from "../util";
 
-export const event = createEvent({
+export const invalidatedEvent = createEvent({
 	name: "invalidated",
 	async once() {
 		CustomClient.printToStderr(
