@@ -372,6 +372,7 @@ export const memeCommand = createCommand({
 		await interaction.respond(
 			memeNames
 				.filter((name) => name.toLowerCase().includes(value))
+				.slice(0, 25)
 				.map((name) => ({ name, value: name })),
 		);
 	},
