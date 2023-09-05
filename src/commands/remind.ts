@@ -1,4 +1,10 @@
-import { ApplicationCommandOptionType, ApplicationCommandType, escapeInlineCode } from "discord.js";
+import {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+	ButtonStyle,
+	ComponentType,
+	escapeMarkdown,
+} from "discord.js";
 import ms from "ms";
 import { Timeout } from "../models";
 import { createCommand, setPermanentTimeout, timeoutCache } from "../util";
@@ -87,6 +93,23 @@ export const remindCommand = createCommand({
 				timeoutCache[timeout.id as string] = timeout;
 				await interaction.editReply({
 					content: `Fatto! Te lo ricorderò <t:${Math.round(date / 1_000)}:R>`,
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `remind-${timeout.id as string}-d`,
+									label: "Rimuovi",
+									style: ButtonStyle.Danger,
+									emoji: {
+										animated: false,
+										name: "❌",
+									},
+								},
+							],
+						},
+					],
 				});
 				break;
 			case "list":
@@ -109,11 +132,12 @@ export const remindCommand = createCommand({
 						.map((t, i) => {
 							const timestamp = Math.round(t.date / 1_000);
 
-							return `${i + 1}. \`${escapeInlineCode(
-								t.options[1],
-							)}\` <t:${timestamp}:F> (<t:${timestamp}:R>)`;
+							return `${i + 1}. **${escapeMarkdown(
+								t.options[1].replaceAll("\n", " "),
+							)}** <t:${timestamp}:F> (<t:${timestamp}:R>)`;
 						})
-						.join("\n")}`,
+						.join("\n")
+						.slice(0, 3975)}`,
 				});
 				break;
 			case "remove":
@@ -170,5 +194,29 @@ export const remindCommand = createCommand({
 					};
 				}),
 		);
+	},
+	async component(interaction) {
+		const [, id, action] = interaction.customId.split("-");
+
+		if (!timeoutCache[id]) {
+			await interaction.reply({
+				content: "Questo promemoria è scaduto o è stato eliminato!",
+				ephemeral: true,
+			});
+			return;
+		}
+		if (timeoutCache[id]!.options[0] !== interaction.user.id) {
+			await interaction.reply({ content: "Non puoi gestire questo promemoria!", ephemeral: true });
+			return;
+		}
+		switch (action) {
+			case "d":
+				await timeoutCache[id]!.deleteOne();
+				delete timeoutCache[id];
+				await interaction.reply({ ephemeral: true, content: "Promemoria eliminato!" });
+				break;
+			default:
+				break;
+		}
 	},
 });
