@@ -74,7 +74,7 @@ export const remindCommand = createCommand({
 				}
 				const date = interaction.createdTimestamp + ms(interaction.options.getString("when", true));
 
-				if (Number.isNaN(date) || date > 10_000_000_000_000) {
+				if (Number.isNaN(date) || date <= Date.now() + 1_000 || date > 10_000_000_000_000) {
 					await interaction.reply({
 						ephemeral: true,
 						content: "Durata non valida!",

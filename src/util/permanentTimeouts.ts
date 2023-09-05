@@ -12,6 +12,7 @@ export const setActionTimeout = async (client: CustomClient, timeout: Document<t
 	if (delay < 2147483648)
 		try {
 			await setTimeout(delay, undefined, { ref: false });
+			if (!timeoutCache[timeout.id as string]) return;
 			delete timeoutCache[timeout.id as string];
 			Promise.all([
 				actions[timeout.action as keyof typeof actions](
