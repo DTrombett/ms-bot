@@ -1,17 +1,16 @@
 import { ApplicationCommandType } from "discord.js";
 import type { CommandOptions, CustomClient } from ".";
-import * as commands from "../commands";
 import Command from "./Command";
 
 /**
  * Loads all commands from the commands directory.
  * @param client - The client to load commands into
  */
-export const loadCommands = async (client: CustomClient, clean = false) => {
+export const loadCommands = async (client: CustomClient) => {
 	client.commands.clear();
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 	for (const command of Object.values(
-		clean ? await import(`./commands/index.js?${Date.now()}`) : commands,
+		await import(`./commands/index.js?${Date.now()}`),
 	) as CommandOptions[])
 		client.commands.set(
 			command.data.find(({ type }) => type === ApplicationCommandType.ChatInput)?.name ??
