@@ -15,10 +15,7 @@ export const setActionTimeout = async (client: CustomClient, timeout: Document<t
 			if (!timeoutCache[timeout.id as string]) return;
 			delete timeoutCache[timeout.id as string];
 			Promise.all([
-				actions[timeout.action as keyof typeof actions](
-					client,
-					...(timeout.options as [Snowflake, string]),
-				),
+				actions[timeout.action](client, ...(timeout.options as [Snowflake, string])),
 				timeout.deleteOne(),
 			]).catch(CustomClient.printToStderr);
 		} catch (err) {}
@@ -35,8 +32,10 @@ export const setPermanentTimeout = async <T extends keyof typeof actions>(
 	client: CustomClient,
 	timeout: TimeoutSchema<T>,
 ) => {
-	const doc = await new Timeout(timeout).save();
+	const doc = new Timeout(timeout);
 
+	timeoutCache[doc.id as string] = doc;
+	if (doc.date < Date.now()) await doc.save();
 	setActionTimeout(client, doc).catch(() => {});
 	return doc;
 };

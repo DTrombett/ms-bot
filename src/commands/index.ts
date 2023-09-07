@@ -15,6 +15,7 @@ export * from "./meme";
 export * from "./ping";
 export * from "./poll";
 export * from "./predict";
+export * from "./predictions";
 export * from "./quelo";
 export * from "./quote";
 export * from "./random";
