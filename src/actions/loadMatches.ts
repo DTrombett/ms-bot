@@ -3,7 +3,7 @@ import { env, platform } from "node:process";
 import { promisify } from "node:util";
 import { chromium } from "playwright";
 import { MatchDay, MatchDaySchema } from "../models";
-import { CustomClient, setPermanentTimeout } from "../util";
+import { CustomClient, capitalize, setPermanentTimeout } from "../util";
 
 const exec = promisify(mainExec);
 const months = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
@@ -45,7 +45,14 @@ export const loadMatches = async (client: CustomClient) => {
 						0,
 						0,
 					).getTime(),
-					teams: [h3[0].toLowerCase(), h3[2].toLowerCase()],
+					teams: [h3[0], h3[2]].map((team) =>
+						team
+							.trim()
+							.toLowerCase()
+							.split(/\s+/g)
+							.map((word) => capitalize(word))
+							.join(" "),
+					) as [string, string],
 				};
 			})(),
 		);
