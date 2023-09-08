@@ -24,37 +24,39 @@ export const loadMatches = async (client: CustomClient) => {
 	await rows.first().waitFor();
 	for (const locator of await rows.all())
 		promises.push(
+			// This nested async function is made not to stop the loop while reading the matches
 			// eslint-disable-next-line @typescript-eslint/no-loop-func
 			(async () => {
 				const [p, h3] = await Promise.all([
 					locator.locator("p").allInnerTexts(),
 					locator.locator("h3").allInnerTexts(),
 				]);
-				const teams = [h3[0].toLowerCase(), h3[2].toLowerCase()] as const;
 				const split = p[1].split(" ");
-				const minutes = split[4].split(":");
-				const date = new Date();
+				const hours = split[4].split(":");
 
 				day ??= Number(p[0].split("°")[0]);
-				date.setFullYear(
-					Number(split[2]),
-					months.indexOf(split[1].toLowerCase()),
-					Number(split[0]),
-				);
-				date.setHours(Number(minutes[0]), Number(minutes[1]), 0, 0);
-				return { date: date.getTime(), teams };
+				return {
+					date: new Date(
+						Number(split[2]),
+						months.indexOf(split[1].toLowerCase()),
+						Number(split[0]),
+						Number(hours[0]),
+						Number(hours[1]),
+						0,
+						0,
+					).getTime(),
+					teams: [h3[0].toLowerCase(), h3[2].toLowerCase()],
+				};
 			})(),
 		);
-	const matchDay = new MatchDay({ day, matches: await Promise.all(promises) });
+	const matchDay = new MatchDay({ matches: await Promise.all(promises), day });
 
 	matchDay.matches.sort((a, b) => a.date - b.date);
-	await Promise.all([
-		browser.close(),
-		matchDay.save(),
-		setPermanentTimeout(client, {
-			action: "loadMatches",
-			date: matchDay.matches.at(-1)!.date + 1_000 * 60 * 60 * 24,
-			options: [],
-		}),
-	]);
+	browser.close().catch(CustomClient.printToStderr);
+	await matchDay.save();
+	await setPermanentTimeout(client, {
+		action: "loadMatches",
+		date: matchDay.matches.at(-1)!.date + 1_000 * 60 * 60 * 24,
+		options: [],
+	});
 };

@@ -1,4 +1,3 @@
-import { Snowflake } from "discord.js";
 import { setTimeout } from "node:timers/promises";
 import * as actions from "../actions";
 import { Document, Timeout, TimeoutSchema } from "../models";
@@ -15,17 +14,23 @@ export const setActionTimeout = async (client: CustomClient, timeout: Document<t
 			if (!timeoutCache[timeout.id as string]) return;
 			delete timeoutCache[timeout.id as string];
 			Promise.all([
-				actions[timeout.action](client, ...(timeout.options as [Snowflake, string])),
+				(actions as Record<string, ((client: CustomClient, ...args: any[]) => any) | undefined>)[
+					timeout.action
+				]?.(client, ...timeout.options),
 				timeout.deleteOne(),
 			]).catch(CustomClient.printToStderr);
 		} catch (err) {}
 };
 
 export const loadTimeouts = async (client: CustomClient) => {
+	let ok = false;
+
 	for (const timeout of await Timeout.find({})) {
 		timeoutCache[timeout.id as string] = timeout;
 		setActionTimeout(client, timeout).catch(() => {});
+		if (timeout.action === "loadMatches") ok ||= true;
 	}
+	if (!ok) actions.loadMatches(client).catch(() => {});
 };
 
 export const setPermanentTimeout = async <T extends keyof typeof actions>(
@@ -35,7 +40,7 @@ export const setPermanentTimeout = async <T extends keyof typeof actions>(
 	const doc = new Timeout(timeout);
 
 	timeoutCache[doc.id as string] = doc;
-	if (doc.date < Date.now()) await doc.save();
+	if (doc.date > Date.now()) await doc.save();
 	setActionTimeout(client, doc).catch(() => {});
 	return doc;
 };
