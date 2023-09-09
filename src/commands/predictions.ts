@@ -114,6 +114,13 @@ export const predictionsCommand = createCommand({
 					description:
 						"Visualizza i tuoi pronostici o quelli di un altro utente",
 					type: ApplicationCommandOptionType.Subcommand,
+					options: [
+						{
+							type: ApplicationCommandOptionType.User,
+							name: "user",
+							description: "L'utente di cui vedere i pronostici",
+						},
+					],
 				},
 			],
 		},
@@ -130,13 +137,31 @@ export const predictionsCommand = createCommand({
 				});
 				return;
 			}
-			const { member } = interaction;
-			const user = await User.findById(interaction.user.id);
+			const option = interaction.options.get("user");
 
-			if (!user?.predictions || user.predictions.length === 0) {
+			if (option && Date.now() < matchDay.matches[0].date - 1_000 * 60 * 15) {
 				await interaction.reply({
 					ephemeral: true,
-					content: "Non hai inviato alcun pronostico per la giornata!",
+					content:
+						"Non puoi vedere i pronostici degli altri utenti prima dell'inizio della giornata!",
+				});
+				return;
+			}
+			const { member, user } = option ?? interaction;
+
+			if (!user) {
+				await interaction.reply({
+					ephemeral: true,
+					content: "Utente non trovato!",
+				});
+				return;
+			}
+			const existingUser = await User.findById(user.id);
+
+			if (!existingUser?.predictions || existingUser.predictions.length === 0) {
+				await interaction.reply({
+					ephemeral: true,
+					content: "L'utente non ha inviato alcun pronostico per la giornata!",
 				});
 				return;
 			}
@@ -148,14 +173,14 @@ export const predictionsCommand = createCommand({
 							name:
 								(member && "displayName" in member
 									? member.displayName
-									: member?.nick) ?? interaction.user.displayName,
+									: member?.nick) ?? user.displayName,
 							icon_url:
 								(member && "displayAvatarURL" in member
 									? member.displayAvatarURL({ extension: "png" })
 									: member?.avatar != null && interaction.guildId != null
 									? this.client.rest.cdn.guildMemberAvatar(
 											interaction.guildId,
-											interaction.user.id,
+											user.id,
 											member.avatar,
 											{ extension: "png" },
 									  )
@@ -168,7 +193,7 @@ export const predictionsCommand = createCommand({
 								match.date / 1000,
 							)}:F>)`,
 							value:
-								user.predictions!.find((predict) =>
+								existingUser.predictions!.find((predict) =>
 									predict.teams.every((p, i) => p === match.teams[i]),
 								)?.prediction ?? "*Non presente*",
 						})),
