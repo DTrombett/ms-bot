@@ -113,13 +113,10 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * @returns A promise that resolves when the client is ready
 	 */
 	async login(token?: string) {
-		await Promise.all([
-			loadCommands(this),
-			loadEvents(this),
-			loadTimeouts(this),
-		]);
-
-		return super.login(token);
+		await Promise.all([loadCommands(this), loadEvents(this)]);
+		token = await super.login(token);
+		await loadTimeouts(this);
+		return token;
 	}
 }
 

@@ -21,15 +21,16 @@ export const sendPredictions = async (client: CustomClient, day: number) => {
 		CustomClient.printToStderr(`Invalid match day: ${day}`);
 		return;
 	}
+	const channel = await client.channels.fetch(channelId);
+
+	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+	if (!channel?.isTextBased() || channel.isDMBased()) {
+		CustomClient.printToStderr("Invalid predictions channel!");
+		return;
+	}
 	for (let i = 0; i < users.length; i += 5) {
 		const chunk = users.slice(i, i + 5);
-		const channel = client.channels.cache.get(channelId);
 
-		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-		if (!channel?.isTextBased() || channel.isDMBased()) {
-			CustomClient.printToStderr("Invalid predictions channel!");
-			return;
-		}
 		await channel.send({
 			embeds: await Promise.all(
 				chunk.map(async (user) => {
