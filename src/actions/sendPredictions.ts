@@ -55,7 +55,6 @@ export const sendPredictions = async (client: CustomClient, day: number) => {
 							url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
 						},
 						title: `${day}° Giornata Serie A TIM`,
-						url: "https://legaseriea.it/it/serie-a",
 					};
 				}),
 			),
