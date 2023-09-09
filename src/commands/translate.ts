@@ -1,4 +1,8 @@
-import { ApplicationCommandOptionType, ApplicationCommandType, escapeMarkdown } from "discord.js";
+import {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+	escapeMarkdown,
+} from "discord.js";
 import { Buffer } from "node:buffer";
 import { createCommand } from "../util";
 

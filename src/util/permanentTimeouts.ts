@@ -3,9 +3,15 @@ import * as actions from "../actions";
 import { Document, Timeout, TimeoutSchema } from "../models";
 import CustomClient from "./CustomClient";
 
-export const timeoutCache: Record<string, Document<typeof Timeout> | undefined> = {};
+export const timeoutCache: Record<
+	string,
+	Document<typeof Timeout> | undefined
+> = {};
 
-export const setActionTimeout = async (client: CustomClient, timeout: Document<typeof Timeout>) => {
+export const setActionTimeout = async (
+	client: CustomClient,
+	timeout: Document<typeof Timeout>,
+) => {
 	const delay = timeout.date - Date.now();
 
 	if (delay < 2147483648)
@@ -14,9 +20,12 @@ export const setActionTimeout = async (client: CustomClient, timeout: Document<t
 			if (!timeoutCache[timeout.id as string]) return;
 			delete timeoutCache[timeout.id as string];
 			Promise.all([
-				(actions as Record<string, ((client: CustomClient, ...args: any[]) => any) | undefined>)[
-					timeout.action
-				]?.(client, ...timeout.options),
+				(
+					actions as Record<
+						string,
+						((client: CustomClient, ...args: any[]) => any) | undefined
+					>
+				)[timeout.action]?.(client, ...timeout.options),
 				timeout.deleteOne(),
 			]).catch(CustomClient.printToStderr);
 		} catch (err) {}

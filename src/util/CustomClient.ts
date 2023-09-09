@@ -1,4 +1,10 @@
-import { ActivityType, Client, Collection, Options, Partials } from "discord.js";
+import {
+	ActivityType,
+	Client,
+	Collection,
+	Options,
+	Partials,
+} from "discord.js";
 import { stderr, stdout } from "node:process";
 import { inspect } from "node:util";
 import type Command from "./Command";
@@ -107,7 +113,11 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 * @returns A promise that resolves when the client is ready
 	 */
 	async login(token?: string) {
-		await Promise.all([loadCommands(this), loadEvents(this), loadTimeouts(this)]);
+		await Promise.all([
+			loadCommands(this),
+			loadEvents(this),
+			loadTimeouts(this),
+		]);
 
 		return super.login(token);
 	}

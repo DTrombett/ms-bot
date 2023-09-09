@@ -80,12 +80,14 @@ export const timestampCommand = createCommand({
 			options: [
 				{
 					name: "year",
-					description: "L'anno solare (richiesto per un timestamp personalizzato)",
+					description:
+						"L'anno solare (richiesto per un timestamp personalizzato)",
 					type: ApplicationCommandOptionType.Integer,
 				},
 				{
 					name: "month",
-					description: "Il mese dell'anno (richiesto per una timestamp personalizzata)",
+					description:
+						"Il mese dell'anno (richiesto per una timestamp personalizzata)",
 					type: ApplicationCommandOptionType.Integer,
 					min_value: 1,
 					max_value: 12,

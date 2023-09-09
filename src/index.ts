@@ -50,6 +50,9 @@ if (env.NODE_ENV === "development")
 		.catch(CustomClient.printToStderr);
 for (const font in fonts)
 	if (Object.hasOwn(fonts, font))
-		GlobalFonts.registerFromPath(join(cwd(), "fonts", `${font}.ttf`), fonts[font]);
+		GlobalFonts.registerFromPath(
+			join(cwd(), "fonts", `${font}.ttf`),
+			fonts[font],
+		);
 await mongoose.connect(env["MONGODB_URL"]!);
 await client.login();

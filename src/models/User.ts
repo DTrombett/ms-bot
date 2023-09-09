@@ -12,7 +12,9 @@ export type UserSchema = {
 
 export const userSchema = new Schema<UserSchema>({
 	_id: string,
-	predictions: [{ prediction: string, teams: { required: true, type: [string] } }],
+	predictions: [
+		{ prediction: string, teams: { required: true, type: [string] } },
+	],
 });
 
 export const User = createModel("User", userSchema);

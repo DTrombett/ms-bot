@@ -63,8 +63,10 @@ export const remindCommand = createCommand({
 		switch (interaction.options.getSubcommand()) {
 			case "me":
 				if (
-					(await Timeout.countDocuments({ action: "remind", "options.0": interaction.user.id })) >
-					remindLimit
+					(await Timeout.countDocuments({
+						action: "remind",
+						"options.0": interaction.user.id,
+					})) > remindLimit
 				) {
 					await interaction.reply({
 						ephemeral: true,
@@ -72,9 +74,15 @@ export const remindCommand = createCommand({
 					});
 					return;
 				}
-				const date = interaction.createdTimestamp + ms(interaction.options.getString("when", true));
+				const date =
+					interaction.createdTimestamp +
+					ms(interaction.options.getString("when", true));
 
-				if (Number.isNaN(date) || date <= Date.now() + 1_000 || date > 10_000_000_000_000) {
+				if (
+					Number.isNaN(date) ||
+					date <= Date.now() + 1_000 ||
+					date > 10_000_000_000_000
+				) {
 					await interaction.reply({
 						ephemeral: true,
 						content: "Durata non valida!",
@@ -85,7 +93,10 @@ export const remindCommand = createCommand({
 					setPermanentTimeout(this.client, {
 						action: "remind",
 						date,
-						options: [interaction.user.id, interaction.options.getString("to", true)],
+						options: [
+							interaction.user.id,
+							interaction.options.getString("to", true),
+						],
 					}),
 					interaction.deferReply({ ephemeral: true }),
 				]);
@@ -154,12 +165,18 @@ export const remindCommand = createCommand({
 						  );
 
 				if (!toRemove) {
-					await interaction.reply({ ephemeral: true, content: "Promemoria non trovato!" });
+					await interaction.reply({
+						ephemeral: true,
+						content: "Promemoria non trovato!",
+					});
 					return;
 				}
 				await toRemove.deleteOne();
 				delete timeoutCache[toRemove.id as string];
-				await interaction.reply({ ephemeral: true, content: "Promemoria eliminato!" });
+				await interaction.reply({
+					ephemeral: true,
+					content: "Promemoria eliminato!",
+				});
 				break;
 			default:
 				break;
@@ -204,14 +221,20 @@ export const remindCommand = createCommand({
 			return;
 		}
 		if (timeoutCache[id]!.options[0] !== interaction.user.id) {
-			await interaction.reply({ content: "Non puoi gestire questo promemoria!", ephemeral: true });
+			await interaction.reply({
+				content: "Non puoi gestire questo promemoria!",
+				ephemeral: true,
+			});
 			return;
 		}
 		switch (action) {
 			case "d":
 				await timeoutCache[id]!.deleteOne();
 				delete timeoutCache[id];
-				await interaction.reply({ ephemeral: true, content: "Promemoria eliminato!" });
+				await interaction.reply({
+					ephemeral: true,
+					content: "Promemoria eliminato!",
+				});
 				break;
 			default:
 				break;

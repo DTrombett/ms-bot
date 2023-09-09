@@ -1,4 +1,7 @@
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
+import {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+} from "discord.js";
 import { createCommand } from "../util";
 
 const emojis = [
@@ -50,7 +53,10 @@ export const loveCommand = createCommand({
 		}
 		const bigint1 = BigInt(user1.id) * BigInt(user1.discriminator);
 		const bigint2 = BigInt(user2.id) * BigInt(user2.discriminator);
-		const loveRate = bigint1 > bigint2 ? (bigint2 * 100n) / bigint1 : (bigint1 * 100n) / bigint2;
+		const loveRate =
+			bigint1 > bigint2
+				? (bigint2 * 100n) / bigint1
+				: (bigint1 * 100n) / bigint2;
 		const emoji = emojis[Math.floor(Number(loveRate) / 10)] ?? "❤️";
 
 		await interaction.reply({

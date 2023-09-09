@@ -162,7 +162,9 @@ export const searchCommand = createCommand({
 			case "google":
 				query = interaction.options.getString("query", true);
 				await interaction.reply({
-					content: `Risultati di Google per la ricerca "**${escapeMarkdown(query)}**":`,
+					content: `Risultati di Google per la ricerca "**${escapeMarkdown(
+						query,
+					)}**":`,
 					components: [
 						{
 							type: ComponentType.ActionRow,
@@ -172,7 +174,9 @@ export const searchCommand = createCommand({
 									label: "Apri nel browser!",
 									style: ButtonStyle.Link,
 									emoji: { name: "🔍" },
-									url: `https://google.com/search?q=${encodeURIComponent(query)}`,
+									url: `https://google.com/search?q=${encodeURIComponent(
+										query,
+									)}`,
 								},
 							],
 						},
@@ -182,7 +186,9 @@ export const searchCommand = createCommand({
 			case "spotify":
 				query = interaction.options.getString("search", true);
 				await interaction.reply({
-					content: `Risultati di Spotify per la ricerca "**${escapeMarkdown(query)}**":`,
+					content: `Risultati di Spotify per la ricerca "**${escapeMarkdown(
+						query,
+					)}**":`,
 					components: [
 						{
 							type: ComponentType.ActionRow,
@@ -192,7 +198,9 @@ export const searchCommand = createCommand({
 									label: "Apri su spotify",
 									style: ButtonStyle.Link,
 									emoji: { name: "🔍" },
-									url: `https://open.spotify.com/search/${encodeURIComponent(query)}`,
+									url: `https://open.spotify.com/search/${encodeURIComponent(
+										query,
+									)}`,
 								},
 							],
 						},
@@ -202,7 +210,9 @@ export const searchCommand = createCommand({
 			case "youtube":
 				query = interaction.options.getString("query", true);
 				await interaction.reply({
-					content: `Risultati di YouTube per la ricerca "**${escapeMarkdown(query)}**":`,
+					content: `Risultati di YouTube per la ricerca "**${escapeMarkdown(
+						query,
+					)}**":`,
 					components: [
 						{
 							type: ComponentType.ActionRow,
@@ -212,7 +222,9 @@ export const searchCommand = createCommand({
 									label: "Apri in YouTube",
 									style: ButtonStyle.Link,
 									emoji: { name: "🔍" },
-									url: `https://youtube.com/results?search_query=${encodeURIComponent(query)}`,
+									url: `https://youtube.com/results?search_query=${encodeURIComponent(
+										query,
+									)}`,
 								},
 							],
 						},
@@ -222,7 +234,9 @@ export const searchCommand = createCommand({
 			case "yt-music":
 				query = interaction.options.getString("query", true);
 				await interaction.reply({
-					content: `Risultati di YouTube Music per la ricerca "**${escapeMarkdown(query)}**":`,
+					content: `Risultati di YouTube Music per la ricerca "**${escapeMarkdown(
+						query,
+					)}**":`,
 					components: [
 						{
 							type: ComponentType.ActionRow,
@@ -232,7 +246,9 @@ export const searchCommand = createCommand({
 									label: "Apri in YouTube Music",
 									style: ButtonStyle.Link,
 									emoji: { name: "🔍" },
-									url: `https://music.youtube.com/search?q=${encodeURIComponent(query)}`,
+									url: `https://music.youtube.com/search?q=${encodeURIComponent(
+										query,
+									)}`,
 								},
 							],
 						},
@@ -244,7 +260,9 @@ export const searchCommand = createCommand({
 
 				query = interaction.options.getString("query", true);
 				await interaction.reply({
-					content: `Risultati di GitHub per la ricerca "**${escapeMarkdown(query)}**":`,
+					content: `Risultati di GitHub per la ricerca "**${escapeMarkdown(
+						query,
+					)}**":`,
 					components: [
 						{
 							type: ComponentType.ActionRow,
@@ -254,9 +272,9 @@ export const searchCommand = createCommand({
 									label: "Apri in GitHub",
 									style: ButtonStyle.Link,
 									emoji: { name: "🔍" },
-									url: `https://github.com/search?q=${encodeURIComponent(query)}${
-										type == null ? "" : `&type=${type}`
-									}`,
+									url: `https://github.com/search?q=${encodeURIComponent(
+										query,
+									)}${type == null ? "" : `&type=${type}`}`,
 								},
 							],
 						},
@@ -288,7 +306,9 @@ export const searchCommand = createCommand({
 			case "wikipedia":
 				query = interaction.options.getString("query", true);
 				await interaction.reply({
-					content: `Risultati di Wikipedia per la ricerca "**${escapeMarkdown(query)}**":`,
+					content: `Risultati di Wikipedia per la ricerca "**${escapeMarkdown(
+						query,
+					)}**":`,
 					components: [
 						{
 							type: ComponentType.ActionRow,
@@ -298,7 +318,9 @@ export const searchCommand = createCommand({
 									label: "Apri in Wikipedia",
 									style: ButtonStyle.Link,
 									emoji: { name: "🔍" },
-									url: `https://wikipedia.org/w/index.php?search=${encodeURIComponent(query)}`,
+									url: `https://wikipedia.org/w/index.php?search=${encodeURIComponent(
+										query,
+									)}`,
 								},
 							],
 						},

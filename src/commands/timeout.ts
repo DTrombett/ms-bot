@@ -11,7 +11,12 @@ import {
 } from "discord.js";
 import ms from "ms";
 import type { InteractionByType, ReceivedInteraction } from "../util";
-import { CustomClient, createCommand, normalizeError, sendError } from "../util";
+import {
+	CustomClient,
+	createCommand,
+	normalizeError,
+	sendError,
+} from "../util";
 
 const checkPerms = async (
 	interaction: ReceivedInteraction<"cached">,
@@ -34,7 +39,11 @@ const checkPerms = async (
 			});
 			return true;
 		}
-		if (member.roles.highest.comparePositionTo(interaction.member.roles.highest) >= 0) {
+		if (
+			member.roles.highest.comparePositionTo(
+				interaction.member.roles.highest,
+			) >= 0
+		) {
 			await interaction.reply({
 				content:
 					"Non puoi eseguire questa azione su un membro con una posizione superiore o uguale alla tua!",
@@ -75,7 +84,9 @@ const executeTimeout = async (
 	await interaction.editReply({
 		content: `Ho applicato il Time out a <@${member.user.id}> (${escapeMarkdown(
 			member.user.tag,
-		)} - ${member.user.id}) fino a <t:${timestamp}:F> (<t:${timestamp}:R>)!\n\nMotivo: ${
+		)} - ${
+			member.user.id
+		}) fino a <t:${timestamp}:F> (<t:${timestamp}:R>)!\n\nMotivo: ${
 			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
 		}`,
 		components: [
@@ -93,7 +104,10 @@ const executeTimeout = async (
 		],
 	});
 };
-const validateDuration = async (interaction: ReceivedInteraction, timeout?: number) => {
+const validateDuration = async (
+	interaction: ReceivedInteraction,
+	timeout?: number,
+) => {
 	if (timeout == null || isNaN(timeout) || timeout < 1_000) {
 		await interaction.reply({
 			content: "La durata non è valida! Esempi: `1m`, `1h`, `1d`.",
@@ -175,9 +189,11 @@ const removeTimeout = async (
 		return;
 	}
 	await interaction.editReply({
-		content: `Time out di <@${member.user.id}> (${escapeMarkdown(member.user.tag)} - ${
-			member.user.id
-		}) annullato!\n\nMotivo: ${reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"}`,
+		content: `Time out di <@${member.user.id}> (${escapeMarkdown(
+			member.user.tag,
+		)} - ${member.user.id}) annullato!\n\nMotivo: ${
+			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
+		}`,
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -240,7 +256,8 @@ export const timeoutCommand = createCommand({
 						},
 						{
 							name: "reason",
-							description: "Il motivo dell'annullamento del Time out, se presente",
+							description:
+								"Il motivo dell'annullamento del Time out, se presente",
 							type: ApplicationCommandOptionType.String,
 							max_length: 512,
 						},
@@ -257,7 +274,8 @@ export const timeoutCommand = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere usato solo all'interno di un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -274,7 +292,9 @@ export const timeoutCommand = createCommand({
 			});
 			return;
 		}
-		const option = data.find((o) => o.type === ApplicationCommandOptionType.User);
+		const option = data.find(
+			(o) => o.type === ApplicationCommandOptionType.User,
+		);
 		const user = option?.user;
 
 		if (!user) {
@@ -310,7 +330,11 @@ export const timeoutCommand = createCommand({
 			);
 			return;
 		}
-		await removeTimeout(interaction, member!, typeof reason === "string" ? reason : undefined);
+		await removeTimeout(
+			interaction,
+			member!,
+			typeof reason === "string" ? reason : undefined,
+		);
 	},
 	async modalSubmit(interaction) {
 		const duration = interaction.fields.fields.get("duration")?.value;
@@ -328,7 +352,8 @@ export const timeoutCommand = createCommand({
 		}
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere usato solo all'interno di un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -347,7 +372,8 @@ export const timeoutCommand = createCommand({
 	async component(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere usato solo all'interno di un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;

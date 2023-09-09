@@ -12,7 +12,10 @@ export type MatchDaySchema = {
 
 export const matchDaySchema = new Schema<MatchDaySchema>({
 	day: number,
-	matches: { type: [{ date: number, teams: { required: true, type: [string] } }], required: true },
+	matches: {
+		type: [{ date: number, teams: { required: true, type: [string] } }],
+		required: true,
+	},
 });
 
 export const MatchDay = createModel("MatchDay", matchDaySchema);

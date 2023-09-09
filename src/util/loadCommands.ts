@@ -13,8 +13,8 @@ export const loadCommands = async (client: CustomClient) => {
 		await import(`./commands/index.js?${Date.now()}`),
 	) as CommandOptions[])
 		client.commands.set(
-			command.data.find(({ type }) => type === ApplicationCommandType.ChatInput)?.name ??
-				command.data[0].name,
+			command.data.find(({ type }) => type === ApplicationCommandType.ChatInput)
+				?.name ?? command.data[0].name,
 			new Command(client, command),
 		);
 };

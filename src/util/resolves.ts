@@ -4,4 +4,5 @@
  * @param promise - The promise to check
  * @returns A promise resolving returning whether the promise was resolved
  */
-export const resolves = (promise: Promise<unknown>) => promise.then(() => true).catch(() => false);
+export const resolves = (promise: Promise<unknown>) =>
+	promise.then(() => true).catch(() => false);

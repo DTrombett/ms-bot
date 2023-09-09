@@ -24,8 +24,9 @@ export const bannerCommand = createCommand({
 	],
 	async run(interaction) {
 		const option =
-			interaction.options.data.find((o) => o.type === ApplicationCommandOptionType.User) ??
-			interaction;
+			interaction.options.data.find(
+				(o) => o.type === ApplicationCommandOptionType.User,
+			) ?? interaction;
 		let user = option.user ?? interaction.user;
 		if (user.banner === undefined) user = await user.fetch(true);
 		if (user.banner == null) {
