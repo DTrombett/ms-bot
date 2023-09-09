@@ -49,6 +49,7 @@ export const loadMatches = async (client: CustomClient) => {
 			return;
 		}
 		const matchDay = new MatchDay({
+			_id: matchDayData.id_category,
 			matches: matches.data.map((match) => ({
 				date: new Date(match.date_time).getTime(),
 				teams: [match.home_team_name, match.away_team_name]

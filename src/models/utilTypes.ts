@@ -7,5 +7,5 @@ export type Document<T> = T extends Model<any, any, any, any, infer M>
 	: // eslint-disable-next-line @typescript-eslint/ban-types
 	  MongoDocument<unknown, {}, T> &
 			T & {
-				_id: Types.ObjectId;
+				_id: T extends { _id: infer I } ? I : Types.ObjectId;
 			};

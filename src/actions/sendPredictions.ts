@@ -1,7 +1,7 @@
 import { Colors } from "discord.js";
 import { env } from "node:process";
 import { MatchDay, User } from "../models";
-import { CustomClient } from "../util";
+import { CustomClient, setPermanentTimeout } from "../util";
 
 export const sendPredictions = async (client: CustomClient, day: number) => {
 	const channelId = env.PREDICTIONS_CHANNEL;
@@ -17,6 +17,7 @@ export const sendPredictions = async (client: CustomClient, day: number) => {
 		MatchDay.findOne({ day }),
 	]);
 
+	if (!users.length) return;
 	if (!matchDay) {
 		CustomClient.printToStderr(`Invalid match day: ${day}`);
 		return;
@@ -43,7 +44,7 @@ export const sendPredictions = async (client: CustomClient, day: number) => {
 							name: member?.displayName ?? user._id,
 							icon_url: member?.displayAvatarURL({ extension: "png" }),
 						},
-						color: Colors.Blue,
+						color: member?.displayColor ?? Colors.Blue,
 						fields: matchDay.matches.map((match) => ({
 							name: match.teams,
 							value:
@@ -60,4 +61,9 @@ export const sendPredictions = async (client: CustomClient, day: number) => {
 			),
 		});
 	}
+	await setPermanentTimeout(client, {
+		action: "liveScore",
+		date: matchDay.matches[0].date,
+		options: [day],
+	});
 };
