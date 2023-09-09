@@ -6,14 +6,14 @@ export type MatchDaySchema = {
 	day: number;
 	matches: {
 		date: number;
-		teams: readonly [string, string];
+		teams: string;
 	}[];
 };
 
 export const matchDaySchema = new Schema<MatchDaySchema>({
 	day: number,
 	matches: {
-		type: [{ date: number, teams: { required: true, type: [string] } }],
+		type: [{ date: number, teams: string }],
 		required: true,
 	},
 });

@@ -23,13 +23,15 @@ const predictionExamples = [
 	"1X",
 	"12",
 	"X2",
-	"1 (2-0)",
+	"1 (1-0)",
 	"1 (2-1)",
-	"2 (0-2)",
+	"2 (0-1)",
 	"2 (1-2)",
+	"X (0-0)",
+	"X (1-1)",
 ];
 const predictionRegex =
-	/^(1|x|2|1x|12|x2|((?<prediction>1|2)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
+	/^(1|x|2|1x|12|x2|((?<prediction>1|2|X)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
 const checkMatchDay = async (
 	matchDay: Document<MatchDaySchema> | null,
 	interaction: RepliableInteraction,
@@ -67,8 +69,8 @@ const showModal = async (
 			.addComponents(
 				matchDay.matches.slice((part - 1) * 5, part * 5).map((match) => {
 					const textInput = new TextInputBuilder()
-						.setCustomId(match.teams.join("-"))
-						.setLabel(match.teams.join(" - "))
+						.setCustomId(match.teams)
+						.setLabel(match.teams)
 						.setStyle(TextInputStyle.Short)
 						.setRequired(true)
 						.setPlaceholder(
@@ -78,8 +80,8 @@ const showModal = async (
 								]
 							}`,
 						);
-					const found = user?.predictions?.find((prediction) =>
-						prediction.teams.every((t, i) => t === match.teams[i]),
+					const found = user?.predictions?.find(
+						(prediction) => prediction.teams === match.teams,
 					);
 
 					if (found) textInput.setValue(found.prediction);
@@ -139,7 +141,10 @@ export const predictionsCommand = createCommand({
 			}
 			const option = interaction.options.get("user");
 
-			if (option && Date.now() < matchDay.matches[0].date - 1_000 * 60 * 15) {
+			if (
+				option?.value !== interaction.user.id &&
+				Date.now() < matchDay.matches[0].date - 1_000 * 60 * 15
+			) {
 				await interaction.reply({
 					ephemeral: true,
 					content:
@@ -189,12 +194,10 @@ export const predictionsCommand = createCommand({
 						},
 						color: Colors.Blue,
 						fields: matchDay.matches.map((match) => ({
-							name: `${match.teams.join(" - ")} (<t:${Math.round(
-								match.date / 1000,
-							)}:F>)`,
+							name: `${match.teams} (<t:${Math.round(match.date / 1000)}:F>)`,
 							value:
-								existingUser.predictions!.find((predict) =>
-									predict.teams.every((p, i) => p === match.teams[i]),
+								existingUser.predictions!.find(
+									(predict) => predict.teams === match.teams,
 								)?.prediction ?? "*Non presente*",
 						})),
 						thumbnail: {
@@ -265,7 +268,9 @@ export const predictionsCommand = createCommand({
 					matches.groups.first < matches.groups.second) ||
 				(matches[0].startsWith("2") &&
 					matches.groups.first &&
-					matches.groups.first > matches.groups.second)
+					matches.groups.first > matches.groups.second) ||
+				(matches.groups.first && Number(matches.groups.first) > 999) ||
+				(matches.groups.second && Number(matches.groups.second) > 999)
 			)
 				invalid.push(
 					field.customId
@@ -297,20 +302,14 @@ export const predictionsCommand = createCommand({
 			new User({ _id: interaction.user.id });
 
 		interaction.fields.fields.mapValues((field) => {
-			const teams = field.customId.split("-").map((team) =>
-				team
-					.split(" ")
-					.map((word) => capitalize(word))
-					.join(" "),
-			) as [string, string];
-			const found = user.predictions?.find((prediction) =>
-				prediction.teams.every((v, i) => v === teams[i]),
+			const found = user.predictions?.find(
+				(prediction) => prediction.teams === field.customId,
 			);
 
 			if (found) found.prediction = resolved[field.value];
 			else
 				(user.predictions ??= []).push({
-					teams,
+					teams: field.customId,
 					prediction: resolved[field.value],
 				});
 		});

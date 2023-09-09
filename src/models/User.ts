@@ -6,15 +6,13 @@ export type UserSchema = {
 	_id: string;
 	predictions?: {
 		prediction: string;
-		teams: readonly [string, string];
+		teams: string;
 	}[];
 };
 
 export const userSchema = new Schema<UserSchema>({
 	_id: string,
-	predictions: [
-		{ prediction: string, teams: { required: true, type: [string] } },
-	],
+	predictions: [{ prediction: string, teams: string }],
 });
 
 export const User = createModel("User", userSchema);
