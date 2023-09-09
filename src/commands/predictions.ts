@@ -31,7 +31,7 @@ const predictionExamples = [
 	"X (1-1)",
 ];
 const predictionRegex =
-	/^(1|x|2|1x|12|x2|((?<prediction>1|2|X)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
+	/^(1|x|2|1x|12|x2|((?<prediction>1|2|x)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
 const checkMatchDay = async (
 	matchDay: Document<MatchDaySchema> | null,
 	interaction: RepliableInteraction,
@@ -142,7 +142,8 @@ export const predictionsCommand = createCommand({
 			const option = interaction.options.get("user");
 
 			if (
-				option?.value !== interaction.user.id &&
+				option &&
+				option.value !== interaction.user.id &&
 				Date.now() < matchDay.matches[0].date - 1_000 * 60 * 15
 			) {
 				await interaction.reply({
@@ -210,7 +211,6 @@ export const predictionsCommand = createCommand({
 			});
 			return;
 		}
-
 		if (await checkMatchDay(matchDay, interaction)) return;
 		const user = await User.findById(interaction.user.id);
 
@@ -261,8 +261,8 @@ export const predictionsCommand = createCommand({
 
 			if (
 				!matches?.groups ||
-				(matches.groups.first &&
-					matches.groups.first === matches.groups.second) ||
+				(matches[0].startsWith("x") &&
+					matches.groups.first !== matches.groups.second) ||
 				(matches[0].startsWith("1") &&
 					matches.groups.first &&
 					matches.groups.first < matches.groups.second) ||
@@ -285,23 +285,17 @@ export const predictionsCommand = createCommand({
 				);
 			else
 				resolved[field.value] = matches.groups.prediction
-					? `${matches.groups.prediction} (${matches.groups.first} - ${matches.groups.second})`
+					? `${matches.groups.prediction.toUpperCase()} (${
+							matches.groups.first
+					  } - ${matches.groups.second})`
 					: value.toUpperCase();
 		});
-		if (invalid.length) {
-			await interaction.reply({
-				ephemeral: true,
-				content: `I pronostici inviati nei seguenti risultati non sono validi: ${invalid
-					.map((text) => `**${text}**`)
-					.join(", ")}`,
-			});
-			return;
-		}
 		const user =
 			(await User.findById(interaction.user.id)) ??
 			new User({ _id: interaction.user.id });
 
 		interaction.fields.fields.mapValues((field) => {
+			if (!resolved[field.value]) return;
 			const found = user.predictions?.find(
 				(prediction) => prediction.teams === field.customId,
 			);
@@ -314,10 +308,37 @@ export const predictionsCommand = createCommand({
 				});
 		});
 		await user.save();
+		if (invalid.length) {
+			await interaction.reply({
+				ephemeral: true,
+				content: `I pronostici inviati nei seguenti risultati non sono validi: ${invalid
+					.map((text) => `**${text}**`)
+					.join(", ")}`,
+				components: [
+					new ActionRowBuilder<ButtonBuilder>().addComponents(
+						new ButtonBuilder()
+							.setCustomId(`predictions-${matchDay!.day}-${part}-1`)
+							.setEmoji("✏️")
+							.setLabel("Modifica")
+							.setStyle(ButtonStyle.Success),
+					),
+				],
+			});
+			return;
+		}
 		if (part === total)
 			await interaction.reply({
 				ephemeral: true,
 				content: "Pronostici inviati correttamente!",
+				components: [
+					new ActionRowBuilder<ButtonBuilder>().addComponents(
+						new ButtonBuilder()
+							.setCustomId(`predictions-${matchDay!.day}-1-1`)
+							.setEmoji("✏️")
+							.setLabel("Modifica")
+							.setStyle(ButtonStyle.Success),
+					),
+				],
 			});
 		else
 			await interaction.reply({
