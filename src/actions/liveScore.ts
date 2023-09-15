@@ -76,7 +76,7 @@ export const liveScore = async (client: CustomClient) => {
 	]);
 
 	if (!matchDay) {
-		CustomClient.printToStderr(`No match day found!`);
+		CustomClient.printToStderr("No match day found!");
 		return;
 	}
 	let matches = await loadMatches(matchDay._id);
