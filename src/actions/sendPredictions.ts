@@ -64,6 +64,6 @@ export const sendPredictions = async (client: CustomClient, day: number) => {
 	await setPermanentTimeout(client, {
 		action: "liveScore",
 		date: matchDay.matches[0].date,
-		options: [day],
+		options: [],
 	});
 };
