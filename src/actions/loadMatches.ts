@@ -1,3 +1,4 @@
+import { env } from "node:process";
 import { request } from "undici";
 import { MatchDay } from "../models";
 import { CustomClient, capitalize, setPermanentTimeout } from "../util";
@@ -66,7 +67,9 @@ export const loadMatches = async (client: CustomClient) => {
 		});
 
 		await matchDay.save();
-		await Promise.all([
+		let date = matchDay.matches[0].date - 1000 * 60 * 15;
+		const [channel] = await Promise.all([
+			client.channels.fetch(env.PREDICTIONS_CHANNEL!),
 			setPermanentTimeout(client, {
 				action: "loadMatches",
 				date: matchDay.matches.at(-1)!.date + 1_000 * 60 * 60 * 24,
@@ -74,10 +77,20 @@ export const loadMatches = async (client: CustomClient) => {
 			}),
 			setPermanentTimeout(client, {
 				action: "sendPredictions",
-				date: matchDay.matches[0].date - 1_000 * 60 * 15,
+				date,
 				options: [matchDay.day],
 			}),
 		]);
+
+		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+		if (!channel?.isTextBased() || channel.isDMBased()) {
+			CustomClient.printToStderr("Invalid predictions channel!");
+			return;
+		}
+		date = Math.round(date / 1_000);
+		await channel.send({
+			content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions add\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)`,
+		});
 	} catch (err) {
 		CustomClient.printToStderr(err);
 	}

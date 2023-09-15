@@ -1,6 +1,6 @@
 import { Colors, EmbedBuilder } from "discord.js";
 import { env } from "node:process";
-import { setInterval } from "node:timers/promises";
+import { setInterval, setTimeout } from "node:timers/promises";
 import { request } from "undici";
 import { Document, MatchDay, User } from "../models";
 import { CustomClient, MatchesData } from "../util";
@@ -60,7 +60,7 @@ const loadMatches = async (matchDayId: number) =>
 		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayId}`,
 	).then((res) => res.body.json())) as MatchesData;
 
-export const liveScore = async (client: CustomClient, day: number) => {
+export const liveScore = async (client: CustomClient) => {
 	const channel = await client.channels.fetch(env.PREDICTIONS_CHANNEL!);
 
 	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -72,11 +72,11 @@ export const liveScore = async (client: CustomClient, day: number) => {
 		User.find({
 			predictions: { $exists: true, $type: "array", $ne: [] },
 		}),
-		MatchDay.findOne({ day }),
+		MatchDay.findOne({}).sort("-day"),
 	]);
 
 	if (!matchDay) {
-		CustomClient.printToStderr(`Invalid match day: ${day}`);
+		CustomClient.printToStderr(`No match day found!`);
 		return;
 	}
 	let matches = await loadMatches(matchDay._id);
@@ -101,7 +101,7 @@ export const liveScore = async (client: CustomClient, day: number) => {
 							url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
 						},
 						timestamp: new Date().toISOString(),
-						title: `🔴 Classifica Live Pronostici ${day}° Giornata`,
+						title: `🔴 Classifica Live Pronostici ${matchDay.day}° Giornata`,
 					},
 				],
 		  })
@@ -112,10 +112,10 @@ export const liveScore = async (client: CustomClient, day: number) => {
 		matchDay.save().catch(CustomClient.printToStderr);
 	}
 	for await (const _ of setInterval(1_000 * 60)) {
-		// TODO: Permanent interval
-		// TODO: Clear when all matches ended
-		matches = await loadMatches(matchDay._id);
-		if (matches.success)
+		const tempMatches = await loadMatches(matchDay._id);
+
+		if (tempMatches.success) {
+			matches = tempMatches;
 			message
 				.edit({
 					embeds: [
@@ -125,5 +125,31 @@ export const liveScore = async (client: CustomClient, day: number) => {
 					],
 				})
 				.catch(CustomClient.printToStderr);
+			if (matches.data.every((match) => match.match_status !== 1)) {
+				const next = matches.data.find((match) => match.match_status === 0);
+
+				if (next)
+					await setTimeout(new Date(next.date_time).getTime() - Date.now());
+				else break;
+			}
+		}
 	}
+	await message.edit({
+		embeds: [
+			{
+				author: {
+					name: "Serie A TIM",
+					url: "https://legaseriea.it/it/serie-a",
+				},
+				color: Colors.Blue,
+				description: resolveLeaderboard(users, matches),
+				footer: { text: "Giornata terminata" },
+				thumbnail: {
+					url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+				},
+				timestamp: new Date().toISOString(),
+				title: `⚽ Classifica Finale Pronostici ${matchDay.day}° Giornata`,
+			},
+		],
+	});
 };

@@ -32,14 +32,17 @@ export const setActionTimeout = async (
 };
 
 export const loadTimeouts = async (client: CustomClient) => {
-	let ok = false;
+	let liveScore = false,
+		loadMatches = false;
 
 	for (const timeout of await Timeout.find({})) {
 		timeoutCache[timeout.id as string] = timeout;
 		setActionTimeout(client, timeout).catch(() => {});
-		if (timeout.action === "loadMatches") ok ||= true;
+		if (timeout.action === "loadMatches") loadMatches ||= true;
+		if (timeout.action === "liveScore") liveScore ||= true;
 	}
-	if (!ok) actions.loadMatches(client).catch(() => {});
+	if (!loadMatches) actions.loadMatches(client).catch(() => {});
+	else if (!liveScore) actions.liveScore(client).catch(() => {});
 };
 
 export const setPermanentTimeout = async <T extends keyof typeof actions>(

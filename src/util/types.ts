@@ -179,6 +179,7 @@ export type MatchesData =
 				home_team_name: Uppercase<string>;
 				away_team_name: Uppercase<string>;
 				date_time: string;
+				match_status: number;
 			}[];
 	  }
 	| { success: false; message: string; errors: unknown[] };
