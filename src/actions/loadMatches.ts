@@ -1,7 +1,7 @@
 import { env } from "node:process";
 import { request } from "undici";
 import { MatchDay } from "../models";
-import { CustomClient, capitalize, setPermanentTimeout } from "../util";
+import { CustomClient, normalizeTeamName, setPermanentTimeout } from "../util";
 
 export const loadMatches = async (client: CustomClient) => {
 	try {
@@ -11,7 +11,7 @@ export const loadMatches = async (client: CustomClient) => {
 			| {
 					success: true;
 					data: {
-						category_status: "PLAYED" | "TO BE PLAYED";
+						category_status: "LIVE" | "PLAYED" | "TO BE PLAYED";
 						description: `${number}`;
 						id_category: number;
 					}[];
@@ -24,7 +24,8 @@ export const loadMatches = async (client: CustomClient) => {
 			return;
 		}
 		const matchDayData = matchDays.data.find(
-			(d) => d.category_status === "TO BE PLAYED",
+			(d) =>
+				d.category_status === "LIVE" || d.category_status === "TO BE PLAYED",
 		);
 
 		if (matchDayData == null) {
@@ -54,13 +55,7 @@ export const loadMatches = async (client: CustomClient) => {
 			matches: matches.data.map((match) => ({
 				date: new Date(match.date_time).getTime(),
 				teams: [match.home_team_name, match.away_team_name]
-					.map((team) =>
-						team
-							.toLowerCase()
-							.split(/\s+/g)
-							.map((word) => capitalize(word))
-							.join(" "),
-					)
+					.map(normalizeTeamName)
 					.join(" - "),
 			})),
 			day: Number(matchDayData.description),

@@ -1,10 +1,23 @@
-import { Colors, EmbedBuilder } from "discord.js";
+import { Colors, EmbedBuilder, Message } from "discord.js";
 import { env } from "node:process";
-import { setInterval, setTimeout } from "node:timers/promises";
+import { setInterval } from "node:timers/promises";
 import { request } from "undici";
 import { Document, MatchDay, User } from "../models";
-import { CustomClient, MatchesData } from "../util";
+import { CustomClient, MatchesData, normalizeTeamName } from "../util";
 
+const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
+	matches.data
+		.map(
+			(match) =>
+				`- ${match.match_status === 1 ? "🔴 " : ""}${normalizeTeamName(
+					match.home_team_name,
+				)} - ${normalizeTeamName(match.away_team_name)}: ${
+					match.match_status === 0
+						? `<t:${Math.round(new Date(match.date_time).getTime() / 1_000)}:F>`
+						: `**${match.home_goal} - ${match.away_goal}**`
+				}`,
+		)
+		.join("\n");
 const resolveLeaderboard = (
 	users: Document<typeof User>[],
 	matches: Extract<MatchesData, { success: true }>,
@@ -22,7 +35,7 @@ const resolveLeaderboard = (
 								teams,
 						);
 
-						if (!found) return points;
+						if (!found || found.match_status === 0) return points;
 						const [type, home, away] = prediction.prediction.split(
 							/( \(| - |\))/g,
 						) as
@@ -52,22 +65,46 @@ const resolveLeaderboard = (
 		.sort((a, b) => b[1] - a[1])
 		.map(
 			([user, points], i) =>
-				`${i}. <@${user._id}>: **${points}** Punti Partita`,
+				`${i}. <@${user._id}>: **${points}** Punt${
+					points === 1 ? "o" : "i"
+				} Partita`,
 		)
 		.join("\n");
+const closeMatchDay = (
+	message: Message,
+	users: Document<typeof User>[],
+	matches: Extract<MatchesData, { success: true }>,
+	matchDay: Document<typeof MatchDay>,
+) => {
+	matchDay.finished = true;
+	return Promise.all([
+		message.edit({
+			embeds: [
+				{
+					author: {
+						name: "Serie A TIM",
+						url: "https://legaseriea.it/it/serie-a",
+					},
+					color: Colors.Blue,
+					description: resolveLeaderboard(users, matches),
+					footer: { text: "Giornata terminata" },
+					thumbnail: {
+						url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+					},
+					timestamp: new Date().toISOString(),
+					title: `⚽ Classifica Finale Pronostici ${matchDay.day}° Giornata`,
+				},
+			],
+		}),
+		matchDay.save(),
+	]);
+};
 const loadMatches = async (matchDayId: number) =>
 	(await request(
 		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayId}`,
 	).then((res) => res.body.json())) as MatchesData;
 
 export const liveScore = async (client: CustomClient) => {
-	const channel = await client.channels.fetch(env.PREDICTIONS_CHANNEL!);
-
-	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-	if (!channel?.isTextBased() || channel.isDMBased()) {
-		CustomClient.printToStderr("Invalid predictions channel!");
-		return;
-	}
 	const [users, matchDay] = await Promise.all([
 		User.find({
 			predictions: { $exists: true, $type: "array", $ne: [] },
@@ -79,6 +116,14 @@ export const liveScore = async (client: CustomClient) => {
 		CustomClient.printToStderr("No match day found!");
 		return;
 	}
+	if (matchDay.finished!) return;
+	const channel = await client.channels.fetch(env.PREDICTIONS_CHANNEL!);
+
+	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+	if (!channel?.isTextBased() || channel.isDMBased()) {
+		CustomClient.printToStderr("Invalid predictions channel!");
+		return;
+	}
 	let matches = await loadMatches(matchDay._id);
 
 	if (!matches.success) {
@@ -86,70 +131,71 @@ export const liveScore = async (client: CustomClient) => {
 		CustomClient.printToStderr(matches.errors);
 		return;
 	}
+	const embeds = [
+		new EmbedBuilder()
+			.setThumbnail(
+				"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+			)
+			.setTitle(`🔴 Risultati Live ${matchDay.day}° Giornata`)
+			.setDescription(resolveMatches(matches))
+			.setAuthor({
+				name: "Serie A TIM",
+				url: "https://legaseriea.it/it/serie-a",
+			})
+			.setColor("Red"),
+		new EmbedBuilder()
+			.setThumbnail(
+				"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+			)
+			.setTitle(`🔴 Classifica Live Pronostici ${matchDay.day}° Giornata`)
+			.setDescription(resolveLeaderboard(users, matches))
+			.setFooter({ text: "Ultimo aggiornamento" })
+			.setAuthor({
+				name: "Serie A TIM",
+				url: "https://legaseriea.it/it/serie-a",
+			})
+			.setColor("Blue")
+			.setTimestamp(),
+	];
 	const message = await (matchDay.messageId == null
-		? channel.send({
-				embeds: [
-					{
-						author: {
-							name: "Serie A TIM",
-							url: "https://legaseriea.it/it/serie-a",
-						},
-						color: Colors.Blue,
-						description: resolveLeaderboard(users, matches),
-						footer: { text: "Ultimo aggiornamento" },
-						thumbnail: {
-							url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
-						},
-						timestamp: new Date().toISOString(),
-						title: `🔴 Classifica Live Pronostici ${matchDay.day}° Giornata`,
-					},
-				],
-		  })
+		? channel.send({ embeds })
 		: channel.messages.fetch(matchDay.messageId));
 
 	if (matchDay.messageId == null) {
 		matchDay.messageId = message.id;
 		matchDay.save().catch(CustomClient.printToStderr);
 	}
+	let waitUntil = 0;
+
+	if (matches.data.every((match) => match.match_status === 2)) {
+		await closeMatchDay(message, users, matches, matchDay);
+		return;
+	}
 	for await (const _ of setInterval(1_000 * 60)) {
+		if (Date.now() < waitUntil) continue;
 		const tempMatches = await loadMatches(matchDay._id);
 
 		if (tempMatches.success) {
 			matches = tempMatches;
-			message
-				.edit({
-					embeds: [
-						EmbedBuilder.from(message.embeds[0])
-							.setDescription(resolveLeaderboard(users, matches))
-							.setTimestamp(),
-					],
-				})
-				.catch(CustomClient.printToStderr);
+			const newDescriptions = [
+				resolveMatches(matches),
+				resolveLeaderboard(users, matches),
+			];
+
+			if (newDescriptions.some((d, i) => d !== embeds[i].data.description)) {
+				embeds[0].setDescription(newDescriptions[0]);
+				embeds[1].setDescription(newDescriptions[1]).setTimestamp();
+				message.edit({ embeds }).catch(CustomClient.printToStderr);
+			}
 			if (matches.data.every((match) => match.match_status !== 1)) {
 				const next = matches.data.find((match) => match.match_status === 0);
 
-				if (next)
-					await setTimeout(new Date(next.date_time).getTime() - Date.now());
-				else break;
+				if (next) waitUntil = new Date(next.date_time).getTime();
+				else {
+					await closeMatchDay(message, users, matches, matchDay);
+					break;
+				}
 			}
 		}
 	}
-	await message.edit({
-		embeds: [
-			{
-				author: {
-					name: "Serie A TIM",
-					url: "https://legaseriea.it/it/serie-a",
-				},
-				color: Colors.Blue,
-				description: resolveLeaderboard(users, matches),
-				footer: { text: "Giornata terminata" },
-				thumbnail: {
-					url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
-				},
-				timestamp: new Date().toISOString(),
-				title: `⚽ Classifica Finale Pronostici ${matchDay.day}° Giornata`,
-			},
-		],
-	});
 };

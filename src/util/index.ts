@@ -15,6 +15,7 @@ export * from "./loadCommands";
 export * from "./loadEvents";
 export * from "./loadQuotes";
 export * from "./normalizeError";
+export * from "./normalizeTeamName";
 export * from "./permanentTimeouts";
 export * from "./randomNumber";
 export * from "./resolves";
