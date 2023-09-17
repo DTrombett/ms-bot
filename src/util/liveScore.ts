@@ -1,4 +1,4 @@
-import { Colors, EmbedBuilder, Message } from "discord.js";
+import { EmbedBuilder, Message } from "discord.js";
 import { env } from "node:process";
 import { setInterval } from "node:timers/promises";
 import { request } from "undici";
@@ -7,6 +7,11 @@ import CustomClient from "./CustomClient";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
 
+const dayPoints = [3, 2, 1];
+const loadMatches = async (matchDayId: number) =>
+	(await request(
+		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayId}`,
+	).then((res) => res.body.json())) as MatchesData;
 const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
 		.map(
@@ -23,53 +28,87 @@ const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 const resolveLeaderboard = (
 	users: Document<typeof User>[],
 	matches: Extract<MatchesData, { success: true }>,
-) =>
-	users
+) => {
+	let lastIndex = 0;
+	const leaderboard = users
 		.map(
-			(user) =>
-				[
-					user,
-					user.predictions!.reduce((points, prediction) => {
-						const teams = prediction.teams.toLowerCase();
-						const found = matches.data.find(
-							(match) =>
-								`${match.home_team_name} - ${match.away_team_name}`.toLowerCase() ===
-								teams,
-						);
+			(
+				user,
+			): [
+				user: Document<typeof User>,
+				matchPoints: number,
+				dayPoints: number,
+			] => [
+				user,
+				user.predictions!.reduce((points, prediction) => {
+					const teams = prediction.teams.toLowerCase();
+					const found = matches.data.find(
+						(match) =>
+							`${match.home_team_name} - ${match.away_team_name}`.toLowerCase() ===
+							teams,
+					);
 
-						if (!found || found.match_status === 0) return points;
-						const [type, home, away] = prediction.prediction.split(
-							/( \(| - |\))/g,
-						) as
-							| ["1" | "1X" | "2" | "X" | "X2"]
-							| ["1" | "2" | "X", `${number}`, `${number}`];
-						const result =
-							found.home_goal > found.away_goal
-								? "1"
-								: found.home_goal < found.away_goal
-								? "2"
-								: "X";
+					if (!found || found.match_status === 0) return points;
+					const [type, home, away] = prediction.prediction.split(
+						/( \(| - |\))/g,
+					) as
+						| ["1" | "1X" | "2" | "X" | "X2"]
+						| ["1" | "2" | "X", `${number}`, `${number}`];
+					const result =
+						found.home_goal > found.away_goal
+							? "1"
+							: found.home_goal < found.away_goal
+							? "2"
+							: "X";
 
-						if (type === result)
-							if (
-								home !== undefined &&
-								Number(home) === found.home_goal &&
-								Number(away) === found.away_goal
-							)
-								points += 3;
-							else points += 2;
-						else if (type.includes(result)) points++;
-						else if (type.length === 2) points--;
-						return points;
-					}, 0),
-				] as const,
+					if (type === result)
+						if (
+							home !== undefined &&
+							Number(home) === found.home_goal &&
+							Number(away) === found.away_goal
+						)
+							points += 3;
+						else points += 2;
+					else if (type.includes(result)) points++;
+					else if (type.length === 2) points--;
+					return points;
+				}, 0),
+				0,
+			],
 		)
-		.sort((a, b) => b[1] - a[1])
+		.sort((a, b) => b[1] - a[1]);
+
+	for (let i = 0; i < leaderboard.length; i++) {
+		const [, points] = leaderboard[i];
+		const toAdd = dayPoints[leaderboard.findIndex(([, p]) => points === p)];
+
+		if (!toAdd) break;
+		leaderboard[i][2] = toAdd;
+		lastIndex = i;
+	}
+	if (leaderboard.length - lastIndex > 1) leaderboard.at(-1)![2] = -1;
+	return leaderboard;
+};
+const createLeaderboardDescription = (
+	leaderboard: [Document<typeof User>, number, number][],
+) =>
+	leaderboard
 		.map(
-			([user, points], i) =>
-				`${i}. <@${user._id}>: **${points}** Punt${
-					points === 1 ? "o" : "i"
-				} Partita`,
+			([user, points]) =>
+				`${leaderboard.findIndex(([, p]) => points === p) + 1}\\. <@${
+					user._id
+				}>: **${points}** Punt${points === 1 ? "o" : "i"} Partita`,
+		)
+		.join("\n");
+const createFinalLeaderboard = (
+	leaderboard: [Document<typeof User>, number, number][],
+) =>
+	leaderboard
+		.map(
+			([user, , points]) =>
+				`${leaderboard.findIndex(([, , p]) => points === p) + 1}\\. <@${
+					user._id
+				}>: **${points}** Punt${points === 1 ? "o" : "i"} Giornata`,
 		)
 		.join("\n");
 const closeMatchDay = (
@@ -78,33 +117,43 @@ const closeMatchDay = (
 	matches: Extract<MatchesData, { success: true }>,
 	matchDay: Document<typeof MatchDay>,
 ) => {
+	const leaderboard = resolveLeaderboard(users, matches);
+	const toEdit = [];
+
 	matchDay.finished = true;
+	for (const [user, , points] of leaderboard)
+		if (points) {
+			user.dayPoints = (user.dayPoints ?? 0) + points;
+			toEdit.push(user);
+		}
 	return Promise.all([
 		message.edit({
 			embeds: [
-				{
-					author: {
+				new EmbedBuilder()
+					.setThumbnail(
+						"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+					)
+					.setTitle(
+						`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
+					)
+					.setDescription(createLeaderboardDescription(leaderboard))
+					.setFooter({ text: "Giornata terminata" })
+					.addFields({
+						name: "Classifica Generale",
+						value: createFinalLeaderboard(leaderboard),
+					})
+					.setAuthor({
 						name: "Serie A TIM",
 						url: "https://legaseriea.it/it/serie-a",
-					},
-					color: Colors.Blue,
-					description: resolveLeaderboard(users, matches),
-					footer: { text: "Giornata terminata" },
-					thumbnail: {
-						url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
-					},
-					timestamp: new Date().toISOString(),
-					title: `⚽ Classifica Finale Pronostici ${matchDay.day}° Giornata`,
-				},
+					})
+					.setColor("Blue")
+					.setTimestamp(),
 			],
 		}),
 		matchDay.save(),
+		...toEdit.map((user) => user.save()),
 	]);
 };
-const loadMatches = async (matchDayId: number) =>
-	(await request(
-		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayId}`,
-	).then((res) => res.body.json())) as MatchesData;
 
 export const liveScore = async (client: CustomClient) => {
 	const [users, matchDay, channel] = await Promise.all([
@@ -132,6 +181,7 @@ export const liveScore = async (client: CustomClient) => {
 		CustomClient.printToStderr(matches.errors);
 		return;
 	}
+	let leaderboard = resolveLeaderboard(users, matches);
 	const embeds = [
 		new EmbedBuilder()
 			.setThumbnail(
@@ -149,8 +199,12 @@ export const liveScore = async (client: CustomClient) => {
 				"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
 			)
 			.setTitle(`🔴 Classifica Live Pronostici ${matchDay.day}° Giornata`)
-			.setDescription(resolveLeaderboard(users, matches))
+			.setDescription(createLeaderboardDescription(leaderboard))
 			.setFooter({ text: "Ultimo aggiornamento" })
+			.addFields({
+				name: "Classifica Generale Provvisoria",
+				value: createFinalLeaderboard(leaderboard),
+			})
 			.setAuthor({
 				name: "Serie A TIM",
 				url: "https://legaseriea.it/it/serie-a",
@@ -186,14 +240,19 @@ export const liveScore = async (client: CustomClient) => {
 
 		if (tempMatches.success) {
 			matches = tempMatches;
+			leaderboard = resolveLeaderboard(users, matches);
 			const newDescriptions = [
 				resolveMatches(matches),
-				resolveLeaderboard(users, matches),
+				createLeaderboardDescription(leaderboard),
 			];
 
 			if (newDescriptions.some((d, i) => d !== embeds[i].data.description)) {
 				embeds[0].setDescription(newDescriptions[0]);
 				embeds[1].setDescription(newDescriptions[1]).setTimestamp();
+				embeds[1].setFields({
+					name: "Classifica Generale",
+					value: createFinalLeaderboard(leaderboard),
+				});
 				message.edit({ embeds }).catch(CustomClient.printToStderr);
 			}
 			if (matches.data.every((match) => match.match_status !== 1)) {
