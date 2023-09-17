@@ -3,7 +3,9 @@ import { env } from "node:process";
 import { setInterval } from "node:timers/promises";
 import { request } from "undici";
 import { Document, MatchDay, User } from "../models";
-import { CustomClient, MatchesData, normalizeTeamName } from "../util";
+import CustomClient from "./CustomClient";
+import normalizeTeamName from "./normalizeTeamName";
+import { MatchesData } from "./types";
 
 const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
@@ -206,3 +208,5 @@ export const liveScore = async (client: CustomClient) => {
 		}
 	}
 };
+
+export default liveScore;

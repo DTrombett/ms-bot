@@ -2,6 +2,7 @@ import { setTimeout } from "node:timers/promises";
 import * as actions from "../actions";
 import { Document, Timeout, TimeoutSchema } from "../models";
 import CustomClient from "./CustomClient";
+import liveScore from "./liveScore";
 
 export const timeoutCache: Record<
 	string,
@@ -32,17 +33,17 @@ export const setActionTimeout = async (
 };
 
 export const loadTimeouts = async (client: CustomClient) => {
-	let liveScore = false,
-		loadMatches = false;
+	let loadMatches = false,
+		sendPredictions = false;
 
 	for (const timeout of await Timeout.find({})) {
 		timeoutCache[timeout.id as string] = timeout;
 		setActionTimeout(client, timeout).catch(() => {});
 		if (timeout.action === "loadMatches") loadMatches ||= true;
-		if (timeout.action === "liveScore") liveScore ||= true;
+		if (timeout.action === "sendPredictions") sendPredictions ||= true;
 	}
 	if (!loadMatches) actions.loadMatches(client).catch(() => {});
-	else if (!liveScore) actions.liveScore(client).catch(() => {});
+	else if (!sendPredictions) liveScore(client).catch(() => {});
 };
 
 export const setPermanentTimeout = async <T extends keyof typeof actions>(

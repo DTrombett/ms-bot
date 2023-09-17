@@ -11,6 +11,7 @@ export * from "./createCommand";
 export * from "./createEvent";
 export * from "./eval";
 export * from "./formatBytes";
+export * from "./liveScore";
 export * from "./loadCommands";
 export * from "./loadEvents";
 export * from "./loadQuotes";

@@ -1,7 +1,8 @@
 import { Colors } from "discord.js";
 import { env } from "node:process";
+import { setTimeout } from "node:timers/promises";
 import { MatchDay, User } from "../models";
-import { CustomClient, setPermanentTimeout } from "../util";
+import { CustomClient, liveScore } from "../util";
 
 export const sendPredictions = async (client: CustomClient, day: number) => {
 	const channelId = env.PREDICTIONS_CHANNEL;
@@ -61,9 +62,6 @@ export const sendPredictions = async (client: CustomClient, day: number) => {
 			),
 		});
 	}
-	await setPermanentTimeout(client, {
-		action: "liveScore",
-		date: matchDay.matches[0].date,
-		options: [],
-	});
+	await setTimeout(matchDay.matches[0].date - Date.now());
+	await liveScore(client);
 };

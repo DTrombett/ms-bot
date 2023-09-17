@@ -71,13 +71,13 @@ const logMemoryUsage = async () => {
 		const memory = memoryUsage();
 
 		CustomClient.printToStdout(
-			`RSS: ${(memory.rss / 1000 / 1000).toFixed(2)}MB\nHeap Used: ${(
+			`RSS: ${(memory.rss / 1000 / 1000).toFixed(3)}MB\nHeap Used: ${(
 				memory.heapUsed /
 				1000 /
 				1000
-			).toFixed(2)}MB\nHeap Total: ${(memory.heapTotal / 1000 / 1000).toFixed(
-				2,
-			)}MB\nExternal: ${(memory.external / 1000 / 1000).toFixed(2)}MB`,
+			).toFixed(3)}MB\nHeap Total: ${(memory.heapTotal / 1000 / 1000).toFixed(
+				3,
+			)}MB\nExternal: ${(memory.external / 1000 / 1000).toFixed(3)}MB`,
 		);
 	}
 };

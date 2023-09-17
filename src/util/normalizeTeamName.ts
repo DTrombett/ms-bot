@@ -6,3 +6,5 @@ export const normalizeTeamName = (team: string) =>
 		.split(/\s+/g)
 		.map((word) => capitalize(word))
 		.join(" ");
+
+export default normalizeTeamName;
