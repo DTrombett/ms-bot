@@ -180,6 +180,7 @@ export type MatchesData =
 				away_team_name: Uppercase<string>;
 				date_time: string;
 				match_status: number;
+				slug: string;
 			}[];
 	  }
 	| { success: false; message: string; errors: unknown[] };

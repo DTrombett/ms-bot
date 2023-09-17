@@ -16,9 +16,11 @@ const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
 		.map(
 			(match) =>
-				`- ${match.match_status === 1 ? "🔴 " : ""}${normalizeTeamName(
+				`- ${match.match_status === 1 ? "🔴 " : ""}[${normalizeTeamName(
 					match.home_team_name,
-				)} - ${normalizeTeamName(match.away_team_name)}: ${
+				)} - ${normalizeTeamName(match.away_team_name)}](https://legaseriea.it${
+					match.slug
+				}): ${
 					match.match_status === 0
 						? `<t:${Math.round(new Date(match.date_time).getTime() / 1_000)}:F>`
 						: `**${match.home_goal} - ${match.away_goal}**`
@@ -131,7 +133,7 @@ const closeMatchDay = (
 			embeds: [
 				new EmbedBuilder()
 					.setThumbnail(
-						"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+						"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 					)
 					.setTitle(
 						`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
@@ -185,7 +187,7 @@ export const liveScore = async (client: CustomClient) => {
 	const embeds = [
 		new EmbedBuilder()
 			.setThumbnail(
-				"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+				"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 			)
 			.setTitle(`🔴 Risultati Live ${matchDay.day}° Giornata`)
 			.setDescription(resolveMatches(matches))
@@ -196,7 +198,7 @@ export const liveScore = async (client: CustomClient) => {
 			.setColor("Red"),
 		new EmbedBuilder()
 			.setThumbnail(
-				"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+				"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 			)
 			.setTitle(`🔴 Classifica Live Pronostici ${matchDay.day}° Giornata`)
 			.setDescription(createLeaderboardDescription(leaderboard))

@@ -202,7 +202,7 @@ export const predictionsCommand = createCommand({
 								)?.prediction ?? "*Non presente*",
 						})),
 						thumbnail: {
-							url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2022.svg/1200px-Serie_A_logo_2022.svg.png",
+							url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 						},
 						title: `${matchDay.day}° Giornata Serie A TIM`,
 						url: "https://legaseriea.it/it/serie-a",
