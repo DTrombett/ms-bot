@@ -1,7 +1,12 @@
 import { env } from "node:process";
 import { request } from "undici";
-import { MatchDay } from "../models";
-import { CustomClient, normalizeTeamName, setPermanentTimeout } from "../util";
+import { MatchDay, User } from "../models";
+import {
+	CustomClient,
+	MatchesData,
+	normalizeTeamName,
+	setPermanentTimeout,
+} from "../util";
 
 export const loadMatches = async (client: CustomClient) => {
 	try {
@@ -34,16 +39,7 @@ export const loadMatches = async (client: CustomClient) => {
 		}
 		const matches = (await request(
 			`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayData.id_category}`,
-		).then((res) => res.body.json())) as
-			| {
-					success: true;
-					data: {
-						home_team_name: Uppercase<string>;
-						away_team_name: Uppercase<string>;
-						date_time: string;
-					}[];
-			  }
-			| { success: false; message: string; errors: unknown[] };
+		).then((res) => res.body.json())) as MatchesData;
 
 		if (!matches.success) {
 			CustomClient.printToStderr(matches.message);
@@ -75,6 +71,12 @@ export const loadMatches = async (client: CustomClient) => {
 				date,
 				options: [matchDay.day],
 			}),
+			User.updateMany(
+				{
+					predictions: { $exists: true, $type: "array", $ne: [] },
+				},
+				{ $unset: { predictions: 1 } },
+			),
 		]);
 
 		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -83,9 +85,10 @@ export const loadMatches = async (client: CustomClient) => {
 			return;
 		}
 		date = Math.round(date / 1_000);
-		await channel.send({
-			content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions add\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)`,
-		});
+		if (date - Date.now() / 1_000 > 10)
+			await channel.send({
+				content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions add\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)`,
+			});
 	} catch (err) {
 		CustomClient.printToStderr(err);
 	}

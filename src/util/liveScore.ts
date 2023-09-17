@@ -119,7 +119,7 @@ export const liveScore = async (client: CustomClient) => {
 		CustomClient.printToStderr("No match day found!");
 		return;
 	}
-	if (matchDay.finished!) return;
+	if (matchDay.finished! || !users.length) return;
 	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 	if (!channel?.isTextBased() || channel.isDMBased()) {
 		CustomClient.printToStderr("Invalid predictions channel!");
