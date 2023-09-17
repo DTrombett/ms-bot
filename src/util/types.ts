@@ -181,6 +181,7 @@ export type MatchesData =
 				date_time: string;
 				match_status: number;
 				slug: string;
+				match_id: number;
 			}[];
 	  }
 	| { success: false; message: string; errors: unknown[] };

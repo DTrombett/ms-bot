@@ -1,17 +1,19 @@
 import { EmbedBuilder, Message } from "discord.js";
+import ms from "ms";
 import { env } from "node:process";
-import { setInterval } from "node:timers/promises";
-import { request } from "undici";
+import { setTimeout as setPromiseTimeout } from "node:timers/promises";
+import { WebSocket, request } from "undici";
 import { Document, MatchDay, User } from "../models";
 import CustomClient from "./CustomClient";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
 
+type Leaderboard = [Document<typeof User>, number, number][];
 const dayPoints = [3, 2, 1];
-const loadMatches = async (matchDayId: number) =>
-	(await request(
-		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayId}`,
-	).then((res) => res.body.json())) as MatchesData;
+const loadMatches = (id: number) =>
+	request(
+		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${id}`,
+	).then((res) => res.body.json()) as Promise<MatchesData>;
 const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
 		.map(
@@ -42,37 +44,37 @@ const resolveLeaderboard = (
 				dayPoints: number,
 			] => [
 				user,
-				user.predictions!.reduce((points, prediction) => {
-					const teams = prediction.teams.toLowerCase();
-					const found = matches.data.find(
-						(match) =>
-							`${match.home_team_name} - ${match.away_team_name}`.toLowerCase() ===
-							teams,
+				matches.data.reduce((points, match) => {
+					if (match.match_status === 0) return points;
+					const teams =
+						`${match.home_team_name} - ${match.away_team_name}`.toLowerCase();
+					const prediction = user.predictions!.find(
+						(p) => teams === p.teams.toLowerCase(),
 					);
 
-					if (!found || found.match_status === 0) return points;
+					if (!prediction) return points - 1;
 					const [type, home, away] = prediction.prediction.split(
 						/( \(| - |\))/g,
 					) as
 						| ["1" | "1X" | "2" | "X" | "X2"]
 						| ["1" | "2" | "X", `${number}`, `${number}`];
 					const result =
-						found.home_goal > found.away_goal
+						match.home_goal > match.away_goal
 							? "1"
-							: found.home_goal < found.away_goal
+							: match.home_goal < match.away_goal
 							? "2"
 							: "X";
 
 					if (type === result)
 						if (
 							home !== undefined &&
-							Number(home) === found.home_goal &&
-							Number(away) === found.away_goal
+							Number(home) === match.home_goal &&
+							Number(away) === match.away_goal
 						)
-							points += 3;
-						else points += 2;
-					else if (type.includes(result)) points++;
-					else if (type.length === 2) points--;
+							return points + 3;
+						else return points + 2;
+					if (type.includes(result)) return ++points;
+					if (type.length === 2) return --points;
 					return points;
 				}, 0),
 				0,
@@ -91,9 +93,7 @@ const resolveLeaderboard = (
 	if (leaderboard.length - lastIndex > 1) leaderboard.at(-1)![2] = -1;
 	return leaderboard;
 };
-const createLeaderboardDescription = (
-	leaderboard: [Document<typeof User>, number, number][],
-) =>
+const createLeaderboardDescription = (leaderboard: Leaderboard) =>
 	leaderboard
 		.map(
 			([user, points]) =>
@@ -102,9 +102,7 @@ const createLeaderboardDescription = (
 				}>: **${points}** Punt${points === 1 ? "o" : "i"} Partita`,
 		)
 		.join("\n");
-const createFinalLeaderboard = (
-	leaderboard: [Document<typeof User>, number, number][],
-) =>
+const createFinalLeaderboard = (leaderboard: Leaderboard) =>
 	leaderboard
 		.map(
 			([user, , points]) =>
@@ -156,6 +154,145 @@ const closeMatchDay = (
 		...toEdit.map((user) => user.save()),
 	]);
 };
+const startWebSocket = (
+	matches: Extract<MatchesData, { success: true }>,
+	users: Document<typeof User>[],
+	embeds: EmbedBuilder[],
+	message: Message,
+	matchDay: Document<typeof MatchDay>,
+) => {
+	let timeout: NodeJS.Timeout | undefined;
+	const ws = new WebSocket(
+		"wss://www.legaseriea.it/socket.io/?EIO=4&transport=websocket",
+	);
+
+	ws.addEventListener("open", () => {
+		CustomClient.printToStdout(
+			`[${new Date().toISOString()}] Waiting for ping.`,
+		);
+	});
+	ws.addEventListener("close", (event) => {
+		CustomClient.printToStderr(
+			`[${new Date().toISOString()}] WebSocket closed with code ${
+				event.code
+			} and reason ${event.reason}`,
+		);
+	});
+	ws.addEventListener("message", async (event) => {
+		try {
+			const type = parseInt(event.data);
+			const start = type.toString().length;
+			const data:
+				| {
+						sid: string;
+						upgrades: [];
+						pingInterval: number;
+						pingTimeout: number;
+						maxPayload: number;
+				  }
+				| [string, string]
+				| undefined =
+				(event.data as string).length === start
+					? undefined
+					: JSON.parse((event.data as string).slice(start));
+
+			if (type === 0) {
+				if (!data || !("pingInterval" in data)) return;
+				ws.send("40");
+				timeout ??= setTimeout(() => {
+					CustomClient.printToStderr(
+						`[${new Date().toISOString()}] Didn't receive ping in time. Trying to restart the websocket...`,
+					);
+					ws.close();
+					startWebSocket(matches, users, embeds, message, matchDay);
+				}, data.pingInterval + data.pingTimeout);
+				CustomClient.printToStdout(
+					`[${new Date().toISOString()}] Live scores ready.`,
+				);
+			} else if (type === 2) {
+				ws.send("3");
+				timeout?.refresh();
+				CustomClient.printToStdout(
+					`[${new Date().toISOString()}] Ping acknowledged.`,
+				);
+			} else if (type === 42) {
+				if (!Array.isArray(data) || data[0] !== "callApi") return;
+				const updateData: {
+					ora: string;
+					match_id: number;
+					away_goal: number;
+					home_goal: number;
+					match_day_id: number;
+					match_status: number;
+				}[] = JSON.parse(data[1]);
+
+				for (const update of updateData) {
+					const found = matches.data.find(
+						(match) => match.match_id === update.match_id,
+					);
+
+					if (!found) continue;
+					found.away_goal = update.away_goal;
+					found.home_goal = update.home_goal;
+					found.match_status = update.match_status;
+				}
+				const leaderboard = resolveLeaderboard(users, matches);
+				const newDescriptions = [
+					resolveMatches(matches),
+					createLeaderboardDescription(leaderboard),
+				];
+
+				if (matches.data.every((match) => match.match_status !== 1)) {
+					const next = matches.data.find((match) => match.match_status === 0);
+
+					if (next) {
+						const matchDate = new Date(next.date_time).getTime(),
+							now = Date.now();
+						const delay = matchDate - now;
+
+						if (delay < 1_000) return;
+						ws.close(1_000);
+						CustomClient.printToStdout(
+							`[${now}] No match live. Waiting for the next match in ${ms(
+								delay,
+							)}.`,
+						);
+						await setPromiseTimeout(delay);
+						const newMatches = await loadMatches(matchDay._id);
+
+						if (!newMatches.success) {
+							CustomClient.printToStderr(newMatches.message);
+							CustomClient.printToStderr(newMatches.errors);
+							return;
+						}
+						startWebSocket(matches, users, embeds, message, matchDay);
+					} else {
+						ws.close(1_000);
+						CustomClient.printToStdout(
+							`[${new Date().toISOString()}] All matches ended. Marking match day as finished.`,
+						);
+						await closeMatchDay(message, users, matches, matchDay);
+					}
+					return;
+				}
+				if (newDescriptions.some((d, i) => d !== embeds[i].data.description)) {
+					embeds[0].setDescription(newDescriptions[0]);
+					embeds[1].setDescription(newDescriptions[1]).setTimestamp();
+					embeds[1].setFields({
+						name: "Classifica Generale",
+						value: createFinalLeaderboard(leaderboard),
+					});
+					message.edit({ embeds }).catch(CustomClient.printToStderr);
+				}
+				CustomClient.printToStdout(
+					`[${new Date().toISOString()}] Matches data updated.`,
+				);
+			}
+		} catch (err) {
+			CustomClient.printToStderr(err);
+		}
+	});
+};
 
 export const liveScore = async (client: CustomClient) => {
 	const [users, matchDay, channel] = await Promise.all([
@@ -176,14 +313,14 @@ export const liveScore = async (client: CustomClient) => {
 		CustomClient.printToStderr("Invalid predictions channel!");
 		return;
 	}
-	let matches = await loadMatches(matchDay._id);
+	const matches = await loadMatches(matchDay._id);
 
 	if (!matches.success) {
 		CustomClient.printToStderr(matches.message);
 		CustomClient.printToStderr(matches.errors);
 		return;
 	}
-	let leaderboard = resolveLeaderboard(users, matches);
+	const leaderboard = resolveLeaderboard(users, matches);
 	const embeds = [
 		new EmbedBuilder()
 			.setThumbnail(
@@ -225,49 +362,17 @@ export const liveScore = async (client: CustomClient) => {
 		embeds.some((d, i) => d.data.description !== message.embeds[i]?.description)
 	)
 		message.edit({ embeds }).catch(CustomClient.printToStderr);
-	let waitUntil = 0;
-
 	if (matches.data.every((match) => match.match_status !== 1)) {
 		const next = matches.data.find((match) => match.match_status === 0);
 
-		if (next) waitUntil = new Date(next.date_time).getTime();
+		if (next)
+			await setPromiseTimeout(new Date(next.date_time).getTime() - Date.now());
 		else {
 			await closeMatchDay(message, users, matches, matchDay);
 			return;
 		}
 	}
-	for await (const _ of setInterval(1_000 * 60)) {
-		if (Date.now() < waitUntil) continue;
-		const tempMatches = await loadMatches(matchDay._id);
-
-		if (tempMatches.success) {
-			matches = tempMatches;
-			leaderboard = resolveLeaderboard(users, matches);
-			const newDescriptions = [
-				resolveMatches(matches),
-				createLeaderboardDescription(leaderboard),
-			];
-
-			if (newDescriptions.some((d, i) => d !== embeds[i].data.description)) {
-				embeds[0].setDescription(newDescriptions[0]);
-				embeds[1].setDescription(newDescriptions[1]).setTimestamp();
-				embeds[1].setFields({
-					name: "Classifica Generale",
-					value: createFinalLeaderboard(leaderboard),
-				});
-				message.edit({ embeds }).catch(CustomClient.printToStderr);
-			}
-			if (matches.data.every((match) => match.match_status !== 1)) {
-				const next = matches.data.find((match) => match.match_status === 0);
-
-				if (next) waitUntil = new Date(next.date_time).getTime();
-				else {
-					await closeMatchDay(message, users, matches, matchDay);
-					break;
-				}
-			}
-		}
-	}
+	startWebSocket(matches, users, embeds, message, matchDay);
 };
 
 export default liveScore;
