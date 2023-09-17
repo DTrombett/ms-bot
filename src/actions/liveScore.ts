@@ -105,11 +105,12 @@ const loadMatches = async (matchDayId: number) =>
 	).then((res) => res.body.json())) as MatchesData;
 
 export const liveScore = async (client: CustomClient) => {
-	const [users, matchDay] = await Promise.all([
+	const [users, matchDay, channel] = await Promise.all([
 		User.find({
 			predictions: { $exists: true, $type: "array", $ne: [] },
 		}),
 		MatchDay.findOne({}).sort("-day"),
+		client.channels.fetch(env.PREDICTIONS_CHANNEL!),
 	]);
 
 	if (!matchDay) {
@@ -117,8 +118,6 @@ export const liveScore = async (client: CustomClient) => {
 		return;
 	}
 	if (matchDay.finished!) return;
-	const channel = await client.channels.fetch(env.PREDICTIONS_CHANNEL!);
-
 	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 	if (!channel?.isTextBased() || channel.isDMBased()) {
 		CustomClient.printToStderr("Invalid predictions channel!");
@@ -164,12 +163,20 @@ export const liveScore = async (client: CustomClient) => {
 	if (matchDay.messageId == null) {
 		matchDay.messageId = message.id;
 		matchDay.save().catch(CustomClient.printToStderr);
-	}
+	} else if (
+		embeds.some((d, i) => d.data.description !== message.embeds[i]?.description)
+	)
+		message.edit({ embeds }).catch(CustomClient.printToStderr);
 	let waitUntil = 0;
 
-	if (matches.data.every((match) => match.match_status === 2)) {
-		await closeMatchDay(message, users, matches, matchDay);
-		return;
+	if (matches.data.every((match) => match.match_status !== 1)) {
+		const next = matches.data.find((match) => match.match_status === 0);
+
+		if (next) waitUntil = new Date(next.date_time).getTime();
+		else {
+			await closeMatchDay(message, users, matches, matchDay);
+			return;
+		}
 	}
 	for await (const _ of setInterval(1_000 * 60)) {
 		if (Date.now() < waitUntil) continue;
