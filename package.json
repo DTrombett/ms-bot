@@ -12,7 +12,6 @@
 		"lint": "eslint src --fix",
 		"prettier": "prettier --write src/**/*.ts",
 		"start": "npm run build && node --trace-warnings --enable-source-maps .",
-		"start:prod": "node .",
 		"test": "tsc --noEmit && eslint src"
 	},
 	"author": "DTrombett",
