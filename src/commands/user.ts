@@ -19,10 +19,10 @@ import {
 } from "discord.js";
 import type { ReceivedInteraction } from "../util";
 import {
-	CustomClient,
 	capitalize,
 	createCommand,
 	normalizeError,
+	printToStderr,
 	sendError,
 } from "../util";
 
@@ -547,9 +547,8 @@ export const userCommand = createCommand({
 		}
 		if (action === "i") {
 			let user =
-				(await interaction.client.users
-					.fetch(args[0])
-					.catch(CustomClient.printToStderr)) || interaction.user;
+				(await interaction.client.users.fetch(args[0]).catch(printToStderr)) ||
+				interaction.user;
 
 			if (user.banner === undefined) user = await user.fetch();
 			await userInfo(interaction, user, true);

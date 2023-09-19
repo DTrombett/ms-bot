@@ -4,7 +4,7 @@ import type {
 	RESTPutAPIApplicationCommandsJSONBody,
 } from "discord.js";
 import { env } from "node:process";
-import type { CommandOptions, InteractionByType } from ".";
+import { printToStderr, type CommandOptions, type InteractionByType } from ".";
 import CustomClient from "./CustomClient";
 
 /**
@@ -68,7 +68,7 @@ export class Command {
 			)
 				await this._autocomplete?.(interaction);
 		} catch (message) {
-			CustomClient.printToStderr(message);
+			printToStderr(message);
 		}
 	}
 
@@ -86,7 +86,7 @@ export class Command {
 			)
 				await this._component?.(interaction);
 		} catch (message) {
-			CustomClient.printToStderr(message);
+			printToStderr(message);
 		}
 	}
 
@@ -104,7 +104,7 @@ export class Command {
 			)
 				await this._modalSubmit?.(interaction);
 		} catch (message) {
-			CustomClient.printToStderr(message);
+			printToStderr(message);
 		}
 	}
 
@@ -139,7 +139,7 @@ export class Command {
 			)
 				await this._execute(interaction);
 		} catch (message) {
-			CustomClient.printToStderr(message);
+			printToStderr(message);
 		}
 	}
 }

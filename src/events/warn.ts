@@ -1,8 +1,8 @@
-import { createEvent, CustomClient } from "../util";
+import { createEvent, printToStderr } from "../util";
 
 export const warnEvent = createEvent({
 	name: "warn",
 	on(warn) {
-		CustomClient.printToStderr(warn);
+		printToStderr(warn);
 	},
 });

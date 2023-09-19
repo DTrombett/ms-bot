@@ -8,10 +8,10 @@ import {
 } from "discord.js";
 import ms from "ms";
 import {
-	CustomClient,
 	Emojis,
 	createCommand,
 	normalizeError,
+	printToStderr,
 	sendError,
 } from "../util";
 
@@ -237,7 +237,7 @@ export const inviteCommand = createCommand({
 					.delete()
 					.then(() => undefined)
 					.catch(normalizeError),
-				interaction.deferReply().catch(CustomClient.printToStderr),
+				interaction.deferReply().catch(printToStderr),
 			]);
 
 			if (error) {

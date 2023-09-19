@@ -2,6 +2,7 @@ import { setTimeout } from "node:timers/promises";
 import * as actions from "../actions";
 import { Document, Timeout, TimeoutSchema } from "../models";
 import CustomClient from "./CustomClient";
+import { printToStderr } from "./logger";
 
 export const timeoutCache: Record<
 	string,
@@ -27,7 +28,7 @@ export const setActionTimeout = async (
 					>
 				)[timeout.action]?.(client, ...timeout.options),
 				timeout.deleteOne(),
-			]).catch(CustomClient.printToStderr);
+			]).catch(printToStderr);
 		} catch (err) {}
 };
 

@@ -21,11 +21,11 @@ import {
 import ms from "ms";
 import type { ReceivedInteraction } from "../util";
 import {
-	CustomClient,
 	capitalize,
 	createCommand,
 	formatBytes,
 	normalizeError,
+	printToStderr,
 	sendError,
 } from "../util";
 
@@ -1005,9 +1005,7 @@ export const channelCommand = createCommand({
 				}
 				const [webhook] = await Promise.all([
 					channel.createWebhook(webhookOptions).catch(normalizeError),
-					interaction
-						.deferReply({ ephemeral: true })
-						.catch(CustomClient.printToStderr),
+					interaction.deferReply({ ephemeral: true }).catch(printToStderr),
 				]);
 
 				if (webhook instanceof Error) {

@@ -8,6 +8,7 @@ import loadMatchDay from "./loadMatchDay";
 import loadMatches from "./loadMatches";
 import sendPredictions from "./sendPredictions";
 import { MatchesData } from "./types";
+import { printToStdout } from "./logger";
 
 const startDay = async (
 	matches: Extract<MatchesData, { success: true }>,
@@ -15,7 +16,7 @@ const startDay = async (
 	channel: GuildTextBasedChannel,
 ): Promise<never> => {
 	if (matchDay.finished) {
-		CustomClient.printToStdout(
+		printToStdout(
 			`[${new Date().toISOString()}] Match Day finished! Waiting until 10 hours after the start of the last match.`,
 		);
 		await setTimeout(
@@ -23,33 +24,27 @@ const startDay = async (
 				1_000 * 60 * 60 * 10 -
 				Date.now(),
 		);
-		CustomClient.printToStdout(
-			`[${new Date().toISOString()}] Loading new match day.`,
-		);
+		printToStdout(`[${new Date().toISOString()}] Loading new match day.`);
 		matchDay = await loadMatchDay(channel);
 		matches = await loadMatches(matchDay._id);
 	}
 	const startTime = new Date(matches.data[0].date_time).getTime();
 
 	if (!matchDay.predictionsSent) {
-		CustomClient.printToStdout(
+		printToStdout(
 			`[${new Date().toISOString()}] Waiting until 15 minutes before the start of the first match to send the predictions.`,
 		);
 		await setTimeout(startTime - Date.now() - 1000 * 60 * 15);
-		CustomClient.printToStdout(
-			`[${new Date().toISOString()}] Sending predictions.`,
-		);
+		printToStdout(`[${new Date().toISOString()}] Sending predictions.`);
 		await sendPredictions(matchDay, channel);
 		matchDay.predictionsSent = true;
 		await matchDay.save();
 	}
-	CustomClient.printToStdout(
+	printToStdout(
 		`[${new Date().toISOString()}] Waiting for the start of the first match.`,
 	);
 	await setTimeout(startTime - Date.now());
-	CustomClient.printToStdout(
-		`[${new Date().toISOString()}] Starting live scores.`,
-	);
+	printToStdout(`[${new Date().toISOString()}] Starting live scores.`);
 	await liveScore(matchDay, channel);
 	return startDay(matches, matchDay, channel);
 };

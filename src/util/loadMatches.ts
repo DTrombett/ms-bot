@@ -1,6 +1,6 @@
 import { request } from "undici";
-import CustomClient from "./CustomClient";
 import { MatchesData } from "./types";
+import { printToStderr } from "./logger";
 
 export const loadMatches = async (id: number) => {
 	const matches = (await request(
@@ -8,8 +8,8 @@ export const loadMatches = async (id: number) => {
 	).then((res) => res.body.json())) as MatchesData;
 
 	if (!matches.success) {
-		CustomClient.printToStderr(matches.message);
-		CustomClient.printToStderr(matches.errors);
+		printToStderr(matches.message);
+		printToStderr(matches.errors);
 		throw new Error("Couldn't load matches data");
 	}
 	return matches;
