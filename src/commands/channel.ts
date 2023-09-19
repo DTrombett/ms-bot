@@ -738,7 +738,7 @@ export const channelCommand = createCommand({
 				return;
 			}
 			await interaction.reply({
-				content: `Canale ${channel.toString()} modificato con successo!\n\nMotivo: ${
+				content: `Canale <#${channel.id}> modificato con successo!\n\nMotivo: ${
 					editOptions.reason ?? "*Nessun motivo*"
 				}`,
 				components: [
@@ -851,7 +851,7 @@ export const channelCommand = createCommand({
 				return;
 			}
 			await interaction.reply({
-				content: `Canale ${result.toString()} clonato con successo!\n\nMotivo: ${
+				content: `Canale <#${result.id}> clonato con successo!\n\nMotivo: ${
 					reason ?? "*Nessun motivo*"
 				}`,
 				components: [
@@ -929,7 +929,7 @@ export const channelCommand = createCommand({
 				return;
 			}
 			await interaction.reply({
-				content: `Canale ${result.toString()} creato con successo!\n\nMotivo: ${
+				content: `Canale <#${result.id}> creato con successo!\n\nMotivo: ${
 					createOptions.reason ?? "*Nessun motivo*"
 				}`,
 				components: [
@@ -985,7 +985,7 @@ export const channelCommand = createCommand({
 				}
 				if (!channel.permissionsFor(interaction.member).has("ManageWebhooks")) {
 					await interaction.reply({
-						content: `Non hai abbastanza permessi per creare webhook in ${channel.toString()}!`,
+						content: `Non hai abbastanza permessi per creare webhook in <#${channel.id}>!`,
 						ephemeral: true,
 					});
 					return;

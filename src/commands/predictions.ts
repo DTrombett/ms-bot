@@ -376,7 +376,8 @@ export const predictionsCommand = createCommand({
 			interaction,
 			matchDay!,
 			part,
-			(edit && (await User.findById(interaction.user.id))) || undefined,
+			(edit ? await User.findById(interaction.user.id) : undefined) ??
+				undefined,
 			true,
 		);
 	},
