@@ -1,4 +1,7 @@
-import type { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
+import type {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+} from "discord.js";
 import type { CommandOptions } from "./types";
 
 /**

@@ -6,7 +6,7 @@ import {
 	escapeMarkdown,
 } from "discord.js";
 import ms from "ms";
-import { Timeout } from "../models";
+import { Document, Timeout, TimeoutSchema } from "../models";
 import { createCommand, setPermanentTimeout, timeoutCache } from "../util";
 
 const remindLimit = 10;
@@ -63,8 +63,10 @@ export const remindCommand = createCommand({
 		switch (interaction.options.getSubcommand()) {
 			case "me":
 				if (
-					(await Timeout.countDocuments({ action: "remind", "options.0": interaction.user.id })) >
-					remindLimit
+					(await Timeout.countDocuments({
+						action: "remind",
+						"options.0": interaction.user.id,
+					})) > remindLimit
 				) {
 					await interaction.reply({
 						ephemeral: true,
@@ -72,9 +74,15 @@ export const remindCommand = createCommand({
 					});
 					return;
 				}
-				const date = interaction.createdTimestamp + ms(interaction.options.getString("when", true));
+				const date =
+					interaction.createdTimestamp +
+					ms(interaction.options.getString("when", true));
 
-				if (Number.isNaN(date) || date <= Date.now() + 1_000 || date > 10_000_000_000_000) {
+				if (
+					Number.isNaN(date) ||
+					date <= Date.now() + 1_000 ||
+					date > 10_000_000_000_000
+				) {
 					await interaction.reply({
 						ephemeral: true,
 						content: "Durata non valida!",
@@ -85,12 +93,14 @@ export const remindCommand = createCommand({
 					setPermanentTimeout(this.client, {
 						action: "remind",
 						date,
-						options: [interaction.user.id, interaction.options.getString("to", true)],
+						options: [
+							interaction.user.id,
+							interaction.options.getString("to", true),
+						],
 					}),
 					interaction.deferReply({ ephemeral: true }),
 				]);
 
-				timeoutCache[timeout.id as string] = timeout;
 				await interaction.editReply({
 					content: `Fatto! Te lo ricorderò <t:${Math.round(date / 1_000)}:R>`,
 					components: [
@@ -114,7 +124,7 @@ export const remindCommand = createCommand({
 				break;
 			case "list":
 				const reminds = Object.values(timeoutCache).filter(
-					(t): t is NonNullable<typeof t> =>
+					(t): t is Document<TimeoutSchema<"remind">> =>
 						t?.action === "remind" && t.options[0] === interaction.user.id,
 				);
 
@@ -155,12 +165,18 @@ export const remindCommand = createCommand({
 						  );
 
 				if (!toRemove) {
-					await interaction.reply({ ephemeral: true, content: "Promemoria non trovato!" });
+					await interaction.reply({
+						ephemeral: true,
+						content: "Promemoria non trovato!",
+					});
 					return;
 				}
 				await toRemove.deleteOne();
 				delete timeoutCache[toRemove.id as string];
-				await interaction.reply({ ephemeral: true, content: "Promemoria eliminato!" });
+				await interaction.reply({
+					ephemeral: true,
+					content: "Promemoria eliminato!",
+				});
 				break;
 			default:
 				break;
@@ -168,15 +184,14 @@ export const remindCommand = createCommand({
 	},
 	async autocomplete(interaction) {
 		const reminds = Object.values(timeoutCache).filter(
-			(t) => t?.action === "remind" && t.options[0] === interaction.user.id,
+			(t): t is Document<TimeoutSchema<"remind">> =>
+				t?.action === "remind" && t.options[0] === interaction.user.id,
 		);
 		const query = interaction.options.getString("remind")?.toLowerCase() ?? "";
 
 		await interaction.respond(
 			reminds
-				.filter(
-					(t): t is NonNullable<typeof t> => t?.options[1].toLowerCase().includes(query) ?? false,
-				)
+				.filter((t) => t.options[1].toLowerCase().includes(query))
 				.slice(0, 25)
 				.sort((a, b) => a.date - b.date)
 				.map((t) => {
@@ -206,14 +221,20 @@ export const remindCommand = createCommand({
 			return;
 		}
 		if (timeoutCache[id]!.options[0] !== interaction.user.id) {
-			await interaction.reply({ content: "Non puoi gestire questo promemoria!", ephemeral: true });
+			await interaction.reply({
+				content: "Non puoi gestire questo promemoria!",
+				ephemeral: true,
+			});
 			return;
 		}
 		switch (action) {
 			case "d":
 				await timeoutCache[id]!.deleteOne();
 				delete timeoutCache[id];
-				await interaction.reply({ ephemeral: true, content: "Promemoria eliminato!" });
+				await interaction.reply({
+					ephemeral: true,
+					content: "Promemoria eliminato!",
+				});
 				break;
 			default:
 				break;

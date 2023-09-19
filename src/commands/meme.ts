@@ -6,7 +6,12 @@ import {
 } from "discord.js";
 import { join } from "node:path";
 import { cwd } from "node:process";
-import { CustomClient, createCommand, normalizeError, sendError } from "../util";
+import {
+	CustomClient,
+	createCommand,
+	normalizeError,
+	sendError,
+} from "../util";
 
 type Coord = [number, number];
 type TextPoint = {
@@ -22,7 +27,10 @@ type TextPoint = {
 	text?: number;
 };
 
-const memes: Record<string, { dimensions: Coord; textPoints: TextPoint[] } | undefined> = {
+const memes: Record<
+	string,
+	{ dimensions: Coord; textPoints: TextPoint[] } | undefined
+> = {
 	"Drake Hotline Bling": {
 		dimensions: [1200, 1200],
 		textPoints: [
@@ -124,18 +132,36 @@ const memes: Record<string, { dimensions: Coord; textPoints: TextPoint[] } | und
 		textPoints: [
 			{ coord: [255, 185], dimensions: [120, 130], color: "#ffffff" },
 			{ coord: [505, 185], dimensions: [170, 130], color: "#ffffff" },
-			{ coord: [410, 600], dimensions: [320, 100], color: "#ffffff", rotate: -Math.PI / 36 },
+			{
+				coord: [410, 600],
+				dimensions: [320, 100],
+				color: "#ffffff",
+				rotate: -Math.PI / 36,
+			},
 		],
 	},
 	"Bernie I Am Once Again Asking For Your Support": {
 		dimensions: [750, 750],
 		textPoints: [
-			{ coord: [380, 665], dimensions: [500, 40], color: "#ffffff", fontSize: 40, bold: true },
+			{
+				coord: [380, 665],
+				dimensions: [500, 40],
+				color: "#ffffff",
+				fontSize: 40,
+				bold: true,
+			},
 		],
 	},
 	"Change My Mind": {
 		dimensions: [482, 361],
-		textPoints: [{ coord: [320, 258], dimensions: [210, 90], fontSize: 32, rotate: -Math.PI / 24 }],
+		textPoints: [
+			{
+				coord: [320, 258],
+				dimensions: [210, 90],
+				fontSize: 32,
+				rotate: -Math.PI / 24,
+			},
+		],
 	},
 	"Buff Doge vs. Cheems": {
 		dimensions: [937, 720],
@@ -192,7 +218,9 @@ const drawTextInBox = (
 		borderColor = "",
 	} = point;
 	const buildFont = () =>
-		(context.font = `${italic ? "italic " : ""}${bold ? "bold " : ""}${fontSize}px ${fontFamily}`);
+		(context.font = `${italic ? "italic " : ""}${
+			bold ? "bold " : ""
+		}${fontSize}px ${fontFamily}`);
 	const lines: string[] = [];
 	const lineBreaks = text.split("\n");
 
@@ -218,7 +246,10 @@ const drawTextInBox = (
 			const testLine = `${line + words[j]} `;
 
 			if (context.measureText(testLine).width > width) {
-				if ((lines.length + 2) * fontSize > height || context.measureText(line).width > width) {
+				if (
+					(lines.length + 2) * fontSize > height ||
+					context.measureText(line).width > width
+				) {
 					reset();
 					break;
 				}
@@ -282,7 +313,8 @@ export const memeCommand = createCommand({
 				},
 				{
 					name: "dimensione-carattere",
-					description: "La dimensione massima del carattere da utilizzare in pixel (default: 100)",
+					description:
+						"La dimensione massima del carattere da utilizzare in pixel (default: 100)",
 					type: ApplicationCommandOptionType.Number,
 				},
 				{
@@ -327,15 +359,16 @@ export const memeCommand = createCommand({
 		}
 		const canvas = Canvas.createCanvas(...meme.dimensions);
 		const context = canvas.getContext("2d");
-		const background = await Canvas.loadImage(join(cwd(), "templates", `${name}.png`)).catch(
-			normalizeError,
-		);
+		const background = await Canvas.loadImage(
+			join(cwd(), "templates", `${name}.png`),
+		).catch(normalizeError);
 
 		if (background instanceof Error) {
 			await sendError(interaction, background);
 			return;
 		}
-		const fontSize = interaction.options.getNumber("dimensione-carattere") ?? undefined;
+		const fontSize =
+			interaction.options.getNumber("dimensione-carattere") ?? undefined;
 		const fontFamily = interaction.options.getString("carattere") ?? undefined;
 		const bold = interaction.options.getBoolean("grassetto") ?? undefined;
 		const italic = interaction.options.getBoolean("corsivo") ?? undefined;
@@ -347,10 +380,20 @@ export const memeCommand = createCommand({
 			const text =
 				(meme.textPoints[i].text === undefined
 					? interaction.options.getString(`testo${j + 1}`)
-					: interaction.options.getString(`testo${meme.textPoints[i].text! + 1}`)) ?? "";
+					: interaction.options.getString(
+							`testo${meme.textPoints[i].text! + 1}`,
+					  )) ?? "";
 
 			if (text)
-				drawTextInBox(context, meme.textPoints[i], text, fontSize, fontFamily, bold, italic);
+				drawTextInBox(
+					context,
+					meme.textPoints[i],
+					text,
+					fontSize,
+					fontFamily,
+					bold,
+					italic,
+				);
 			if (meme.textPoints[i].text === undefined) j++;
 		}
 		const [attachment] = await Promise.all([
@@ -367,7 +410,8 @@ export const memeCommand = createCommand({
 		});
 	},
 	autocomplete: async (interaction) => {
-		const value = interaction.options.getString("template")?.toLowerCase() ?? "";
+		const value =
+			interaction.options.getString("template")?.toLowerCase() ?? "";
 
 		await interaction.respond(
 			memeNames

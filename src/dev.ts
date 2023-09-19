@@ -17,7 +17,7 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 
 		CustomClient.printToStdout(`File change detected: ${filename}`);
 		if (
-			await build({
+			(await build({
 				entry: [`src/${Constants.commandsFolderName}/index.ts`],
 				outDir: `dist/${Constants.commandsFolderName}`,
 				silent: true,
@@ -25,10 +25,14 @@ const watchCommands = async (client: CustomClient, build: typeof Build) => {
 				CustomClient.printToStderr("Failed to build new commands:");
 				CustomClient.printToStderr(err);
 				return true as const;
-			})
+			})) ||
+			(await loadCommands(client).catch((err) => {
+				CustomClient.printToStderr("Failed to load new commands:");
+				CustomClient.printToStderr(err);
+				return true as const;
+			}))
 		)
 			continue;
-		await loadCommands(client);
 		CustomClient.printToStdout(
 			`Fast reloaded commands in ${(performance.now() - now).toFixed(2)}ms!`,
 		);
@@ -41,7 +45,7 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 
 		CustomClient.printToStdout(`File change detected: ${filename}`);
 		if (
-			await build({
+			(await build({
 				entry: [`src/${Constants.eventsFolderName}/index.ts`],
 				outDir: `dist/${Constants.eventsFolderName}`,
 				silent: true,
@@ -49,10 +53,14 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 				CustomClient.printToStderr("Failed to build new events:");
 				CustomClient.printToStderr(err);
 				return true as const;
-			})
+			})) ||
+			(await loadEvents(client).catch((err) => {
+				CustomClient.printToStderr("Failed to load new events:");
+				CustomClient.printToStderr(err);
+				return true as const;
+			}))
 		)
 			continue;
-		await loadEvents(client);
 		CustomClient.printToStdout(
 			`Fast reloaded events in ${(performance.now() - now).toFixed(2)}ms!`,
 		);
@@ -63,22 +71,22 @@ const logMemoryUsage = async () => {
 		const memory = memoryUsage();
 
 		CustomClient.printToStdout(
-			`RSS: ${(memory.rss / 1000 / 1000).toFixed(2)}MB\nHeap Used: ${(
+			`RSS: ${(memory.rss / 1000 / 1000).toFixed(3)}MB\nHeap Used: ${(
 				memory.heapUsed /
 				1000 /
 				1000
-			).toFixed(2)}MB\nHeap Total: ${(memory.heapTotal / 1000 / 1000).toFixed(2)}MB\nExternal: ${(
-				memory.external /
-				1000 /
-				1000
-			).toFixed(2)}MB`,
+			).toFixed(3)}MB\nHeap Total: ${(memory.heapTotal / 1000 / 1000).toFixed(
+				3,
+			)}MB\nExternal: ${(memory.external / 1000 / 1000).toFixed(3)}MB`,
 		);
 	}
 };
 
 export const configureDev = async (client: CustomClient) => {
 	const tsup = await import("tsup").catch(() => {
-		CustomClient.printToStderr("Failed to load tsup, not watching for changes...");
+		CustomClient.printToStderr(
+			"Failed to load tsup, not watching for changes...",
+		);
 	});
 
 	Promise.all([

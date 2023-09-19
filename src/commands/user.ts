@@ -18,7 +18,13 @@ import {
 	escapeMarkdown,
 } from "discord.js";
 import type { ReceivedInteraction } from "../util";
-import { CustomClient, capitalize, createCommand, normalizeError, sendError } from "../util";
+import {
+	CustomClient,
+	capitalize,
+	createCommand,
+	normalizeError,
+	sendError,
+} from "../util";
 
 const normalizeRoles = (value: string, roles: RoleManager) =>
 	value
@@ -32,7 +38,11 @@ const normalizeRoles = (value: string, roles: RoleManager) =>
 				: roles.cache.find((role) => role.name.toLowerCase().startsWith(r))?.id;
 		})
 		.filter((r): r is string => r !== undefined);
-const userInfo = async (interaction: ReceivedInteraction, user: User, ephemeral?: boolean) => {
+const userInfo = async (
+	interaction: ReceivedInteraction,
+	user: User,
+	ephemeral?: boolean,
+) => {
 	const createdAt = Math.round(user.createdTimestamp / 1000);
 	const accentColor = user.accentColor?.toString(16).padStart(6, "0");
 	const fields: APIEmbedField[] = [
@@ -119,7 +129,10 @@ const userInfo = async (interaction: ReceivedInteraction, user: User, ephemeral?
 			},
 			{
 				name: "Nickname",
-				value: member.nickname == null ? "*Non presente*" : escapeMarkdown(member.nickname),
+				value:
+					member.nickname == null
+						? "*Non presente*"
+						: escapeMarkdown(member.nickname),
 				inline: true,
 			},
 			{
@@ -129,7 +142,9 @@ const userInfo = async (interaction: ReceivedInteraction, user: User, ephemeral?
 			},
 			{
 				name: "Potenziando il server",
-				value: boostTimestamp ? `Da <t:${boostTimestamp}:F> (<t:${boostTimestamp}:R>)` : "No",
+				value: boostTimestamp
+					? `Da <t:${boostTimestamp}:F> (<t:${boostTimestamp}:R>)`
+					: "No",
 				inline: true,
 			},
 			{
@@ -143,7 +158,10 @@ const userInfo = async (interaction: ReceivedInteraction, user: User, ephemeral?
 			},
 			{
 				name: "Canale vocale",
-				value: member.voice.channelId == null ? "*Nessuno*" : `<#${member.voice.channelId}>`,
+				value:
+					member.voice.channelId == null
+						? "*Nessuno*"
+						: `<#${member.voice.channelId}>`,
 				inline: true,
 			},
 		);
@@ -190,7 +208,8 @@ const userInfo = async (interaction: ReceivedInteraction, user: User, ephemeral?
 	});
 };
 
-const autoArchiveChoices: { name: string; value: ThreadAutoArchiveDuration }[] = [];
+const autoArchiveChoices: { name: string; value: ThreadAutoArchiveDuration }[] =
+	[];
 const videoQualityChoices: { name: string; value: VideoQualityMode }[] = [];
 
 for (const [name, value] of Object.entries(ThreadAutoArchiveDuration))
@@ -279,7 +298,8 @@ export const userCommand = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere usato solo all'interno di un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -310,9 +330,11 @@ export const userCommand = createCommand({
 					if (typeof option.value === "string")
 						removeRoles = normalizeRoles(option.value, guild.roles);
 				} else if (option.name === "mute") {
-					if (typeof option.value === "boolean") editOptions.mute = option.value;
+					if (typeof option.value === "boolean")
+						editOptions.mute = option.value;
 				} else if (option.name === "deaf") {
-					if (typeof option.value === "boolean") editOptions.deaf = option.value;
+					if (typeof option.value === "boolean")
+						editOptions.deaf = option.value;
 				} else if (option.name === "voice-channel") {
 					if (option.channel?.type === ChannelType.GuildVoice)
 						editOptions.channel =
@@ -323,7 +345,8 @@ export const userCommand = createCommand({
 										.fetch(option.channel.id)
 										.catch(() => undefined)) as VoiceChannel);
 				} else if (option.name === "reason") {
-					if (typeof option.value === "string") editOptions.reason = option.value;
+					if (typeof option.value === "string")
+						editOptions.reason = option.value;
 				} else if (option.name === "member" && typeof option.value === "string")
 					member =
 						option.member && "client" in option.member
@@ -341,9 +364,14 @@ export const userCommand = createCommand({
 				editOptions.roles = member.roles.cache.map((r) => r.id);
 				if (newRoles) editOptions.roles = editOptions.roles.concat(newRoles);
 				if (removeRoles)
-					editOptions.roles = editOptions.roles.filter((r) => !removeRoles!.includes(r as string));
+					editOptions.roles = editOptions.roles.filter(
+						(r) => !removeRoles!.includes(r as string),
+					);
 			}
-			if (Object.keys(editOptions).length - (editOptions.reason! ? 1 : 0) === 0) {
+			if (
+				Object.keys(editOptions).length - (editOptions.reason! ? 1 : 0) ===
+				0
+			) {
 				await interaction.reply({
 					content: "Non hai specificato alcuna modifica!",
 					ephemeral: true,
@@ -355,7 +383,9 @@ export const userCommand = createCommand({
 
 				if (
 					!self &&
-					member.roles.highest.comparePositionTo(interaction.member.roles.highest) >= 0
+					member.roles.highest.comparePositionTo(
+						interaction.member.roles.highest,
+					) >= 0
 				) {
 					await interaction.reply({
 						content:
@@ -409,7 +439,8 @@ export const userCommand = createCommand({
 					}
 					if (!interaction.memberPermissions.has("MuteMembers")) {
 						await interaction.reply({
-							content: "Hai bisogno del permesso **Silenzia membri** per eseguire questa azione!",
+							content:
+								"Hai bisogno del permesso **Silenzia membri** per eseguire questa azione!",
 							ephemeral: true,
 						});
 						return;
@@ -434,16 +465,22 @@ export const userCommand = createCommand({
 				}
 				if (editOptions.channel !== undefined)
 					if (self) {
-						if (!(editOptions.channel as VoiceChannel).permissionsFor(member).has("Connect")) {
+						if (
+							!(editOptions.channel as VoiceChannel)
+								.permissionsFor(member)
+								.has("Connect")
+						) {
 							await interaction.reply({
-								content: "Non puoi hai abbastanza permessi per connetterti a questo canale!",
+								content:
+									"Non puoi hai abbastanza permessi per connetterti a questo canale!",
 								ephemeral: true,
 							});
 							return;
 						}
 					} else if (!interaction.memberPermissions.has("MoveMembers")) {
 						await interaction.reply({
-							content: "Hai bisogno del permesso **Sposta membri** per eseguire questa azione!",
+							content:
+								"Hai bisogno del permesso **Sposta membri** per eseguire questa azione!",
 							ephemeral: true,
 						});
 						return;
@@ -456,7 +493,9 @@ export const userCommand = createCommand({
 				});
 				return;
 			}
-			const result = await guild.members.edit(member, editOptions).catch(normalizeError);
+			const result = await guild.members
+				.edit(member, editOptions)
+				.catch(normalizeError);
 
 			if (result instanceof Error) {
 				await sendError(interaction, result);
@@ -491,7 +530,8 @@ export const userCommand = createCommand({
 	async component(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere usato solo all'interno di un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -507,8 +547,9 @@ export const userCommand = createCommand({
 		}
 		if (action === "i") {
 			let user =
-				(await interaction.client.users.fetch(args[0]).catch(CustomClient.printToStderr)) ||
-				interaction.user;
+				(await interaction.client.users
+					.fetch(args[0])
+					.catch(CustomClient.printToStderr)) || interaction.user;
 
 			if (user.banner === undefined) user = await user.fetch();
 			await userInfo(interaction, user, true);
@@ -520,8 +561,9 @@ export const userCommand = createCommand({
 		const option = interaction.options.getFocused(true);
 
 		if (typeof option.value !== "string") return;
-		const oldRoles = guild.members.cache.get(interaction.options.get("member")?.value as string)
-			?.roles.cache;
+		const oldRoles = guild.members.cache.get(
+			interaction.options.get("member")?.value as string,
+		)?.roles.cache;
 		const { cache } = guild.roles;
 		const startRoles =
 			option.name === "new-roles"
@@ -534,8 +576,13 @@ export const userCommand = createCommand({
 		const value = split.at(-1)!.toLowerCase();
 		const roles = option.value
 			? /^\d{2,20}$/.test(value)
-				? startRoles.filter((r) => r.id.startsWith(value) && !old.includes(r.name))
-				: startRoles.filter((r) => r.name.toLowerCase().startsWith(value) && !old.includes(r.name))
+				? startRoles.filter(
+						(r) => r.id.startsWith(value) && !old.includes(r.name),
+				  )
+				: startRoles.filter(
+						(r) =>
+							r.name.toLowerCase().startsWith(value) && !old.includes(r.name),
+				  )
 			: startRoles;
 
 		await interaction.respond(

@@ -1,4 +1,7 @@
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
+import {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+} from "discord.js";
 import { createCommand, randomNumber } from "../util";
 
 type PossibleChoice = (typeof choices)[number];
@@ -58,8 +61,14 @@ export const rpsCommand = createCommand({
 		const myChoice = choices[randomNumber(0, 2)];
 
 		await interaction.reply({
-			content: `Hai scelto ${emojis[choice]}\nLa mia scelta è ${emojis[myChoice]}\n\n**${
-				myChoice === choice ? "Pareggio" : winners[myChoice] === choice ? "Hai vinto" : "Hai perso"
+			content: `Hai scelto ${emojis[choice]}\nLa mia scelta è ${
+				emojis[myChoice]
+			}\n\n**${
+				myChoice === choice
+					? "Pareggio"
+					: winners[myChoice] === choice
+					? "Hai vinto"
+					: "Hai perso"
 			}**!`,
 		});
 	},

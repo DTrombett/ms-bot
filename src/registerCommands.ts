@@ -27,7 +27,9 @@ const [privateAPICommands, publicAPICommands] = await Promise.all([
 	}) as Promise<APIApplicationCommand[]>,
 	nodeEnv === "production"
 		? (rest.put(Routes.applicationCommands(applicationId!), {
-				body: commands.filter((c) => c.isPrivate !== true).flatMap((file) => file.data),
+				body: commands
+					.filter((c) => c.isPrivate !== true)
+					.flatMap((file) => file.data),
 		  }) as Promise<APIApplicationCommand[]>)
 		: [],
 ]);

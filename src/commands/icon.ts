@@ -1,4 +1,9 @@
-import { ApplicationCommandType, ButtonStyle, ComponentType, escapeMarkdown } from "discord.js";
+import {
+	ApplicationCommandType,
+	ButtonStyle,
+	ComponentType,
+	escapeMarkdown,
+} from "discord.js";
 import { createCommand } from "../util";
 
 export const iconCommand = createCommand({
@@ -12,7 +17,8 @@ export const iconCommand = createCommand({
 	async run(interaction) {
 		if (!interaction.inCachedGuild()) {
 			await interaction.reply({
-				content: "Questo comando può essere usato solo all'interno di un server!",
+				content:
+					"Questo comando può essere usato solo all'interno di un server!",
 				ephemeral: true,
 			});
 			return;
@@ -27,7 +33,9 @@ export const iconCommand = createCommand({
 			return;
 		}
 		await interaction.reply({
-			content: `Icona di **[${escapeMarkdown(interaction.guild.name)}](${url} )**:`,
+			content: `Icona di **[${escapeMarkdown(
+				interaction.guild.name,
+			)}](${url} )**:`,
 			components: [
 				{
 					type: ComponentType.ActionRow,

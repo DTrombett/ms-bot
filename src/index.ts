@@ -4,7 +4,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { join } from "node:path";
 import process, { cwd, env } from "node:process";
-import Constants, { CustomClient } from "./util";
+import Constants, { CustomClient, loadPredictions } from "./util";
 
 CustomClient.printToStdout("Starting...");
 if (!("DISCORD_TOKEN" in env)) config();
@@ -50,6 +50,10 @@ if (env.NODE_ENV === "development")
 		.catch(CustomClient.printToStderr);
 for (const font in fonts)
 	if (Object.hasOwn(fonts, font))
-		GlobalFonts.registerFromPath(join(cwd(), "fonts", `${font}.ttf`), fonts[font]);
+		GlobalFonts.registerFromPath(
+			join(cwd(), "fonts", `${font}.ttf`),
+			fonts[font],
+		);
 await mongoose.connect(env["MONGODB_URL"]!);
 await client.login();
+await loadPredictions(client);

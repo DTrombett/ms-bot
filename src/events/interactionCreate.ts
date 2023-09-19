@@ -11,7 +11,9 @@ export const interactionCreateEvent = createEvent({
 				void this.client.commands
 					.find((c) =>
 						c.data.some(
-							(d) => d.type === interaction.commandType && d.name === interaction.commandName,
+							(d) =>
+								d.type === interaction.commandType &&
+								d.name === interaction.commandName,
 						),
 					)
 					?.run(interaction);
@@ -21,7 +23,9 @@ export const interactionCreateEvent = createEvent({
 				void this.client.commands.get(action)?.component(interaction);
 				break;
 			case InteractionType.ApplicationCommandAutocomplete:
-				void this.client.commands.get(interaction.commandName)?.autocomplete(interaction);
+				void this.client.commands
+					.get(interaction.commandName)
+					?.autocomplete(interaction);
 				break;
 			case InteractionType.ModalSubmit:
 				[action] = interaction.customId.split("-");

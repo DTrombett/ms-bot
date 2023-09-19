@@ -1,4 +1,7 @@
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
+import {
+	ApplicationCommandOptionType,
+	ApplicationCommandType,
+} from "discord.js";
 import { createCommand } from "../util";
 
 export const pollCommand = createCommand({
@@ -35,7 +38,8 @@ export const pollCommand = createCommand({
 						title,
 						author: {
 							name: interaction.user.tag,
-							icon_url: interaction.user.avatarURL({ extension: "png" }) ?? undefined,
+							icon_url:
+								interaction.user.avatarURL({ extension: "png" }) ?? undefined,
 						},
 						color: 0xfd6500,
 						description: "✅ **Sì**\n\n❌ **No**",

@@ -6,90 +6,10 @@ import type {
 	CacheType,
 	ClientEvents,
 	Interaction,
-	InteractionEditReplyOptions,
-	InteractionReplyOptions,
 	InteractionType,
-	InteractionUpdateOptions,
 	RESTPostAPIApplicationCommandsJSONBody,
-	Snowflake,
 } from "discord.js";
-import type { Buffer } from "node:buffer";
-import type { Command, CustomClient, Event } from ".";
-
-/**
- * List of actions and their arguments
- */
-export type Actions = {
-	avatar: [user: Snowflake, guild?: Snowflake];
-	bann: [
-		user: Snowflake,
-		guild: Snowflake,
-		executor?: Snowflake,
-		reason?: string,
-		deleteMessageDays?: `${number}`,
-		duration?: string,
-	];
-	banner: [user: Snowflake];
-	bannList: [guild: Snowflake, page?: `${number}`, executor?: Snowflake, update?: `${boolean}`];
-	calc: [expr: string, fraction?: `${boolean}`];
-	cat: [];
-	createEmoji: [
-		guild: Snowflake,
-		attachment: Buffer | string,
-		name: string,
-		executor?: Snowflake,
-		reason?: string,
-		...roles: Snowflake[],
-	];
-	deleteEmoji: [emoji: Snowflake | string, guild: Snowflake, executor?: Snowflake, reason?: string];
-	dice: [count?: `${number}`];
-	dog: [];
-	editEmoji: [
-		emoji: Snowflake | string,
-		guild: Snowflake,
-		name?: string,
-		executor?: Snowflake,
-		reason?: string,
-		...roles: Snowflake[],
-	];
-	emojiInfo: [emoji: Snowflake | string, guild?: Snowflake];
-	emojiList: [guild: Snowflake, page?: `${number}`, executor?: Snowflake, update?: `${boolean}`];
-	google: [query: string];
-	icon: [guild: Snowflake];
-	kick: [user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string];
-	love: [user1: Snowflake, user2: Snowflake, discriminator1: string, discriminator2: string];
-	ping: [];
-	predict: [text: string];
-	randomNumber: [min?: `${number}`, max?: `${number}`];
-	rps: [choice: "paper" | "rock" | "scissors"];
-	timeout: [
-		user: Snowflake,
-		guild: Snowflake,
-		timeout: string | null,
-		executor?: Snowflake,
-		reason?: string,
-	];
-	timestamp: [
-		year?: `${number}`,
-		month?: `${number}`,
-		date?: `${number}`,
-		hours?: `${number}`,
-		minutes?: `${number}`,
-		seconds?: `${number}`,
-	];
-	unbann: [user: Snowflake, guild: Snowflake, executor?: Snowflake, reason?: string];
-};
-
-/**
- * A function to be called when an action is executed
- */
-export type ActionMethod<
-	T extends keyof Actions,
-	R extends
-		| InteractionEditReplyOptions
-		| InteractionReplyOptions
-		| InteractionUpdateOptions = InteractionEditReplyOptions & InteractionUpdateOptions,
-> = (this: void, client: CustomClient<true>, ...args: Actions[T]) => Promise<R>;
+import type { Command, Event } from ".";
 
 export type InteractionByType<
 	T extends InteractionType,
@@ -200,12 +120,13 @@ export type EventOptions<K extends keyof ClientEvents = keyof ClientEvents> = {
 	once?: EventOptions<K>["on"];
 };
 
-export type ReceivedInteraction<C extends CacheType = CacheType> = InteractionByType<
-	| InteractionType.ApplicationCommand
-	| InteractionType.MessageComponent
-	| InteractionType.ModalSubmit,
-	C
->;
+export type ReceivedInteraction<C extends CacheType = CacheType> =
+	InteractionByType<
+		| InteractionType.ApplicationCommand
+		| InteractionType.MessageComponent
+		| InteractionType.ModalSubmit,
+		C
+	>;
 
 /**
  * A response from thecatapi.com
@@ -248,3 +169,19 @@ export type UrbanResponse = {
 		thumbs_down: number;
 	}[];
 };
+
+export type MatchesData =
+	| {
+			success: true;
+			data: {
+				home_goal: number;
+				away_goal: number;
+				home_team_name: Uppercase<string>;
+				away_team_name: Uppercase<string>;
+				date_time: string;
+				match_status: number;
+				slug: string;
+				match_id: number;
+			}[];
+	  }
+	| { success: false; message: string; errors: unknown[] };

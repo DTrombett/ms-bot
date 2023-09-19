@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/member-ordering */
-import type { InteractionType, RESTPutAPIApplicationCommandsJSONBody } from "discord.js";
+import type {
+	InteractionType,
+	RESTPutAPIApplicationCommandsJSONBody,
+} from "discord.js";
 import { env } from "node:process";
 import type { CommandOptions, InteractionByType } from ".";
 import CustomClient from "./CustomClient";
@@ -59,7 +62,10 @@ export class Command {
 		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
 	) {
 		try {
-			if (!this.isPrivate || env.OWNER_IDS?.includes(interaction.user.id) === true)
+			if (
+				!this.isPrivate ||
+				env.OWNER_IDS?.includes(interaction.user.id) === true
+			)
 				await this._autocomplete?.(interaction);
 		} catch (message) {
 			CustomClient.printToStderr(message);
@@ -70,9 +76,14 @@ export class Command {
 	 * Run this command for a message component.
 	 * @param interaction - The interaction received
 	 */
-	async component(interaction: InteractionByType<InteractionType.MessageComponent>) {
+	async component(
+		interaction: InteractionByType<InteractionType.MessageComponent>,
+	) {
 		try {
-			if (!this.isPrivate || env.OWNER_IDS?.includes(interaction.user.id) === true)
+			if (
+				!this.isPrivate ||
+				env.OWNER_IDS?.includes(interaction.user.id) === true
+			)
 				await this._component?.(interaction);
 		} catch (message) {
 			CustomClient.printToStderr(message);
@@ -83,9 +94,14 @@ export class Command {
 	 * Run this command for a submitted modal.
 	 * @param interaction - The interaction received
 	 */
-	async modalSubmit(interaction: InteractionByType<InteractionType.ModalSubmit>) {
+	async modalSubmit(
+		interaction: InteractionByType<InteractionType.ModalSubmit>,
+	) {
 		try {
-			if (!this.isPrivate || env.OWNER_IDS?.includes(interaction.user.id) === true)
+			if (
+				!this.isPrivate ||
+				env.OWNER_IDS?.includes(interaction.user.id) === true
+			)
 				await this._modalSubmit?.(interaction);
 		} catch (message) {
 			CustomClient.printToStderr(message);
@@ -98,9 +114,12 @@ export class Command {
 	 */
 	patch(options: Partial<CommandOptions>) {
 		if (options.data !== undefined) this.data = options.data;
-		if (options.autocomplete !== undefined) this._autocomplete = options.autocomplete.bind(this);
-		if (options.component !== undefined) this._component = options.component.bind(this);
-		if (options.modalSubmit !== undefined) this._modalSubmit = options.modalSubmit.bind(this);
+		if (options.autocomplete !== undefined)
+			this._autocomplete = options.autocomplete.bind(this);
+		if (options.component !== undefined)
+			this._component = options.component.bind(this);
+		if (options.modalSubmit !== undefined)
+			this._modalSubmit = options.modalSubmit.bind(this);
 		if (options.isPrivate !== undefined) this.isPrivate = options.isPrivate;
 		if (options.run !== undefined) this._execute = options.run.bind(this);
 		return this;
@@ -110,9 +129,14 @@ export class Command {
 	 * Run this command.
 	 * @param interaction - The interaction received
 	 */
-	async run(interaction: InteractionByType<InteractionType.ApplicationCommand>) {
+	async run(
+		interaction: InteractionByType<InteractionType.ApplicationCommand>,
+	) {
 		try {
-			if (!this.isPrivate || env.OWNER_IDS?.includes(interaction.user.id) === true)
+			if (
+				!this.isPrivate ||
+				env.OWNER_IDS?.includes(interaction.user.id) === true
+			)
 				await this._execute(interaction);
 		} catch (message) {
 			CustomClient.printToStderr(message);

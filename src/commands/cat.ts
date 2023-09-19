@@ -4,7 +4,10 @@ import { request } from "undici";
 import type { CatResponse, ReceivedInteraction } from "../util";
 import { createCommand } from "../util";
 
-const sendCat = async (interaction: ReceivedInteraction, ephemeral?: boolean) => {
+const sendCat = async (
+	interaction: ReceivedInteraction,
+	ephemeral?: boolean,
+) => {
 	const data = await request(
 		"https://api.thecatapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
 		{
