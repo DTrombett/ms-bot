@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { exit, nextTick } from "node:process";
 import { CustomClient, createEvent } from "../util";
 
@@ -7,7 +8,7 @@ export const invalidatedEvent = createEvent({
 		CustomClient.printToStderr(
 			"Client session became invalidated.\nClosing the process gracefully...",
 		);
-		await this.client.destroy();
+		await Promise.all([this.client.destroy(), mongoose.disconnect()]);
 		nextTick(exit, 1);
 	},
 });
