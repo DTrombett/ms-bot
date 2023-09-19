@@ -6,7 +6,8 @@ export type MatchDaySchema = {
 	_id: number;
 	day: number;
 	messageId?: string;
-	finished?: boolean;
+	finished: boolean;
+	predictionsSent: boolean;
 	matches: {
 		date: number;
 		teams: string;
@@ -17,7 +18,8 @@ export const matchDaySchema = new Schema<MatchDaySchema>({
 	_id: number,
 	day: number,
 	messageId: String,
-	finished: Boolean,
+	finished: { type: Boolean, default: false },
+	predictionsSent: { type: Boolean, default: false },
 	matches: {
 		type: [{ date: number, teams: string }],
 		required: true,

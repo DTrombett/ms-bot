@@ -1,19 +1,15 @@
-import { EmbedBuilder, Message } from "discord.js";
+import { EmbedBuilder, GuildTextBasedChannel, Message } from "discord.js";
 import ms from "ms";
-import { env } from "node:process";
 import { setTimeout as setPromiseTimeout } from "node:timers/promises";
-import { WebSocket, request } from "undici";
+import { WebSocket } from "undici";
 import { Document, MatchDay, User } from "../models";
 import CustomClient from "./CustomClient";
+import loadMatches from "./loadMatches";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
 
 type Leaderboard = [Document<typeof User>, number, number][];
 const dayPoints = [3, 2, 1];
-const loadMatches = (id: number) =>
-	request(
-		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${id}`,
-	).then((res) => res.body.json()) as Promise<MatchesData>;
 const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
 		.map(
@@ -157,6 +153,8 @@ const startWebSocket = (
 	message: Message,
 	matchDay: Document<typeof MatchDay>,
 ) => {
+	let resolve: (value: PromiseLike<void> | void) => void;
+
 	let timeout: NodeJS.Timeout | undefined;
 	const ws = new WebSocket(
 		"wss://www.legaseriea.it/socket.io/?EIO=4&transport=websocket",
@@ -199,7 +197,7 @@ const startWebSocket = (
 					`[${new Date().toISOString()}] Didn't receive ping in time. Trying to restart the websocket...`,
 				);
 				ws.close(1014);
-				startWebSocket(matches, users, embeds, message, matchDay);
+				resolve(startWebSocket(matches, users, embeds, message, matchDay));
 			}, data.pingInterval + data.pingTimeout);
 			CustomClient.printToStdout(
 				`[${new Date().toISOString()}] Live scores ready.`,
@@ -251,14 +249,14 @@ const startWebSocket = (
 						)}.`,
 					);
 					await setPromiseTimeout(delay);
-					const newMatches = await loadMatches(matchDay._id);
-
-					startWebSocket(
-						newMatches.success ? newMatches : matches,
-						users,
-						embeds,
-						message,
-						matchDay,
+					resolve(
+						startWebSocket(
+							await loadMatches(matchDay._id),
+							users,
+							embeds,
+							message,
+							matchDay,
+						),
 					);
 				} else {
 					ws.close(1001);
@@ -266,6 +264,7 @@ const startWebSocket = (
 						`[${new Date().toISOString()}] All matches ended. Marking match day as finished.`,
 					);
 					await closeMatchDay(message, users, matches, matchDay, embeds);
+					resolve();
 				}
 				return;
 			}
@@ -283,109 +282,91 @@ const startWebSocket = (
 			);
 		}
 	});
+	return new Promise<void>((res) => {
+		resolve = res;
+	});
 };
 
-export const liveScore = async (client: CustomClient) => {
-	try {
-		const [users, matchDay, channel] = await Promise.all([
-			User.find({
-				$or: [
-					{ predictions: { $exists: true, $type: "array", $ne: [] } },
-					{ dayPoints: { $exists: true, $ne: null } },
-				],
-			}),
-			MatchDay.findOne({}).sort("-day"),
-			client.channels.fetch(env.PREDICTIONS_CHANNEL!),
-		]);
+export const liveScore = async (
+	matchDay: Document<typeof MatchDay>,
+	channel: GuildTextBasedChannel,
+) => {
+	const users = await User.find({
+		$or: [
+			{ predictions: { $exists: true, $type: "array", $ne: [] } },
+			{ dayPoints: { $exists: true, $ne: null } },
+		],
+	});
 
-		if (!matchDay) {
-			CustomClient.printToStderr("No match day found!");
-			return;
-		}
-		if (
-			matchDay.finished! ||
-			!users.length ||
-			!users.find((u) => u.predictions?.length)
-		)
-			return;
-		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-		if (!channel?.isTextBased() || channel.isDMBased()) {
-			CustomClient.printToStderr("Invalid predictions channel!");
-			return;
-		}
-		const matches = await loadMatches(matchDay._id);
-
-		if (!matches.success) {
-			CustomClient.printToStderr(matches.message);
-			CustomClient.printToStderr(matches.errors);
-			return;
-		}
-		const leaderboard = resolveLeaderboard(users, matches);
-		const embeds = [
-			new EmbedBuilder()
-				.setThumbnail(
-					"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
-				)
-				.setTitle(`🔴 Risultati Live ${matchDay.day}° Giornata`)
-				.setDescription(resolveMatches(matches))
-				.setAuthor({
-					name: "Serie A TIM",
-					url: "https://legaseriea.it/it/serie-a",
-				})
-				.setColor("Red"),
-			new EmbedBuilder()
-				.setThumbnail(
-					"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
-				)
-				.setTitle(`🔴 Classifica Live Pronostici ${matchDay.day}° Giornata`)
-				.setDescription(createLeaderboardDescription(leaderboard))
-				.setFooter({ text: "Ultimo aggiornamento" })
-				.addFields({
-					name: "Classifica Generale Provvisoria",
-					value: createFinalLeaderboard(leaderboard),
-				})
-				.setAuthor({
-					name: "Serie A TIM",
-					url: "https://legaseriea.it/it/serie-a",
-				})
-				.setColor("Blue")
-				.setTimestamp(),
-		];
-		const message = await (matchDay.messageId == null
-			? channel.send({ embeds })
-			: channel.messages.fetch(matchDay.messageId));
-
-		if (matchDay.messageId == null) {
-			matchDay.messageId = message.id;
-			matchDay.save().catch(CustomClient.printToStderr);
-		} else if (
-			embeds.some(
-				(d, i) => d.data.description !== message.embeds[i]?.description,
-			) ||
-			embeds[1].data.fields?.[0].value !== message.embeds[1]?.fields[0].value
-		)
-			message.edit({ embeds }).catch(CustomClient.printToStderr);
-		if (matches.data.every((match) => match.match_status !== 1)) {
-			const next = matches.data.find((match) => match.match_status === 0);
-
-			if (next) {
-				const delay = new Date(next.date_time).getTime() - Date.now();
-
-				CustomClient.printToStdout(
-					`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
-						delay,
-					)}.`,
-				);
-				await setPromiseTimeout(delay);
-			} else {
-				await closeMatchDay(message, users, matches, matchDay, embeds);
-				return;
-			}
-		}
-		startWebSocket(matches, users, embeds, message, matchDay);
-	} catch (err) {
-		CustomClient.printToStderr(err);
+	if (!users.length || !users.find((u) => u.predictions?.length)) {
+		matchDay.finished = true;
+		await matchDay.save();
+		return;
 	}
+	const matches = await loadMatches(matchDay._id);
+	const leaderboard = resolveLeaderboard(users, matches);
+	const embeds = [
+		new EmbedBuilder()
+			.setThumbnail(
+				"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+			)
+			.setTitle(`🔴 Risultati Live ${matchDay.day}° Giornata`)
+			.setDescription(resolveMatches(matches))
+			.setAuthor({
+				name: "Serie A TIM",
+				url: "https://legaseriea.it/it/serie-a",
+			})
+			.setColor("Red"),
+		new EmbedBuilder()
+			.setThumbnail(
+				"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+			)
+			.setTitle(`🔴 Classifica Live Pronostici ${matchDay.day}° Giornata`)
+			.setDescription(createLeaderboardDescription(leaderboard))
+			.setFooter({ text: "Ultimo aggiornamento" })
+			.addFields({
+				name: "Classifica Generale Provvisoria",
+				value: createFinalLeaderboard(leaderboard),
+			})
+			.setAuthor({
+				name: "Serie A TIM",
+				url: "https://legaseriea.it/it/serie-a",
+			})
+			.setColor("Blue")
+			.setTimestamp(),
+	];
+	const message = await (matchDay.messageId == null
+		? channel.send({ embeds })
+		: channel.messages.fetch(matchDay.messageId));
+
+	if (matchDay.messageId == null) {
+		matchDay.messageId = message.id;
+		matchDay.save().catch(CustomClient.printToStderr);
+	} else if (
+		embeds.some(
+			(d, i) => d.data.description !== message.embeds[i]?.description,
+		) ||
+		embeds[1].data.fields?.[0].value !== message.embeds[1]?.fields[0].value
+	)
+		message.edit({ embeds }).catch(CustomClient.printToStderr);
+	if (matches.data.every((match) => match.match_status !== 1)) {
+		const next = matches.data.find((match) => match.match_status === 0);
+
+		if (next) {
+			const delay = new Date(next.date_time).getTime() - Date.now();
+
+			CustomClient.printToStdout(
+				`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
+					delay,
+				)}.`,
+			);
+			await setPromiseTimeout(delay);
+		} else {
+			await closeMatchDay(message, users, matches, matchDay, embeds);
+			return;
+		}
+	}
+	await startWebSocket(matches, users, embeds, message, matchDay);
 };
 
 export default liveScore;

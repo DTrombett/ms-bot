@@ -4,7 +4,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { join } from "node:path";
 import process, { cwd, env } from "node:process";
-import Constants, { CustomClient } from "./util";
+import Constants, { CustomClient, loadPredictions } from "./util";
 
 CustomClient.printToStdout("Starting...");
 if (!("DISCORD_TOKEN" in env)) config();
@@ -56,3 +56,4 @@ for (const font in fonts)
 		);
 await mongoose.connect(env["MONGODB_URL"]!);
 await client.login();
+await loadPredictions(client);
