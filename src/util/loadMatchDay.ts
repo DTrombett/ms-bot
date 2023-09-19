@@ -64,6 +64,7 @@ export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
 	if (date - Date.now() / 1_000 > 10)
 		await channel.send({
 			content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions add\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)`,
+			allowedMentions: { roles: [env.PREDICTIONS_ROLE!] },
 		});
 	return matchDay;
 };
