@@ -6,7 +6,6 @@ export * from "./channel";
 export * from "./dice";
 export * from "./dog";
 export * from "./emojis";
-export * from "./eval";
 export * from "./icon";
 export * from "./invite";
 export * from "./kick";
