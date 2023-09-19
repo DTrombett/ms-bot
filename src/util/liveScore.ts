@@ -126,6 +126,7 @@ const closeMatchDay = (
 	users: Document<typeof User>[],
 	matches: Extract<MatchesData, { success: true }>,
 	matchDay: Document<typeof MatchDay>,
+	embeds: EmbedBuilder[],
 ) => {
 	const leaderboard = resolveLeaderboard(users, matches);
 	const toEdit = [];
@@ -139,25 +140,10 @@ const closeMatchDay = (
 	return Promise.all([
 		message.edit({
 			embeds: [
-				new EmbedBuilder()
-					.setThumbnail(
-						"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
-					)
-					.setTitle(
-						`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
-					)
-					.setDescription(createLeaderboardDescription(leaderboard))
-					.setFooter({ text: "Giornata terminata" })
-					.addFields({
-						name: "Classifica Generale",
-						value: createFinalLeaderboard(leaderboard),
-					})
-					.setAuthor({
-						name: "Serie A TIM",
-						url: "https://legaseriea.it/it/serie-a",
-					})
-					.setColor("Blue")
-					.setTimestamp(),
+				embeds[0].setTitle(`Risultati Finali ${matchDay.day}° Giornata`),
+				embeds[1].setTitle(
+					`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
+				),
 			],
 		}),
 		matchDay.save(),
@@ -212,7 +198,7 @@ const startWebSocket = (
 				CustomClient.printToStderr(
 					`[${new Date().toISOString()}] Didn't receive ping in time. Trying to restart the websocket...`,
 				);
-				ws.close();
+				ws.close(1014);
 				startWebSocket(matches, users, embeds, message, matchDay);
 			}, data.pingInterval + data.pingTimeout);
 			CustomClient.printToStdout(
@@ -258,7 +244,7 @@ const startWebSocket = (
 					const delay = new Date(next.date_time).getTime() - Date.now();
 
 					if (delay < 1_000) return;
-					ws.close(1_000);
+					ws.close(1000);
 					CustomClient.printToStdout(
 						`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
 							delay,
@@ -267,18 +253,19 @@ const startWebSocket = (
 					await setPromiseTimeout(delay);
 					const newMatches = await loadMatches(matchDay._id);
 
-					if (!newMatches.success) {
-						CustomClient.printToStderr(newMatches.message);
-						CustomClient.printToStderr(newMatches.errors);
-						return;
-					}
-					startWebSocket(matches, users, embeds, message, matchDay);
+					startWebSocket(
+						newMatches.success ? newMatches : matches,
+						users,
+						embeds,
+						message,
+						matchDay,
+					);
 				} else {
-					ws.close(1_000);
+					ws.close(1001);
 					CustomClient.printToStdout(
 						`[${new Date().toISOString()}] All matches ended. Marking match day as finished.`,
 					);
-					await closeMatchDay(message, users, matches, matchDay);
+					await closeMatchDay(message, users, matches, matchDay, embeds);
 				}
 				return;
 			}
@@ -391,7 +378,7 @@ export const liveScore = async (client: CustomClient) => {
 				);
 				await setPromiseTimeout(delay);
 			} else {
-				await closeMatchDay(message, users, matches, matchDay);
+				await closeMatchDay(message, users, matches, matchDay, embeds);
 				return;
 			}
 		}
