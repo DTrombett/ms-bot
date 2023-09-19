@@ -7,11 +7,12 @@
 	"main": "./dist/index.js",
 	"scripts": {
 		"build": "tsup",
+		"dev": "npm run build && node --trace-warnings --enable-source-maps .",
 		"prepare": "npm run build",
 		"commands": "npm run build && node --trace-warnings --enable-source-maps ./dist/registerCommands.js",
 		"lint": "eslint src --fix",
 		"prettier": "prettier --write src/**/*.ts",
-		"start": "npm run build && node --trace-warnings --enable-source-maps .",
+		"start": "node .",
 		"test": "tsc --noEmit && eslint src"
 	},
 	"author": "DTrombett",
