@@ -10,18 +10,10 @@ const old = {
 };
 
 stream.write(`\n${"-".repeat(80)}\n\n`);
-stdout.write = (...args) => {
-	const success = old.stdout(...(args as [string]));
-
-	stream.write(args[0]);
-	return success;
-};
-stderr.write = (...args) => {
-	const success = old.stderr(...(args as [string]));
-
-	stream.write(args[0]);
-	return success;
-};
+stdout.write = (...args) =>
+	old.stdout(...(args as [string])) && stream.write(args[0]);
+stderr.write = (...args) =>
+	old.stderr(...(args as [string])) && stream.write(args[0]);
 
 /**
  * Inspects a value.
