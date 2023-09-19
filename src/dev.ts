@@ -1,8 +1,7 @@
 /* eslint-disable node/no-unpublished-import */
 import { watch } from "node:fs/promises";
 import { join } from "node:path";
-import { cwd, memoryUsage } from "node:process";
-import { setInterval } from "node:timers/promises";
+import { cwd } from "node:process";
 import type { build as Build } from "tsup";
 import { loadCommands, loadEvents, printToStderr, printToStdout } from "./util";
 import Constants from "./util/Constants";
@@ -66,21 +65,6 @@ const watchEvents = async (client: CustomClient, build: typeof Build) => {
 		);
 	}
 };
-const logMemoryUsage = async () => {
-	for await (const _ of setInterval(60_000)) {
-		const memory = memoryUsage();
-
-		printToStdout(
-			`RSS: ${(memory.rss / 1000 / 1000).toFixed(3)}MB\nHeap Used: ${(
-				memory.heapUsed /
-				1000 /
-				1000
-			).toFixed(3)}MB\nHeap Total: ${(memory.heapTotal / 1000 / 1000).toFixed(
-				3,
-			)}MB\nExternal: ${(memory.external / 1000 / 1000).toFixed(3)}MB`,
-		);
-	}
-};
 
 export const configureDev = async (client: CustomClient) => {
 	const tsup = await import("tsup").catch(() => {
@@ -90,7 +74,6 @@ export const configureDev = async (client: CustomClient) => {
 	Promise.all([
 		tsup ? watchCommands(client, tsup.build) : undefined,
 		tsup ? watchEvents(client, tsup.build) : undefined,
-		logMemoryUsage(),
 	]).catch(printToStderr);
 };
 
