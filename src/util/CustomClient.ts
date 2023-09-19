@@ -5,11 +5,8 @@ import {
 	Options,
 	Partials,
 } from "discord.js";
-import { stderr, stdout } from "node:process";
-import { inspect } from "node:util";
 import type Command from "./Command";
 import type Event from "./Event";
-import color, { Colors } from "./colors";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
 import { loadTimeouts } from "./permanentTimeouts";
@@ -68,43 +65,6 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 			],
 			waitGuildTimeout: 1_000,
 		});
-	}
-
-	/**
-	 * Inspects a value.
-	 * @param value - The value to check
-	 */
-	static inspect(this: void, value: unknown) {
-		switch (typeof value) {
-			case "string":
-				return value;
-			case "bigint":
-			case "number":
-			case "boolean":
-			case "function":
-			case "symbol":
-				return value.toString();
-			case "object":
-				return inspect(value);
-			default:
-				return "undefined";
-		}
-	}
-
-	/**
-	 * Prints a message to stdout.
-	 * @param message - The string to print
-	 */
-	static printToStdout(this: void, message: unknown) {
-		stdout.write(`${CustomClient.inspect(message)}\n`);
-	}
-
-	/**
-	 * Prints a message to stderr.
-	 * @param message - The string to print
-	 */
-	static printToStderr(this: void, message: unknown) {
-		stderr.write(color(`${CustomClient.inspect(message)}\n`, Colors.FgRed));
 	}
 
 	/**

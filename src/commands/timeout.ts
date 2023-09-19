@@ -12,9 +12,9 @@ import {
 import ms from "ms";
 import type { InteractionByType, ReceivedInteraction } from "../util";
 import {
-	CustomClient,
 	createCommand,
 	normalizeError,
+	printToStderr,
 	sendError,
 } from "../util";
 
@@ -72,7 +72,7 @@ const executeTimeout = async (
 			.timeout(timeout, reason || undefined)
 			.then(() => undefined)
 			.catch(normalizeError),
-		interaction.deferReply().catch(CustomClient.printToStderr),
+		interaction.deferReply().catch(printToStderr),
 	]);
 
 	if (error) {
@@ -181,7 +181,7 @@ const removeTimeout = async (
 			.timeout(null, reason || undefined)
 			.then(() => undefined)
 			.catch(normalizeError),
-		interaction.deferReply().catch(CustomClient.printToStderr),
+		interaction.deferReply().catch(printToStderr),
 	]);
 
 	if (error) {

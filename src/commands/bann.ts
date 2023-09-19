@@ -11,10 +11,10 @@ import {
 } from "discord.js";
 import type { InteractionByType, ReceivedInteraction } from "../util";
 import {
-	CustomClient,
 	Emojis,
 	createCommand,
 	normalizeError,
+	printToStderr,
 	sendError,
 } from "../util";
 
@@ -69,7 +69,7 @@ const executeBan = async (
 			})
 			.then(() => undefined)
 			.catch(normalizeError),
-		interaction.deferReply().catch(CustomClient.printToStderr),
+		interaction.deferReply().catch(printToStderr),
 	]);
 
 	if (error) {
@@ -159,7 +159,7 @@ const unban = async (
 			.unban(user, reason || undefined)
 			.then(() => undefined)
 			.catch(normalizeError),
-		interaction.deferReply().catch(CustomClient.printToStderr),
+		interaction.deferReply().catch(printToStderr),
 	]);
 
 	if (error) {

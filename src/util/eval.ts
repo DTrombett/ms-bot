@@ -1,4 +1,4 @@
-import CustomClient from "./CustomClient";
+import { inspect } from "./logger";
 
 /**
  * Execute some code and return the result.
@@ -20,4 +20,4 @@ export async function runEval(code: string): Promise<unknown> {
  * @returns The result of the code
  */
 export const parseEval = async (code: string): Promise<string> =>
-	CustomClient.inspect(await runEval(code));
+	inspect(await runEval(code));

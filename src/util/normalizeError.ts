@@ -1,4 +1,4 @@
-import CustomClient from "./CustomClient";
+import { printToStderr } from "./logger";
 
 /**
  * Normalize a promise rejection to a plain error object.
@@ -6,7 +6,7 @@ import CustomClient from "./CustomClient";
  * @returns An Error object
  */
 export const normalizeError = (err: unknown) => {
-	CustomClient.printToStderr(err);
+	printToStderr(err);
 	return err instanceof Error
 		? err
 		: new Error(typeof err === "string" ? err : "Unknown error");

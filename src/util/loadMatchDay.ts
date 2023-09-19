@@ -2,9 +2,9 @@ import { GuildTextBasedChannel } from "discord.js";
 import { env } from "node:process";
 import { request } from "undici";
 import { MatchDay, User } from "../models";
-import CustomClient from "./CustomClient";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
+import { printToStderr } from "./logger";
 
 export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
 	const matchDays = (await request(
@@ -21,8 +21,8 @@ export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
 		| { success: false; message: string; errors: unknown[] };
 
 	if (!matchDays.success) {
-		CustomClient.printToStderr(matchDays.message);
-		CustomClient.printToStderr(matchDays.errors);
+		printToStderr(matchDays.message);
+		printToStderr(matchDays.errors);
 		throw new Error("Couldn't load season data");
 	}
 	const matchDayData = matchDays.data.find(
@@ -35,8 +35,8 @@ export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
 	).then((res) => res.body.json())) as MatchesData;
 
 	if (!matches.success) {
-		CustomClient.printToStderr(matches.message);
-		CustomClient.printToStderr(matches.errors);
+		printToStderr(matches.message);
+		printToStderr(matches.errors);
 		throw new Error("Couldn't load matches data");
 	}
 	const matchDay = new MatchDay({

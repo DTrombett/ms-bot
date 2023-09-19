@@ -3,10 +3,10 @@ import ms from "ms";
 import { setTimeout as setPromiseTimeout } from "node:timers/promises";
 import { WebSocket } from "undici";
 import { Document, MatchDay, User } from "../models";
-import CustomClient from "./CustomClient";
 import loadMatches from "./loadMatches";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
+import { printToStderr, printToStdout } from "./logger";
 
 type Leaderboard = [Document<typeof User>, number, number][];
 const dayPoints = [3, 2, 1];
@@ -161,12 +161,10 @@ const startWebSocket = (
 	);
 
 	ws.addEventListener("open", () => {
-		CustomClient.printToStdout(
-			`[${new Date().toISOString()}] Waiting for ping.`,
-		);
+		printToStdout(`[${new Date().toISOString()}] Waiting for ping.`);
 	});
 	ws.addEventListener("close", (event) => {
-		CustomClient.printToStderr(
+		printToStderr(
 			`[${new Date().toISOString()}] WebSocket closed with code ${
 				event.code
 			} and reason ${event.reason}`,
@@ -193,21 +191,17 @@ const startWebSocket = (
 			if (!data || !("pingInterval" in data)) return;
 			ws.send("40");
 			timeout ??= setTimeout(() => {
-				CustomClient.printToStderr(
+				printToStderr(
 					`[${new Date().toISOString()}] Didn't receive ping in time. Trying to restart the websocket...`,
 				);
 				ws.close(1014);
 				resolve(startWebSocket(matches, users, embeds, message, matchDay));
 			}, data.pingInterval + data.pingTimeout);
-			CustomClient.printToStdout(
-				`[${new Date().toISOString()}] Live scores ready.`,
-			);
+			printToStdout(`[${new Date().toISOString()}] Live scores ready.`);
 		} else if (type === 2) {
 			ws.send("3");
 			timeout?.refresh();
-			CustomClient.printToStdout(
-				`[${new Date().toISOString()}] Ping acknowledged.`,
-			);
+			printToStdout(`[${new Date().toISOString()}] Ping acknowledged.`);
 		} else if (type === 42) {
 			if (!Array.isArray(data) || data[0] !== "callApi") return;
 			const updateData: {
@@ -243,7 +237,7 @@ const startWebSocket = (
 
 					if (delay < 1_000) return;
 					ws.close(1000);
-					CustomClient.printToStdout(
+					printToStdout(
 						`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
 							delay,
 						)}.`,
@@ -260,7 +254,7 @@ const startWebSocket = (
 					);
 				} else {
 					ws.close(1001);
-					CustomClient.printToStdout(
+					printToStdout(
 						`[${new Date().toISOString()}] All matches ended. Marking match day as finished.`,
 					);
 					await closeMatchDay(message, users, matches, matchDay, embeds);
@@ -275,11 +269,9 @@ const startWebSocket = (
 					name: "Classifica Generale",
 					value: createFinalLeaderboard(leaderboard),
 				});
-				message.edit({ embeds }).catch(CustomClient.printToStderr);
+				message.edit({ embeds }).catch(printToStderr);
 			}
-			CustomClient.printToStdout(
-				`[${new Date().toISOString()}] Matches data updated.`,
-			);
+			printToStdout(`[${new Date().toISOString()}] Matches data updated.`);
 		}
 	});
 	return new Promise<void>((res) => {
@@ -341,21 +333,21 @@ export const liveScore = async (
 
 	if (matchDay.messageId == null) {
 		matchDay.messageId = message.id;
-		matchDay.save().catch(CustomClient.printToStderr);
+		matchDay.save().catch(printToStderr);
 	} else if (
 		embeds.some(
 			(d, i) => d.data.description !== message.embeds[i]?.description,
 		) ||
 		embeds[1].data.fields?.[0].value !== message.embeds[1]?.fields[0].value
 	)
-		message.edit({ embeds }).catch(CustomClient.printToStderr);
+		message.edit({ embeds }).catch(printToStderr);
 	if (matches.data.every((match) => match.match_status !== 1)) {
 		const next = matches.data.find((match) => match.match_status === 0);
 
 		if (next) {
 			const delay = new Date(next.date_time).getTime() - Date.now();
 
-			CustomClient.printToStdout(
+			printToStdout(
 				`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
 					delay,
 				)}.`,

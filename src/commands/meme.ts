@@ -7,9 +7,9 @@ import {
 import { join } from "node:path";
 import { cwd } from "node:process";
 import {
-	CustomClient,
 	createCommand,
 	normalizeError,
+	printToStderr,
 	sendError,
 } from "../util";
 
@@ -398,7 +398,7 @@ export const memeCommand = createCommand({
 		}
 		const [attachment] = await Promise.all([
 			canvas.encode("png").catch(normalizeError),
-			interaction.deferReply().catch(CustomClient.printToStderr),
+			interaction.deferReply().catch(printToStderr),
 		]);
 
 		if (attachment instanceof Error) {

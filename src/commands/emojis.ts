@@ -9,9 +9,9 @@ import {
 } from "discord.js";
 import type { ReceivedInteraction } from "../util";
 import {
-	CustomClient,
 	createCommand,
 	normalizeError,
+	printToStderr,
 	sendError,
 } from "../util";
 
@@ -339,7 +339,7 @@ export const emojisCommand = createCommand({
 						roles,
 					})
 					.catch(normalizeError),
-				interaction.deferReply().catch(CustomClient.printToStderr),
+				interaction.deferReply().catch(printToStderr),
 			]);
 
 			if (result instanceof Error) {
