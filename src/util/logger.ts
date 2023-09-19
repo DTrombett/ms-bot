@@ -9,7 +9,7 @@ const old = {
 	stderr: stderr.write.bind(stderr),
 };
 
-stream.write(`\n${"-".repeat(80)}\n\n`);
+stream.write(`${"_".repeat(80)}\n\n`);
 stdout.write = (...args) =>
 	old.stdout(...(args as [string])) && stream.write(args[0]);
 stderr.write = (...args) =>
