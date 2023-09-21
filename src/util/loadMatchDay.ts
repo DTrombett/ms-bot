@@ -2,9 +2,9 @@ import { GuildTextBasedChannel } from "discord.js";
 import { env } from "node:process";
 import { request } from "undici";
 import { MatchDay, User } from "../models";
+import { printToStderr } from "./logger";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
-import { printToStderr } from "./logger";
 
 export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
 	const matchDays = (await request(
@@ -63,7 +63,7 @@ export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
 	date = Math.round(date / 1_000);
 	if (date - Date.now() / 1_000 > 10)
 		await channel.send({
-			content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions add\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)`,
+			content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions send\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)`,
 			allowedMentions: { roles: [env.PREDICTIONS_ROLE!] },
 		});
 	return matchDay;
