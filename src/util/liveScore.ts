@@ -351,12 +351,14 @@ export const liveScore = async (
 		if (next) {
 			const delay = new Date(next.date_time).getTime() - Date.now();
 
-			printToStdout(
-				`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
-					delay,
-				)}.`,
-			);
-			await setPromiseTimeout(delay);
+			if (delay > 1_000) {
+				printToStdout(
+					`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
+						delay,
+					)}.`,
+				);
+				await setPromiseTimeout(delay);
+			}
 		} else {
 			await closeMatchDay(message, users, matches, matchDay, embeds);
 			return;
