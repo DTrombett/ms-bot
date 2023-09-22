@@ -233,6 +233,15 @@ const startWebSocket = (
 				createLeaderboardDescription(leaderboard),
 			];
 
+			if (newDescriptions.some((d, i) => d !== embeds[i].data.description)) {
+				embeds[0].setDescription(newDescriptions[0]);
+				embeds[1].setDescription(newDescriptions[1]).setTimestamp();
+				embeds[1].setFields({
+					name: "Classifica Generale",
+					value: createFinalLeaderboard(leaderboard),
+				});
+				message.edit({ embeds }).catch(printToStderr);
+			}
 			if (matches.data.every((match) => match.match_status !== 1)) {
 				const next = matches.data.find((match) => match.match_status === 0);
 
@@ -265,15 +274,6 @@ const startWebSocket = (
 					resolve();
 				}
 				return;
-			}
-			if (newDescriptions.some((d, i) => d !== embeds[i].data.description)) {
-				embeds[0].setDescription(newDescriptions[0]);
-				embeds[1].setDescription(newDescriptions[1]).setTimestamp();
-				embeds[1].setFields({
-					name: "Classifica Generale",
-					value: createFinalLeaderboard(leaderboard),
-				});
-				message.edit({ embeds }).catch(printToStderr);
 			}
 			printToStdout(`[${new Date().toISOString()}] Matches data updated.`);
 		}
