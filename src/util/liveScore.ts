@@ -4,9 +4,9 @@ import { setTimeout as setPromiseTimeout } from "node:timers/promises";
 import { WebSocket } from "undici";
 import { Document, MatchDay, User } from "../models";
 import loadMatches from "./loadMatches";
+import { printToStderr, printToStdout } from "./logger";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
-import { printToStderr, printToStdout } from "./logger";
 
 type Leaderboard = [Document<typeof User>, number, number][];
 const dayPoints = [3, 2, 1];
@@ -21,7 +21,7 @@ const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 				}): ${
 					match.match_status === 0
 						? `<t:${Math.round(new Date(match.date_time).getTime() / 1_000)}:F>`
-						: `**${match.home_goal} - ${match.away_goal}**`
+						: `**${match.home_goal ?? 0} - ${match.away_goal ?? 0}**`
 				}`,
 		)
 		.join("\n");
@@ -48,6 +48,8 @@ const resolveLeaderboard = (
 						(p) => teams === p.teams.toLowerCase(),
 					);
 
+					match.home_goal ??= 0;
+					match.away_goal ??= 0;
 					if (!prediction) return points - 1;
 					const [type, home, away] = prediction.prediction.split(
 						/( \(| - |\))/g,
@@ -213,6 +215,8 @@ const startWebSocket = (
 				match_status: number;
 			}[] = JSON.parse(data[1]);
 
+			printToStdout(`[${new Date().toISOString()}] Received updated data.`);
+			printToStdout(updateData);
 			for (const update of updateData) {
 				const found = matches.data.find(
 					(match) => match.match_id === update.match_id,

@@ -174,8 +174,8 @@ export type MatchesData =
 	| {
 			success: true;
 			data: {
-				home_goal: number;
-				away_goal: number;
+				home_goal: number | null;
+				away_goal: number | null;
 				home_team_name: Uppercase<string>;
 				away_team_name: Uppercase<string>;
 				date_time: string;
