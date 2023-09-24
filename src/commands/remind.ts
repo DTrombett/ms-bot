@@ -81,7 +81,8 @@ export const remindCommand = createCommand({
 				if (
 					Number.isNaN(date) ||
 					date <= Date.now() + 1_000 ||
-					date > 10_000_000_000_000
+					// 100 years
+					date > 3_153_600_000_000
 				) {
 					await interaction.reply({
 						ephemeral: true,
