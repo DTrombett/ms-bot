@@ -58,7 +58,7 @@ const resolveLeaderboard = (
 							? "2"
 							: "X";
 					const matched = prediction.prediction.match(
-						/(?<type>.) \((?<home>(?<=\()\d+) - (?<away>\d+(?=\)))/,
+						/(?<type>.)( \((?<home>(?<=\()\d+) - (?<away>\d+(?=\))))?/,
 					)?.groups;
 
 					if (!matched) return points - 1;
