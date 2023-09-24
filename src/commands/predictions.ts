@@ -13,6 +13,7 @@ import {
 	TextInputBuilder,
 	TextInputStyle,
 } from "discord.js";
+import ms from "ms";
 import { Document, MatchDay, MatchDaySchema, User } from "../models";
 import { capitalize, createCommand } from "../util";
 
@@ -124,11 +125,65 @@ export const predictionsCommand = createCommand({
 						},
 					],
 				},
+				{
+					name: "reminder",
+					description:
+						"Imposta un promemoria per ricordarti di inserire i pronostici",
+					type: ApplicationCommandOptionType.Subcommand,
+					options: [
+						{
+							type: ApplicationCommandOptionType.String,
+							name: "before",
+							required: true,
+							description:
+								"Quanto tempo prima dell'inizio della giornata inviare il promemoria. Imposta 0 per eliminarlo",
+						},
+					],
+				},
 			],
 		},
 	],
 	async run(interaction) {
 		const subCommand = interaction.options.getSubcommand();
+
+		if (subCommand === "reminder") {
+			const before = ms(interaction.options.getString("before", true));
+			const user =
+				(await User.findById(interaction.user.id)) ??
+				new User({ _id: interaction.user.id });
+
+			if (before === 0) {
+				if (!user.predictionReminder!) {
+					await interaction.reply({
+						ephemeral: true,
+						content: "Non hai impostato alcun promemoria!",
+					});
+					return;
+				}
+				user.predictionReminder = undefined;
+				await user.save();
+				await interaction.reply({
+					ephemeral: true,
+					content: "Promemoria rimosso con successo!",
+				});
+				return;
+			}
+			if (Number.isNaN(before) || before < 1_000 || before > 604_800_000) {
+				await interaction.reply({
+					ephemeral: true,
+					content:
+						"Durata non valida! Imposta il promemoria almeno a un secondo e al massimo una settimana dall'inizio della giornata.",
+				});
+				return;
+			}
+			user.predictionReminder = before;
+			await user.save();
+			await interaction.reply({
+				ephemeral: true,
+				content: "Promemoria impostato con successo!",
+			});
+			return;
+		}
 		const matchDay = await MatchDay.findOne({}).sort("-day");
 
 		if (subCommand === "view") {

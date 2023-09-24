@@ -9,12 +9,14 @@ export type UserSchema = {
 		teams: string;
 	}[];
 	dayPoints?: number;
+	predictionReminder?: number;
 };
 
 export const userSchema = new Schema<UserSchema>({
 	_id: string,
 	predictions: [{ prediction: string, teams: string }],
 	dayPoints: Number,
+	predictionReminder: Number,
 });
 
 export const User = createModel("User", userSchema);

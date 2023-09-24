@@ -1,16 +1,17 @@
 import { GuildTextBasedChannel } from "discord.js";
 import { env } from "node:process";
 import { setTimeout } from "node:timers/promises";
-import { Document, MatchDay } from "../models";
+import { Document, MatchDay, User } from "../models";
 import CustomClient from "./CustomClient";
 import liveScore from "./liveScore";
 import loadMatchDay from "./loadMatchDay";
 import loadMatches from "./loadMatches";
+import { printToStderr, printToStdout } from "./logger";
 import sendPredictions from "./sendPredictions";
 import { MatchesData } from "./types";
-import { printToStdout } from "./logger";
 
 const startDay = async (
+	client: CustomClient,
 	matches: Extract<MatchesData, { success: true }>,
 	matchDay: Document<typeof MatchDay>,
 	channel: GuildTextBasedChannel,
@@ -34,6 +35,22 @@ const startDay = async (
 		printToStdout(
 			`[${new Date().toISOString()}] Waiting until 15 minutes before the start of the first match to send the predictions.`,
 		);
+		const users = await User.find({
+			predictionReminder: { $exists: true, $ne: null },
+		});
+
+		Promise.all(
+			users.map(async (u) => {
+				await setTimeout(
+					startTime - Date.now() - 1000 * 60 * 15 - u.predictionReminder!,
+				);
+				if (u.predictions?.length !== matchDay.matches.length)
+					await client.users.send(u._id, {
+						content:
+							"⚽ È tempo di inviare i pronostici per la prossima giornata!",
+					});
+			}),
+		).catch(printToStderr);
 		await setTimeout(startTime - Date.now() - 1000 * 60 * 15);
 		printToStdout(`[${new Date().toISOString()}] Sending predictions.`);
 		await sendPredictions(matchDay, channel);
@@ -46,7 +63,7 @@ const startDay = async (
 	await setTimeout(startTime - Date.now());
 	printToStdout(`[${new Date().toISOString()}] Starting live scores.`);
 	await liveScore(matchDay, channel);
-	return startDay(matches, matchDay, channel);
+	return startDay(client, matches, matchDay, channel);
 };
 
 export const loadPredictions = async (client: CustomClient) => {
@@ -60,5 +77,5 @@ export const loadPredictions = async (client: CustomClient) => {
 	const matchDay =
 		(await MatchDay.findOne({}).sort("-day")) ?? (await loadMatchDay(channel));
 
-	await startDay(await loadMatches(matchDay._id), matchDay, channel);
+	await startDay(client, await loadMatches(matchDay._id), matchDay, channel);
 };
