@@ -51,18 +51,22 @@ const resolveLeaderboard = (
 					match.home_goal ??= 0;
 					match.away_goal ??= 0;
 					if (!prediction) return points - 1;
-					const [type, home, away] = prediction.prediction.split(
-						/( \(| - |\))/g,
-					) as
-						| ["1" | "1X" | "2" | "X" | "X2"]
-						| ["1" | "2" | "X", `${number}`, `${number}`];
 					const result =
 						match.home_goal > match.away_goal
 							? "1"
 							: match.home_goal < match.away_goal
 							? "2"
 							: "X";
+					const matched = prediction.prediction.match(
+						/(?<type>.) \((?<home>(?<=\()\d+) - (?<away>\d+(?=\)))/,
+					)?.groups;
 
+					if (!matched) return points - 1;
+					const { type, home, away } = matched as {
+						type: "1" | "2" | "X";
+						home?: `${number}`;
+						away?: `${number}`;
+					};
 					if (type === result)
 						if (
 							home !== undefined &&
