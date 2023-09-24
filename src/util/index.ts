@@ -18,6 +18,7 @@ export * from "./loadMatchDay";
 export * from "./loadMatches";
 export * from "./loadPredictions";
 export * from "./loadQuotes";
+export * from "./logMemoryUsage";
 export * from "./logger";
 export * from "./normalizeError";
 export * from "./normalizeTeamName";
