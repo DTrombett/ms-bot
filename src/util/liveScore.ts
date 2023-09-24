@@ -303,7 +303,7 @@ export const liveScore = async (
 		await matchDay.save();
 		return;
 	}
-	const matches = await loadMatches(matchDay._id);
+	let matches = await loadMatches(matchDay._id);
 	const leaderboard = resolveLeaderboard(users, matches);
 	const embeds = [
 		new EmbedBuilder()
@@ -362,6 +362,7 @@ export const liveScore = async (
 					)}.`,
 				);
 				await setPromiseTimeout(delay);
+				matches = await loadMatches(matchDay._id);
 			}
 		} else {
 			await closeMatchDay(message, users, matches, matchDay, embeds);
