@@ -232,20 +232,16 @@ const startWebSocket = (
 				found.match_status = update.match_status;
 			}
 			const leaderboard = resolveLeaderboard(users, matches);
-			const newDescriptions = [
-				resolveMatches(matches),
-				createLeaderboardDescription(leaderboard),
-			];
 
-			if (newDescriptions.some((d, i) => d !== embeds[i].data.description)) {
-				embeds[0].setDescription(newDescriptions[0]);
-				embeds[1].setDescription(newDescriptions[1]).setTimestamp();
-				embeds[1].setFields({
-					name: "Classifica Generale",
-					value: createFinalLeaderboard(leaderboard),
-				});
-				message.edit({ embeds }).catch(printToStderr);
-			}
+			embeds[0].setDescription(resolveMatches(matches));
+			embeds[1]
+				.setDescription(createLeaderboardDescription(leaderboard))
+				.setTimestamp();
+			embeds[1].setFields({
+				name: "Classifica Generale",
+				value: createFinalLeaderboard(leaderboard),
+			});
+			message.edit({ embeds }).catch(printToStderr);
 			if (matches.data.every((match) => match.match_status !== 1)) {
 				const next = matches.data.find((match) => match.match_status === 0);
 
