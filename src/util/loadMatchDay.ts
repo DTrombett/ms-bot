@@ -78,7 +78,7 @@ export const loadMatchDay = async (
 	date = Math.round(date / 1_000);
 	if (date - Date.now() / 1_000 > 10)
 		await channel.send({
-			content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions send\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)`,
+			content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions send\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)! Vi ricordo che potete aggiungere un promemoria valido per ogni giornata per ricordarvi di inviare i pronostici con il comando \`/predictions reminder\``,
 			allowedMentions: { roles: [env.PREDICTIONS_ROLE!] },
 		});
 	return matchDay;
