@@ -2,11 +2,16 @@ import { GuildTextBasedChannel } from "discord.js";
 import { env } from "node:process";
 import { request } from "undici";
 import { MatchDay, User } from "../models";
+import CustomClient from "./CustomClient";
 import { printToStderr } from "./logger";
 import normalizeTeamName from "./normalizeTeamName";
+import { setPermanentTimeout } from "./permanentTimeouts";
 import { MatchesData } from "./types";
 
-export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
+export const loadMatchDay = async (
+	client: CustomClient,
+	channel: GuildTextBasedChannel,
+) => {
 	const matchDays = (await request(
 		"https://www.legaseriea.it/api/season/157617/championship/A/matchday",
 	).then((res) => res.body.json())) as
@@ -49,6 +54,9 @@ export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
 		})),
 		day: Number(matchDayData.description),
 	});
+	const users = await User.find({
+		predictionReminder: { $exists: true, $ne: null },
+	});
 	let date = matchDay.matches[0].date - 1000 * 60 * 15;
 
 	await Promise.all([
@@ -58,6 +66,13 @@ export const loadMatchDay = async (channel: GuildTextBasedChannel) => {
 				predictions: { $exists: true, $type: "array", $ne: [] },
 			},
 			{ $unset: { predictions: 1 } },
+		),
+		...users.map((u) =>
+			setPermanentTimeout(client, {
+				action: "predictionRemind",
+				date: matchDay.matches[0].date - 1000 * 60 * 15 - u.predictionReminder!,
+				options: [u._id],
+			}),
 		),
 	]);
 	date = Math.round(date / 1_000);

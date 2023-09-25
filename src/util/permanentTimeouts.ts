@@ -8,16 +8,24 @@ export const timeoutCache: Record<
 	string,
 	Document<typeof Timeout> | undefined
 > = {};
+const controllers: Record<string, (() => void) | undefined> = {};
 
-export const setActionTimeout = async (
+const setActionTimeout = async (
 	client: CustomClient,
 	timeout: Document<typeof Timeout>,
 ) => {
 	const delay = timeout.date - Date.now();
 
-	if (delay < 2147483648)
+	if (delay < 2_147_483_648)
 		try {
-			await setTimeout(delay, undefined, { ref: false });
+			const abortController = new AbortController();
+
+			controllers[timeout.id as string] =
+				abortController.abort.bind(abortController);
+			await setTimeout(delay, undefined, {
+				ref: false,
+				signal: abortController.signal,
+			});
 			if (!timeoutCache[timeout.id as string]) return;
 			delete timeoutCache[timeout.id as string];
 			Promise.all([
@@ -47,6 +55,14 @@ export const setPermanentTimeout = async <T extends keyof typeof actions>(
 
 	timeoutCache[doc.id as string] = doc;
 	if (doc.date > Date.now()) await doc.save();
-	setActionTimeout(client, doc).catch(() => {});
+	setActionTimeout(client, doc)
+		.catch(() => {})
+		.catch(() => {});
 	return doc;
+};
+
+export const removePermanentTimeout = async (id: string) => {
+	controllers[id]?.();
+	await timeoutCache[id]?.deleteOne();
+	delete timeoutCache[id];
 };

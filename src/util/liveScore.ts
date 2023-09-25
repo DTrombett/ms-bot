@@ -143,9 +143,14 @@ const closeMatchDay = (
 		message.edit({
 			embeds: [
 				embeds[0].setTitle(`Risultati Finali ${matchDay.day}° Giornata`),
-				embeds[1].setTitle(
-					`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
-				),
+				embeds[1]
+					.setTitle(
+						`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
+					)
+					.setFields({
+						name: "Classifica Generale",
+						value: createFinalLeaderboard(leaderboard),
+					}),
 			],
 		}),
 		matchDay.save(),
@@ -238,7 +243,7 @@ const startWebSocket = (
 				.setDescription(createLeaderboardDescription(leaderboard))
 				.setTimestamp();
 			embeds[1].setFields({
-				name: "Classifica Generale",
+				name: "Classifica Generale Provvisoria",
 				value: createFinalLeaderboard(leaderboard),
 			});
 			message.edit({ embeds }).catch(printToStderr);

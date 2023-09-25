@@ -7,7 +7,12 @@ import {
 } from "discord.js";
 import ms from "ms";
 import { Document, Timeout, TimeoutSchema } from "../models";
-import { createCommand, setPermanentTimeout, timeoutCache } from "../util";
+import {
+	createCommand,
+	removePermanentTimeout,
+	setPermanentTimeout,
+	timeoutCache,
+} from "../util";
 
 const remindLimit = 10;
 
@@ -172,8 +177,7 @@ export const remindCommand = createCommand({
 					});
 					return;
 				}
-				await toRemove.deleteOne();
-				delete timeoutCache[toRemove.id as string];
+				await removePermanentTimeout(toRemove.id);
 				await interaction.reply({
 					ephemeral: true,
 					content: "Promemoria eliminato!",
@@ -230,8 +234,7 @@ export const remindCommand = createCommand({
 		}
 		switch (action) {
 			case "d":
-				await timeoutCache[id]!.deleteOne();
-				delete timeoutCache[id];
+				await removePermanentTimeout(id);
 				await interaction.reply({
 					ephemeral: true,
 					content: "Promemoria eliminato!",

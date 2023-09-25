@@ -13,9 +13,10 @@ import Constants, {
 } from "./util";
 
 printToStdout("Starting...");
-if (!("DISCORD_TOKEN" in env)) config();
 // eslint-disable-next-line no-console
 console.time(Constants.clientOnlineLabel);
+if (!("DISCORD_TOKEN" in env)) config();
+logMemoryUsage().catch(printToStderr);
 const client = new CustomClient();
 const app = express();
 const server = app.listen(3000);
@@ -62,4 +63,4 @@ for (const font in fonts)
 		);
 await mongoose.connect(env["MONGODB_URL"]!);
 await client.login();
-await Promise.all([loadPredictions(client), logMemoryUsage()]);
+await loadPredictions(client);

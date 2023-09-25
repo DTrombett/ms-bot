@@ -15,7 +15,13 @@ import {
 } from "discord.js";
 import ms from "ms";
 import { Document, MatchDay, MatchDaySchema, User } from "../models";
-import { capitalize, createCommand } from "../util";
+import {
+	capitalize,
+	createCommand,
+	removePermanentTimeout,
+	setPermanentTimeout,
+	timeoutCache,
+} from "../util";
 
 const predictionExamples = [
 	"1",
@@ -145,15 +151,21 @@ export const predictionsCommand = createCommand({
 	],
 	async run(interaction) {
 		const subCommand = interaction.options.getSubcommand();
+		const matchDay = await MatchDay.findOne({}).sort("-day");
 
 		if (subCommand === "reminder") {
 			const before = ms(interaction.options.getString("before", true));
 			const user =
 				(await User.findById(interaction.user.id)) ??
 				new User({ _id: interaction.user.id });
+			const existing = Object.values(timeoutCache).find(
+				(t) =>
+					t?.action === "predictionRemind" &&
+					t.options[0] === interaction.user.id,
+			);
 
 			if (before === 0) {
-				if (!user.predictionReminder!) {
+				if (user.predictionReminder == null) {
 					await interaction.reply({
 						ephemeral: true,
 						content: "Non hai impostato alcun promemoria!",
@@ -161,7 +173,10 @@ export const predictionsCommand = createCommand({
 					return;
 				}
 				user.predictionReminder = undefined;
-				await user.save();
+				await Promise.all([
+					user.save(),
+					existing && removePermanentTimeout(existing.id),
+				]);
 				await interaction.reply({
 					ephemeral: true,
 					content: "Promemoria rimosso con successo!",
@@ -177,15 +192,30 @@ export const predictionsCommand = createCommand({
 				return;
 			}
 			user.predictionReminder = before;
-			await user.save();
+			const promises: unknown[] = [
+				user.save(),
+				existing && removePermanentTimeout(existing.id),
+			];
+
+			if (matchDay?.predictionsSent === false) {
+				const date = matchDay.matches[0].date - 1000 * 60 * 15 - before;
+
+				if (date - Date.now() > 1_000)
+					promises.push(
+						setPermanentTimeout(this.client, {
+							action: "predictionRemind",
+							date,
+							options: [interaction.user.id],
+						}),
+					);
+			}
+			await Promise.all(promises);
 			await interaction.reply({
 				ephemeral: true,
 				content: "Promemoria impostato con successo!",
 			});
 			return;
 		}
-		const matchDay = await MatchDay.findOne({}).sort("-day");
-
 		if (subCommand === "view") {
 			if (!matchDay) {
 				await interaction.reply({
