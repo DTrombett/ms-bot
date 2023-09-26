@@ -48,7 +48,7 @@ process
 		printToStderr(message);
 	});
 app.use((_, res) => {
-	res.sendStatus(204);
+	res.send("Online!");
 });
 
 if (env.NODE_ENV === "development")
