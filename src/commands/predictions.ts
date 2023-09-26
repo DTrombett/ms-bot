@@ -411,7 +411,14 @@ export const predictionsCommand = createCommand({
 			});
 			return;
 		}
-		if (part === total)
+		if (part === total) {
+			const existing = Object.values(timeoutCache).find(
+				(t) =>
+					t?.action === "predictionRemind" &&
+					t.options[0] === interaction.user.id,
+			);
+
+			if (existing) await removePermanentTimeout(existing.id);
 			await interaction.reply({
 				ephemeral: true,
 				content: "Pronostici inviati correttamente!",
@@ -425,7 +432,7 @@ export const predictionsCommand = createCommand({
 					),
 				],
 			});
-		else
+		} else
 			await interaction.reply({
 				ephemeral: true,
 				content: `Parte **${part} di ${total}** inviata correttamente! Clicca il pulsante per continuare...`,
