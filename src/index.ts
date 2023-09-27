@@ -21,7 +21,7 @@ const app = express().use((_, res) => {
 	res.send(
 		client.isReady()
 			? `Online! Ping: ${client.ws.ping}ms`
-			: "Offline! The bot should be restarting right now, wait around 30 seconds and reload this page...",
+			: "Offline! The bot is restarting, wait around 10 seconds and reload this page...",
 	);
 });
 logMemoryUsage().catch(printToStderr);

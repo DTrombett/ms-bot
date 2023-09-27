@@ -202,10 +202,15 @@ const startWebSocket = (
 			if (!data || !("pingInterval" in data)) return;
 			ws.send("40");
 			timeout ??= setTimeout(() => {
+				if (
+					ws.readyState === WebSocket.CLOSED ||
+					ws.readyState === WebSocket.CLOSING
+				)
+					return;
 				printToStderr(
 					`[${new Date().toISOString()}] Didn't receive ping in time. Trying to restart the websocket...`,
 				);
-				ws.close(1014);
+				ws.close(1002);
 				resolve(startWebSocket(matches, users, embeds, message, matchDay));
 			}, data.pingInterval + data.pingTimeout);
 			printToStdout(`[${new Date().toISOString()}] Live scores ready.`);
