@@ -16,9 +16,15 @@ printToStdout("Starting...");
 // eslint-disable-next-line no-console
 console.time(Constants.clientOnlineLabel);
 if (!("DISCORD_TOKEN" in env)) config();
-logMemoryUsage().catch(printToStderr);
 const client = new CustomClient();
-const app = express();
+const app = express().use((_, res) => {
+	res.send(
+		client.isReady()
+			? `Online! Ping: ${client.ws.ping}ms`
+			: "Offline! The bot should be restarting right now, wait around 30 seconds and reload this page...",
+	);
+});
+logMemoryUsage().catch(printToStderr);
 const server = app.listen(3000);
 const fonts: Record<string, string> = {
 	impact: "Impact",
@@ -47,9 +53,6 @@ process
 	.on("warning", (message) => {
 		printToStderr(message);
 	});
-app.use((_, res) => {
-	res.send("Online!");
-});
 
 if (env.NODE_ENV === "development")
 	import(`./dev.js?${Date.now()}`)
