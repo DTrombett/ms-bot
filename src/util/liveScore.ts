@@ -202,6 +202,11 @@ const startWebSocket = (
 			if (!data || !("pingInterval" in data)) return;
 			ws.send("40");
 			timeout ??= setTimeout(() => {
+				if (
+					ws.readyState === WebSocket.CLOSED ||
+					ws.readyState === WebSocket.CLOSING
+				)
+					return;
 				printToStderr(
 					`[${new Date().toISOString()}] Didn't receive ping in time. Trying to restart the websocket...`,
 				);
