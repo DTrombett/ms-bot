@@ -1,4 +1,4 @@
-import type { InteractionType, Snowflake, User } from "discord.js";
+import type { Snowflake, User } from "discord.js";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -9,7 +9,7 @@ import {
 	TextInputStyle,
 	escapeMarkdown,
 } from "discord.js";
-import type { InteractionByType, ReceivedInteraction } from "../util";
+import type { ReceivedInteraction } from "../util";
 import { Emojis, createCommand, normalizeError, sendError } from "../util";
 
 const checkPerms = async (
@@ -91,48 +91,6 @@ const executeBan = async (
 		],
 	});
 };
-const showModal = (
-	interaction: InteractionByType<
-		InteractionType.ApplicationCommand | InteractionType.MessageComponent
-	>,
-	user: User,
-) =>
-	interaction.showModal({
-		title: `Vuoi bannare ${user.username}?`,
-		custom_id: `bann-${user.id}`,
-		components: [
-			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.TextInput,
-						custom_id: "deleteMessageDays",
-						label: "Giorni di messaggi da eliminare",
-						placeholder: "Esempi: 1, 3.5, 7",
-						style: TextInputStyle.Short,
-						value: "1",
-						min_length: 1,
-						max_length: 10,
-						required: false,
-					},
-				],
-			},
-			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.TextInput,
-						custom_id: "reason",
-						label: "Motivo del bann",
-						placeholder: "Il motivo del bann",
-						max_length: 512,
-						style: TextInputStyle.Paragraph,
-						required: false,
-					},
-				],
-			},
-		],
-	});
 const unban = async (
 	interaction: ReceivedInteraction<"cached">,
 	user: User,
@@ -395,7 +353,43 @@ export const bannCommand = createCommand({
 			return;
 		}
 		if (await checkPerms(interaction, guild.ownerId, id, member)) return;
-		if (action === "a") await showModal(interaction, user);
+		if (action === "a")
+			await interaction.showModal({
+				title: `Vuoi bannare ${user.username}?`,
+				custom_id: `bann-${user.id}`,
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.TextInput,
+								custom_id: "deleteMessageDays",
+								label: "Giorni di messaggi da eliminare",
+								placeholder: "Esempi: 1, 3.5, 7",
+								style: TextInputStyle.Short,
+								value: "1",
+								min_length: 1,
+								max_length: 10,
+								required: false,
+							},
+						],
+					},
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.TextInput,
+								custom_id: "reason",
+								label: "Motivo del bann",
+								placeholder: "Il motivo del bann",
+								max_length: 512,
+								style: TextInputStyle.Paragraph,
+								required: false,
+							},
+						],
+					},
+				],
+			});
 		else if (action === "r") await unban(interaction, user);
 	},
 });
