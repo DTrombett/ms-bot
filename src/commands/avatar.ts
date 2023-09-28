@@ -3,7 +3,6 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	GuildMember,
 	escapeMarkdown,
 } from "discord.js";
 import { createCommand } from "../util";
@@ -24,26 +23,25 @@ export const avatarCommand = createCommand({
 		},
 	],
 	async run(interaction) {
-		const { guild } = interaction;
-		const option =
-			interaction.options.data.find(
-				(o) => o.type === ApplicationCommandOptionType.User,
-			) ?? interaction;
-		const user = option.user ?? interaction.user;
-		const member = option.member
-			? option.member
-			: guild
-			? await guild.members.fetch(user.id).catch(() => user)
-			: user;
+		const option = interaction.options.get("user");
+		const { member, user } = option ?? interaction;
+
+		if (!user) {
+			await interaction.reply({
+				ephemeral: true,
+				content: "Utente non trovato!",
+			});
+			return;
+		}
 		const url =
-			"client" in member
+			member && "displayAvatarURL" in member
 				? member.displayAvatarURL({
 						extension: "png",
 						size: 4096,
 				  })
-				: member.avatar != null
+				: member?.avatar != null
 				? this.client.rest.cdn.guildMemberAvatar(
-						guild!.id,
+						interaction.guildId!,
 						user.id,
 						member.avatar,
 						{
@@ -58,11 +56,9 @@ export const avatarCommand = createCommand({
 
 		await interaction.reply({
 			content: `Avatar di **[${escapeMarkdown(
-				member instanceof GuildMember
+				(member && "displayName" in member
 					? member.displayName
-					: "nick" in member && member.nick != null
-					? member.nick
-					: user.username,
+					: member?.nick) ?? user.displayName,
 			)}](${url} )**:`,
 			components: [
 				{
