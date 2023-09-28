@@ -10,13 +10,7 @@ import {
 	escapeMarkdown,
 } from "discord.js";
 import type { InteractionByType, ReceivedInteraction } from "../util";
-import {
-	Emojis,
-	createCommand,
-	normalizeError,
-	printToStderr,
-	sendError,
-} from "../util";
+import { Emojis, createCommand, normalizeError, sendError } from "../util";
 
 const checkPerms = async (
 	interaction: ReceivedInteraction<"cached">,
@@ -58,29 +52,29 @@ const checkPerms = async (
 const executeBan = async (
 	interaction: ReceivedInteraction<"cached">,
 	user: User,
-	deleteMessageDays: number,
-	reason = "",
+	deleteMessageSeconds?: number,
+	reason?: string,
 ) => {
-	const [error] = await Promise.all([
-		interaction.guild.members
-			.ban(user, {
-				deleteMessageDays,
-				reason: reason || undefined,
-			})
-			.then(() => undefined)
-			.catch(normalizeError),
-		interaction.deferReply().catch(printToStderr),
-	]);
+	reason = reason?.trim();
+	const error = await interaction.guild.members
+		.ban(user, {
+			deleteMessageSeconds,
+			reason,
+		})
+		.then(() => {})
+		.catch(normalizeError);
 
 	if (error) {
 		await sendError(interaction, error);
 		return;
 	}
-	await interaction.editReply({
+	await interaction.reply({
 		content: `<:bann:${Emojis.bann}> <@${user.id}> (${escapeMarkdown(
 			user.tag,
 		)} - ${user.id}) è stato bannato!\n\nMotivo: ${
-			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
+			reason !== undefined && reason.length > 0
+				? reason.slice(0, 1_000)
+				: "*Nessun motivo*"
 		}`,
 		components: [
 			{
@@ -104,7 +98,7 @@ const showModal = (
 	user: User,
 ) =>
 	interaction.showModal({
-		title: `Vuoi bannare "@${user.username}"?`,
+		title: `Vuoi bannare ${user.username}?`,
 		custom_id: `bann-${user.id}`,
 		components: [
 			{
@@ -113,12 +107,12 @@ const showModal = (
 					{
 						type: ComponentType.TextInput,
 						custom_id: "deleteMessageDays",
-						label: "Elimina la cronologia dei messaggi degli ultimi giorni",
-						placeholder: "Esempi: 1, 7",
+						label: "Giorni di messaggi da eliminare",
+						placeholder: "Esempi: 1, 3.5, 7",
 						style: TextInputStyle.Short,
 						value: "1",
 						min_length: 1,
-						max_length: 3,
+						max_length: 10,
 						required: false,
 					},
 				],
@@ -130,8 +124,7 @@ const showModal = (
 						type: ComponentType.TextInput,
 						custom_id: "reason",
 						label: "Motivo del bann",
-						placeholder:
-							"Inserisci un motivo. Sarà visibile solo nel registro attività e non sarà mostrato al membro.",
+						placeholder: "Il motivo del bann",
 						max_length: 512,
 						style: TextInputStyle.Paragraph,
 						required: false,
@@ -143,7 +136,7 @@ const showModal = (
 const unban = async (
 	interaction: ReceivedInteraction<"cached">,
 	user: User,
-	reason = "",
+	reason?: string,
 ) => {
 	const { guild } = interaction;
 
@@ -154,23 +147,20 @@ const unban = async (
 		});
 		return;
 	}
-	const [error] = await Promise.all([
-		guild.members
-			.unban(user, reason || undefined)
-			.then(() => undefined)
-			.catch(normalizeError),
-		interaction.deferReply().catch(printToStderr),
-	]);
+	const error = await guild.members
+		.unban(user, reason)
+		.then(() => undefined)
+		.catch(normalizeError);
 
 	if (error) {
 		await sendError(interaction, error);
 		return;
 	}
-	await interaction.editReply({
+	await interaction.reply({
 		content: `Ho revocato il bann da <@${user.id}> (${escapeMarkdown(
 			user.tag,
 		)} - ${user.id})!\n\nMotivo: ${
-			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
+			reason?.slice(0, 1_000) ?? "*Nessun motivo*"
 		}`,
 		components: [
 			{
@@ -262,37 +252,11 @@ export const bannCommand = createCommand({
 				},
 			],
 		},
-		{
-			type: ApplicationCommandType.User,
-			name: "Bann",
-			default_member_permissions: String(PermissionFlagsBits.BanMembers),
-		},
 	],
 	async run(interaction) {
-		if (!interaction.inCachedGuild()) {
-			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
-				ephemeral: true,
-			});
-			return;
-		}
-		const data =
-			interaction.commandType === ApplicationCommandType.User
-				? interaction.options.data
-				: interaction.options.data[0].options;
-
-		if (!data) {
-			await interaction.reply({
-				content: "Questo comando non è attualmente disponibile!",
-				ephemeral: true,
-			});
-			return;
-		}
-		const option = data.find(
-			(o) => o.type === ApplicationCommandOptionType.User,
-		);
-		const user = option?.user;
+		if (!interaction.inCachedGuild()) return;
+		const option = interaction.options.get("user", true);
+		const { user } = option;
 
 		if (!user) {
 			await interaction.reply({
@@ -302,8 +266,9 @@ export const bannCommand = createCommand({
 			return;
 		}
 		const { guild } = interaction;
+		const subcommand = interaction.options.getSubcommand();
 
-		if (interaction.options.data[0].name === "check") {
+		if (subcommand === "check") {
 			const bannData = await guild.bans.fetch(user.id).catch(() => undefined);
 
 			if (!bannData) {
@@ -360,36 +325,25 @@ export const bannCommand = createCommand({
 				: await guild.members.fetch(user.id).catch(() => undefined);
 
 		if (await checkPerms(interaction, guild.ownerId, user.id, member)) return;
-		if (interaction.commandName === "Bann") {
-			await showModal(interaction, user);
-			return;
-		}
-		const reason = data.find((o) => o.name === "reason")?.value;
+		const reason = interaction.options.getString("reason");
+		const deleteMessageDays = interaction.options.getNumber("delete-messages");
 
-		if (interaction.options.data[0].name === "add") {
-			const deleteMessages = data.find((o) => o.name === "delete-messages")
-				?.value;
-			const deleteMessageDays =
-				typeof deleteMessages === "number" ? deleteMessages : 0;
-
+		if (subcommand === "add")
 			await executeBan(
 				interaction,
 				user,
-				deleteMessageDays,
-				typeof reason === "string" ? reason : undefined,
+				deleteMessageDays == null
+					? undefined
+					: deleteMessageDays * 60 * 60 * 24,
+				reason ?? undefined,
 			);
-			return;
-		}
-		if (interaction.options.data[0].name === "remove")
-			await unban(
-				interaction,
-				user,
-				typeof reason === "string" ? reason : undefined,
-			);
+		else if (subcommand === "remove")
+			await unban(interaction, user, reason ?? undefined);
 	},
 	async modalSubmit(interaction) {
+		if (!interaction.inCachedGuild()) return;
 		const deleteMessageDays =
-			Number(interaction.fields.fields.get("deleteMessageDays")?.value) || 0;
+			Number(interaction.fields.getTextInputValue("deleteMessageDays")) || 0;
 
 		if (deleteMessageDays < 0 || deleteMessageDays > 7) {
 			await interaction.reply({
@@ -398,8 +352,14 @@ export const bannCommand = createCommand({
 			});
 			return;
 		}
+		const { guild } = interaction;
 		const [, id] = interaction.customId.split("-");
-		const user = await this.client.users.fetch(id).catch(() => undefined);
+		const [user, member] = (await Promise.allSettled([
+			this.client.users.fetch(id),
+			guild.members.fetch(id),
+		]).then((results) =>
+			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
+		)) as [User | undefined, GuildMember | undefined];
 
 		if (!user) {
 			await interaction.reply({
@@ -408,36 +368,24 @@ export const bannCommand = createCommand({
 			});
 			return;
 		}
-		if (!interaction.inCachedGuild()) {
-			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
-				ephemeral: true,
-			});
-			return;
-		}
-		const { guild } = interaction;
-		const member = await guild.members.fetch(id).catch(() => undefined);
-
 		if (await checkPerms(interaction, guild.ownerId, id, member)) return;
 		await executeBan(
 			interaction,
 			user,
-			deleteMessageDays,
-			interaction.fields.fields.get("reason")?.value,
+			deleteMessageDays * 60 * 60 * 24,
+			interaction.fields.getTextInputValue("reason"),
 		);
 	},
 	async component(interaction) {
-		if (!interaction.inCachedGuild()) {
-			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
-				ephemeral: true,
-			});
-			return;
-		}
+		if (!interaction.inCachedGuild()) return;
+		const { guild } = interaction;
 		const [, id, action] = interaction.customId.split("-");
-		const user = await this.client.users.fetch(id).catch(() => undefined);
+		const [user, member] = (await Promise.allSettled([
+			this.client.users.fetch(id),
+			guild.members.fetch(id),
+		]).then((results) =>
+			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
+		)) as [User | undefined, GuildMember | undefined];
 
 		if (!user) {
 			await interaction.reply({
@@ -446,21 +394,8 @@ export const bannCommand = createCommand({
 			});
 			return;
 		}
-		if (!action || !["a", "r"].includes(action)) {
-			await interaction.reply({
-				content: "Azione non valida!",
-				ephemeral: true,
-			});
-			return;
-		}
-		const { guild } = interaction;
-		const member = await guild.members.fetch(id).catch(() => undefined);
-
 		if (await checkPerms(interaction, guild.ownerId, id, member)) return;
-		if (action === "a") {
-			await showModal(interaction, user);
-			return;
-		}
-		await unban(interaction, user, undefined);
+		if (action === "a") await showModal(interaction, user);
+		else if (action === "r") await unban(interaction, user);
 	},
 });

@@ -23,8 +23,8 @@ export const avatarCommand = createCommand({
 		},
 	],
 	async run(interaction) {
-		const option = interaction.options.get("user");
-		const { member, user } = option ?? interaction;
+		const option = interaction.options.get("user") ?? interaction;
+		const { user } = option;
 
 		if (!user) {
 			await interaction.reply({
@@ -33,6 +33,9 @@ export const avatarCommand = createCommand({
 			});
 			return;
 		}
+		const member =
+			option.member ??
+			(await interaction.guild?.members.fetch(user.id).catch(() => {}));
 		const url =
 			member && "displayAvatarURL" in member
 				? member.displayAvatarURL({
