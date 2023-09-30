@@ -131,6 +131,7 @@ const closeMatchDay = (
 	embeds: EmbedBuilder[],
 ) => {
 	const leaderboard = resolveLeaderboard(users, matches);
+	const value = createFinalLeaderboard(leaderboard);
 	const toEdit = [];
 
 	matchDay.finished = true;
@@ -149,7 +150,7 @@ const closeMatchDay = (
 					)
 					.setFields({
 						name: "Classifica Generale",
-						value: createFinalLeaderboard(leaderboard),
+						value,
 					}),
 			],
 		}),
