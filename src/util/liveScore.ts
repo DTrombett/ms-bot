@@ -100,28 +100,30 @@ const resolveLeaderboard = (
 	return leaderboard;
 };
 const createLeaderboardDescription = (leaderboard: Leaderboard) => {
-	const allHistoryPoints = leaderboard.reduce(
-		(array, [{ matchPointsHistory }]) => array.concat(matchPointsHistory ?? []),
-		[] as number[],
+	const highestMatchPoints = leaderboard.reduce(
+		(highest, [{ matchPointsHistory }]) =>
+			matchPointsHistory?.reduce((h, p) => (p > h ? p : h), highest) ?? highest,
+		-Infinity,
 	);
 
 	return [...leaderboard]
 		.sort((a, b) => b[1] - a[1])
-		.map(
-			([user, points]) =>
-				`${leaderboard.findIndex(([, p]) => points === p) + 1}\\. <@${
-					user._id
-				}>: **${points}** Punt${points === 1 ? "o" : "i"} Partita${
-					!allHistoryPoints.some((p) => p > points)
-						? " ✨"
-						: !(
-								user.matchPointsHistory &&
-								user.matchPointsHistory.some((p) => p > points)
-						  )
-						? " 🔥"
-						: ""
-				}`,
-		)
+		.map(([user, points]) => {
+			const position = leaderboard.findIndex(([, p]) => points === p) + 1;
+
+			return `${position}\\. <@${user._id}>: **${points}** Punt${
+				points === 1 ? "o" : "i"
+			} Partita${
+				position === 1 && points > highestMatchPoints
+					? " ✨"
+					: !(
+							user.matchPointsHistory &&
+							user.matchPointsHistory.some((p) => p >= points)
+					  )
+					? " 🔥"
+					: ""
+			}`;
+		})
 		.join("\n");
 };
 const createFinalLeaderboard = (leaderboard: Leaderboard) =>
