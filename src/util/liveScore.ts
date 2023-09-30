@@ -9,7 +9,7 @@ import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
 
 type Leaderboard = [Document<typeof User>, number, number][];
-const dayPoints = [3, 2, 1];
+const positionDayPoints = [3, 2, 1];
 const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
 		.map(
@@ -86,7 +86,8 @@ const resolveLeaderboard = (
 
 	for (let i = 0; i < leaderboard.length; i++) {
 		const [, points] = leaderboard[i];
-		const toAdd = dayPoints[leaderboard.findIndex(([, p]) => points === p)];
+		const toAdd =
+			positionDayPoints[leaderboard.findIndex(([, p]) => points === p)];
 
 		if (!toAdd) break;
 		leaderboard[i][2] = toAdd;
@@ -98,16 +99,31 @@ const resolveLeaderboard = (
 		last[2] = -1;
 	return leaderboard;
 };
-const createLeaderboardDescription = (leaderboard: Leaderboard) =>
-	[...leaderboard]
+const createLeaderboardDescription = (leaderboard: Leaderboard) => {
+	const allHistoryPoints = leaderboard.reduce(
+		(array, [{ matchPointsHistory }]) => array.concat(matchPointsHistory ?? []),
+		[] as number[],
+	);
+
+	return [...leaderboard]
 		.sort((a, b) => b[1] - a[1])
 		.map(
 			([user, points]) =>
 				`${leaderboard.findIndex(([, p]) => points === p) + 1}\\. <@${
 					user._id
-				}>: **${points}** Punt${points === 1 ? "o" : "i"} Partita`,
+				}>: **${points}** Punt${points === 1 ? "o" : "i"} Partita${
+					!allHistoryPoints.some((p) => p > points)
+						? " ✨"
+						: !(
+								user.matchPointsHistory &&
+								user.matchPointsHistory.some((p) => p > points)
+						  )
+						? " 🔥"
+						: ""
+				}`,
 		)
 		.join("\n");
+};
 const createFinalLeaderboard = (leaderboard: Leaderboard) =>
 	[...leaderboard]
 		.sort(
@@ -132,14 +148,14 @@ const closeMatchDay = (
 ) => {
 	const leaderboard = resolveLeaderboard(users, matches);
 	const value = createFinalLeaderboard(leaderboard);
-	const toEdit = [];
 
 	matchDay.finished = true;
-	for (const [user, , points] of leaderboard)
-		if (points) {
-			user.dayPoints = (user.dayPoints ?? 0) + points;
-			toEdit.push(user);
-		}
+	for (const [user, matchPoints, dayPoints] of leaderboard) {
+		(user.matchPointsHistory ??= new Array(matchDay.day - 1).fill(null)).push(
+			matchPoints,
+		);
+		if (dayPoints) user.dayPoints = (user.dayPoints ?? 0) + dayPoints;
+	}
 	return Promise.all([
 		message.edit({
 			embeds: [
@@ -155,7 +171,7 @@ const closeMatchDay = (
 			],
 		}),
 		matchDay.save(),
-		...toEdit.map((user) => user.save()),
+		...leaderboard.map(([user]) => user.save()),
 	]);
 };
 const startWebSocket = (
