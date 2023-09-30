@@ -151,9 +151,7 @@ const closeMatchDay = (
 
 	matchDay.finished = true;
 	for (const [user, matchPoints, dayPoints] of leaderboard) {
-		(user.matchPointsHistory ??= new Array(matchDay.day - 1).fill(null)).push(
-			matchPoints,
-		);
+		(user.matchPointsHistory ??= new Array(matchDay.day - 1)).push(matchPoints);
 		if (dayPoints) user.dayPoints = (user.dayPoints ?? 0) + dayPoints;
 	}
 	return Promise.all([
