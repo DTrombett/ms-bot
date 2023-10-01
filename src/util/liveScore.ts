@@ -148,9 +148,9 @@ const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 				Math.abs(newPoints) === 1 ? "o" : "i"
 			} Giornata ${
 				newPosition > oldPosition
-					? "⬆️"
-					: newPosition < oldPosition
 					? "⬇️"
+					: newPosition < oldPosition
+					? "⬆️"
 					: "➖"
 			}`;
 		})
