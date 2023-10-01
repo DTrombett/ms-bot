@@ -7,7 +7,7 @@ export const sendPredictions = async (
 ) => {
 	const users = await User.find({
 		predictions: { $exists: true, $type: "array", $ne: [] },
-	});
+	}).sort({ dayPoints: -1 });
 
 	if (!users.length) return;
 	for (let i = 0; i < users.length; i += 5) {

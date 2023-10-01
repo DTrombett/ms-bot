@@ -35,9 +35,14 @@ export const loadMatchDay = async (
 	);
 
 	if (matchDayData == null) throw new Error("No match to be played!");
-	const matches = (await request(
-		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayData.id_category}`,
-	).then((res) => res.body.json())) as MatchesData;
+	const [matches, users] = await Promise.all([
+		request(
+			`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayData.id_category}`,
+		).then((res) => res.body.json() as Promise<MatchesData>),
+		User.find({
+			predictionReminder: { $exists: true, $ne: null },
+		}),
+	]);
 
 	if (!matches.success) {
 		printToStderr(matches.message);
@@ -53,9 +58,6 @@ export const loadMatchDay = async (
 				.join(" - "),
 		})),
 		day: Number(matchDayData.description),
-	});
-	const users = await User.find({
-		predictionReminder: { $exists: true, $ne: null },
 	});
 	let date = matchDay.matches[0].date - 1000 * 60 * 15;
 

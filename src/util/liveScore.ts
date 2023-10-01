@@ -334,7 +334,7 @@ export const liveScore = async (
 			{ predictions: { $exists: true, $type: "array", $ne: [] } },
 			{ dayPoints: { $exists: true, $ne: null } },
 		],
-	});
+	}).sort({ dayPoints: -1 });
 
 	if (!users.length || !users.find((u) => u.predictions?.length)) {
 		matchDay.finished = true;
