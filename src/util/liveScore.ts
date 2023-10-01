@@ -9,7 +9,16 @@ import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
 
 type Leaderboard = [Document<typeof User>, number, number][];
+
 const positionDayPoints = [3, 2, 1];
+const finalEmojis: Record<number, string | undefined> = {
+	[-2]: "⏬",
+	[-1]: "⬇️",
+	0: "➖",
+	1: "⬆️",
+	2: "⏫",
+};
+
 const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
 		.map(
@@ -143,15 +152,12 @@ const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 			const oldPosition = oldLeaderboard.findIndex(
 				([u]) => u.dayPoints === user.dayPoints,
 			);
+			const diff = oldPosition - newPosition;
 
 			return `${newPosition + 1}\\. <@${user._id}>: **${newPoints}** Punt${
 				Math.abs(newPoints) === 1 ? "o" : "i"
 			} Giornata ${
-				newPosition > oldPosition
-					? "⬇️"
-					: newPosition < oldPosition
-					? "⬆️"
-					: "➖"
+				finalEmojis[diff] ?? (diff < 0 ? finalEmojis[-2] : finalEmojis[2])
 			}`;
 		})
 		.join("\n");
