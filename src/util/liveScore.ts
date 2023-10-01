@@ -126,21 +126,36 @@ const createLeaderboardDescription = (leaderboard: Leaderboard) => {
 		})
 		.join("\n");
 };
-const createFinalLeaderboard = (leaderboard: Leaderboard) =>
-	[...leaderboard]
+const createFinalLeaderboard = (leaderboard: Leaderboard) => {
+	const oldLeaderboard = [...leaderboard].sort(
+		(a, b) => (b[0].dayPoints ?? 0) - (a[0].dayPoints ?? 0),
+	);
+
+	return [...leaderboard]
 		.sort(
 			(a, b) => (b[0].dayPoints ?? 0) + b[2] - ((a[0].dayPoints ?? 0) + a[2]),
 		)
 		.map(([user, , points], _i, array) => {
 			const newPoints = (user.dayPoints ?? 0) + points;
+			const newPosition = array.findIndex(
+				([u, , p]) => (u.dayPoints ?? 0) + p === newPoints,
+			);
+			const oldPosition = oldLeaderboard.findIndex(
+				([u]) => u.dayPoints === user.dayPoints,
+			);
 
-			return `${
-				array.findIndex(([u, , p]) => (u.dayPoints ?? 0) + p === newPoints) + 1
-			}\\. <@${user._id}>: **${newPoints}** Punt${
+			return `${newPosition + 1}\\. <@${user._id}>: **${newPoints}** Punt${
 				Math.abs(newPoints) === 1 ? "o" : "i"
-			} Giornata`;
+			} Giornata ${
+				newPosition > oldPosition
+					? "⬆️"
+					: newPosition < oldPosition
+					? "⬇️"
+					: "➖"
+			}`;
 		})
 		.join("\n");
+};
 const closeMatchDay = (
 	message: Message,
 	users: Document<typeof User>[],
