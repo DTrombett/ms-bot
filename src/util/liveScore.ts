@@ -43,6 +43,15 @@ const setPresence = (
 		newMatches.every((match) => oldMatches.includes(match.match_id))
 	)
 		return;
+	const state = newMatches
+		.map(
+			(m) =>
+				`${normalizeTeamName(m.home_team_name)} - ${normalizeTeamName(
+					m.away_team_name,
+				)}: ${m.home_goal} - ${m.away_goal}`,
+		)
+		.join("\n");
+
 	oldMatches = newMatches.map((match) => match.match_id);
 	client.user.setPresence({
 		activities: [
@@ -51,7 +60,7 @@ const setPresence = (
 				name: `${normalizeTeamName(match.home_team_name)} - ${normalizeTeamName(
 					match.away_team_name,
 				)}`,
-				state: `${match.home_goal} - ${match.away_goal}`,
+				state,
 				url: `https://legaseriea.it${match.slug}`,
 			})),
 			{
