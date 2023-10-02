@@ -8,7 +8,12 @@ import { printToStderr, printToStdout } from "./logger";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
 
-type Leaderboard = [Document<typeof User>, number, number][];
+type Leaderboard = [
+	user: Document<typeof User>,
+	matchPoints: number,
+	dayPoints: number,
+	maxPoints: number,
+][];
 
 const positionDayPoints = [3, 2, 1];
 const finalEmojis: Record<number, string | undefined> = {
@@ -40,57 +45,63 @@ const resolveLeaderboard = (
 ) => {
 	let lastIndex = 0;
 	const leaderboard = users
-		.map(
-			(
-				user,
-			): [
-				user: Document<typeof User>,
-				matchPoints: number,
-				dayPoints: number,
-			] => [
+		.map((user): Leaderboard[number] => {
+			let maxPoints = 0;
+
+			return [
 				user,
 				matches.data.reduce((points, match) => {
-					if (match.match_status === 0) return points;
 					const teams =
 						`${match.home_team_name} - ${match.away_team_name}`.toLowerCase();
-					const prediction = user.predictions?.find(
-						(p) => teams === p.teams.toLowerCase(),
-					);
+					const matched = user.predictions
+						?.find((p) => teams === p.teams.toLowerCase())
+						?.prediction.match(
+							/(?<type>(X|1|2){1,2})( \((?<home>(?<=\()\d+) - (?<away>\d+(?=\))))?/,
+						)?.groups;
 
+					if (!matched) return points - 1;
 					match.home_goal ??= 0;
 					match.away_goal ??= 0;
-					if (!prediction) return points - 1;
+					const { type, home, away } = matched as {
+						type: "1" | "1X" | "2" | "12" | "X" | "X2";
+						home?: `${number}`;
+						away?: `${number}`;
+					};
 					const result =
 						match.home_goal > match.away_goal
 							? "1"
 							: match.home_goal < match.away_goal
 							? "2"
 							: "X";
-					const matched = prediction.prediction.match(
-						/(?<type>(X|1|2){1,2})( \((?<home>(?<=\()\d+) - (?<away>\d+(?=\))))?/,
-					)?.groups;
+					let diffPoints = 0;
 
-					if (!matched) return points - 1;
-					const { type, home, away } = matched as {
-						type: "1" | "2" | "X";
-						home?: `${number}`;
-						away?: `${number}`;
-					};
-					if (type === result)
+					if (match.match_status !== 0)
+						if (type === result)
+							if (
+								home != null &&
+								Number(home) === match.home_goal &&
+								Number(away) === match.away_goal
+							)
+								diffPoints = 3;
+							else diffPoints = 2;
+						else if (type.includes(result)) diffPoints = 1;
+						else if (type.length === 2) diffPoints = -1;
+					if (match.match_status === 2) maxPoints += diffPoints;
+					else if (home != null)
 						if (
-							home !== undefined &&
-							Number(home) === match.home_goal &&
-							Number(away) === match.away_goal
+							match.home_goal <= Number(home) &&
+							match.away_goal <= Number(away)
 						)
-							return points + 3;
-						else return points + 2;
-					if (type.includes(result)) return points + 1;
-					if (type.length === 2) return points - 1;
-					return points;
+							maxPoints += 3;
+						else maxPoints += 2;
+					else if (type.length === 1) maxPoints += 2;
+					else maxPoints++;
+					return match.match_status === 0 ? points : points + diffPoints;
 				}, 0),
 				0,
-			],
-		)
+				maxPoints,
+			];
+		})
 		.sort((a, b) => b[1] - a[1]);
 
 	for (let i = 0; i < leaderboard.length; i++) {
@@ -108,7 +119,10 @@ const resolveLeaderboard = (
 		last[2] = -1;
 	return leaderboard;
 };
-const createLeaderboardDescription = (leaderboard: Leaderboard) => {
+const createLeaderboardDescription = (
+	leaderboard: Leaderboard,
+	final = false,
+) => {
 	const highestMatchPoints = leaderboard.reduce(
 		(highest, [{ matchPointsHistory }]) =>
 			matchPointsHistory?.reduce((h, p) => (p > h ? p : h), highest) ?? highest,
@@ -117,12 +131,21 @@ const createLeaderboardDescription = (leaderboard: Leaderboard) => {
 
 	return [...leaderboard]
 		.sort((a, b) => b[1] - a[1])
-		.map(([user, points]) => {
+		.map(([user, points, , maxPoints]) => {
 			const position = leaderboard.findIndex(([, p]) => points === p) + 1;
+			const matchPointsHistory =
+				user.matchPointsHistory?.filter((n: number | null) => n != null) ?? [];
 
 			return `${position}\\. <@${user._id}>: **${points}** Punt${
 				points === 1 ? "o" : "i"
-			} Partita${
+			} Partita ${
+				final
+					? `(avg. ${(
+							(matchPointsHistory.reduce((a, b) => a + b, 0) + points) /
+							(matchPointsHistory.length + 1)
+					  ).toFixed(2)})`
+					: `(max. ${maxPoints})`
+			}${
 				position === 1 && points > highestMatchPoints
 					? " ✨"
 					: !(
@@ -156,9 +179,7 @@ const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 
 			return `${newPosition + 1}\\. <@${user._id}>: **${newPoints}** Punt${
 				Math.abs(newPoints) === 1 ? "o" : "i"
-			} Giornata ${
-				finalEmojis[diff] ?? (diff < 0 ? finalEmojis[-2] : finalEmojis[2])
-			}`;
+			} Giornata ${finalEmojis[diff] ?? finalEmojis[diff > 0 ? 2 : -2]}`;
 		})
 		.join("\n");
 };
