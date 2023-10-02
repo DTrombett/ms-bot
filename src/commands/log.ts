@@ -3,9 +3,10 @@ import {
 	ApplicationCommandType,
 	EmbedBuilder,
 	codeBlock,
+	escapeCodeBlock,
 } from "discord.js";
 import { readFile } from "node:fs/promises";
-import { createCommand, printToStderr } from "../util";
+import { createCommand } from "../util";
 
 export const logCommand = createCommand({
 	data: [
@@ -26,7 +27,14 @@ export const logCommand = createCommand({
 	],
 	isPrivate: true,
 	async run(interaction) {
-		printToStderr({ sus: 12 });
+		const text = escapeCodeBlock(
+			(await readFile("./.log", { encoding: "utf8" }))
+				.split("\n")
+				.slice(-(interaction.options.getInteger("lines") ?? 10))
+				.join("\n"),
+		);
+		const start = text.length - 4096 + 12;
+
 		await interaction.reply({
 			embeds: [
 				new EmbedBuilder()
@@ -38,10 +46,7 @@ export const logCommand = createCommand({
 					.setDescription(
 						`${codeBlock(
 							"ansi",
-							(await readFile("./.log", { encoding: "utf8" }))
-								.split("\n")
-								.slice(-(interaction.options.getInteger("lines") ?? 10))
-								.join("\n"),
+							text.replaceAll("\x1b[m", "\x1b[0m").slice(start > 0 ? start : 0),
 						)}`,
 					)
 					.setTimestamp()

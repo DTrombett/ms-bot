@@ -10,16 +10,10 @@ export const inspect = (value: unknown) => {
 	switch (typeof value) {
 		case "string":
 			return value;
-		case "bigint":
-		case "number":
-		case "boolean":
 		case "function":
-		case "symbol":
 			return value.toString();
-		case "object":
-			return nodeInspect(value, { colors: true });
 		default:
-			return "undefined";
+			return nodeInspect(value, { colors: true });
 	}
 };
 
