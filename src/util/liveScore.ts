@@ -290,7 +290,7 @@ const startWebSocket = (
 			printToStdout(
 				`[${new Date().toISOString()}] Ping acknowledged, latency of ${
 					-lastPing + (lastPing = Date.now())
-				}.`,
+				}ms.`,
 			);
 		} else if (type === 42) {
 			if (!Array.isArray(data) || data[0] !== "callApi") return;
