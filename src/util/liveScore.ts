@@ -30,19 +30,12 @@ const finalEmojis: Record<number, string | undefined> = {
 	1: "⬆️",
 	2: "⏫",
 };
-let oldMatches: number[] = [];
 
 const setPresence = (
 	client: Client<true>,
 	matches: Extract<MatchesData, { success: true }>,
 ) => {
 	const newMatches = matches.data.filter((match) => match.match_status === 1);
-
-	if (
-		oldMatches.length === newMatches.length &&
-		newMatches.every((match) => oldMatches.includes(match.match_id))
-	)
-		return;
 	const state = newMatches
 		.map(
 			(m) =>
@@ -52,7 +45,6 @@ const setPresence = (
 		)
 		.join("\n");
 
-	oldMatches = newMatches.map((match) => match.match_id);
 	client.user.setPresence({
 		activities: [
 			...newMatches.map<ActivitiesOptions>((match) => ({
@@ -61,7 +53,6 @@ const setPresence = (
 					match.away_team_name,
 				)}`,
 				state,
-				url: `https://legaseriea.it${match.slug}`,
 			})),
 			{
 				type: ActivityType.Watching,
