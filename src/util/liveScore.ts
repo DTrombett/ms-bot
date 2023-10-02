@@ -1,4 +1,5 @@
 import {
+	ActivitiesOptions,
 	ActivityType,
 	Client,
 	EmbedBuilder,
@@ -45,11 +46,13 @@ const setPresence = (
 	oldMatches = newMatches.map((match) => match.match_id);
 	client.user.setPresence({
 		activities: [
-			...newMatches.map((match) => ({
+			...newMatches.map<ActivitiesOptions>((match) => ({
 				type: ActivityType.Watching,
 				name: `${normalizeTeamName(match.home_team_name)} - ${normalizeTeamName(
 					match.away_team_name,
 				)}`,
+				state: `${match.home_goal} - ${match.away_goal}`,
+				url: `https://legaseriea.it${match.slug}`,
 			})),
 			{
 				type: ActivityType.Watching,
