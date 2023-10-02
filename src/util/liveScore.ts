@@ -59,7 +59,10 @@ const resolveLeaderboard = (
 							/(?<type>(X|1|2){1,2})( \((?<home>(?<=\()\d+) - (?<away>\d+(?=\))))?/,
 						)?.groups;
 
-					if (!matched) return points - 1;
+					if (!matched) {
+						maxPoints--;
+						return points - 1;
+					}
 					match.home_goal ??= 0;
 					match.away_goal ??= 0;
 					const { type, home, away } = matched as {
@@ -74,8 +77,9 @@ const resolveLeaderboard = (
 							? "2"
 							: "X";
 					let diffPoints = 0;
+					const toBePlayed = match.match_status === 0;
 
-					if (match.match_status !== 0)
+					if (!toBePlayed)
 						if (type === result)
 							if (
 								home != null &&
@@ -89,20 +93,22 @@ const resolveLeaderboard = (
 					if (match.match_status === 2) maxPoints += diffPoints;
 					else if (home != null)
 						if (
-							match.home_goal <= Number(home) &&
-							match.away_goal <= Number(away)
+							toBePlayed ||
+							(match.home_goal <= Number(home) &&
+								match.away_goal <= Number(away))
 						)
 							maxPoints += 3;
 						else maxPoints += 2;
 					else if (type.length === 1) maxPoints += 2;
 					else maxPoints++;
-					return match.match_status === 0 ? points : points + diffPoints;
+					return toBePlayed ? points : points + diffPoints;
 				}, 0),
 				0,
 				maxPoints,
 			];
 		})
 		.sort((a, b) => b[1] - a[1]);
+	const last = leaderboard.at(-1)!;
 
 	for (let i = 0; i < leaderboard.length; i++) {
 		const [, points] = leaderboard[i];
@@ -113,8 +119,6 @@ const resolveLeaderboard = (
 		leaderboard[i][2] = toAdd;
 		lastIndex = i;
 	}
-	const last = leaderboard.at(-1)!;
-
 	if (leaderboard.length - lastIndex > 1 && last[1] !== leaderboard.at(-2)![1])
 		last[2] = -1;
 	return leaderboard;
@@ -191,7 +195,11 @@ const closeMatchDay = (
 	embeds: EmbedBuilder[],
 ) => {
 	const leaderboard = resolveLeaderboard(users, matches);
-	const value = createFinalLeaderboard(leaderboard);
+	const finalLeaderboard = createFinalLeaderboard(leaderboard);
+	const leaderboardDescription = createLeaderboardDescription(
+		leaderboard,
+		true,
+	);
 
 	matchDay.finished = true;
 	for (const [user, matchPoints, dayPoints] of leaderboard) {
@@ -201,14 +209,16 @@ const closeMatchDay = (
 	return Promise.all([
 		message.edit({
 			embeds: [
-				embeds[0].setTitle(`Risultati Finali ${matchDay.day}° Giornata`),
+				embeds[0]
+					.setTitle(`Risultati Finali ${matchDay.day}° Giornata`)
+					.setDescription(leaderboardDescription),
 				embeds[1]
 					.setTitle(
 						`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
 					)
 					.setFields({
 						name: "Classifica Generale",
-						value,
+						value: finalLeaderboard,
 					}),
 			],
 		}),
@@ -224,8 +234,8 @@ const startWebSocket = (
 	matchDay: Document<typeof MatchDay>,
 ) => {
 	let resolve: (value: PromiseLike<void> | void) => void;
-
 	let timeout: NodeJS.Timeout | undefined;
+	let lastPing: number;
 	const ws = new WebSocket(
 		"wss://www.legaseriea.it/socket.io/?EIO=4&transport=websocket",
 	);
@@ -259,6 +269,7 @@ const startWebSocket = (
 
 		if (type === 0) {
 			if (!data || !("pingInterval" in data)) return;
+			lastPing = Date.now();
 			ws.send("40");
 			timeout ??= setTimeout(() => {
 				if (
@@ -276,7 +287,11 @@ const startWebSocket = (
 		} else if (type === 2) {
 			ws.send("3");
 			timeout?.refresh();
-			printToStdout(`[${new Date().toISOString()}] Ping acknowledged.`);
+			printToStdout(
+				`[${new Date().toISOString()}] Ping acknowledged, latency of ${
+					-lastPing + (lastPing = Date.now())
+				}.`,
+			);
 		} else if (type === 42) {
 			if (!Array.isArray(data) || data[0] !== "callApi") return;
 			const updateData: {
@@ -305,11 +320,11 @@ const startWebSocket = (
 			embeds[0].setDescription(resolveMatches(matches));
 			embeds[1]
 				.setDescription(createLeaderboardDescription(leaderboard))
-				.setTimestamp();
-			embeds[1].setFields({
-				name: "Classifica Generale Provvisoria",
-				value: createFinalLeaderboard(leaderboard),
-			});
+				.setTimestamp()
+				.setFields({
+					name: "Classifica Generale Provvisoria",
+					value: createFinalLeaderboard(leaderboard),
+				});
 			message.edit({ embeds }).catch(printToStderr);
 			if (matches.data.every((match) => match.match_status !== 1)) {
 				const next = matches.data.find((match) => match.match_status === 0);
@@ -317,23 +332,25 @@ const startWebSocket = (
 				if (next) {
 					const delay = new Date(next.date_time).getTime() - Date.now();
 
-					if (delay < 1_000) return;
-					ws.close(1000);
-					printToStdout(
-						`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
-							delay,
-						)}.`,
-					);
-					await setPromiseTimeout(delay);
-					resolve(
-						startWebSocket(
-							await loadMatches(matchDay._id),
-							users,
-							embeds,
-							message,
-							matchDay,
-						),
-					);
+					if (delay > 1_000) {
+						ws.close(1000);
+						printToStdout(
+							`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
+								delay,
+							)}.`,
+						);
+						await setPromiseTimeout(delay);
+						resolve(
+							startWebSocket(
+								await loadMatches(matchDay._id),
+								users,
+								embeds,
+								message,
+								matchDay,
+							),
+						);
+						return;
+					}
 				} else {
 					ws.close(1001);
 					printToStdout(
@@ -341,8 +358,8 @@ const startWebSocket = (
 					);
 					await closeMatchDay(message, users, matches, matchDay, embeds);
 					resolve();
+					return;
 				}
-				return;
 			}
 			printToStdout(`[${new Date().toISOString()}] Matches data updated.`);
 		}
@@ -406,7 +423,7 @@ export const liveScore = async (
 
 	if (matchDay.messageId == null) {
 		matchDay.messageId = message.id;
-		matchDay.save().catch(printToStderr);
+		await matchDay.save();
 	} else if (
 		embeds.some(
 			(d, i) => d.data.description !== message.embeds[i]?.description,
