@@ -1,5 +1,6 @@
 import type {
 	ChannelWebhookCreateOptions,
+	CommandInteractionOptionResolver,
 	GuildBasedChannel,
 	GuildChannelCreateOptions,
 	GuildChannelEditOptions,
@@ -223,6 +224,31 @@ const channelInfo = async (
 		ephemeral,
 	});
 };
+const resolveOptions = (
+	options: Omit<CommandInteractionOptionResolver, "getFocused" | "getMessage">,
+) => {
+	const slowmode = options.getString("slowmode");
+	const region = options.getString("rtc-region");
+	const position = options.getInteger("position");
+	const editOptions: GuildChannelCreateOptions | GuildChannelEditOptions = {
+		name: options.getString("name") ?? undefined,
+		type: options.getInteger("type") ?? undefined,
+		topic: options.getString("topic") ?? undefined,
+		nsfw: options.getBoolean("nsfw") ?? undefined,
+		bitrate: options.getNumber("bitrate") ?? undefined,
+		userLimit: options.getInteger("user-limit") ?? undefined,
+		parent: options.getString("parent") ?? undefined,
+		lockPermissions: options.getBoolean("lock-permissions") ?? undefined,
+		defaultAutoArchiveDuration: options.getInteger("autoarchive") ?? undefined,
+		videoQualityMode: options.getInteger("video-quality") ?? undefined,
+	};
+
+	if (position != null) editOptions.position = position - 1;
+	if (slowmode != null)
+		editOptions.rateLimitPerUser = Math.round(ms(slowmode) / 1000);
+	if (region != null) editOptions.rtcRegion = region === "auto" ? null : region;
+	return editOptions;
+};
 
 const webhooksCache: { [id: string]: Webhook[] | undefined } = {};
 const autoArchiveChoices: { name: string; value: ThreadAutoArchiveDuration }[] =
@@ -251,7 +277,11 @@ for (const [name, value] of Object.entries(ThreadAutoArchiveDuration))
 for (const [name, value] of Object.entries(VideoQualityMode))
 	if (typeof value === "number") videoQualityChoices.push({ name, value });
 for (const [name, value] of Object.entries(ChannelType))
-	if (typeof value === "number" && [0, 2, 4, 5, 6, 13, 14, 15].includes(value))
+	if (
+		typeof value === "number" &&
+		name.startsWith("Guild") &&
+		!channelTypeChoices.find(({ name: n }) => n === name)
+	)
 		channelTypeChoices.push({ name: name.slice(5), value });
 
 export const channelCommand = createCommand({
@@ -276,19 +306,22 @@ export const channelCommand = createCommand({
 						{
 							name: "type",
 							description: "Il nuovo tipo",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							choices: [
 								{
 									name: "Canale di testo",
 									value: ChannelType.GuildText,
 								},
-								{ name: "Canale annunci", value: ChannelType.GuildNews },
+								{
+									name: "Canale annunci",
+									value: ChannelType.GuildAnnouncement,
+								},
 							],
 						},
 						{
 							name: "position",
 							description: "La nuova posizione",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							min_value: 1,
 						},
 						{
@@ -315,7 +348,7 @@ export const channelCommand = createCommand({
 							name: "user-limit",
 							description:
 								"Il nuovo limite utenti (0 per rimuoverlo) (applicabile solo per i canali vocali)",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							min_value: 0,
 							max_value: 99,
 						},
@@ -339,7 +372,7 @@ export const channelCommand = createCommand({
 							name: "autoarchive",
 							description:
 								"Il tempo di inattività dopo il quale i nuovi thread saranno archiviati",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							choices: autoArchiveChoices,
 						},
 						{
@@ -353,7 +386,7 @@ export const channelCommand = createCommand({
 							name: "video-quality",
 							description:
 								"La nuova qualità video (applicabile solo per i canali vocali)",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							choices: videoQualityChoices,
 						},
 						{
@@ -434,7 +467,7 @@ export const channelCommand = createCommand({
 						{
 							name: "type",
 							description: "Il tipo",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							choices: channelTypeChoices,
 						},
 						{
@@ -467,7 +500,7 @@ export const channelCommand = createCommand({
 							name: "user-limit",
 							description:
 								"Il limite utenti (applicabile solo per i canali vocali)",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							min_value: 0,
 							max_value: 99,
 						},
@@ -486,7 +519,7 @@ export const channelCommand = createCommand({
 							name: "autoarchive",
 							description:
 								"Il tempo di inattività dopo il quale i nuovi thread saranno archiviati",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							choices: autoArchiveChoices,
 						},
 						{
@@ -500,7 +533,7 @@ export const channelCommand = createCommand({
 							name: "video-quality",
 							description:
 								"La qualità video (applicabile solo per i canali vocali)",
-							type: ApplicationCommandOptionType.Number,
+							type: ApplicationCommandOptionType.Integer,
 							choices: videoQualityChoices,
 						},
 						{
@@ -648,41 +681,20 @@ export const channelCommand = createCommand({
 			});
 			return;
 		}
-		if (interaction.options.data[0].name === "edit") {
+		const subcommand = interaction.options.getSubcommand();
+
+		if (subcommand === "edit") {
 			const channel =
 				interaction.options.getChannel("channel") ?? interaction.channel;
 
 			if (!channel || !("client" in channel)) {
 				await interaction.reply({
-					content: "Canale non valido!",
+					content: "Il canale specificato non è valido",
 					ephemeral: true,
 				});
 				return;
 			}
 			const { guild } = interaction;
-			const slowmode = interaction.options.getString("slowmode");
-			const region = interaction.options.getString("rtc-region");
-			const position = interaction.options.getNumber("position");
-			const editOptions: GuildChannelEditOptions = {
-				name: interaction.options.getString("name") ?? undefined,
-				type: interaction.options.getNumber("type") ?? undefined,
-				position: position == null ? undefined : position - 1,
-				topic: interaction.options.getString("topic") ?? undefined,
-				nsfw: interaction.options.getBoolean("nsfw") ?? undefined,
-				bitrate: interaction.options.getNumber("bitrate") ?? undefined,
-				userLimit: interaction.options.getNumber("user-limit") ?? undefined,
-				parent: interaction.options.getString("parent") ?? undefined,
-				rateLimitPerUser:
-					slowmode == null ? undefined : Math.round(ms(slowmode) / 1000),
-				lockPermissions:
-					interaction.options.getBoolean("lock-permissions") ?? undefined,
-				defaultAutoArchiveDuration:
-					interaction.options.getNumber("autoarchive") ?? undefined,
-				rtcRegion: region === "auto" ? null : region,
-				videoQualityMode:
-					interaction.options.getNumber("video-quality") ?? undefined,
-				reason: interaction.options.getString("reason") ?? undefined,
-			};
 
 			if (
 				guild.ownerId !== interaction.user.id &&
@@ -699,10 +711,16 @@ export const channelCommand = createCommand({
 				});
 				return;
 			}
-			if (
-				Object.keys(editOptions).length - (editOptions.reason! ? 1 : 0) ===
-				0
-			) {
+			if (!channel.manageable) {
+				await interaction.reply({
+					content: "Non ho abbastanza permessi per gestire questo canale!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const editOptions = resolveOptions(interaction.options);
+
+			if (Object.keys(editOptions).length === 0) {
 				await interaction.reply({
 					content: "Non hai specificato alcuna modifica!",
 					ephemeral: true,
@@ -711,24 +729,18 @@ export const channelCommand = createCommand({
 			}
 			if (
 				editOptions.rateLimitPerUser !== undefined &&
-				(isNaN(editOptions.rateLimitPerUser) ||
+				(Number.isNaN(editOptions.rateLimitPerUser) ||
 					editOptions.rateLimitPerUser < 0 ||
 					editOptions.rateLimitPerUser > 21_600)
 			) {
 				await interaction.reply({
 					content:
-						"Il valore della slowmode non è valido o non è minore di 6 ore!",
+						"Il valore della slowmode non è valido o è maggiore di 6 ore!",
 					ephemeral: true,
 				});
 				return;
 			}
-			if (!channel.manageable) {
-				await interaction.reply({
-					content: "Non ho abbastanza permessi per gestire questo canale!",
-					ephemeral: true,
-				});
-				return;
-			}
+			editOptions.reason = interaction.options.getString("reason") ?? undefined;
 			const result = await guild.channels
 				.edit(channel, editOptions)
 				.catch(normalizeError);
@@ -758,12 +770,12 @@ export const channelCommand = createCommand({
 			});
 			return;
 		}
-		if (interaction.options.data[0].name === "delete") {
+		if (subcommand === "delete") {
 			const channel = interaction.options.getChannel("channel", true);
 
 			if (!("client" in channel)) {
 				await interaction.reply({
-					content: "Canale non valido!",
+					content: "Il canale specificato non è valido",
 					ephemeral: true,
 				});
 				return;
@@ -808,13 +820,13 @@ export const channelCommand = createCommand({
 			});
 			return;
 		}
-		if (interaction.options.data[0].name === "clone") {
+		if (subcommand === "clone") {
 			const channel =
 				interaction.options.getChannel("channel") ?? interaction.channel;
 
 			if (!channel || !("clone" in channel)) {
 				await interaction.reply({
-					content: "Canale non valido!",
+					content: "Il canale specificato non è valido",
 					ephemeral: true,
 				});
 				return;
@@ -838,7 +850,7 @@ export const channelCommand = createCommand({
 			}
 			if (!interaction.appPermissions.has("ManageChannels")) {
 				await interaction.reply({
-					content: "Non ho abbastanza permessi per eliminare questo canale!",
+					content: "Non ho abbastanza permessi per clonare questo canale!",
 					ephemeral: true,
 				});
 				return;
@@ -871,7 +883,7 @@ export const channelCommand = createCommand({
 			});
 			return;
 		}
-		if (interaction.options.data[0].name === "create") {
+		if (subcommand === "create") {
 			if (!interaction.memberPermissions.has("ManageChannels")) {
 				await interaction.reply({
 					content:
@@ -880,24 +892,16 @@ export const channelCommand = createCommand({
 				});
 				return;
 			}
-			const slowmode = interaction.options.getString("slowmode");
-			const position = interaction.options.getNumber("position");
-			const createOptions: GuildChannelCreateOptions = {
-				name: interaction.options.getString("name", true),
-				type: interaction.options.getNumber("type") ?? undefined,
-				position: position == null ? undefined : position - 1,
-				topic: interaction.options.getString("topic") ?? undefined,
-				nsfw: interaction.options.getBoolean("nsfw") ?? undefined,
-				bitrate: interaction.options.getNumber("bitrate") ?? undefined,
-				userLimit: interaction.options.getNumber("user-limit") ?? undefined,
-				parent: interaction.options.getString("parent") ?? undefined,
-				rateLimitPerUser:
-					slowmode == null ? undefined : Math.round(ms(slowmode) / 1000),
-				rtcRegion: interaction.options.getString("rtc-region") ?? undefined,
-				videoQualityMode:
-					interaction.options.getNumber("video-quality") ?? undefined,
-				reason: interaction.options.getString("reason") ?? undefined,
-			};
+			if (!interaction.appPermissions.has("ManageChannels")) {
+				await interaction.reply({
+					content: "Non ho abbastanza permessi per creare canali!",
+					ephemeral: true,
+				});
+				return;
+			}
+			const createOptions = resolveOptions(
+				interaction.options,
+			) as GuildChannelCreateOptions;
 			const { guild } = interaction;
 
 			if (
@@ -913,13 +917,8 @@ export const channelCommand = createCommand({
 				});
 				return;
 			}
-			if (!interaction.appPermissions.has("ManageChannels")) {
-				await interaction.reply({
-					content: "Non ho abbastanza permessi per creare canali!",
-					ephemeral: true,
-				});
-				return;
-			}
+			createOptions.reason =
+				interaction.options.getString("reason") ?? undefined;
 			const result = await guild.channels
 				.create(createOptions)
 				.catch(normalizeError);
@@ -949,7 +948,7 @@ export const channelCommand = createCommand({
 			});
 			return;
 		}
-		if (interaction.options.data[0].name === "info") {
+		if (subcommand === "info") {
 			const channel =
 				interaction.options.getChannel("channel") ?? interaction.channel;
 
@@ -962,7 +961,7 @@ export const channelCommand = createCommand({
 			}
 			await channelInfo(channel, interaction);
 		}
-		if (interaction.options.data[0].name === "webhook") {
+		if (subcommand === "webhook") {
 			const subOptions = options[0].options;
 
 			if (!subOptions) {
