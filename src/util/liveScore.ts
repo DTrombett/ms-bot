@@ -235,7 +235,8 @@ const startWebSocket = (
 ) => {
 	let resolve: (value: PromiseLike<void> | void) => void;
 	let timeout: NodeJS.Timeout | undefined;
-	let lastPing: number;
+	let lastPing = Date.now();
+	let pingInterval: number;
 	const ws = new WebSocket(
 		"wss://www.legaseriea.it/socket.io/?EIO=4&transport=websocket",
 	);
@@ -269,8 +270,8 @@ const startWebSocket = (
 
 		if (type === 0) {
 			if (!data || !("pingInterval" in data)) return;
-			lastPing = Date.now();
 			ws.send("40");
+			({ pingInterval } = data);
 			timeout ??= setTimeout(() => {
 				if (
 					ws.readyState === WebSocket.CLOSED ||
@@ -282,14 +283,14 @@ const startWebSocket = (
 				);
 				ws.close(1002);
 				resolve(startWebSocket(matches, users, embeds, message, matchDay));
-			}, data.pingInterval + data.pingTimeout);
+			}, pingInterval + data.pingTimeout);
 			printToStdout(`[${new Date().toISOString()}] Live scores ready.`);
 		} else if (type === 2) {
 			ws.send("3");
 			timeout?.refresh();
 			printToStdout(
 				`[${new Date().toISOString()}] Ping acknowledged, latency of ${
-					-lastPing + (lastPing = Date.now())
+					-lastPing + (lastPing = Date.now()) - pingInterval
 				}ms.`,
 			);
 		} else if (type === 42) {
