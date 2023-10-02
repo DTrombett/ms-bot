@@ -235,8 +235,8 @@ const startWebSocket = (
 ) => {
 	let resolve: (value: PromiseLike<void> | void) => void;
 	let timeout: NodeJS.Timeout | undefined;
-	let lastPing = Date.now();
 	let pingInterval: number;
+	let lastPing = Date.now();
 	const ws = new WebSocket(
 		"wss://www.legaseriea.it/socket.io/?EIO=4&transport=websocket",
 	);
