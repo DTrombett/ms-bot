@@ -47,7 +47,9 @@ const setPresence = (
 		activities: [
 			...newMatches.map((match) => ({
 				type: ActivityType.Watching,
-				name: `${match.home_team_name} - ${match.away_team_name}`,
+				name: `${normalizeTeamName(match.home_team_name)} - ${normalizeTeamName(
+					match.away_team_name,
+				)}`,
 			})),
 			{
 				type: ActivityType.Watching,
