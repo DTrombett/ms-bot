@@ -1,4 +1,10 @@
-import { EmbedBuilder, GuildTextBasedChannel, Message } from "discord.js";
+import {
+	ActivityType,
+	Client,
+	EmbedBuilder,
+	GuildTextBasedChannel,
+	Message,
+} from "discord.js";
 import ms from "ms";
 import { setTimeout as setPromiseTimeout } from "node:timers/promises";
 import { WebSocket } from "undici";
@@ -23,7 +29,33 @@ const finalEmojis: Record<number, string | undefined> = {
 	1: "⬆️",
 	2: "⏫",
 };
+let oldMatches: number[] = [];
 
+const setPresence = (
+	client: Client<true>,
+	matches: Extract<MatchesData, { success: true }>,
+) => {
+	const newMatches = matches.data.filter((match) => match.match_status === 1);
+
+	if (
+		oldMatches.length === newMatches.length &&
+		newMatches.every((match) => oldMatches.includes(match.match_id))
+	)
+		return;
+	oldMatches = newMatches.map((match) => match.match_id);
+	client.user.setPresence({
+		activities: [
+			...newMatches.map((match) => ({
+				type: ActivityType.Watching,
+				name: `${match.home_team_name} - ${match.away_team_name}`,
+			})),
+			{
+				type: ActivityType.Watching,
+				name: "MS Community",
+			},
+		],
+	});
+};
 const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
 		.map(
@@ -362,6 +394,7 @@ const startWebSocket = (
 					return;
 				}
 			}
+			setPresence(message.client, matches);
 			printToStdout(`[${new Date().toISOString()}] Matches data updated.`);
 		}
 	});
@@ -452,6 +485,7 @@ export const liveScore = async (
 			return;
 		}
 	}
+	setPresence(channel.client, matches);
 	await startWebSocket(matches, users, embeds, message, matchDay);
 };
 
