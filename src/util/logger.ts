@@ -1,19 +1,6 @@
-import { createWriteStream } from "node:fs";
 import { stderr, stdout } from "node:process";
 import { inspect as nodeInspect } from "node:util";
 import color, { Colors } from "./colors";
-
-const stream = createWriteStream("./.log", { flags: "a" });
-const old = {
-	stdout: stdout.write.bind(stdout),
-	stderr: stderr.write.bind(stderr),
-};
-
-stream.write(`${"_".repeat(80)}\n\n`);
-stdout.write = (...args) =>
-	old.stdout(...(args as [string])) && stream.write(args[0]);
-stderr.write = (...args) =>
-	old.stderr(...(args as [string])) && stream.write(args[0]);
 
 /**
  * Inspects a value.
@@ -30,7 +17,7 @@ export const inspect = (value: unknown) => {
 		case "symbol":
 			return value.toString();
 		case "object":
-			return nodeInspect(value);
+			return nodeInspect(value, { colors: true });
 		default:
 			return "undefined";
 	}

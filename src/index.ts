@@ -3,8 +3,9 @@ import { config } from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
 import ms from "ms";
+import { createWriteStream } from "node:fs";
 import { join } from "node:path";
-import process, { cwd, env } from "node:process";
+import process, { cwd, env, stderr, stdout } from "node:process";
 import Constants, {
 	CustomClient,
 	loadPredictions,
@@ -16,6 +17,17 @@ import Constants, {
 printToStdout("Starting...");
 // eslint-disable-next-line no-console
 console.time(Constants.clientOnlineLabel);
+const stream = createWriteStream("./.log", { flags: "a" });
+const old = {
+	stdout: stdout.write.bind(stdout),
+	stderr: stderr.write.bind(stderr),
+};
+
+stream.write(`${"_".repeat(80)}\n\n`);
+stdout.write = (...args) =>
+	old.stdout(...(args as [string])) && stream.write(args[0]);
+stderr.write = (...args) =>
+	old.stderr(...(args as [string])) && stream.write(args[0]);
 if (!("DISCORD_TOKEN" in env)) config();
 const client = new CustomClient();
 const app = express().use((_, res) => {

@@ -233,9 +233,9 @@ const startWebSocket = (
 	message: Message,
 	matchDay: Document<typeof MatchDay>,
 ) => {
-	let resolve: (value: PromiseLike<void> | void) => void;
-	let timeout: NodeJS.Timeout | undefined;
-	let pingInterval: number;
+	let pingInterval: number,
+		resolve: (value: PromiseLike<void> | void) => void,
+		timeout: NodeJS.Timeout | undefined;
 	let lastPing = Date.now();
 	const ws = new WebSocket(
 		"wss://www.legaseriea.it/socket.io/?EIO=4&transport=websocket",

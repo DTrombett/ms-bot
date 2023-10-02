@@ -9,6 +9,7 @@ export * from "./emojis";
 export * from "./icon";
 export * from "./invite";
 export * from "./kick";
+export * from "./log";
 export * from "./love";
 export * from "./meme";
 export * from "./ping";
