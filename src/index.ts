@@ -2,6 +2,7 @@ import { GlobalFonts } from "@napi-rs/canvas";
 import { config } from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
+import ms from "ms";
 import { join } from "node:path";
 import process, { cwd, env } from "node:process";
 import Constants, {
@@ -20,7 +21,9 @@ const client = new CustomClient();
 const app = express().use((_, res) => {
 	res.send(
 		client.isReady()
-			? `Online! Ping: ${client.ws.ping}ms`
+			? `Online! Ping: ${client.ws.ping}ms, uptime: ${ms(client.uptime, {
+					long: true,
+			  })}`
 			: "Offline! The bot is restarting, wait around 10 seconds and reload this page...",
 	);
 });

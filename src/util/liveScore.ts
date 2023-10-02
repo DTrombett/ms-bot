@@ -8,8 +8,22 @@ import { printToStderr, printToStdout } from "./logger";
 import normalizeTeamName from "./normalizeTeamName";
 import { MatchesData } from "./types";
 
-type Leaderboard = [Document<typeof User>, number, number][];
-const dayPoints = [3, 2, 1];
+type Leaderboard = [
+	user: Document<typeof User>,
+	matchPoints: number,
+	dayPoints: number,
+	maxPoints: number,
+][];
+
+const positionDayPoints = [3, 2, 1];
+const finalEmojis: Record<number, string | undefined> = {
+	[-2]: "⏬",
+	[-1]: "⬇️",
+	0: "➖",
+	1: "⬆️",
+	2: "⏫",
+};
+
 const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 	matches.data
 		.map(
@@ -31,98 +45,148 @@ const resolveLeaderboard = (
 ) => {
 	let lastIndex = 0;
 	const leaderboard = users
-		.map(
-			(
-				user,
-			): [
-				user: Document<typeof User>,
-				matchPoints: number,
-				dayPoints: number,
-			] => [
+		.map((user): Leaderboard[number] => {
+			let maxPoints = 0;
+
+			return [
 				user,
 				matches.data.reduce((points, match) => {
-					if (match.match_status === 0) return points;
 					const teams =
 						`${match.home_team_name} - ${match.away_team_name}`.toLowerCase();
-					const prediction = user.predictions?.find(
-						(p) => teams === p.teams.toLowerCase(),
-					);
+					const matched = user.predictions
+						?.find((p) => teams === p.teams.toLowerCase())
+						?.prediction.match(
+							/(?<type>(X|1|2){1,2})( \((?<home>(?<=\()\d+) - (?<away>\d+(?=\))))?/,
+						)?.groups;
 
+					if (!matched) {
+						maxPoints--;
+						return points - 1;
+					}
 					match.home_goal ??= 0;
 					match.away_goal ??= 0;
-					if (!prediction) return points - 1;
+					const { type, home, away } = matched as {
+						type: "1" | "1X" | "2" | "12" | "X" | "X2";
+						home?: `${number}`;
+						away?: `${number}`;
+					};
 					const result =
 						match.home_goal > match.away_goal
 							? "1"
 							: match.home_goal < match.away_goal
 							? "2"
 							: "X";
-					const matched = prediction.prediction.match(
-						/(?<type>(X|1|2){1,2})( \((?<home>(?<=\()\d+) - (?<away>\d+(?=\))))?/,
-					)?.groups;
+					let diffPoints = 0;
+					const toBePlayed = match.match_status === 0;
 
-					if (!matched) return points - 1;
-					const { type, home, away } = matched as {
-						type: "1" | "2" | "X";
-						home?: `${number}`;
-						away?: `${number}`;
-					};
-					if (type === result)
+					if (!toBePlayed)
+						if (type === result)
+							if (
+								home != null &&
+								Number(home) === match.home_goal &&
+								Number(away) === match.away_goal
+							)
+								diffPoints = 3;
+							else diffPoints = 2;
+						else if (type.includes(result)) diffPoints = 1;
+						else if (type.length === 2) diffPoints = -1;
+					if (match.match_status === 2) maxPoints += diffPoints;
+					else if (home != null)
 						if (
-							home !== undefined &&
-							Number(home) === match.home_goal &&
-							Number(away) === match.away_goal
+							toBePlayed ||
+							(match.home_goal <= Number(home) &&
+								match.away_goal <= Number(away))
 						)
-							return points + 3;
-						else return points + 2;
-					if (type.includes(result)) return points + 1;
-					if (type.length === 2) return points - 1;
-					return points;
+							maxPoints += 3;
+						else maxPoints += 2;
+					else if (type.length === 1) maxPoints += 2;
+					else maxPoints++;
+					return toBePlayed ? points : points + diffPoints;
 				}, 0),
 				0,
-			],
-		)
+				maxPoints,
+			];
+		})
 		.sort((a, b) => b[1] - a[1]);
+	const last = leaderboard.at(-1)!;
 
 	for (let i = 0; i < leaderboard.length; i++) {
 		const [, points] = leaderboard[i];
-		const toAdd = dayPoints[leaderboard.findIndex(([, p]) => points === p)];
+		const toAdd =
+			positionDayPoints[leaderboard.findIndex(([, p]) => points === p)];
 
 		if (!toAdd) break;
 		leaderboard[i][2] = toAdd;
 		lastIndex = i;
 	}
-	const last = leaderboard.at(-1)!;
-
 	if (leaderboard.length - lastIndex > 1 && last[1] !== leaderboard.at(-2)![1])
 		last[2] = -1;
 	return leaderboard;
 };
-const createLeaderboardDescription = (leaderboard: Leaderboard) =>
-	[...leaderboard]
+const createLeaderboardDescription = (
+	leaderboard: Leaderboard,
+	final = false,
+) => {
+	const highestMatchPoints = leaderboard.reduce(
+		(highest, [{ matchPointsHistory }]) =>
+			matchPointsHistory?.reduce((h, p) => (p > h ? p : h), highest) ?? highest,
+		-Infinity,
+	);
+
+	return [...leaderboard]
 		.sort((a, b) => b[1] - a[1])
-		.map(
-			([user, points]) =>
-				`${leaderboard.findIndex(([, p]) => points === p) + 1}\\. <@${
-					user._id
-				}>: **${points}** Punt${points === 1 ? "o" : "i"} Partita`,
-		)
+		.map(([user, points, , maxPoints]) => {
+			const position = leaderboard.findIndex(([, p]) => points === p) + 1;
+			const matchPointsHistory =
+				user.matchPointsHistory?.filter((n: number | null) => n != null) ?? [];
+
+			return `${position}\\. <@${user._id}>: **${points}** Punt${
+				points === 1 ? "o" : "i"
+			} Partita ${
+				final
+					? `(avg. ${(
+							(matchPointsHistory.reduce((a, b) => a + b, 0) + points) /
+							(matchPointsHistory.length + 1)
+					  ).toFixed(2)})`
+					: `(max. ${maxPoints})`
+			}${
+				position === 1 && points > highestMatchPoints
+					? " ✨"
+					: !(
+							user.matchPointsHistory &&
+							user.matchPointsHistory.some((p) => p >= points)
+					  )
+					? " 🔥"
+					: ""
+			}`;
+		})
 		.join("\n");
-const createFinalLeaderboard = (leaderboard: Leaderboard) =>
-	[...leaderboard]
+};
+const createFinalLeaderboard = (leaderboard: Leaderboard) => {
+	const oldLeaderboard = [...leaderboard].sort(
+		(a, b) => (b[0].dayPoints ?? 0) - (a[0].dayPoints ?? 0),
+	);
+
+	return [...leaderboard]
 		.sort(
 			(a, b) => (b[0].dayPoints ?? 0) + b[2] - ((a[0].dayPoints ?? 0) + a[2]),
 		)
 		.map(([user, , points], _i, array) => {
 			const newPoints = (user.dayPoints ?? 0) + points;
+			const newPosition = array.findIndex(
+				([u, , p]) => (u.dayPoints ?? 0) + p === newPoints,
+			);
+			const oldPosition = oldLeaderboard.findIndex(
+				([u]) => u.dayPoints === user.dayPoints,
+			);
+			const diff = oldPosition - newPosition;
 
-			return `${
-				array.findIndex(([u, , p]) => (u.dayPoints ?? 0) + p === newPoints) + 1
-			}\\. <@${user._id}>: **${newPoints}** Punt${
+			return `${newPosition + 1}\\. <@${user._id}>: **${newPoints}** Punt${
 				Math.abs(newPoints) === 1 ? "o" : "i"
-			} Giornata`;
+			} Giornata ${finalEmojis[diff] ?? finalEmojis[diff > 0 ? 2 : -2]}`;
 		})
 		.join("\n");
+};
 const closeMatchDay = (
 	message: Message,
 	users: Document<typeof User>[],
@@ -131,30 +195,35 @@ const closeMatchDay = (
 	embeds: EmbedBuilder[],
 ) => {
 	const leaderboard = resolveLeaderboard(users, matches);
-	const toEdit = [];
+	const finalLeaderboard = createFinalLeaderboard(leaderboard);
+	const leaderboardDescription = createLeaderboardDescription(
+		leaderboard,
+		true,
+	);
 
 	matchDay.finished = true;
-	for (const [user, , points] of leaderboard)
-		if (points) {
-			user.dayPoints = (user.dayPoints ?? 0) + points;
-			toEdit.push(user);
-		}
+	for (const [user, matchPoints, dayPoints] of leaderboard) {
+		(user.matchPointsHistory ??= new Array(matchDay.day - 1)).push(matchPoints);
+		if (dayPoints) user.dayPoints = (user.dayPoints ?? 0) + dayPoints;
+	}
 	return Promise.all([
 		message.edit({
 			embeds: [
-				embeds[0].setTitle(`Risultati Finali ${matchDay.day}° Giornata`),
+				embeds[0]
+					.setTitle(`Risultati Finali ${matchDay.day}° Giornata`)
+					.setDescription(leaderboardDescription),
 				embeds[1]
 					.setTitle(
 						`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
 					)
 					.setFields({
 						name: "Classifica Generale",
-						value: createFinalLeaderboard(leaderboard),
+						value: finalLeaderboard,
 					}),
 			],
 		}),
 		matchDay.save(),
-		...toEdit.map((user) => user.save()),
+		...leaderboard.map(([user]) => user.save()),
 	]);
 };
 const startWebSocket = (
@@ -165,8 +234,8 @@ const startWebSocket = (
 	matchDay: Document<typeof MatchDay>,
 ) => {
 	let resolve: (value: PromiseLike<void> | void) => void;
-
 	let timeout: NodeJS.Timeout | undefined;
+	let lastPing: number;
 	const ws = new WebSocket(
 		"wss://www.legaseriea.it/socket.io/?EIO=4&transport=websocket",
 	);
@@ -200,6 +269,7 @@ const startWebSocket = (
 
 		if (type === 0) {
 			if (!data || !("pingInterval" in data)) return;
+			lastPing = Date.now();
 			ws.send("40");
 			timeout ??= setTimeout(() => {
 				if (
@@ -217,7 +287,11 @@ const startWebSocket = (
 		} else if (type === 2) {
 			ws.send("3");
 			timeout?.refresh();
-			printToStdout(`[${new Date().toISOString()}] Ping acknowledged.`);
+			printToStdout(
+				`[${new Date().toISOString()}] Ping acknowledged, latency of ${
+					-lastPing + (lastPing = Date.now())
+				}ms.`,
+			);
 		} else if (type === 42) {
 			if (!Array.isArray(data) || data[0] !== "callApi") return;
 			const updateData: {
@@ -246,11 +320,11 @@ const startWebSocket = (
 			embeds[0].setDescription(resolveMatches(matches));
 			embeds[1]
 				.setDescription(createLeaderboardDescription(leaderboard))
-				.setTimestamp();
-			embeds[1].setFields({
-				name: "Classifica Generale Provvisoria",
-				value: createFinalLeaderboard(leaderboard),
-			});
+				.setTimestamp()
+				.setFields({
+					name: "Classifica Generale Provvisoria",
+					value: createFinalLeaderboard(leaderboard),
+				});
 			message.edit({ embeds }).catch(printToStderr);
 			if (matches.data.every((match) => match.match_status !== 1)) {
 				const next = matches.data.find((match) => match.match_status === 0);
@@ -258,23 +332,25 @@ const startWebSocket = (
 				if (next) {
 					const delay = new Date(next.date_time).getTime() - Date.now();
 
-					if (delay < 1_000) return;
-					ws.close(1000);
-					printToStdout(
-						`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
-							delay,
-						)}.`,
-					);
-					await setPromiseTimeout(delay);
-					resolve(
-						startWebSocket(
-							await loadMatches(matchDay._id),
-							users,
-							embeds,
-							message,
-							matchDay,
-						),
-					);
+					if (delay > 1_000) {
+						ws.close(1000);
+						printToStdout(
+							`[${new Date().toISOString()}] No match live. Waiting for the next match in ${ms(
+								delay,
+							)}.`,
+						);
+						await setPromiseTimeout(delay);
+						resolve(
+							startWebSocket(
+								await loadMatches(matchDay._id),
+								users,
+								embeds,
+								message,
+								matchDay,
+							),
+						);
+						return;
+					}
 				} else {
 					ws.close(1001);
 					printToStdout(
@@ -282,8 +358,8 @@ const startWebSocket = (
 					);
 					await closeMatchDay(message, users, matches, matchDay, embeds);
 					resolve();
+					return;
 				}
-				return;
 			}
 			printToStdout(`[${new Date().toISOString()}] Matches data updated.`);
 		}
@@ -302,7 +378,7 @@ export const liveScore = async (
 			{ predictions: { $exists: true, $type: "array", $ne: [] } },
 			{ dayPoints: { $exists: true, $ne: null } },
 		],
-	});
+	}).sort({ dayPoints: -1 });
 
 	if (!users.length || !users.find((u) => u.predictions?.length)) {
 		matchDay.finished = true;
@@ -347,7 +423,7 @@ export const liveScore = async (
 
 	if (matchDay.messageId == null) {
 		matchDay.messageId = message.id;
-		matchDay.save().catch(printToStderr);
+		await matchDay.save();
 	} else if (
 		embeds.some(
 			(d, i) => d.data.description !== message.embeds[i]?.description,
