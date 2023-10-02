@@ -361,6 +361,7 @@ const startWebSocket = (
 					value: createFinalLeaderboard(leaderboard),
 				});
 			message.edit({ embeds }).catch(printToStderr);
+			setPresence(message.client, matches);
 			if (matches.data.every((match) => match.match_status !== 1)) {
 				const next = matches.data.find((match) => match.match_status === 0);
 
@@ -396,7 +397,6 @@ const startWebSocket = (
 					return;
 				}
 			}
-			setPresence(message.client, matches);
 			printToStdout(`[${new Date().toISOString()}] Matches data updated.`);
 		}
 	});
