@@ -17,16 +17,17 @@ const startDay = async (
 	channel: GuildTextBasedChannel,
 ): Promise<never> => {
 	if (matchDay.finished) {
-		printToStdout(
-			`[${new Date().toISOString()}] Match Day finished! Waiting until 10 hours after the start of the last match.`,
-		);
-		await setTimeout(
+		const delay =
 			new Date(matches.data.at(-1)!.date_time).getTime() +
-				1_000 * 60 * 60 * 10 -
-				Date.now(),
-			undefined,
-			{ ref: false },
-		);
+			1000 * 60 * 60 * 10 -
+			Date.now();
+
+		if (delay > 0) {
+			printToStdout(
+				`[${new Date().toISOString()}] Match Day finished! Waiting until 10 hours after the start of the last match.`,
+			);
+			await setTimeout(delay, undefined, { ref: false });
+		}
 		printToStdout(`[${new Date().toISOString()}] Loading new match day.`);
 		matchDay = await loadMatchDay(client, channel);
 		matches = await loadMatches(matchDay._id);
@@ -34,21 +35,29 @@ const startDay = async (
 	const startTime = new Date(matches.data[0].date_time).getTime();
 
 	if (!matchDay.predictionsSent) {
-		printToStdout(
-			`[${new Date().toISOString()}] Waiting until 15 minutes before the start of the first match to send the predictions.`,
-		);
-		await setTimeout(startTime - Date.now() - 1000 * 60 * 15, undefined, {
-			ref: false,
-		});
+		const delay = startTime - Date.now() - 1000 * 60 * 15;
+
+		if (delay > 0) {
+			printToStdout(
+				`[${new Date().toISOString()}] Waiting until 15 minutes before the start of the first match to send the predictions.`,
+			);
+			await setTimeout(delay, undefined, {
+				ref: false,
+			});
+		}
 		printToStdout(`[${new Date().toISOString()}] Sending predictions.`);
 		await sendPredictions(matchDay, channel);
 		matchDay.predictionsSent = true;
 		await matchDay.save();
 	}
-	printToStdout(
-		`[${new Date().toISOString()}] Waiting for the start of the first match.`,
-	);
-	await setTimeout(startTime - Date.now(), undefined, { ref: false });
+	const delay = startTime - Date.now();
+
+	if (delay > 0) {
+		printToStdout(
+			`[${new Date().toISOString()}] Waiting for the start of the first match.`,
+		);
+		await setTimeout(delay, undefined, { ref: false });
+	}
 	printToStdout(`[${new Date().toISOString()}] Starting live scores.`);
 	await liveScore(matchDay, channel);
 	return startDay(client, matches, matchDay, channel);
