@@ -22,7 +22,6 @@ type Leaderboard = [
 	maxPoints: number,
 ][];
 
-const positionDayPoints = [3, 2, 1];
 const finalEmojis: Record<number, string | undefined> = {
 	[-2]: "⏬",
 	[-1]: "⬇️",
@@ -80,7 +79,6 @@ const resolveLeaderboard = (
 	users: Document<typeof User>[],
 	matches: Extract<MatchesData, { success: true }>,
 ) => {
-	let lastIndex = 0;
 	const leaderboard = users
 		.map((user): Leaderboard[number] => {
 			let maxPoints = 0;
@@ -145,19 +143,10 @@ const resolveLeaderboard = (
 			];
 		})
 		.sort((a, b) => b[1] - a[1]);
-	const last = leaderboard.at(-1)!;
+	const first = Math.ceil(leaderboard.length / 2);
 
-	for (let i = 0; i < leaderboard.length; i++) {
-		const [, points] = leaderboard[i];
-		const toAdd =
-			positionDayPoints[leaderboard.findIndex(([, p]) => points === p)];
-
-		if (!toAdd) break;
-		leaderboard[i][2] = toAdd;
-		lastIndex = i;
-	}
-	if (leaderboard.length - lastIndex > 1 && last[1] !== leaderboard.at(-2)![1])
-		last[2] = -1;
+	for (const entry of leaderboard)
+		entry[2] = first - leaderboard.findIndex(([, p]) => entry[1] === p);
 	return leaderboard;
 };
 const createLeaderboardDescription = (
@@ -240,19 +229,20 @@ const closeMatchDay = (
 
 	matchDay.finished = true;
 	for (const [user, matchPoints, dayPoints] of leaderboard) {
-		(user.matchPointsHistory ??= new Array(matchDay.day - 1)).push(matchPoints);
+		if (!user.matchPointsHistory?.length)
+			user.matchPointsHistory = new Array(matchDay.day - 1);
+		user.matchPointsHistory.push(matchPoints);
 		if (dayPoints) user.dayPoints = (user.dayPoints ?? 0) + dayPoints;
 	}
 	return Promise.all([
 		message.edit({
 			embeds: [
-				embeds[0]
-					.setTitle(`Risultati Finali ${matchDay.day}° Giornata`)
-					.setDescription(leaderboardDescription),
+				embeds[0].setTitle(`Risultati Finali ${matchDay.day}ª Giornata`),
 				embeds[1]
 					.setTitle(
-						`⚽ Classifica Definitiva Pronostici ${matchDay.day}° Giornata`,
+						`⚽ Classifica Definitiva Pronostici ${matchDay.day}ª Giornata`,
 					)
+					.setDescription(leaderboardDescription)
 					.setFields({
 						name: "Classifica Generale",
 						value: finalLeaderboard,
@@ -431,7 +421,7 @@ export const liveScore = async (
 			.setThumbnail(
 				"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 			)
-			.setTitle(`🔴 Risultati Live ${matchDay.day}° Giornata`)
+			.setTitle(`🔴 Risultati Live ${matchDay.day}ª Giornata`)
 			.setDescription(resolveMatches(matches))
 			.setAuthor({
 				name: "Serie A TIM",
@@ -442,7 +432,7 @@ export const liveScore = async (
 			.setThumbnail(
 				"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 			)
-			.setTitle(`🔴 Classifica Live Pronostici ${matchDay.day}° Giornata`)
+			.setTitle(`🔴 Classifica Live Pronostici ${matchDay.day}ª Giornata`)
 			.setDescription(createLeaderboardDescription(leaderboard))
 			.setFooter({ text: "Ultimo aggiornamento" })
 			.addFields({

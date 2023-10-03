@@ -46,7 +46,6 @@ export const quoteCommand = createCommand({
 				env.QUOTES_CHANNEL!,
 			);
 
-			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 			if (!channel?.isTextBased()) {
 				await interaction.reply({
 					content: "Comando non disponibile!",
@@ -95,7 +94,6 @@ export const quoteCommand = createCommand({
 				env.QUOTES_CHANNEL!,
 			);
 
-			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 			if (!channel?.isTextBased()) {
 				await interaction.respond([]);
 				return;

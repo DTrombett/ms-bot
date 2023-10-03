@@ -72,7 +72,7 @@ const showModal = async (
 	return interaction.showModal(
 		new ModalBuilder()
 			.setCustomId(`predictions-${matchDay.day}-${part}-${Number(editing)}`)
-			.setTitle(`Pronostici ${matchDay.day}° Giornata (${part}/${total})`)
+			.setTitle(`Pronostici ${matchDay.day}ª Giornata (${part}/${total})`)
 			.addComponents(
 				matchDay.matches.slice((part - 1) * 5, part * 5).map((match) => {
 					const textInput = new TextInputBuilder()
@@ -289,7 +289,7 @@ export const predictionsCommand = createCommand({
 						thumbnail: {
 							url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 						},
-						title: `${matchDay.day}° Giornata Serie A TIM`,
+						title: `${matchDay.day}ª Giornata Serie A TIM`,
 						url: "https://legaseriea.it/it/serie-a",
 					},
 				],
