@@ -68,7 +68,6 @@ export const loadPredictions = async (client: CustomClient) => {
 		throw new TypeError("Predictions channel not set!");
 	const channel = await client.channels.fetch(env.PREDICTIONS_CHANNEL);
 
-	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 	if (!channel?.isTextBased() || channel.isDMBased())
 		throw new TypeError("Invalid predictions channel!");
 	const matchDay =

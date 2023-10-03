@@ -36,7 +36,7 @@ export const sendPredictions = async (
 						thumbnail: {
 							url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 						},
-						title: `${matchDay.day}° Giornata Serie A TIM`,
+						title: `${matchDay.day}ª Giornata Serie A TIM`,
 					};
 				}),
 			),
