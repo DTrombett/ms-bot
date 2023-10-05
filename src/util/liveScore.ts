@@ -75,6 +75,103 @@ const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 				}`,
 		)
 		.join("\n");
+const resolveStats = (users: Document<typeof User>[]) => {
+	let currentStreaks: { id: string; days: number }[] = [];
+	const highestAvg: { users: string[]; avg: number } = {
+		users: [],
+		avg: -Infinity,
+	};
+	const highestPoints: { users: string[]; points: number } = {
+		users: [],
+		points: -Infinity,
+	};
+	const highestStreak: { users: string[]; days: number } = {
+		users: [],
+		days: -Infinity,
+	};
+	const days: {
+		winners: string[];
+		totalPoints: number;
+		winnerPoints: number;
+		day: number;
+	}[] = [];
+
+	for (const user of users) {
+		const total = [0, 0];
+
+		for (let i = 0; i < (user.matchPointsHistory?.length ?? 0); i++)
+			if (user.matchPointsHistory?.[i] != null) {
+				total[1]++;
+				total[0] += user.matchPointsHistory[i];
+				if (days[i]) {
+					days[i].totalPoints += user.matchPointsHistory[i];
+					const diff = user.matchPointsHistory[i] - days[i].winnerPoints;
+
+					if (diff >= 0) {
+						days[i].winners = [user._id, ...(diff ? [] : days[i].winners)];
+						days[i].winnerPoints = user.matchPointsHistory[i];
+					}
+				} else
+					days[i] = {
+						day: i,
+						totalPoints: user.matchPointsHistory[i],
+						winners: [user._id],
+						winnerPoints: user.matchPointsHistory[i],
+					};
+			}
+		const avg = total[0] / total[1];
+
+		if (avg >= highestAvg.avg) {
+			highestAvg.users = [
+				user._id,
+				...(avg === highestAvg.avg ? highestAvg.users : []),
+			];
+			highestAvg.avg = avg;
+		}
+	}
+	let [bestDay] = days;
+
+	for (const day of days) {
+		if (day.totalPoints > bestDay.totalPoints) bestDay = day;
+		if (day.winnerPoints >= highestPoints.points) {
+			highestPoints.users = day.winners.concat(
+				day.winnerPoints === highestPoints.points ? highestPoints.users : [],
+			);
+			highestPoints.points = day.winnerPoints;
+		}
+		currentStreaks = currentStreaks.filter(({ id }) =>
+			day.winners.includes(id),
+		);
+		for (const winner of day.winners) {
+			let found = currentStreaks.find(({ id }) => winner === id);
+
+			if (found) found.days++;
+			else currentStreaks.push((found = { id: winner, days: 1 }));
+			if (found.days >= highestStreak.days) {
+				highestStreak.users = [
+					found.id,
+					...(found.days === highestStreak.days ? highestStreak.users : []),
+				];
+				highestStreak.days = found.days;
+			}
+		}
+	}
+	return {
+		name: "Statistiche",
+		value: `- Punteggio più alto: ${highestPoints.users
+			.map((id) => `<@${id}>`)
+			.join(", ")} - **${highestPoints.points}** Punti Partita
+- Media più alta: ${highestAvg.users
+			.map((id) => `<@${id}>`)
+			.join(", ")} - **${highestAvg.avg.toFixed(2)}** Punti Partita
+- Combo più lunga: ${highestStreak.users
+			.map((id) => `<@${id}>`)
+			.join(", ")} - **${highestStreak.days}** Giornate
+- Giornata con più punti: **${bestDay.day + 1}ª** Giornata - **${
+			bestDay.totalPoints
+		}** Punti Partita`,
+	};
+};
 const resolveLeaderboard = (
 	users: Document<typeof User>[],
 	matches: Extract<MatchesData, { success: true }>,
@@ -202,10 +299,9 @@ const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 			const newPosition = array.findIndex(
 				([u, , p]) => (u.dayPoints ?? 0) + p === newPoints,
 			);
-			const oldPosition = oldLeaderboard.findIndex(
-				([u]) => u.dayPoints === user.dayPoints,
-			);
-			const diff = oldPosition - newPosition;
+			const diff =
+				oldLeaderboard.findIndex(([u]) => u.dayPoints === user.dayPoints) -
+				newPosition;
 
 			return `${newPosition + 1}\\. <@${user._id}>: **${newPoints}** Punt${
 				Math.abs(newPoints) === 1 ? "o" : "i"
@@ -243,10 +339,15 @@ const closeMatchDay = (
 						`⚽ Classifica Definitiva Pronostici ${matchDay.day}ª Giornata`,
 					)
 					.setDescription(leaderboardDescription)
-					.setFields({
-						name: "Classifica Generale",
-						value: finalLeaderboard,
-					}),
+					.spliceFields(
+						0,
+						2,
+						{
+							name: "Classifica Generale",
+							value: finalLeaderboard,
+						},
+						resolveStats(users),
+					),
 			],
 		}),
 		matchDay.save(),
@@ -349,7 +450,7 @@ const startWebSocket = (
 			embeds[1]
 				.setDescription(createLeaderboardDescription(leaderboard))
 				.setTimestamp()
-				.setFields({
+				.spliceFields(0, 1, {
 					name: "Classifica Generale Provvisoria",
 					value: createFinalLeaderboard(leaderboard),
 				});
@@ -435,10 +536,13 @@ export const liveScore = async (
 			.setTitle(`🔴 Classifica Live Pronostici ${matchDay.day}ª Giornata`)
 			.setDescription(createLeaderboardDescription(leaderboard))
 			.setFooter({ text: "Ultimo aggiornamento" })
-			.addFields({
-				name: "Classifica Generale Provvisoria",
-				value: createFinalLeaderboard(leaderboard),
-			})
+			.addFields(
+				{
+					name: "Classifica Generale Provvisoria",
+					value: createFinalLeaderboard(leaderboard),
+				},
+				resolveStats(users),
+			)
 			.setAuthor({
 				name: "Serie A TIM",
 				url: "https://legaseriea.it/it/serie-a",
