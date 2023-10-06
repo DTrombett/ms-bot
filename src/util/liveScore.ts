@@ -157,14 +157,14 @@ const resolveStats = (users: Document<typeof User>[]) => {
 		}
 	}
 	return {
-		name: "Statistiche",
+		name: "Statistiche Serie A 2023/2024",
 		value: `- Punteggio più alto: ${highestPoints.users
 			.map((id) => `<@${id}>`)
 			.join(", ")} - **${highestPoints.points}** Punti Partita
 - Media più alta: ${highestAvg.users
 			.map((id) => `<@${id}>`)
 			.join(", ")} - **${highestAvg.avg.toFixed(2)}** Punti Partita
-- Combo più lunga: ${highestStreak.users
+- Combo vittorie più lunga: ${highestStreak.users
 			.map((id) => `<@${id}>`)
 			.join(", ")} - **${highestStreak.days}** Giornate
 - Giornata con più punti: **${bestDay.day + 1}ª** Giornata - **${
@@ -258,7 +258,7 @@ const createLeaderboardDescription = (
 
 	return [...leaderboard]
 		.sort((a, b) => b[1] - a[1])
-		.map(([user, points, , maxPoints]) => {
+		.map(([user, points, dayPoints, maxPoints]) => {
 			const position = leaderboard.findIndex(([, p]) => points === p) + 1;
 			const matchPointsHistory =
 				user.matchPointsHistory?.filter((n: number | null) => n != null) ?? [];
@@ -271,7 +271,7 @@ const createLeaderboardDescription = (
 							(matchPointsHistory.reduce((a, b) => a + b, 0) + points) /
 							(matchPointsHistory.length + 1)
 					  ).toFixed(2)})`
-					: `(max. ${maxPoints})`
+					: `(max. ${maxPoints}) (${dayPoints > 0 ? "+" : ""}${dayPoints})`
 			}${
 				position === 1 && points > highestMatchPoints
 					? " ✨"
