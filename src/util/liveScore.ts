@@ -160,14 +160,14 @@ const resolveStats = (users: Document<typeof User>[]) => {
 		name: "Statistiche Serie A 2023/2024",
 		value: `- Punteggio più alto: ${highestPoints.users
 			.map((id) => `<@${id}>`)
-			.join(", ")} - **${highestPoints.points}** Punti Partita
+			.join(", ")} • **${highestPoints.points}** Punti Partita
 - Media più alta: ${highestAvg.users
 			.map((id) => `<@${id}>`)
-			.join(", ")} - **${highestAvg.avg.toFixed(2)}** Punti Partita
+			.join(", ")} • **${highestAvg.avg.toFixed(2)}** Punti Partita
 - Combo vittorie più lunga: ${highestStreak.users
 			.map((id) => `<@${id}>`)
-			.join(", ")} - **${highestStreak.days}** Giornate
-- Giornata con più punti: **${bestDay.day + 1}ª** Giornata - **${
+			.join(", ")} • **${highestStreak.days}** Giornate
+- Giornata con più punti: **${bestDay.day + 1}ª** Giornata • **${
 			bestDay.totalPoints
 		}** Punti Partita`,
 	};
