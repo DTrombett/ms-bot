@@ -86,6 +86,7 @@ module.exports = {
 		"no-case-declarations": "off",
 		"no-constructor-return": "warn",
 		"no-empty": "off",
+		"no-empty-pattern": "off",
 		"no-labels": "warn",
 		"no-multi-str": "warn",
 		"no-new": "warn",

@@ -55,9 +55,7 @@ export const setPermanentTimeout = async <T extends keyof typeof actions>(
 
 	timeoutCache[doc.id as string] = doc;
 	if (doc.date > Date.now()) await doc.save();
-	setActionTimeout(client, doc)
-		.catch(() => {})
-		.catch(() => {});
+	setActionTimeout(client, doc).catch(() => {});
 	return doc;
 };
 
