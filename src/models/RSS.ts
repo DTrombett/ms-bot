@@ -7,6 +7,7 @@ export type RSSSchema = {
 	guild: string;
 	link: string;
 	lastUpdate: number;
+	title?: string;
 };
 
 export const rssSchema = new Schema<RSSSchema>({
@@ -14,6 +15,7 @@ export const rssSchema = new Schema<RSSSchema>({
 	guild: string,
 	link: string,
 	lastUpdate: number,
+	title: String,
 });
 
 export const RSS = createModel("RSS", rssSchema);
