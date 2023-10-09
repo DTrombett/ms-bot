@@ -3,6 +3,8 @@ import {
 	ApplicationCommandType,
 	GuildTextBasedChannel,
 	PermissionFlagsBits,
+	TimestampStyles,
+	time,
 } from "discord.js";
 import { parseFeed } from "htmlparser2";
 import { request } from "undici";
@@ -71,6 +73,11 @@ export const rssCommand = createCommand({
 						},
 					],
 				},
+				{
+					name: "list",
+					description: "Elenca i feed che stai seguendo",
+					type: ApplicationCommandOptionType.Subcommand,
+				},
 			],
 		},
 	],
@@ -78,12 +85,18 @@ export const rssCommand = createCommand({
 		switch (interaction.options.getSubcommand()) {
 			case "add": {
 				const link = interaction.options.getString("link", true);
+				const guildFeeds = feeds.filter(
+					(feed) => feed.guild === interaction.guildId,
+				);
 
-				if (
-					feeds.find(
-						(feed) => feed.link === link && feed.guild === interaction.guildId,
-					)
-				) {
+				if (guildFeeds.size === 10) {
+					await interaction.reply({
+						content: "Non puoi seguire più di 10 feeds contemporaneamente!",
+						ephemeral: true,
+					});
+					return;
+				}
+				if (guildFeeds.find((feed) => feed.link === link)) {
 					await interaction.reply({
 						content: "Stai già seguendo questo feed!",
 						ephemeral: true,
@@ -117,7 +130,7 @@ export const rssCommand = createCommand({
 					channel: channel.id,
 					guild: interaction.guildId!,
 					link,
-					title: feed.title,
+					title: feed.title?.slice(0, 256),
 				});
 				await interaction.reply({
 					content: `Feed [${feed.title ?? "senza nome"}](${link}) creato!`,
@@ -202,6 +215,23 @@ export const rssCommand = createCommand({
 				await interaction.reply({
 					content: "Ultimo aggiornamento inviato con successo!",
 					ephemeral: true,
+				});
+				break;
+			}
+			case "list": {
+				await interaction.reply({
+					content: `Ecco i feeds che stai seguendo:\n\n${feeds
+						.filter((feed) => feed.guild === interaction.guildId)
+						.map(
+							(feed) =>
+								`- [${feed.title ?? "Feed sconosciuto"}](<${feed.link}>): <#${
+									feed.channel
+								}> • Ultimo aggiornamento: ${time(
+									Math.round(feed.lastUpdate / 1_000),
+									TimestampStyles.RelativeTime,
+								)}`,
+						)
+						.join("\n")}`,
 				});
 				break;
 			}
