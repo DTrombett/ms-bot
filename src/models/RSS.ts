@@ -4,6 +4,7 @@ import { number, string } from "./utilTypes";
 
 export type RSSSchema = {
 	channel: string;
+	errorsCount: number;
 	guild: string;
 	link: string;
 	lastUpdate: number;
@@ -12,6 +13,7 @@ export type RSSSchema = {
 
 export const rssSchema = new Schema<RSSSchema>({
 	channel: string,
+	errorsCount: { type: Number, default: 0 },
 	guild: string,
 	link: string,
 	lastUpdate: number,

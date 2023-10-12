@@ -72,21 +72,48 @@ const setFeedsInterval = async (client: CustomClient) => {
 					feed.channel,
 				) as Promise<GuildTextBasedChannel | null>,
 			]).catch(() => ["", null] as const);
+
+			if (!channel) return;
 			const rss = parseFeed(feedText, { xmlMode: true });
 
-			if (!rss || (rss.updated && feed.lastUpdate >= rss.updated.getTime()))
+			if (!rss) {
+				if (feed.errorsCount === 9) {
+					await Promise.all([
+						channel.send(
+							`Il feed [${feed.title ?? "Feed sconosciuto"}](<${
+								feed.link
+							}>) è stato automaticamente eliminato in quanto ha ricevuto troppi errori consecutivi. Se il problema con il feed è stato risolto, è possibile aggiungerlo nuovamente tramite il comando \`/rss add\`.`,
+						),
+						feed.deleteOne(),
+					]).catch(printToStderr);
+					return;
+				}
+				feed.errorsCount++;
+				await Promise.all([
+					feed.errorsCount === 6 &&
+						channel.send(
+							`È stato impostato il feed [${
+								feed.title ?? "Feed sconosciuto"
+							}](<${
+								feed.link
+							}>) in questo canale ma ha ricevuto più di 5 errori consecutivi. Questo indica che probabilmente il feed non è più valido o non è più attivo. Se verranno rilevati altri errori, verrà automaticamente disattivato.`,
+						),
+					feed.save(),
+				]).catch(printToStderr);
 				return;
+			}
+			feed.errorsCount = 0;
+			if (rss.updated && feed.lastUpdate >= rss.updated.getTime()) return;
 			const items = rss.items.filter(
 				(item) => item.pubDate && item.pubDate.getTime() > feed.lastUpdate,
 			);
 
 			if (!items.length) return;
-			if (!channel) return;
-			const now = Date.now();
-
-			await channel.send(createFeedMessageOptions(rss)).catch(printToStderr);
-			feed.lastUpdate = now;
-			await feed.save();
+			feed.lastUpdate = Date.now();
+			await Promise.all([
+				channel.send(createFeedMessageOptions(rss)),
+				feed.save(),
+			]).catch(printToStderr);
 		});
 };
 
@@ -97,7 +124,7 @@ export const loadFeeds = async (client: CustomClient) => {
 };
 
 export const createFeed = async (
-	schema: Omit<RSSSchema, "lastUpdate"> & Partial<RSSSchema>,
+	schema: Omit<RSSSchema, "errorsCount" | "lastUpdate"> & Partial<RSSSchema>,
 ) => {
 	const doc = new RSS(schema);
 
