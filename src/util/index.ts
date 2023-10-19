@@ -8,6 +8,7 @@ export * from "./capitalize";
 export * from "./colors";
 export * from "./createCommand";
 export * from "./createEvent";
+export * from "./feeds";
 export * from "./formatBytes";
 export * from "./liveScore";
 export * from "./loadCommands";
