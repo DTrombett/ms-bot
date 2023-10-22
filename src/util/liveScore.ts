@@ -81,6 +81,10 @@ const resolveStats = (users: Document<typeof User>[]) => {
 		users: [],
 		avg: -Infinity,
 	};
+	const highestDiff: { users: string[]; points: number } = {
+		users: [],
+		points: 0,
+	};
 	const highestPoints: { users: string[]; points: number } = {
 		users: [],
 		points: -Infinity,
@@ -94,6 +98,7 @@ const resolveStats = (users: Document<typeof User>[]) => {
 		totalPoints: number;
 		winnerPoints: number;
 		day: number;
+		secondPoints: number;
 	}[] = [];
 
 	for (const user of users) {
@@ -105,18 +110,22 @@ const resolveStats = (users: Document<typeof User>[]) => {
 				total[0] += user.matchPointsHistory[i];
 				if (days[i]) {
 					days[i].totalPoints += user.matchPointsHistory[i];
-					const diff = user.matchPointsHistory[i] - days[i].winnerPoints;
-
-					if (diff >= 0) {
-						days[i].winners = [user._id, ...(diff ? [] : days[i].winners)];
+					if (user.matchPointsHistory[i] > days[i].winnerPoints) {
+						days[i].secondPoints = days[i].winnerPoints;
+						days[i].winners = [user._id];
 						days[i].winnerPoints = user.matchPointsHistory[i];
-					}
+					} else if (user.matchPointsHistory[i] === days[i].winnerPoints) {
+						days[i].secondPoints = days[i].winnerPoints;
+						days[i].winners.push(user._id);
+					} else if (user.matchPointsHistory[i] > days[i].secondPoints)
+						days[i].secondPoints = user.matchPointsHistory[i];
 				} else
 					days[i] = {
 						day: i,
 						totalPoints: user.matchPointsHistory[i],
 						winners: [user._id],
 						winnerPoints: user.matchPointsHistory[i],
+						secondPoints: -Infinity,
 					};
 			}
 		const avg = total[0] / total[1];
@@ -142,9 +151,18 @@ const resolveStats = (users: Document<typeof User>[]) => {
 		currentStreaks = currentStreaks.filter(({ id }) =>
 			day.winners.includes(id),
 		);
+		const diff = day.winnerPoints - day.secondPoints;
+		let updateDiff = false;
+
+		if (diff > highestDiff.points) {
+			highestDiff.points = diff;
+			highestDiff.users = day.winners;
+		} else if (diff === highestDiff.points) updateDiff = true;
 		for (const winner of day.winners) {
 			let found = currentStreaks.find(({ id }) => winner === id);
 
+			if (updateDiff && !highestDiff.users.includes(winner))
+				highestDiff.users.push(winner);
 			if (found) found.days++;
 			else currentStreaks.push((found = { id: winner, days: 1 }));
 			if (found.days >= highestStreak.days) {
@@ -167,6 +185,9 @@ const resolveStats = (users: Document<typeof User>[]) => {
 - Combo vittorie più lunga: ${highestStreak.users
 			.map((id) => `<@${id}>`)
 			.join(", ")} • **${highestStreak.days}** Giornate
+- Vittoria con maggior distacco: ${highestDiff.users
+			.map((id) => `<@${id}>`)
+			.join(", ")} • **${highestDiff.points}** Punti Partita
 - Giornata con più punti: **${bestDay.day + 1}ª** Giornata • **${
 			bestDay.totalPoints
 		}** Punti Partita`,
