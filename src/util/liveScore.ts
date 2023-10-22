@@ -182,12 +182,12 @@ const resolveStats = (users: Document<typeof User>[]) => {
 - Media più alta: ${highestAvg.users
 			.map((id) => `<@${id}>`)
 			.join(", ")} • **${highestAvg.avg.toFixed(2)}** Punti Partita
-- Combo vittorie più lunga: ${highestStreak.users
-			.map((id) => `<@${id}>`)
-			.join(", ")} • **${highestStreak.days}** Giornate
 - Vittoria con maggior distacco: ${highestDiff.users
 			.map((id) => `<@${id}>`)
 			.join(", ")} • **${highestDiff.points}** Punti Partita
+- Combo vittorie più lunga: ${highestStreak.users
+			.map((id) => `<@${id}>`)
+			.join(", ")} • **${highestStreak.days}** Giornate
 - Giornata con più punti: **${bestDay.day + 1}ª** Giornata • **${
 			bestDay.totalPoints
 		}** Punti Partita`,
