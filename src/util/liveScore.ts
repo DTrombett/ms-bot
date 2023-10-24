@@ -277,8 +277,8 @@ const createLeaderboardDescription = (
 		-Infinity,
 	);
 
-	return [...leaderboard]
-		.sort((a, b) => b[1] - a[1])
+	return leaderboard
+		.toSorted((a, b) => b[1] - a[1])
 		.map(([user, points, dayPoints, maxPoints]) => {
 			const position = leaderboard.findIndex(([, p]) => points === p) + 1;
 			const matchPointsHistory =
@@ -307,12 +307,12 @@ const createLeaderboardDescription = (
 		.join("\n");
 };
 const createFinalLeaderboard = (leaderboard: Leaderboard) => {
-	const oldLeaderboard = [...leaderboard].sort(
+	const oldLeaderboard = leaderboard.toSorted(
 		(a, b) => (b[0].dayPoints ?? 0) - (a[0].dayPoints ?? 0),
 	);
 
-	return [...leaderboard]
-		.sort(
+	return leaderboard
+		.toSorted(
 			(a, b) => (b[0].dayPoints ?? 0) + b[2] - ((a[0].dayPoints ?? 0) + a[2]),
 		)
 		.map(([user, , points], _i, array) => {
