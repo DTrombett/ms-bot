@@ -77,6 +77,7 @@ const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
 		.join("\n");
 const resolveStats = (users: Document<typeof User>[]) => {
 	let currentStreaks: { id: string; days: number }[] = [];
+	let totalPoints = 0;
 	const highestAvg: { users: string[]; avg: number } = {
 		users: [],
 		avg: -Infinity,
@@ -137,6 +138,7 @@ const resolveStats = (users: Document<typeof User>[]) => {
 			];
 			highestAvg.avg = avg;
 		}
+		totalPoints += total[0];
 	}
 	let [bestDay] = days;
 
@@ -190,7 +192,10 @@ const resolveStats = (users: Document<typeof User>[]) => {
 			.join(", ")} • **${highestStreak.days}** Giornate
 - Giornata con più punti: **${bestDay.day + 1}ª** Giornata • **${
 			bestDay.totalPoints
-		}** Punti Partita`,
+		}** Punti Partita
+- Punti totali accumulati: **${totalPoints}** Punti Partita • Avg. **${(
+			totalPoints / days.length
+		).toFixed(2)}**/day`,
 	};
 };
 const resolveLeaderboard = (

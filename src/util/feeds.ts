@@ -104,11 +104,10 @@ const setFeedsInterval = async (client: CustomClient) => {
 			}
 			feed.errorsCount = 0;
 			if (rss.updated && feed.lastUpdate >= rss.updated.getTime()) return;
-			const items = rss.items.filter(
+			rss.items = rss.items.filter(
 				(item) => item.pubDate && item.pubDate.getTime() > feed.lastUpdate,
 			);
-
-			if (!items.length) return;
+			if (!rss.items.length) return;
 			feed.lastUpdate = Date.now();
 			await Promise.all([
 				channel.send(createFeedMessageOptions(rss)),
