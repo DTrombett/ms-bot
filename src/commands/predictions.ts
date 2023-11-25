@@ -350,10 +350,10 @@ export const predictionsCommand = createCommand({
 					matches.groups.first !== matches.groups.second) ||
 				(matches[0].startsWith("1") &&
 					matches.groups.first &&
-					matches.groups.first < matches.groups.second) ||
+					matches.groups.first <= matches.groups.second) ||
 				(matches[0].startsWith("2") &&
 					matches.groups.first &&
-					matches.groups.first > matches.groups.second) ||
+					matches.groups.first >= matches.groups.second) ||
 				(matches.groups.first && Number(matches.groups.first) > 999) ||
 				(matches.groups.second && Number(matches.groups.second) > 999)
 			)
