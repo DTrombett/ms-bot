@@ -65,7 +65,7 @@ export class Command {
 		return this.execute(
 			env,
 			interaction,
-			this._autocomplete.bind(this, interaction),
+			this._autocomplete.bind(this, { interaction, env }),
 		);
 	}
 
@@ -81,7 +81,7 @@ export class Command {
 		return this.execute(
 			env,
 			interaction,
-			this._component.bind(this, interaction),
+			this._component.bind(this, { interaction, env }),
 		);
 	}
 
@@ -97,7 +97,7 @@ export class Command {
 		return this.execute(
 			env,
 			interaction,
-			this._modalSubmit.bind(this, interaction),
+			this._modalSubmit.bind(this, { interaction, env }),
 		);
 	}
 
@@ -129,7 +129,7 @@ export class Command {
 		return this.execute(
 			env,
 			interaction,
-			this._execute.bind(this, interaction),
+			this._execute.bind(this, { interaction, env }),
 		);
 	}
 

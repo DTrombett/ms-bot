@@ -42,13 +42,13 @@ export const ping = createCommand({
 			type: ApplicationCommandType.ChatInput,
 		},
 	],
-	async run(interaction, resolve) {
+	async run({ interaction }, resolve) {
 		resolve({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: pong(interaction),
 		});
 	},
-	async component(interaction, resolve) {
+	async component({ interaction }, resolve) {
 		resolve({
 			type: InteractionResponseType.UpdateMessage,
 			data: pong(interaction),

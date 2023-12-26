@@ -25,7 +25,7 @@ export const avatar = createCommand({
 			],
 		},
 	],
-	async run(interaction, resolve) {
+	async run({ interaction }, resolve) {
 		const userId = interaction.data.options?.find(
 			(o): o is APIApplicationCommandInteractionDataUserOption =>
 				o.name === "user" && o.type === ApplicationCommandOptionType.User,
