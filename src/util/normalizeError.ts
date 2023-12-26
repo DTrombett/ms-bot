@@ -4,10 +4,10 @@
  * @returns An Error object
  */
 export const normalizeError = (err: unknown) => {
-  console.error(err);
-  return err instanceof Error
-    ? err
-    : new Error(typeof err === "string" ? err : "Unknown error");
+	console.error(err);
+	return err instanceof Error
+		? err
+		: new Error(typeof err === "string" ? err : "Unknown error");
 };
 
 export default normalizeError;
