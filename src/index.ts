@@ -1,7 +1,6 @@
 import { REST } from "@discordjs/rest";
 import {
 	APIVersion,
-	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
 } from "discord-api-types/v10";
@@ -19,8 +18,14 @@ const rest = new REST({
 	hashSweepInterval: 0,
 	handlerSweepInterval: 0,
 });
-const commands = Object.values(commandsObject).map(
-	(command) => new Command(rest, command),
+const commands = new Map(
+	Object.entries(commandsObject).map(([key, command]) => [
+		key,
+		new Command(rest, command),
+	]),
+);
+const applicationCommands = new Map(
+	[...commands].flatMap(([, cmd]) => cmd.data.map((d) => [d.name, cmd])),
 );
 
 const server: ExportedHandler<Env> = {
@@ -41,57 +46,29 @@ const server: ExportedHandler<Env> = {
 					};
 					break;
 				case InteractionType.ApplicationCommand:
-					command = commands.find((c) =>
-						c.data.some(
-							(d) =>
-								d.type === interaction.data.type &&
-								d.name === interaction.data.name,
-						),
-					);
+					command = applicationCommands.get(interaction.data.name);
 					result = await command?.run(interaction, env);
 					break;
 				case InteractionType.MessageComponent:
 					[action] = interaction.data.custom_id.split("-");
-					command = commands.find(
-						(cmd) =>
-							(cmd.data.find(
-								({ type }) => type === ApplicationCommandType.ChatInput,
-							)?.name ?? cmd.data[0]!.name) === action,
-					);
+					if (!action) break;
+					command = commands.get(action);
 					result = await command?.component(interaction, env);
 					break;
 				case InteractionType.ApplicationCommandAutocomplete:
-					command = commands.find(
-						(cmd) =>
-							(cmd.data.find(
-								({ type }) => type === ApplicationCommandType.ChatInput,
-							)?.name ?? cmd.data[0]!.name) === interaction.data.name,
-					);
+					command = commands.get(interaction.data.name);
 					result = await command?.autocomplete(interaction, env);
 					break;
 				case InteractionType.ModalSubmit:
 					[action] = interaction.data.custom_id.split("-");
-					command = commands.find(
-						(cmd) =>
-							(cmd.data.find(
-								({ type }) => type === ApplicationCommandType.ChatInput,
-							)?.name ?? cmd.data[0]!.name) === action,
-					);
+					if (!action) break;
+					command = commands.get(action);
 					result = await command?.modalSubmit(interaction, env);
 					break;
 				default:
 					break;
 			}
-			console.log(
-				`Interaction ${
-					interaction.data && "name" in interaction.data
-						? interaction.data.name
-						: command?.data[0]!.name
-				} handled correctly`,
-			);
-			return result
-				? new JsonResponse(result)
-				: new JsonResponse({ error: "An error occurred" }, { status: 500 });
+			return new JsonResponse(result);
 		}
 		if (request.method === "GET") return new Response("Ready!");
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
