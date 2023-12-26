@@ -1,5 +1,0 @@
-language = "nodejs"
-run = "node ."
-
-[nix]
-channel = "stable-23_05"

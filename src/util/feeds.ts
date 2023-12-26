@@ -1,16 +1,6 @@
-import {
-	Collection,
-	Colors,
-	EmbedBuilder,
-	GuildTextBasedChannel,
-} from "discord.js";
 import { Feed, parseFeed } from "htmlparser2";
-import { setInterval } from "node:timers/promises";
-import { request } from "undici";
 import { Document, RSS, RSSSchema } from "../models";
-import CustomClient from "./CustomClient";
 import formatBytes from "./formatBytes";
-import { printToStderr } from "./logger";
 
 export const feeds = new Collection<string, Document<RSSSchema>>();
 

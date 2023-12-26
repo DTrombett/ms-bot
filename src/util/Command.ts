@@ -1,147 +1,156 @@
-/* eslint-disable @typescript-eslint/member-ordering */
-import type {
-	InteractionType,
-	RESTPutAPIApplicationCommandsJSONBody,
-} from "discord.js";
-import { env } from "node:process";
-import { printToStderr, type CommandOptions, type InteractionByType } from ".";
-import CustomClient from "./CustomClient";
+import { REST } from "@discordjs/rest";
+import {
+  APIInteraction,
+  InteractionType,
+  RESTPutAPIApplicationCommandsJSONBody,
+} from "discord-api-types/v10";
+import type { CommandOptions, Env, InteractionByType } from ".";
 
 /**
  * A class representing a Discord slash command
  */
 export class Command {
-	/**
-	 * The client that instantiated this
-	 */
-	readonly client: CustomClient<true>;
+  /**
+   * The rest for discord requests
+   */
+  readonly api: REST;
 
-	/**
-	 * The Discord data for this command
-	 */
-	data!: RESTPutAPIApplicationCommandsJSONBody;
+  /**
+   * The Discord data for this command
+   */
+  data!: RESTPutAPIApplicationCommandsJSONBody;
 
-	/**
-	 * Whether this command is private
-	 */
-	isPrivate = false;
+  /**
+   * Whether this command is private
+   */
+  isPrivate = false;
 
-	/**
-	 * The function to handle the autocomplete of this command
-	 */
-	private _autocomplete: OmitThisParameter<CommandOptions["autocomplete"]>;
+  /**
+   * The function to handle the autocomplete of this command
+   */
+  private _autocomplete: OmitThisParameter<CommandOptions["autocomplete"]>;
 
-	/**
-	 * The function to handle a message component received
-	 */
-	private _component: OmitThisParameter<CommandOptions["component"]>;
+  /**
+   * The function to handle a message component received
+   */
+  private _component: OmitThisParameter<CommandOptions["component"]>;
 
-	/**
-	 * The function to handle a submitted modal
-	 */
-	private _modalSubmit: OmitThisParameter<CommandOptions["modalSubmit"]>;
+  /**
+   * The function to handle a submitted modal
+   */
+  private _modalSubmit: OmitThisParameter<CommandOptions["modalSubmit"]>;
 
-	/**
-	 * The function provided to handle the command received
-	 */
-	private _execute!: OmitThisParameter<CommandOptions["run"]>;
+  /**
+   * The function provided to handle the command received
+   */
+  private _execute!: OmitThisParameter<CommandOptions["run"]>;
 
-	/**
-	 * @param options - Options for this command
-	 */
-	constructor(client: CustomClient, options: CommandOptions) {
-		this.client = client;
-		this.patch(options);
-	}
+  /**
+   * @param options - Options for this command
+   */
+  constructor(api: REST, options: CommandOptions<any>) {
+    this.api = api;
+    this.patch(options);
+  }
 
-	/**
-	 * Autocomplete this command.
-	 * @param interaction - The interaction received
-	 */
-	async autocomplete(
-		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
-	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_IDS?.includes(interaction.user.id) === true
-			)
-				await this._autocomplete?.(interaction);
-		} catch (message) {
-			printToStderr(message);
-		}
-	}
+  /**
+   * Autocomplete this command.
+   * @param interaction - The interaction received
+   */
+  async autocomplete(
+    interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
+    env: Env,
+  ) {
+    if (!this._autocomplete) return undefined;
+    return this.execute(
+      env,
+      interaction,
+      this._autocomplete.bind(this, interaction),
+    );
+  }
 
-	/**
-	 * Run this command for a message component.
-	 * @param interaction - The interaction received
-	 */
-	async component(
-		interaction: InteractionByType<InteractionType.MessageComponent>,
-	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_IDS?.includes(interaction.user.id) === true
-			)
-				await this._component?.(interaction);
-		} catch (message) {
-			printToStderr(message);
-		}
-	}
+  /**
+   * Run this command for a message component.
+   * @param interaction - The interaction received
+   */
+  async component(
+    interaction: InteractionByType<InteractionType.MessageComponent>,
+    env: Env,
+  ) {
+    if (!this._component) return undefined;
+    return this.execute(
+      env,
+      interaction,
+      this._component.bind(this, interaction),
+    );
+  }
 
-	/**
-	 * Run this command for a submitted modal.
-	 * @param interaction - The interaction received
-	 */
-	async modalSubmit(
-		interaction: InteractionByType<InteractionType.ModalSubmit>,
-	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_IDS?.includes(interaction.user.id) === true
-			)
-				await this._modalSubmit?.(interaction);
-		} catch (message) {
-			printToStderr(message);
-		}
-	}
+  /**
+   * Run this command for a submitted modal.
+   * @param interaction - The interaction received
+   */
+  async modalSubmit(
+    interaction: InteractionByType<InteractionType.ModalSubmit>,
+    env: Env,
+  ) {
+    if (!this._modalSubmit) return undefined;
+    return this.execute(
+      env,
+      interaction,
+      this._modalSubmit.bind(this, interaction),
+    );
+  }
 
-	/**
-	 * Patch this command.
-	 * @param options - Options for this command
-	 */
-	patch(options: Partial<CommandOptions>) {
-		if (options.data !== undefined) this.data = options.data;
-		if (options.autocomplete !== undefined)
-			this._autocomplete = options.autocomplete.bind(this);
-		if (options.component !== undefined)
-			this._component = options.component.bind(this);
-		if (options.modalSubmit !== undefined)
-			this._modalSubmit = options.modalSubmit.bind(this);
-		if (options.isPrivate !== undefined) this.isPrivate = options.isPrivate;
-		if (options.run !== undefined) this._execute = options.run.bind(this);
-		return this;
-	}
+  /**
+   * Patch this command.
+   * @param options - Options for this command
+   */
+  patch(options: Partial<CommandOptions>) {
+    if (options.data !== undefined) this.data = options.data;
+    if (options.autocomplete !== undefined)
+      this._autocomplete = options.autocomplete.bind(this);
+    if (options.component !== undefined)
+      this._component = options.component.bind(this);
+    if (options.modalSubmit !== undefined)
+      this._modalSubmit = options.modalSubmit.bind(this);
+    if (options.isPrivate !== undefined) this.isPrivate = options.isPrivate;
+    if (options.run !== undefined) this._execute = options.run.bind(this);
+    return this;
+  }
 
-	/**
-	 * Run this command.
-	 * @param interaction - The interaction received
-	 */
-	async run(
-		interaction: InteractionByType<InteractionType.ApplicationCommand>,
-	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_IDS?.includes(interaction.user.id) === true
-			)
-				await this._execute(interaction);
-		} catch (message) {
-			printToStderr(message);
-		}
-	}
+  /**
+   * Run this command.
+   * @param interaction - The interaction received
+   */
+  async run(
+    interaction: InteractionByType<InteractionType.ApplicationCommand>,
+    env: Env,
+  ) {
+    return this.execute(
+      env,
+      interaction,
+      this._execute.bind(this, interaction),
+    );
+  }
+
+  private async execute(
+    env: Env,
+    interaction: APIInteraction,
+    executor: ConstructorParameters<PromiseConstructor>[0],
+  ) {
+    try {
+      if (
+        !this.isPrivate ||
+        env.OWNER_ID.includes(
+          (interaction.user ?? interaction.member?.user)?.id ?? "--",
+        )
+      )
+        return await new Promise(executor);
+    } catch (err) {
+      console.error(err);
+    }
+    return undefined;
+  }
 }
 
 export default Command;
