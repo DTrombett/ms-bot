@@ -13,3 +13,9 @@ jobs:
       - run: npm ci
       - name: Run tests
         run: npm test
+      - name: Publish to Cloudflare Workers
+        if: github.ref == 'refs/heads/workers'
+        run: npm run publish
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

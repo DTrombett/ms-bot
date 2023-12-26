@@ -10,7 +10,7 @@ import {
 } from "discord-api-types/v10";
 import { createCommand } from "../util";
 
-export const avatarCommand = createCommand({
+export const avatar = createCommand({
 	data: [
 		{
 			name: "avatar",
@@ -53,11 +53,11 @@ export const avatarCommand = createCommand({
 							user.discriminator === "0"
 								? Number(BigInt(user.id) >> 22n) % 6
 								: Number(user.discriminator) % 5,
-					  )
+						)
 					: this.api.cdn.avatar(user.id, user.avatar, {
 							size: 4096,
 							extension: "png",
-					  })
+						})
 				: this.api.cdn.guildMemberAvatar(
 						interaction.guild_id!,
 						user.id,
@@ -66,7 +66,7 @@ export const avatarCommand = createCommand({
 							size: 4096,
 							extension: "png",
 						},
-				  );
+					);
 
 		resolve({
 			type: InteractionResponseType.ChannelMessageWithSource,

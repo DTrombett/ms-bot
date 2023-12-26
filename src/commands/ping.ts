@@ -10,7 +10,7 @@ import {
 } from "discord-api-types/v10";
 import { createCommand } from "../util";
 
-const ping = (
+const pong = (
 	interaction:
 		| APIChatInputApplicationCommandInteraction
 		| APIMessageComponentInteraction,
@@ -34,7 +34,7 @@ const ping = (
 	],
 });
 
-export const pingCommand = createCommand({
+export const ping = createCommand({
 	data: [
 		{
 			name: "ping",
@@ -45,13 +45,13 @@ export const pingCommand = createCommand({
 	async run(interaction, resolve) {
 		resolve({
 			type: InteractionResponseType.ChannelMessageWithSource,
-			data: ping(interaction),
+			data: pong(interaction),
 		});
 	},
 	async component(interaction, resolve) {
 		resolve({
 			type: InteractionResponseType.UpdateMessage,
-			data: ping(interaction),
+			data: pong(interaction),
 		});
 	},
 });
