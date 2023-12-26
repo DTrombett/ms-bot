@@ -1,5 +1,5 @@
 import { APIInteraction } from "discord-api-types/v10";
-import { sign } from "tweetnacl";
+import nacl from "tweetnacl";
 import type { Env } from ".";
 
 export const verifyDiscordRequest = async (request: Request, env: Env) => {
@@ -9,7 +9,7 @@ export const verifyDiscordRequest = async (request: Request, env: Env) => {
 	const isValidRequest =
 		signature &&
 		timestamp &&
-		sign.detached.verify(
+		nacl.sign.detached.verify(
 			Buffer.from(timestamp + body),
 			Buffer.from(signature, "hex"),
 			Buffer.from(env.DISCORD_PUBLIC_KEY, "hex"),

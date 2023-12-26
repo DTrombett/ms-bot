@@ -1,5 +1,6 @@
 import { REST } from "@discordjs/rest";
 import {
+	APIVersion,
 	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
@@ -14,7 +15,7 @@ import {
 } from "./util";
 
 const rest = new REST({
-	version: "10",
+	version: APIVersion,
 	hashSweepInterval: 0,
 	handlerSweepInterval: 0,
 });

@@ -1,10 +1,4 @@
 name = "test"
 main = "./dist/index.js"
-compatibility_date="2023-05-18"
+compatibility_date="2023-12-01"
 node_compat = true
-
-# [secrets]
-# DISCORD_TOKEN
-# DISCORD_PUBLIC_KEY
-# DISCORD_APPLICATION_ID
-# OWNER_ID

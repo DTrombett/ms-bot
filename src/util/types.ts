@@ -199,4 +199,6 @@ export type Env = {
 	DISCORD_PUBLIC_KEY: string;
 	DISCORD_TOKEN: string;
 	OWNER_ID: string;
+	NODE_ENV?: string;
+	TEST_GUILD: string;
 };
