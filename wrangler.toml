@@ -2,3 +2,11 @@ name = "test"
 main = "./dist/index.js"
 compatibility_date="2023-12-01"
 node_compat = true
+
+[placement]
+mode = "smart"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "database"
+database_id = "8a298455-ac11-4e0c-b160-4db807cf3572"

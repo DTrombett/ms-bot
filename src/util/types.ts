@@ -74,7 +74,7 @@ export type CommandOptions<
 		resolve: (
 			result: Awaitable<APIApplicationCommandAutocompleteResponse>,
 		) => void,
-		reject: (error: unknown) => void,
+		reject: (error?: unknown) => void,
 	): Awaitable<void>;
 
 	/**
@@ -97,7 +97,7 @@ export type CommandOptions<
 				| APIModalInteractionResponse
 			>,
 		) => void,
-		reject: (error: unknown) => void,
+		reject: (error?: unknown) => void,
 	): Awaitable<void>;
 
 	/**
@@ -118,7 +118,7 @@ export type CommandOptions<
 				| APIInteractionResponseDeferredMessageUpdate
 			>,
 		) => void,
-		reject: (error: unknown) => void,
+		reject: (error?: unknown) => void,
 	): Awaitable<void>;
 
 	/**
@@ -139,7 +139,7 @@ export type CommandOptions<
 				| APIModalInteractionResponse
 			>,
 		) => void,
-		reject: (error: unknown) => void,
+		reject: (error?: unknown) => void,
 	): Awaitable<void>;
 };
 export type ReceivedInteraction = InteractionByType<
@@ -213,4 +213,5 @@ export type Env = {
 	OWNER_ID: string;
 	NODE_ENV?: string;
 	TEST_GUILD: string;
+	DB: D1Database;
 };
