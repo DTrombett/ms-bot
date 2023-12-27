@@ -9,7 +9,6 @@ import type Command from "./Command";
 import type Event from "./Event";
 import loadCommands from "./loadCommands";
 import loadEvents from "./loadEvents";
-import { loadTimeouts } from "./permanentTimeouts";
 
 /**
  * A custom class to interact with Discord
@@ -74,9 +73,7 @@ export class CustomClient<T extends boolean = boolean> extends Client<T> {
 	 */
 	async login(token?: string) {
 		await Promise.all([loadCommands(this), loadEvents(this)]);
-		token = await super.login(token);
-		await loadTimeouts(this);
-		return token;
+		return super.login(token);
 	}
 }
 

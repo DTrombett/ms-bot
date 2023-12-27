@@ -1,4 +1,10 @@
-import { Constants, createEvent, loadQuotes, loadTimeouts } from "../util";
+import {
+	Constants,
+	createEvent,
+	loadFeeds,
+	loadQuotes,
+	loadTimeouts,
+} from "../util";
 
 export const readyEvent = createEvent({
 	name: "ready",
@@ -7,6 +13,7 @@ export const readyEvent = createEvent({
 			client.application.fetch(),
 			loadQuotes(this.client),
 			loadTimeouts(this.client),
+			loadFeeds(this.client),
 		]);
 		// eslint-disable-next-line no-console
 		console.timeEnd(Constants.clientOnlineLabel);
