@@ -9,7 +9,7 @@ import { createCommand, randomNumber } from "../util";
 
 const dice = async (
 	interaction: ReceivedInteraction,
-	count: number,
+	count = 1,
 	ephemeral?: boolean,
 ) => {
 	if (count < 1 || count > 100) {
@@ -29,7 +29,9 @@ const dice = async (
 		results.push(roll);
 	}
 	await interaction.reply({
-		content: `🎲 **${result}** (${results.join(", ")}) con ${count} dadi!`,
+		content: `🎲 **${result}** ${
+			count > 1 ? `(${results.join(", ")})` : ""
+		}con ${count} dad${count === 1 ? "o" : "i"}!`,
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -68,27 +70,12 @@ export const diceCommand = createCommand({
 		},
 	],
 	async run(interaction) {
-		const count = interaction.options.data[0]?.value ?? 1;
-
-		if (typeof count !== "number") {
-			await interaction.reply({
-				content: "Numero di dadi non valido!",
-				ephemeral: true,
-			});
-			return;
-		}
-		await dice(interaction, count);
+		await dice(
+			interaction,
+			interaction.options.getInteger("count") ?? undefined,
+		);
 	},
 	async component(interaction) {
-		const count = Number(interaction.customId.split("-")[1]);
-
-		if (isNaN(count)) {
-			await interaction.reply({
-				content: "Numero di dadi non valido!",
-				ephemeral: true,
-			});
-			return;
-		}
-		await dice(interaction, count, true);
+		await dice(interaction, Number(interaction.customId.split("-")[1]), true);
 	},
 });

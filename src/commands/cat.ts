@@ -21,6 +21,7 @@ const sendCat = async (
 	if (!data?.[0]) {
 		await interaction.reply({
 			content: "Si è verificato un errore nel caricamento dell'immagine!",
+			ephemeral: true,
 		});
 		return;
 	}
