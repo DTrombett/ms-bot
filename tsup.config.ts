@@ -15,6 +15,7 @@ export default defineConfig(({ watch }) => {
 		external: ["dotenv"],
 		minify: true,
 		target: "esnext",
+		sourcemap: env.NODE_ENV === "development" ? "inline" : undefined,
 	};
 
 	return options;

@@ -25,7 +25,7 @@ export const avatar = createCommand({
 			],
 		},
 	],
-	async run({ interaction }, resolve) {
+	async run(interaction, { reply }) {
 		const userId = interaction.data.options?.find(
 			(o): o is APIApplicationCommandInteractionDataUserOption =>
 				o.name === "user" && o.type === ApplicationCommandOptionType.User,
@@ -36,7 +36,7 @@ export const avatar = createCommand({
 				: interaction.data.resolved?.users?.[userId];
 
 		if (!user) {
-			resolve({
+			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: { flags: MessageFlags.Ephemeral, content: "Utente non trovato!" },
 			});
@@ -68,7 +68,7 @@ export const avatar = createCommand({
 						},
 					);
 
-		resolve({
+		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: {
 				content: `Avatar di **[${escapeMarkdown(

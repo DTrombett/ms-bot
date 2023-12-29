@@ -1,10 +1,17 @@
 import { REST } from "@discordjs/rest";
 import {
 	APIInteraction,
+	APIInteractionResponse,
 	InteractionType,
 	RESTPutAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type { CommandOptions, Env, InteractionByType } from ".";
+import type {
+	Awaitable,
+	CommandOptions,
+	Env,
+	ExecutorContext,
+	InteractionByType,
+} from ".";
 
 /**
  * A class representing a Discord slash command
@@ -60,12 +67,14 @@ export class Command {
 	async autocomplete(
 		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
 		env: Env,
+		context: ExecutionContext,
 	) {
 		if (!this._autocomplete) return undefined;
 		return this.execute(
-			env,
 			interaction,
-			this._autocomplete.bind(this, { interaction, env }),
+			env,
+			context,
+			this._autocomplete.bind(this, interaction),
 		);
 	}
 
@@ -76,12 +85,14 @@ export class Command {
 	async component(
 		interaction: InteractionByType<InteractionType.MessageComponent>,
 		env: Env,
+		context: ExecutionContext,
 	) {
 		if (!this._component) return undefined;
 		return this.execute(
-			env,
 			interaction,
-			this._component.bind(this, { interaction, env }),
+			env,
+			context,
+			this._component.bind(this, interaction),
 		);
 	}
 
@@ -92,12 +103,14 @@ export class Command {
 	async modalSubmit(
 		interaction: InteractionByType<InteractionType.ModalSubmit>,
 		env: Env,
+		context: ExecutionContext,
 	) {
 		if (!this._modalSubmit) return undefined;
 		return this.execute(
-			env,
 			interaction,
-			this._modalSubmit.bind(this, { interaction, env }),
+			env,
+			context,
+			this._modalSubmit.bind(this, interaction),
 		);
 	}
 
@@ -125,31 +138,46 @@ export class Command {
 	async run(
 		interaction: InteractionByType<InteractionType.ApplicationCommand>,
 		env: Env,
+		context: ExecutionContext,
 	) {
 		return this.execute(
-			env,
 			interaction,
-			this._execute.bind(this, { interaction, env }),
+			env,
+			context,
+			this._execute.bind(this, interaction),
 		);
 	}
 
 	private async execute(
-		env: Env,
 		interaction: APIInteraction,
-		executor: ConstructorParameters<PromiseConstructor>[0],
+		env: Env,
+		context: ExecutionContext,
+		executor: (context: ExecutorContext) => Awaitable<void>,
 	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_ID.includes(
-					(interaction.user ?? interaction.member?.user)?.id ?? "--",
-				)
+		if (
+			this.isPrivate &&
+			!env.OWNER_ID.includes(
+				(interaction.user ?? interaction.member?.user)?.id ?? "--",
 			)
-				return await new Promise(executor);
-		} catch (err) {
-			console.error(err);
-		}
-		return undefined;
+		)
+			return undefined;
+		return new Promise<APIInteractionResponse>((resolve, reject) => {
+			let done = false;
+			const promise = executor({
+				env,
+				context,
+				reply: (value) => {
+					if (done) return;
+					resolve(value);
+					done = true;
+				},
+			})?.catch((err) => {
+				if (done) console.error(err);
+				else reject(err);
+			});
+
+			if (promise) context.waitUntil(promise);
+		}).catch(console.error);
 	}
 }
 

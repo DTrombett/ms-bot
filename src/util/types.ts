@@ -2,6 +2,7 @@ import {
 	APIApplicationCommandAutocompleteResponse,
 	APIApplicationCommandOption,
 	APIInteraction,
+	APIInteractionResponse,
 	APIInteractionResponseChannelMessageWithSource,
 	APIInteractionResponseDeferredChannelMessageWithSource,
 	APIInteractionResponseDeferredMessageUpdate,
@@ -42,6 +43,14 @@ export type CommandData<
 	name: N;
 };
 
+export type ExecutorContext<
+	T extends APIInteractionResponse = APIInteractionResponse,
+> = {
+	env: Env;
+	context: ExecutionContext;
+	reply: (result: T) => void;
+};
+
 /**
  * Options to create a command
  */
@@ -67,14 +76,8 @@ export type CommandOptions<
 	 */
 	autocomplete?(
 		this: Command,
-		context: {
-			interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>;
-			env: Env;
-		},
-		resolve: (
-			result: Awaitable<APIApplicationCommandAutocompleteResponse>,
-		) => void,
-		reject: (error?: unknown) => void,
+		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
+		context: ExecutorContext<APIApplicationCommandAutocompleteResponse>,
 	): Awaitable<void>;
 
 	/**
@@ -84,20 +87,14 @@ export type CommandOptions<
 	 */
 	component?(
 		this: Command,
-		context: {
-			interaction: InteractionByType<InteractionType.MessageComponent>;
-			env: Env;
-		},
-		resolve: (
-			result: Awaitable<
-				| APIInteractionResponseChannelMessageWithSource
-				| APIInteractionResponseDeferredChannelMessageWithSource
-				| APIInteractionResponseDeferredMessageUpdate
-				| APIInteractionResponseUpdateMessage
-				| APIModalInteractionResponse
-			>,
-		) => void,
-		reject: (error?: unknown) => void,
+		interaction: InteractionByType<InteractionType.MessageComponent>,
+		context: ExecutorContext<
+			| APIInteractionResponseChannelMessageWithSource
+			| APIInteractionResponseDeferredChannelMessageWithSource
+			| APIInteractionResponseDeferredMessageUpdate
+			| APIInteractionResponseUpdateMessage
+			| APIModalInteractionResponse
+		>,
 	): Awaitable<void>;
 
 	/**
@@ -107,18 +104,12 @@ export type CommandOptions<
 	 */
 	modalSubmit?(
 		this: Command,
-		context: {
-			interaction: InteractionByType<InteractionType.ModalSubmit>;
-			env: Env;
-		},
-		resolve: (
-			result: Awaitable<
-				| APIInteractionResponseChannelMessageWithSource
-				| APIInteractionResponseDeferredChannelMessageWithSource
-				| APIInteractionResponseDeferredMessageUpdate
-			>,
-		) => void,
-		reject: (error?: unknown) => void,
+		interaction: InteractionByType<InteractionType.ModalSubmit>,
+		context: ExecutorContext<
+			| APIInteractionResponseChannelMessageWithSource
+			| APIInteractionResponseDeferredChannelMessageWithSource
+			| APIInteractionResponseDeferredMessageUpdate
+		>,
 	): Awaitable<void>;
 
 	/**
@@ -128,18 +119,12 @@ export type CommandOptions<
 	 */
 	run(
 		this: Command,
-		context: {
-			interaction: CommandInteractionByType<T>;
-			env: Env;
-		},
-		resolve: (
-			result: Awaitable<
-				| APIInteractionResponseChannelMessageWithSource
-				| APIInteractionResponseDeferredChannelMessageWithSource
-				| APIModalInteractionResponse
-			>,
-		) => void,
-		reject: (error?: unknown) => void,
+		interaction: CommandInteractionByType<T>,
+		context: ExecutorContext<
+			| APIInteractionResponseChannelMessageWithSource
+			| APIInteractionResponseDeferredChannelMessageWithSource
+			| APIModalInteractionResponse
+		>,
 	): Awaitable<void>;
 };
 export type ReceivedInteraction = InteractionByType<
@@ -206,12 +191,14 @@ export type MatchesData =
 	  }
 	| { success: false; message: string; errors: unknown[] };
 
-export type Env = {
+export type EnvVars = {
+	NODE_ENV?: string;
 	DISCORD_APPLICATION_ID: string;
 	DISCORD_PUBLIC_KEY: string;
 	DISCORD_TOKEN: string;
 	OWNER_ID: string;
-	NODE_ENV?: string;
 	TEST_GUILD: string;
-	DB: D1Database;
+};
+export type Env = EnvVars & {
+	D1: D1Database;
 };

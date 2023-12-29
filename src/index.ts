@@ -29,7 +29,7 @@ const applicationCommands = new Map(
 );
 
 const server: ExportedHandler<Env> = {
-	fetch: async (request, env) => {
+	fetch: async (request, env, context) => {
 		rest.setToken(env.DISCORD_TOKEN);
 		if (request.method === "POST") {
 			const interaction = await verifyDiscordRequest(request, env).catch(
@@ -47,23 +47,23 @@ const server: ExportedHandler<Env> = {
 					break;
 				case InteractionType.ApplicationCommand:
 					command = applicationCommands.get(interaction.data.name);
-					result = await command?.run(interaction, env);
+					result = await command?.run(interaction, env, context);
 					break;
 				case InteractionType.MessageComponent:
 					[action] = interaction.data.custom_id.split("-");
 					if (!action) break;
 					command = commands.get(action);
-					result = await command?.component(interaction, env);
+					result = await command?.component(interaction, env, context);
 					break;
 				case InteractionType.ApplicationCommandAutocomplete:
 					command = commands.get(interaction.data.name);
-					result = await command?.autocomplete(interaction, env);
+					result = await command?.autocomplete(interaction, env, context);
 					break;
 				case InteractionType.ModalSubmit:
 					[action] = interaction.data.custom_id.split("-");
 					if (!action) break;
 					command = commands.get(action);
-					result = await command?.modalSubmit(interaction, env);
+					result = await command?.modalSubmit(interaction, env, context);
 					break;
 				default:
 					break;

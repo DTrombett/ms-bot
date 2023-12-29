@@ -7,7 +7,7 @@ import {
 import { config } from "dotenv";
 import { env, exit } from "node:process";
 import * as commandsObject from "./commands";
-import { CommandOptions, Env } from "./util";
+import { CommandOptions, EnvVars } from "./util";
 
 const label = "Register slash commands";
 
@@ -19,7 +19,7 @@ const {
 	DISCORD_TOKEN: token,
 	TEST_GUILD: guildId,
 	NODE_ENV: nodeEnv,
-} = env as Env;
+} = env as EnvVars;
 const rest = new REST({ version: APIVersion }).setToken(token);
 const commands = Object.values(commandsObject) as CommandOptions[];
 const [privateAPICommands, publicAPICommands] = await Promise.all([
