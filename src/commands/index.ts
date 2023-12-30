@@ -5,4 +5,5 @@ export * from "./cat";
 export * from "./dice";
 export * from "./dog";
 export * from "./icon";
+export * from "./kick";
 export * from "./ping";
