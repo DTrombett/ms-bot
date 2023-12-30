@@ -256,25 +256,24 @@ export const quelo = createCommand({
 			)
 			?.value.toLowerCase();
 
-		if (option)
-			reply({
-				type: InteractionResponseType.ApplicationCommandAutocompleteResult,
-				data: {
-					choices: phrases
-						.filter((p) => p.toLowerCase().includes(option))
-						.slice(0, 25)
-						.map((p) => {
-							const name = p.replaceAll("\n", " ");
+		reply({
+			type: InteractionResponseType.ApplicationCommandAutocompleteResult,
+			data: {
+				choices: (option
+					? phrases.filter((p) => p.toLowerCase().includes(option))
+					: phrases
+				)
+					.slice(0, 25)
+					.map((p) => {
+						const name = p.replaceAll("\n", " ");
 
-							return {
-								name:
-									name.length > 100
-										? `${name.slice(0, 97).trimEnd()}...`
-										: name,
-								value: p.slice(0, 100),
-							};
-						}),
-				},
-			});
+						return {
+							name:
+								name.length > 100 ? `${name.slice(0, 97).trimEnd()}...` : name,
+							value: p.slice(0, 100),
+						};
+					}),
+			},
+		});
 	},
 });

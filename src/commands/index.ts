@@ -11,3 +11,4 @@ export * from "./ping";
 export * from "./poll";
 export * from "./predict";
 export * from "./quelo";
+export * from "./quote";
