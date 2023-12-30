@@ -53,6 +53,7 @@ export const icon = createCommand({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: {
 				content: `Icona di **[${escapeMarkdown(guild.name)}](${url} )**:`,
+				allowed_mentions: { parse: [] },
 				components: [
 					{
 						type: ComponentType.ActionRow,

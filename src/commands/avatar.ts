@@ -74,6 +74,7 @@ export const avatar = createCommand({
 				content: `Avatar di **[${escapeMarkdown(
 					member?.nick ?? user.global_name ?? user.username,
 				)}](${url} )**:`,
+				allowed_mentions: { parse: [] },
 				components: [
 					{
 						type: ComponentType.ActionRow,

@@ -77,6 +77,7 @@ const executeKick = async (
 				0,
 				1000,
 			)}\``,
+			allowed_mentions: { parse: [] },
 		};
 	return {
 		content: `<:kick:${Emojis.kick}> <@${user.id}> (${escapeMarkdown(
@@ -86,6 +87,7 @@ const executeKick = async (
 				? reason.slice(0, 1_000)
 				: "*Nessun motivo*"
 		}`,
+		allowed_mentions: { parse: [] },
 	};
 };
 

@@ -91,6 +91,7 @@ const executeBan = async (
 				0,
 				1000,
 			)}\``,
+			allowed_mentions: { parse: [] },
 		};
 	return {
 		content: `<:bann:${Emojis.bann}> <@${user.id}> (${escapeMarkdown(
@@ -100,6 +101,7 @@ const executeBan = async (
 				? reason.slice(0, 1_000)
 				: "*Nessun motivo*"
 		}`,
+		allowed_mentions: { parse: [] },
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -133,6 +135,7 @@ const unban = async (
 				0,
 				1000,
 			)}\``,
+			allowed_mentions: { parse: [] },
 		};
 	return {
 		content: `Ho revocato il bann da <@${user.id}> (${escapeMarkdown(
@@ -140,6 +143,7 @@ const unban = async (
 		)} - ${user.id})!\n\nMotivo: ${
 			reason?.slice(0, 1_000) ?? "*Nessun motivo*"
 		}`,
+		allowed_mentions: { parse: [] },
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -304,6 +308,7 @@ export const bann = createCommand({
 							? bannData.reason.slice(0, 1_000)
 							: "*Nessun motivo*"
 					}`,
+					allowed_mentions: { parse: [] },
 					components: [
 						{
 							type: ComponentType.ActionRow,
