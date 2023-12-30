@@ -32,7 +32,6 @@
   "dependencies": {
     "@discordjs/formatters": "^0.3.3",
     "@discordjs/rest": "^2.2.0",
-    "@napi-rs/canvas": "^0.1.44",
     "@sapphire/snowflake": "^3.5.2",
     "discord-api-types": "^0.37.66",
     "htmlparser2": "^9.0.0",
