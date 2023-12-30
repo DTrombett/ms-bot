@@ -11,7 +11,6 @@ import {
 	APIGuildMember,
 	APIInteractionDataResolvedGuildMember,
 	APIInteractionGuildMember,
-	APIInteractionResponseCallbackData,
 	APIUser,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -33,50 +32,39 @@ const checkPerms = (
 	guild: APIGuild,
 	target: Snowflake,
 	targetMember?: Omit<APIInteractionDataResolvedGuildMember, "permissions">,
-): APIInteractionResponseCallbackData | undefined => {
-	if (executor.user.id !== guild.owner_id) {
-		if (target === guild.owner_id)
-			return {
-				content: "Non puoi eseguire questa azione sul proprietario del server!",
-				flags: MessageFlags.Ephemeral,
-			};
-		if (targetMember) {
-			const roles = new Map(guild.roles.map((role) => [role.id, role]));
-			const highest = executor.roles.reduce((prev, role, i) => {
-				if (i === 0) return prev;
-				const resolved = roles.get(role);
+): string | undefined => {
+	if (executor.user.id === guild.owner_id) return undefined;
+	if (target === guild.owner_id)
+		return "Non puoi eseguire questa azione sul proprietario del server!";
+	if (!targetMember) return undefined;
+	const roles = new Map(guild.roles.map((role) => [role.id, role]));
+	const highest = executor.roles.reduce((prev, role, i) => {
+		if (i === 0) return prev;
+		const resolved = roles.get(role);
 
-				if (!prev) return resolved;
-				if (!resolved) return prev;
-				if (resolved.position > prev.position) return resolved;
-				if (resolved.position < prev.position) return prev;
-				if (BigInt(role) < BigInt(prev.id)) return resolved;
-				return prev;
-			}, roles.get(executor.roles[0]!));
+		if (!prev) return resolved;
+		if (!resolved) return prev;
+		if (resolved.position > prev.position) return resolved;
+		if (resolved.position < prev.position) return prev;
+		if (BigInt(role) < BigInt(prev.id)) return resolved;
+		return prev;
+	}, roles.get(executor.roles[0]!));
 
-			if (highest) {
-				const highestId = BigInt(highest.id);
+	if (!highest) return undefined;
+	const highestId = BigInt(highest.id);
 
-				if (
-					targetMember.roles.some((role) => {
-						const resolved = roles.get(role);
+	if (
+		targetMember.roles.some((role) => {
+			const resolved = roles.get(role);
 
-						return (
-							resolved &&
-							(resolved.position > highest.position ||
-								(resolved.position === highest.position &&
-									highestId > BigInt(role)))
-						);
-					})
-				)
-					return {
-						content:
-							"Non puoi bannare un membro con una posizione superiore o uguale alla tua!",
-						flags: MessageFlags.Ephemeral,
-					};
-			}
-		}
-	}
+			return (
+				resolved &&
+				(resolved.position > highest.position ||
+					(resolved.position === highest.position && highestId > BigInt(role)))
+			);
+		})
+	)
+		return "Non puoi bannare un membro con una posizione superiore o uguale alla tua!";
 	return undefined;
 };
 const executeBan = async (
@@ -337,10 +325,13 @@ export const bann = createCommand({
 		const guild = (await this.api
 			.get(Routes.guild(interaction.guild_id))
 			.catch(console.error)) as APIGuild;
-		const data = checkPerms(interaction.member, guild, user.id, member);
+		const content = checkPerms(interaction.member, guild, user.id, member);
 
-		if (data) {
-			reply({ type: InteractionResponseType.ChannelMessageWithSource, data });
+		if (content) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: { content, flags: MessageFlags.Ephemeral },
+			});
 			return;
 		}
 		const reason = (
@@ -360,13 +351,13 @@ export const bann = createCommand({
 				.patch(
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
-						body: await executeBan(
+						body: (await executeBan(
 							this.api,
 							interaction.guild_id,
 							user,
 							deleteMessageDays && deleteMessageDays * 60 * 60 * 24,
 							reason ?? undefined,
-						),
+						)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				)
 				.catch(console.error);
@@ -377,12 +368,12 @@ export const bann = createCommand({
 				.patch(
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
-						body: await unban(
+						body: (await unban(
 							this.api,
 							interaction.guild_id,
 							user,
 							reason ?? undefined,
-						),
+						)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				)
 				.catch(console.error);
@@ -407,6 +398,8 @@ export const bann = createCommand({
 			return;
 		}
 		const [, id] = interaction.data.custom_id.split("-");
+
+		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
 		const [guild, target, targetMember] = (await Promise.allSettled([
 			this.api.get(Routes.guild(interaction.guild_id)),
 			this.api.get(Routes.user(id)),
@@ -421,65 +414,66 @@ export const bann = createCommand({
 
 		if (!guild) throw new TypeError("Guild not found", { cause: interaction });
 		if (!target) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "Utente non trovato!",
-					flags: MessageFlags.Ephemeral,
-				},
-			});
+			await this.api
+				.patch(
+					Routes.webhookMessage(interaction.application_id, interaction.token),
+					{
+						body: {
+							content: "Utente non trovato!",
+						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					},
+				)
+				.catch(console.error);
 			return;
 		}
-		const data = checkPerms(interaction.member, guild, target.id, targetMember);
+		const content = checkPerms(
+			interaction.member,
+			guild,
+			target.id,
+			targetMember,
+		);
 
-		if (data) {
-			reply({ type: InteractionResponseType.ChannelMessageWithSource, data });
+		if (content) {
+			await this.api
+				.patch(
+					Routes.webhookMessage(interaction.application_id, interaction.token),
+					{
+						body: {
+							content,
+						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					},
+				)
+				.catch(console.error);
 			return;
 		}
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: await executeBan(
-				this.api,
-				interaction.guild_id,
-				target,
-				deleteMessageDays * 60 * 60 * 24,
-				interaction.data.components[0]?.components.find(
-					(v) => v.custom_id === "reason",
-				)?.value,
-			),
-		});
+		await this.api
+			.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: (await executeBan(
+						this.api,
+						interaction.guild_id,
+						target,
+						deleteMessageDays * 60 * 60 * 24,
+						interaction.data.components[0]?.components.find(
+							(v) => v.custom_id === "reason",
+						)?.value,
+					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			)
+			.catch(console.error);
 	},
 	async component(interaction, { reply }) {
 		if (!interaction.guild_id || !interaction.member)
 			throw new TypeError("Invalid interaction", { cause: interaction });
 		const [, id, action] = interaction.data.custom_id.split("-");
-		const [guild, target, targetMember] = (await Promise.allSettled([
-			this.api.get(Routes.guild(interaction.guild_id)),
-			this.api.get(Routes.user(id)),
-			this.api.get(Routes.guildMember(interaction.guild_id, id)),
-		]).then((results) =>
-			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
-		)) as [
-			APIGuild | undefined,
-			APIUser | undefined,
-			APIGuildMember | undefined,
-		];
+		const target = (await this.api.get(Routes.user(id))) as APIUser | undefined;
 
-		if (!guild) throw new TypeError("Guild not found", { cause: interaction });
 		if (!target) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "Utente non trovato!",
-					flags: MessageFlags.Ephemeral,
-				},
+				data: { content: "Utente non trovato!", flags: MessageFlags.Ephemeral },
 			});
-			return;
-		}
-		const data = checkPerms(interaction.member, guild, target.id, targetMember);
-
-		if (data) {
-			reply({ type: InteractionResponseType.ChannelMessageWithSource, data });
 			return;
 		}
 		if (action === "a") {
@@ -524,10 +518,47 @@ export const bann = createCommand({
 			});
 			return;
 		}
+		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
+		const [guild, targetMember] = (await Promise.allSettled([
+			this.api.get(Routes.guild(interaction.guild_id)),
+			this.api.get(Routes.guildMember(interaction.guild_id, id)),
+		]).then((results) =>
+			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
+		)) as [APIGuild | undefined, APIGuildMember | undefined];
+
+		if (!guild) throw new TypeError("Guild not found", { cause: interaction });
+		const content = checkPerms(
+			interaction.member,
+			guild,
+			target.id,
+			targetMember,
+		);
+
+		if (content) {
+			await this.api
+				.patch(
+					Routes.webhookMessage(interaction.application_id, interaction.token),
+					{
+						body: {
+							content,
+						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					},
+				)
+				.catch(console.error);
+			return;
+		}
 		if (action === "r")
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: await unban(this.api, interaction.guild_id, target),
-			});
+			await this.api
+				.patch(
+					Routes.webhookMessage(interaction.application_id, interaction.token),
+					{
+						body: (await unban(
+							this.api,
+							interaction.guild_id,
+							target,
+						)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					},
+				)
+				.catch(console.error);
 	},
 });
