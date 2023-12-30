@@ -14,3 +14,4 @@ export * from "./quelo";
 export * from "./quote";
 export * from "./random";
 export * from "./rps";
+export * from "./search";
