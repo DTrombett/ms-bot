@@ -4,4 +4,5 @@ export * from "./banner";
 export * from "./cat";
 export * from "./dice";
 export * from "./dog";
+export * from "./icon";
 export * from "./ping";
