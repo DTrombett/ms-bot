@@ -198,6 +198,8 @@ export type EnvVars = {
 	DISCORD_TOKEN: string;
 	OWNER_ID: string;
 	TEST_GUILD: string;
+	CAT_API_KEY: string;
+	DOG_API_KEY: string;
 };
 export type Env = EnvVars & {
 	D1: D1Database;
