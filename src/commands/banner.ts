@@ -1,31 +1,33 @@
 import { escapeMarkdown } from "@discordjs/formatters";
 import {
 	APIApplicationCommandInteractionDataUserOption,
+	APIUser,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
 	InteractionResponseType,
 	MessageFlags,
+	Routes,
 } from "discord-api-types/v10";
 import { createCommand } from "../util";
 
-export const avatar = createCommand({
+export const banner = createCommand({
 	data: [
 		{
-			name: "avatar",
-			description: "Mostra l'avatar di un utente",
+			name: "banner",
+			description: "Mostra il banner di un utente",
 			type: ApplicationCommandType.ChatInput,
 			options: [
 				{
 					name: "user",
-					description: "L'utente di cui mostrare l'avatar",
+					description: "L'utente di cui mostrare il banner",
 					type: ApplicationCommandOptionType.User,
 				},
 			],
 		},
 	],
-	run(interaction, { reply }) {
+	async run(interaction, { reply }) {
 		const userId = interaction.data.options?.find(
 			(o): o is APIApplicationCommandInteractionDataUserOption =>
 				o.name === "user" && o.type === ApplicationCommandOptionType.User,
@@ -42,38 +44,30 @@ export const avatar = createCommand({
 			});
 			return;
 		}
-		const member =
-			userId == null
-				? interaction.member
-				: interaction.data.resolved?.members?.[userId];
-		const url =
-			member?.avatar == null
-				? user.avatar == null
-					? this.api.cdn.defaultAvatar(
-							user.discriminator === "0"
-								? Number(BigInt(user.id) >> 22n) % 6
-								: Number(user.discriminator) % 5,
-						)
-					: this.api.cdn.avatar(user.id, user.avatar, {
-							size: 4096,
-							extension: "png",
-						})
-				: this.api.cdn.guildMemberAvatar(
-						interaction.guild_id!,
-						user.id,
-						member.avatar,
-						{
-							size: 4096,
-							extension: "png",
-						},
-					);
+		const bannerHash =
+			user.banner === undefined
+				? ((await this.api.get(Routes.user(user.id))) as APIUser).banner
+				: user.banner;
+
+		if (bannerHash == null) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "L'utente non ha un banner!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
+		const url = this.api.cdn.banner(user.id, bannerHash, {
+			size: 4096,
+			extension: "png",
+		});
 
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: {
-				content: `Avatar di **[${escapeMarkdown(
-					member?.nick ?? user.global_name ?? user.username,
-				)}](${url} )**:`,
+				content: `Banner di **[${escapeMarkdown(user.username)}](${url} )**:`,
 				components: [
 					{
 						type: ComponentType.ActionRow,
