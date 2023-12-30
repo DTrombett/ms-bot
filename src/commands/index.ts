@@ -13,3 +13,4 @@ export * from "./predict";
 export * from "./quelo";
 export * from "./quote";
 export * from "./random";
+export * from "./rps";
