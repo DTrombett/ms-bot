@@ -9,3 +9,4 @@ export * from "./kick";
 export * from "./love";
 export * from "./ping";
 export * from "./poll";
+export * from "./predict";
