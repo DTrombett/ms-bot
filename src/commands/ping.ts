@@ -1,38 +1,12 @@
 import { DiscordSnowflake } from "@sapphire/snowflake";
 import {
-	APIChatInputApplicationCommandInteraction,
-	APIInteractionResponseCallbackData,
-	APIMessageComponentInteraction,
+	APIMessage,
 	ApplicationCommandType,
-	ButtonStyle,
-	ComponentType,
 	InteractionResponseType,
+	RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	Routes,
 } from "discord-api-types/v10";
 import { createCommand } from "../util";
-
-const pong = (
-	interaction:
-		| APIChatInputApplicationCommandInteraction
-		| APIMessageComponentInteraction,
-): APIInteractionResponseCallbackData => ({
-	content: `Ritardo totale: **${
-		Date.now() - Number(DiscordSnowflake.deconstruct(interaction.id).timestamp)
-	}ms**`,
-	components: [
-		{
-			type: ComponentType.ActionRow,
-			components: [
-				{
-					type: ComponentType.Button,
-					custom_id: "ping",
-					label: "Pong!",
-					style: ButtonStyle.Success,
-					emoji: { name: "🏓" },
-				},
-			],
-		},
-	],
-});
 
 export const ping = createCommand({
 	data: [
@@ -42,16 +16,28 @@ export const ping = createCommand({
 			type: ApplicationCommandType.ChatInput,
 		},
 	],
-	run(interaction, { reply }) {
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: pong(interaction),
-		});
-	},
-	component(interaction, { reply }) {
-		reply({
-			type: InteractionResponseType.UpdateMessage,
-			data: pong(interaction),
-		});
+	async run(interaction, { reply }) {
+		const now = Date.now();
+
+		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
+		const { id, edited_timestamp } = (await this.api.get(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+		)) as APIMessage;
+		const timestamp = DiscordSnowflake.timestampFrom(interaction.id);
+
+		await this.api.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{
+				body: {
+					content: `🏓 **Pong!**\nRitardo relativo: **${
+						now - timestamp
+					}ms**\nRitardo totale: **${
+						(edited_timestamp
+							? new Date(edited_timestamp).getTime()
+							: DiscordSnowflake.timestampFrom(id)) - timestamp
+					}ms**`,
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			},
+		);
 	},
 });
