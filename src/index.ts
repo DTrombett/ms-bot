@@ -10,6 +10,7 @@ import {
 	Command,
 	JsonResponse,
 	errorToResponse,
+	loadMatchDay,
 	verifyDiscordRequest,
 } from "./util";
 
@@ -70,7 +71,15 @@ const server: ExportedHandler<Env> = {
 			}
 			return new JsonResponse(result);
 		}
-		if (request.method === "GET") return new Response("Ready!");
+		if (request.method === "GET") {
+			const url = new URL(request.url);
+
+			if (url.pathname === "/") return new Response("Ready!");
+			if (url.pathname === "/loadMatchDay")
+				return Response.json(await loadMatchDay(rest, env));
+			if (url.pathname === "/test") {
+			}
+		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
 };

@@ -191,6 +191,37 @@ export type MatchesData =
 	  }
 	| { success: false; message: string; errors: unknown[] };
 
+export enum MatchDayStatus {
+	ToBePlayed,
+	Live,
+	Finished,
+}
+export type SQLBoolean = 0 | 1;
+export type SQLTimestamp = string;
+
+export type Match = {
+	id: number;
+	dayId: number;
+	matchDate: SQLTimestamp;
+	teams: string;
+};
+export type MatchDay = {
+	id: number;
+	day: number;
+	state?: MatchDayStatus;
+	messageId?: string | null;
+};
+export type Prediction = {
+	matchId: number;
+	userId: string;
+	prediction: string;
+};
+export type User = {
+	id: string;
+	dayPoints?: number | null;
+	matchPointsHistory?: string | null;
+};
+
 export type EnvVars = {
 	NODE_ENV?: string;
 	DISCORD_APPLICATION_ID: string;
@@ -200,7 +231,9 @@ export type EnvVars = {
 	TEST_GUILD: string;
 	CAT_API_KEY: string;
 	DOG_API_KEY: string;
+	PREDICTIONS_CHANNEL: string;
+	PREDICTIONS_ROLE: string;
 };
 export type Env = EnvVars & {
-	D1: D1Database;
+	DB: D1Database;
 };

@@ -5,6 +5,7 @@ export * from "./capitalize";
 export * from "./createCommand";
 export * from "./errorToResponse";
 export * from "./formatBytes";
+export * from "./loadMatchDay";
 export * from "./normalizeError";
 export * from "./normalizeTeamName";
 export * from "./randomNumber";
