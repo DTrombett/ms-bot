@@ -4,7 +4,7 @@ import {
 	Routes,
 } from "discord-api-types/v10";
 import { normalizeTeamName } from ".";
-import { Env, MatchDay, MatchesData } from "./types";
+import { Env, MatchesData } from "./types";
 
 export const loadMatchDay = async (api: REST, env: Env) => {
 	const matchDays = (await fetch(
@@ -29,14 +29,16 @@ export const loadMatchDay = async (api: REST, env: Env) => {
 	);
 
 	if (!matchDayData) return "No match to be played!";
+	const matchDay = Number(matchDayData.description);
+
 	if (
 		await env.DB.prepare(
 			`SELECT 1
 FROM MatchDays
-WHERE id = ?
+WHERE day = ?
 LIMIT 1`,
 		)
-			.bind(matchDayData.id_category)
+			.bind(matchDay)
 			.first("1")
 	)
 		return "Match day already loaded!";
@@ -49,40 +51,46 @@ LIMIT 1`,
 			cause: matches.errors,
 		});
 	if (!matches.data.length) throw new TypeError("No match found");
-	const matchDay: MatchDay = {
-		id: matchDayData.id_category,
-		day: Number(matchDayData.description),
-	};
-
-	await env.DB.batch([
-		env.DB.prepare("INSERT INTO MatchDays (id, day) VALUES (?1, ?2)").bind(
-			matchDay.id,
-			matchDay.day,
-		),
-		env.DB.prepare(
-			`INSERT INTO Matches (id, dayId, matchDate, teams) VALUES ${"\n(?, ?, ?, ?),".repeat(
-				matches.data.length,
-			)}`.slice(0, -1),
-		).bind(
-			...matches.data.flatMap((m) => [
-				m.match_id,
-				matchDay.id,
-				m.date_time,
-				[m.home_team_name, m.away_team_name].map(normalizeTeamName).join(" - "),
-			]),
-		),
-		env.DB.prepare("DELETE FROM Predictions"),
-	]);
 	const date = Math.round(
 		(new Date(matches.data[0]!.date_time).getTime() - 1000 * 60 * 15) / 1_000,
 	);
 
-	if (date - Date.now() / 1_000 > 10)
-		await api.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
-			body: {
-				content: `<@&${env.PREDICTIONS_ROLE}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions send\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)! Vi ricordo che potete aggiungere un promemoria valido per ogni giornata per ricordarvi di inviare i pronostici con il comando \`/predictions reminder\`.`,
-			} satisfies RESTPostAPIChannelMessageJSONBody,
-		});
+	await Promise.all([
+		env.DB.batch([
+			env.DB.prepare("INSERT INTO MatchDays (day) VALUES (?)").bind(matchDay),
+			env.DB.prepare(
+				`INSERT INTO Matches (id, day, matchDate, teams) VALUES ${"\n(?, ?, ?, ?),".repeat(
+					matches.data.length,
+				)}`.slice(0, -1),
+			).bind(
+				...matches.data.flatMap((m) => [
+					m.match_id,
+					matchDay,
+					m.date_time,
+					[m.home_team_name, m.away_team_name]
+						.map(normalizeTeamName)
+						.join(" - "),
+				]),
+			),
+			env.DB.prepare("DELETE FROM Predictions"),
+		]),
+		env.KV.put(
+			"firstMatchDate",
+			matches.data
+				.reduce((time, match) => {
+					const newTime = new Date(match.date_time);
+
+					return time < newTime ? time : newTime;
+				}, new Date(""))
+				.toISOString(),
+		),
+		date - Date.now() / 1_000 > 10 &&
+			api.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
+				body: {
+					content: `<@&${env.PREDICTIONS_ROLE}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions send\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)! Vi ricordo che potete aggiungere un promemoria valido per ogni giornata per ricordarvi di inviare i pronostici con il comando \`/predictions reminder\`.`,
+				} satisfies RESTPostAPIChannelMessageJSONBody,
+			}),
+	]);
 	return "Done!";
 };
 

@@ -201,12 +201,11 @@ export type SQLTimestamp = string;
 
 export type Match = {
 	id: number;
-	dayId: number;
+	day: number;
 	matchDate: SQLTimestamp;
 	teams: string;
 };
 export type MatchDay = {
-	id: number;
 	day: number;
 	state?: MatchDayStatus;
 	messageId?: string | null;
@@ -236,4 +235,5 @@ export type EnvVars = {
 };
 export type Env = EnvVars & {
 	DB: D1Database;
+	KV: KVNamespace;
 };

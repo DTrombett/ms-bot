@@ -1,5 +1,6 @@
 import {
 	ActionRowBuilder,
+	ButtonBuilder,
 	ModalActionRowComponentBuilder,
 	ModalBuilder,
 	TextInputBuilder,
@@ -8,18 +9,12 @@ import {
 	APIApplicationCommandInteractionDataSubcommandOption,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
+	ButtonStyle,
 	InteractionResponseType,
 	MessageFlags,
 	TextInputStyle,
 } from "discord-api-types/v10";
-import {
-	Match,
-	MatchDay,
-	Prediction,
-	User,
-	capitalize,
-	createCommand,
-} from "../util";
+import { Match, Prediction, capitalize, createCommand } from "../util";
 
 const predictionExamples = [
 	"1",
@@ -37,42 +32,20 @@ const predictionExamples = [
 ];
 const predictionRegex =
 	/^(1|x|2|1x|12|x2|((?<prediction>1|2|x)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
-const checkMatchDay = async (
-	matchDay: Document<MatchDaySchema> | null,
-	interaction: RepliableInteraction,
-) => {
-	if (!matchDay) {
-		await interaction.reply({
-			ephemeral: true,
-			content: "Non c'è alcun pronostico da inviare al momento!",
-		});
-		return true;
-	}
-	if (Date.now() >= matchDay.matches[0].date - 1_000 * 60 * 15) {
-		await interaction.reply({
-			ephemeral: true,
-			content:
-				"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
-		});
-		return true;
-	}
-	return false;
-};
-const showModal = async (
-	matchDay: MatchDay & { matches: Match[] },
+const showModal = (
+	matches: Match[],
 	part: number,
-	user?: User & { predictions?: Prediction[] },
-	editing = false,
-) => {
-	const total = matchDay.matches.length / 5;
-
-	return new ModalBuilder()
-		.setCustomId(`predictions-${matchDay.day}-${part}-${Number(editing)}`)
-		.setTitle(`Pronostici ${matchDay.day}ª Giornata (${part}/${total})`)
+	predictions?: Prediction[],
+) =>
+	new ModalBuilder()
+		.setCustomId(`predictions-${matches[0]!.day}-${part}`)
+		.setTitle(
+			`Pronostici ${matches[0]!.day}ª Giornata (${part}/${matches.length / 5})`,
+		)
 		.addComponents(
-			matchDay.matches.slice((part - 1) * 5, part * 5).map((match) => {
+			matches.slice((part - 1) * 5, part * 5).map((match) => {
 				const textInput = new TextInputBuilder()
-					.setCustomId(match.teams)
+					.setCustomId(match.id.toString())
 					.setLabel(match.teams)
 					.setStyle(TextInputStyle.Short)
 					.setRequired(true)
@@ -83,7 +56,7 @@ const showModal = async (
 							]
 						}`,
 					);
-				const found = user?.predictions?.find(
+				const found = predictions?.find(
 					(prediction) => prediction.matchId === match.id,
 				);
 
@@ -93,9 +66,8 @@ const showModal = async (
 				);
 			}),
 		);
-};
 
-export const predictionsCommand = createCommand({
+export const predictions = createCommand({
 	data: [
 		{
 			name: "predictions",
@@ -154,16 +126,29 @@ export const predictionsCommand = createCommand({
 		if (subCommand.options)
 			for (const option of subCommand.options)
 				options[option.name] = option.value;
-		const { results: matches } = await env.DB.prepare(
-			`SELECT Matches.matchDate,
-	Matches.teams
+		const userId = options.user as string | undefined;
+		const [
+			[{ results: matches }, { results: existingPredictions }],
+			startDate,
+		] = await Promise.all([
+			env.DB.batch([
+				env.DB.prepare(
+					`SELECT *
 FROM Matches
-	JOIN MatchDays ON Matches.dayId = MatchDays.id
-WHERE MatchDays.day = (
+WHERE Matches.day = (
 		SELECT MAX(day)
-		FROM MatchDays
+		FROM Matches
 	)`,
-		).all<Pick<Match, "id" | "matchDate" | "teams">>();
+				),
+				env.DB.prepare(
+					`SELECT Predictions.*
+				FROM Predictions
+				JOIN Users ON Predictions.userId = Users.id
+				WHERE Users.id = ?`,
+				).bind(userId ?? (interaction.member ?? interaction).user!.id),
+			]) as Promise<[D1Result<Match>, D1Result<Prediction>]>,
+			env.KV.get("firstMatchDate").then((s) => s && new Date(s)),
+		]);
 
 		if (subCommand.name === "reminder") {
 			// 	const before = ms(interaction.options.getString("before", true));
@@ -233,7 +218,7 @@ WHERE MatchDays.day = (
 			return;
 		}
 		if (subCommand.name === "view") {
-			if (!matches.length) {
+			if (!matches.length || !startDate) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
@@ -243,20 +228,10 @@ WHERE MatchDays.day = (
 				});
 				return;
 			}
-			const userId = options.user as string | undefined;
-
 			if (
 				userId &&
 				userId !== (interaction.member ?? interaction).user!.id &&
-				Date.now() <
-					matches
-						.reduce((time, match) => {
-							const newTime = new Date(match.matchDate);
-
-							return time < newTime ? time : newTime;
-						}, new Date(""))
-						.getTime() -
-						1_000 * 60 * 15
+				Date.now() < startDate.getTime() - 1_000 * 60 * 15
 			) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
@@ -271,14 +246,6 @@ WHERE MatchDays.day = (
 			const user = userId
 				? interaction.data.resolved!.users![userId]!
 				: (interaction.member ?? interaction).user!;
-			const { results: existingPredictions } = await env.DB.prepare(
-				`SELECT Predictions.*
-FROM Predictions
-	JOIN Users ON Predictions.userId = Users.id
-WHERE Users.id = ?`,
-			)
-				.bind(userId)
-				.all<Prediction>();
 
 			if (!existingPredictions.length) {
 				reply({
@@ -323,7 +290,7 @@ WHERE Users.id = ?`,
 							thumbnail: {
 								url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 							},
-							title: `${matchDay.day}ª Giornata Serie A TIM`,
+							title: `${matches[0]!.day}ª Giornata Serie A TIM`,
 							url: "https://legaseriea.it/it/serie-a",
 						},
 					],
@@ -332,71 +299,146 @@ WHERE Users.id = ?`,
 			});
 			return;
 		}
-		// TODO: Update types
-		if (await checkMatchDay(matchDay, interaction)) return;
-		const user = await User.findById(interaction.user.id);
-
-		if (
-			subCommand === "send" &&
-			user?.predictions?.length === matchDay!.matches.length
-		) {
-			await interaction.reply({
-				ephemeral: true,
-				content:
-					"Hai già inviato i pronostici per questa giornata! Clicca il pulsante se vuoi modificarli...",
-				components: [
-					new ActionRowBuilder<ButtonBuilder>().addComponents(
-						new ButtonBuilder()
-							.setCustomId(`predictions-${matchDay!.day}-1-1`)
-							.setEmoji("✏️")
-							.setLabel("Modifica")
-							.setStyle(ButtonStyle.Success),
-					),
-				],
+		if (!matches.length || !startDate) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Non c'è alcun pronostico da inviare al momento!",
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
-		await showModal(interaction, matchDay!, 1, user ?? undefined);
+		if (Date.now() >= startDate.getTime() - 1_000 * 60 * 15) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
+		if (
+			subCommand.name === "send" &&
+			existingPredictions.length === matches.length
+		) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						"Hai già inviato i pronostici per questa giornata! Clicca il pulsante se vuoi modificarli...",
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(`predictions-${matches[0]!.day}-1-1`)
+									.setEmoji({ name: "✏️" })
+									.setLabel("Modifica")
+									.setStyle(ButtonStyle.Success),
+							)
+							.toJSON(),
+					],
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
+		reply({
+			type: InteractionResponseType.Modal,
+			data: showModal(matches, 1, existingPredictions).toJSON(),
+		});
 	},
-	async modalSubmit(interaction) {
-		const matchDay = await MatchDay.findOne({}).sort("-day");
+	async modalSubmit(interaction, { reply, env }) {
+		const userId = (interaction.member ?? interaction).user!.id;
+		const [
+			[{ results: matches }, { results: existingPredictions }],
+			startDate,
+		] = await Promise.all([
+			env.DB.batch([
+				env.DB.prepare(
+					`SELECT *
+FROM Matches
+WHERE Matches.day = (
+		SELECT MAX(day)
+		FROM Matches
+	)`,
+				),
+				env.DB.prepare(
+					`SELECT Predictions.*
+				FROM Predictions
+				JOIN Users ON Predictions.userId = Users.id
+				WHERE Users.id = ?`,
+				).bind(userId),
+			]) as Promise<[D1Result<Match>, D1Result<Prediction>]>,
+			env.KV.get("firstMatchDate").then((s) => s && new Date(s)),
+		]);
 
-		if (await checkMatchDay(matchDay, interaction)) return;
-		const [, day, part, editing] = interaction.customId
+		if (!matches.length || !startDate) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Non c'è alcun pronostico da inviare al momento!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
+		if (Date.now() >= startDate.getTime() - 1_000 * 60 * 15) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
+		const [, day, part] = interaction.data.custom_id
 			.split("-")
 			.map((n) => Number(n));
-		const total = matchDay!.matches.length / 5;
+		const total = matches.length / 5;
 
-		if (day !== matchDay!.day) {
-			await interaction.reply({
-				ephemeral: true,
-				content: "Questi pronostici sono scaduti!",
+		if (day !== matches[0]!.day) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Questi pronostici sono scaduti!",
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
 		const invalid: string[] = [];
-		const resolved: Record<string, string> = {};
+		const resolved: Record<string, string | undefined> = {};
+		const newPredictions: Prediction[] = [];
 
-		interaction.fields.fields.mapValues((field) => {
-			const value = field.value.trim();
-			const matches = value.toLowerCase().match(predictionRegex);
+		for (const {
+			components: [field],
+		} of interaction.data.components) {
+			const value = field!.value.trim();
+			const match = value.toLowerCase().match(predictionRegex);
+			const matchId = parseInt(field!.custom_id);
 
 			if (
-				!matches?.groups ||
-				(matches[0].startsWith("x") &&
-					matches.groups.first !== matches.groups.second) ||
-				(matches[0].startsWith("1") &&
-					matches.groups.first &&
-					matches.groups.first <= matches.groups.second) ||
-				(matches[0].startsWith("2") &&
-					matches.groups.first &&
-					matches.groups.first >= matches.groups.second) ||
-				(matches.groups.first && Number(matches.groups.first) > 999) ||
-				(matches.groups.second && Number(matches.groups.second) > 999)
+				!match?.groups ||
+				(match[0].startsWith("x") &&
+					match.groups.first !== match.groups.second) ||
+				(match[0].startsWith("1") &&
+					match.groups.first &&
+					match.groups.first <= match.groups.second!) ||
+				(match[0].startsWith("2") &&
+					match.groups.first &&
+					match.groups.first >= match.groups.second!) ||
+				(match.groups.first && Number(match.groups.first) > 999) ||
+				(match.groups.second && Number(match.groups.second) > 999)
 			)
 				invalid.push(
-					field.customId
-						.split("-")
+					matches
+						.find((m) => m.id === matchId)!
+						.teams.split("-")
 						.map((team) =>
 							team
 								.split(" ")
@@ -405,109 +447,144 @@ WHERE Users.id = ?`,
 						)
 						.join(" - "),
 				);
-			else
-				resolved[field.value] = matches.groups.prediction
-					? `${matches.groups.prediction.toUpperCase()} (${
-							matches.groups.first
-						} - ${matches.groups.second})`
-					: value.toUpperCase();
-		});
-		const user =
-			(await User.findById(interaction.user.id)) ??
-			new User({ _id: interaction.user.id });
-
-		interaction.fields.fields.mapValues((field) => {
-			if (!resolved[field.value]) return;
-			const found = user.predictions?.find(
-				(prediction) => prediction.teams === field.customId,
-			);
-
-			if (found) found.prediction = resolved[field.value];
-			else
-				(user.predictions ??= []).push({
-					teams: field.customId,
-					prediction: resolved[field.value],
+			else if (
+				existingPredictions.find((p) => p.matchId === matchId)?.prediction !==
+				(resolved[field!.value] ??= match.groups.prediction
+					? `${match.groups.prediction.toUpperCase()} (${
+							match.groups.first
+						} - ${match.groups.second})`
+					: value.toUpperCase())
+			)
+				newPredictions.push({
+					matchId,
+					userId,
+					prediction: resolved[field!.value]!,
 				});
-		});
-		await user.save();
+		}
+		if (newPredictions.length)
+			await env.DB.batch([
+				env.DB.prepare(
+					`INSERT
+	OR IGNORE INTO Users(id)
+VALUES (?)`,
+				).bind(userId),
+				env.DB.prepare(
+					`INSERT INTO Predictions (matchId, userId, prediction) VALUES ${"\n(?, ?, ?),".repeat(
+						newPredictions.length,
+					)}`.slice(0, -1),
+				).bind(
+					...newPredictions.flatMap((m) => [m.matchId, userId, m.prediction]),
+				),
+			]);
 		if (invalid.length) {
-			await interaction.reply({
-				ephemeral: true,
-				content: `I pronostici inviati nei seguenti risultati non sono validi: ${invalid
-					.map((text) => `**${text}**`)
-					.join(", ")}`,
-				components: [
-					new ActionRowBuilder<ButtonBuilder>().addComponents(
-						new ButtonBuilder()
-							.setCustomId(`predictions-${matchDay!.day}-${part}-1`)
-							.setEmoji("✏️")
-							.setLabel("Modifica")
-							.setStyle(ButtonStyle.Success),
-					),
-				],
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: `I pronostici inviati nei seguenti risultati non sono validi: ${invalid
+						.map((text) => `**${text}**`)
+						.join(", ")}`,
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(`predictions-${matches[0]!.day}-${part}-1`)
+									.setEmoji({ name: "✏️" })
+									.setLabel("Modifica")
+									.setStyle(ButtonStyle.Success),
+							)
+							.toJSON(),
+					],
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
-		if (part === total) {
-			const existing = Object.values(timeoutCache).find(
-				(t) =>
-					t?.action === "predictionRemind" &&
-					t.options[0] === interaction.user.id,
-			);
-
-			if (existing) await removePermanentTimeout(existing.id);
-			await interaction.reply({
-				ephemeral: true,
-				content: "Pronostici inviati correttamente!",
-				components: [
-					new ActionRowBuilder<ButtonBuilder>().addComponents(
-						new ButtonBuilder()
-							.setCustomId(`predictions-${matchDay!.day}-1-1`)
-							.setEmoji("✏️")
-							.setLabel("Modifica")
-							.setStyle(ButtonStyle.Success),
-					),
-				],
-			});
-		} else
-			await interaction.reply({
-				ephemeral: true,
-				content: `Parte **${part} di ${total}** inviata correttamente! Clicca il pulsante per continuare...`,
-				components: [
-					new ActionRowBuilder<ButtonBuilder>().addComponents(
-						new ButtonBuilder()
-							.setCustomId(
-								`predictions-${matchDay!.day}-${part + 1}-${editing ? 1 : 0}`,
+		if (part === total)
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Pronostici inviati correttamente!",
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(`predictions-${matches[0]!.day}-1-1`)
+									.setEmoji({ name: "✏️" })
+									.setLabel("Modifica")
+									.setStyle(ButtonStyle.Success),
 							)
-							.setEmoji("⏩")
-							.setLabel("Continua")
-							.setStyle(ButtonStyle.Primary),
-					),
-				],
+							.toJSON(),
+					],
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+		else
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: `Parte **${part} di ${total}** inviata correttamente! Clicca il pulsante per continuare...`,
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(`predictions-${matches[0]!.day}-${part! + 1}`)
+									.setEmoji({ name: "⏩" })
+									.setLabel("Continua")
+									.setStyle(ButtonStyle.Primary),
+							)
+							.toJSON(),
+					],
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 	},
-	async component(interaction) {
-		const matchDay = await MatchDay.findOne({}).sort("-day");
+	async component(interaction, { reply, env }) {
+		const userId = (interaction.member ?? interaction).user!.id;
+		const [{ results: matches }, { results: existingPredictions }] =
+			(await env.DB.batch([
+				env.DB.prepare(
+					`SELECT *
+FROM Matches
+WHERE Matches.day = (
+		SELECT MAX(day)
+		FROM Matches
+	)`,
+				),
+				env.DB.prepare(
+					`SELECT Predictions.*
+				FROM Predictions
+				JOIN Users ON Predictions.userId = Users.id
+				WHERE Users.id = ?`,
+				).bind(userId),
+			])) as [D1Result<Match>, D1Result<Prediction>];
 
-		if (await checkMatchDay(matchDay, interaction)) return;
-		const [, day, part, edit] = interaction.customId
-			.split("-")
-			.map((n) => Number(n));
-
-		if (day !== matchDay!.day) {
-			await interaction.reply({
-				ephemeral: true,
-				content: "Questi pronostici sono scaduti!",
+		if (!matches.length) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Non c'è alcun pronostico da inviare al momento!",
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
-		await showModal(
-			interaction,
-			matchDay!,
-			part,
-			(edit ? await User.findById(interaction.user.id) : undefined) ??
-				undefined,
-			true,
-		);
+		const [, day, part] = interaction.data.custom_id
+			.split("-")
+			.map((n) => parseInt(n));
+
+		if (day !== matches[0]!.day) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Questi pronostici sono scaduti!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
+		reply({
+			type: InteractionResponseType.Modal,
+			data: showModal(matches, part!, existingPredictions).toJSON(),
+		});
 	},
 });

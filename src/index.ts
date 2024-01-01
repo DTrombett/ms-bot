@@ -31,54 +31,56 @@ const applicationCommands = new Map(
 
 const server: ExportedHandler<Env> = {
 	fetch: async (request, env, context) => {
+		const url = new URL(request.url);
+
 		rest.setToken(env.DISCORD_TOKEN);
-		if (request.method === "POST") {
-			const interaction = await verifyDiscordRequest(request, env).catch(
-				errorToResponse,
-			);
+		if (url.pathname === "/") {
+			if (request.method === "POST") {
+				const interaction = await verifyDiscordRequest(request, env).catch(
+					errorToResponse,
+				);
 
-			if (interaction instanceof Response) return interaction;
-			let action: string | undefined, command: Command | undefined, result;
+				if (interaction instanceof Response) return interaction;
+				let action: string | undefined, command: Command | undefined, result;
 
-			switch (interaction.type) {
-				case InteractionType.Ping:
-					result = {
-						type: InteractionResponseType.Pong,
-					};
-					break;
-				case InteractionType.ApplicationCommand:
-					command = applicationCommands.get(interaction.data.name);
-					result = await command?.run(interaction, env, context);
-					break;
-				case InteractionType.MessageComponent:
-					[action] = interaction.data.custom_id.split("-");
-					if (!action) break;
-					command = commands.get(action);
-					result = await command?.component(interaction, env, context);
-					break;
-				case InteractionType.ApplicationCommandAutocomplete:
-					command = commands.get(interaction.data.name);
-					result = await command?.autocomplete(interaction, env, context);
-					break;
-				case InteractionType.ModalSubmit:
-					[action] = interaction.data.custom_id.split("-");
-					if (!action) break;
-					command = commands.get(action);
-					result = await command?.modalSubmit(interaction, env, context);
-					break;
-				default:
-					break;
+				switch (interaction.type) {
+					case InteractionType.Ping:
+						result = {
+							type: InteractionResponseType.Pong,
+						};
+						break;
+					case InteractionType.ApplicationCommand:
+						command = applicationCommands.get(interaction.data.name);
+						result = await command?.run(interaction, env, context);
+						break;
+					case InteractionType.MessageComponent:
+						[action] = interaction.data.custom_id.split("-");
+						if (!action) break;
+						command = commands.get(action);
+						result = await command?.component(interaction, env, context);
+						break;
+					case InteractionType.ApplicationCommandAutocomplete:
+						command = commands.get(interaction.data.name);
+						result = await command?.autocomplete(interaction, env, context);
+						break;
+					case InteractionType.ModalSubmit:
+						[action] = interaction.data.custom_id.split("-");
+						if (!action) break;
+						command = commands.get(action);
+						result = await command?.modalSubmit(interaction, env, context);
+						break;
+					default:
+						break;
+				}
+				return new JsonResponse(result);
 			}
-			return new JsonResponse(result);
+			if (request.method === "GET") return new Response("Ready!");
+			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
 		}
-		if (request.method === "GET") {
-			const url = new URL(request.url);
-
-			if (url.pathname === "/") return new Response("Ready!");
-			if (url.pathname === "/loadMatchDay")
+		if (url.pathname === "/loadMatchDay") {
+			if (request.method === "GET")
 				return Response.json(await loadMatchDay(rest, env));
-			if (url.pathname === "/test") {
-			}
+			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
