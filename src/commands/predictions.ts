@@ -14,7 +14,14 @@ import {
 	MessageFlags,
 	TextInputStyle,
 } from "discord-api-types/v10";
-import { Match, Prediction, capitalize, createCommand } from "../util";
+import {
+	Match,
+	MatchDay,
+	Prediction,
+	capitalize,
+	createCommand,
+	startPredictions,
+} from "../util";
 
 const predictionExamples = [
 	"1",
@@ -127,18 +134,17 @@ export const predictions = createCommand({
 			for (const option of subCommand.options)
 				options[option.name] = option.value;
 		const userId = options.user as string | undefined;
-		const [
-			[{ results: matches }, { results: existingPredictions }],
-			startDate,
-		] = await Promise.all([
-			env.DB.batch([
+		const [{ results: matches }, { results: existingPredictions }] =
+			(await env.DB.batch([
 				env.DB.prepare(
 					`SELECT *
 FROM Matches
+	JOIN MatchDays ON Matches.day = MatchDays.day
 WHERE Matches.day = (
 		SELECT MAX(day)
-		FROM Matches
-	)`,
+		FROM MatchDays
+	)
+ORDER BY matchDate`,
 				),
 				env.DB.prepare(
 					`SELECT Predictions.*
@@ -146,9 +152,7 @@ WHERE Matches.day = (
 				JOIN Users ON Predictions.userId = Users.id
 				WHERE Users.id = ?`,
 				).bind(userId ?? (interaction.member ?? interaction).user!.id),
-			]) as Promise<[D1Result<Match>, D1Result<Prediction>]>,
-			env.KV.get("firstMatchDate").then((s) => s && new Date(s)),
-		]);
+			])) as [D1Result<Match & MatchDay>, D1Result<Prediction>];
 
 		if (subCommand.name === "reminder") {
 			// 	const before = ms(interaction.options.getString("before", true));
@@ -218,7 +222,7 @@ WHERE Matches.day = (
 			return;
 		}
 		if (subCommand.name === "view") {
-			if (!matches.length || !startDate) {
+			if (!matches.length) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
@@ -231,7 +235,7 @@ WHERE Matches.day = (
 			if (
 				userId &&
 				userId !== (interaction.member ?? interaction).user!.id &&
-				Date.now() < startDate.getTime() - 1_000 * 60 * 15
+				Date.now() < new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
 			) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
@@ -299,7 +303,7 @@ WHERE Matches.day = (
 			});
 			return;
 		}
-		if (!matches.length || !startDate) {
+		if (!matches.length) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -309,7 +313,10 @@ WHERE Matches.day = (
 			});
 			return;
 		}
-		if (Date.now() >= startDate.getTime() - 1_000 * 60 * 15) {
+		if (
+			Date.now() >=
+			new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
+		) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -352,18 +359,17 @@ WHERE Matches.day = (
 	},
 	async modalSubmit(interaction, { reply, env }) {
 		const userId = (interaction.member ?? interaction).user!.id;
-		const [
-			[{ results: matches }, { results: existingPredictions }],
-			startDate,
-		] = await Promise.all([
-			env.DB.batch([
+		const [{ results: matches }, { results: existingPredictions }] =
+			(await env.DB.batch([
 				env.DB.prepare(
 					`SELECT *
 FROM Matches
+	JOIN MatchDays ON Matches.day = MatchDays.day
 WHERE Matches.day = (
 		SELECT MAX(day)
-		FROM Matches
-	)`,
+		FROM MatchDays
+	)
+ORDER BY matchDate`,
 				),
 				env.DB.prepare(
 					`SELECT Predictions.*
@@ -371,11 +377,9 @@ WHERE Matches.day = (
 				JOIN Users ON Predictions.userId = Users.id
 				WHERE Users.id = ?`,
 				).bind(userId),
-			]) as Promise<[D1Result<Match>, D1Result<Prediction>]>,
-			env.KV.get("firstMatchDate").then((s) => s && new Date(s)),
-		]);
+			])) as [D1Result<Match & MatchDay>, D1Result<Prediction>];
 
-		if (!matches.length || !startDate) {
+		if (!matches.length) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -385,7 +389,10 @@ WHERE Matches.day = (
 			});
 			return;
 		}
-		if (Date.now() >= startDate.getTime() - 1_000 * 60 * 15) {
+		if (
+			Date.now() >=
+			new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
+		) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -508,7 +515,7 @@ VALUES (?)`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matches[0]!.day}-1-1`)
+									.setCustomId(`predictions-${matches[0]!.day}-1`)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -539,16 +546,22 @@ VALUES (?)`,
 			});
 	},
 	async component(interaction, { reply, env }) {
+		if (interaction.data.custom_id === "predictions-start") {
+			await startPredictions(this.api, env, interaction, reply);
+			return;
+		}
 		const userId = (interaction.member ?? interaction).user!.id;
 		const [{ results: matches }, { results: existingPredictions }] =
 			(await env.DB.batch([
 				env.DB.prepare(
 					`SELECT *
 FROM Matches
+	JOIN MatchDays ON Matches.day = MatchDays.day
 WHERE Matches.day = (
 		SELECT MAX(day)
-		FROM Matches
-	)`,
+		FROM MatchDays
+	)
+ORDER BY matchDate`,
 				),
 				env.DB.prepare(
 					`SELECT Predictions.*
@@ -556,13 +569,27 @@ WHERE Matches.day = (
 				JOIN Users ON Predictions.userId = Users.id
 				WHERE Users.id = ?`,
 				).bind(userId),
-			])) as [D1Result<Match>, D1Result<Prediction>];
+			])) as [D1Result<Match & MatchDay>, D1Result<Prediction>];
 
 		if (!matches.length) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content: "Non c'è alcun pronostico da inviare al momento!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
+		if (
+			Date.now() >=
+			new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
+		) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});

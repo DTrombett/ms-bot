@@ -191,24 +191,19 @@ export type MatchesData =
 	  }
 	| { success: false; message: string; errors: unknown[] };
 
-export enum MatchDayStatus {
-	ToBePlayed,
-	Live,
-	Finished,
-}
 export type SQLBoolean = 0 | 1;
-export type SQLTimestamp = string;
+export type SQLDateTime = string;
 
 export type Match = {
 	id: number;
 	day: number;
-	matchDate: SQLTimestamp;
+	matchDate: SQLDateTime;
 	teams: string;
 };
 export type MatchDay = {
 	day: number;
-	state?: MatchDayStatus;
-	messageId?: string | null;
+	categoryId: number;
+	startDate: SQLDateTime;
 };
 export type Prediction = {
 	matchId: number;

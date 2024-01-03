@@ -77,7 +77,7 @@ const server: ExportedHandler<Env> = {
 			if (request.method === "GET") return new Response("Ready!");
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
 		}
-		if (url.pathname === "/loadMatchDay") {
+		if (url.pathname === "/predictions/loadMatchDay") {
 			if (request.method === "GET")
 				return Response.json(await loadMatchDay(rest, env));
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });

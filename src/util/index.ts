@@ -9,5 +9,6 @@ export * from "./loadMatchDay";
 export * from "./normalizeError";
 export * from "./normalizeTeamName";
 export * from "./randomNumber";
+export * from "./startPredictions";
 export * from "./types";
 export * from "./verifyDiscordRequest";
