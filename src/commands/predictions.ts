@@ -20,9 +20,11 @@ import {
 	Prediction,
 	User,
 	capitalize,
+	closeMatchDay,
 	createCommand,
 	getLiveEmbed,
 	loadMatches,
+	resolveLeaderboard,
 	startPredictions,
 } from "../util";
 
@@ -42,7 +44,7 @@ const predictionExamples = [
 ];
 const predictionRegex =
 	/^(1|x|2|1x|12|x2|((?<prediction>1|2|x)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
-const showModal = (
+const buildModal = (
 	matches: (Match & MatchDay)[],
 	part: number,
 	predictions?: Prediction[],
@@ -361,7 +363,7 @@ ORDER BY matchDate`,
 		}
 		reply({
 			type: InteractionResponseType.Modal,
-			data: showModal(matches, 1, existingPredictions).toJSON(),
+			data: buildModal(matches, 1, existingPredictions).toJSON(),
 		});
 	},
 	async modalSubmit(interaction, { reply, env }) {
@@ -560,16 +562,16 @@ VALUES (?)`,
 		const time = parseInt(timestamp!);
 
 		if (actionOrDay === "start") {
-			// if (Date.now() < time) {
-			// 	reply({
-			// 		type: InteractionResponseType.ChannelMessageWithSource,
-			// 		data: {
-			// 			content: `La giornata inizia <t:${Math.round(time / 1000)}:R>!`,
-			// 			flags: MessageFlags.Ephemeral,
-			// 		},
-			// 	});
-			// 	return;
-			// }
+			if (Date.now() < time) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `La giornata inizia <t:${Math.round(time / 1000)}:R>!`,
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
 			await startPredictions(
 				this.api,
 				env,
@@ -616,11 +618,13 @@ ORDER BY Users.id`,
 					});
 				return array;
 			}, []);
+			const finished = matches.data.every((match) => match.match_status === 2);
+			const leaderboard = resolveLeaderboard(users, matches);
 
 			reply({
 				type: InteractionResponseType.UpdateMessage,
 				data: {
-					embeds: getLiveEmbed(users, matches, parseInt(day!)),
+					embeds: getLiveEmbed(users, matches, leaderboard, parseInt(day!)),
 					components: [
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
@@ -632,12 +636,15 @@ ORDER BY Users.id`,
 									)
 									.setEmoji({ name: "🔄" })
 									.setLabel("Aggiorna")
-									.setStyle(ButtonStyle.Primary),
+									.setStyle(ButtonStyle.Primary)
+									.setDisabled(finished),
 							)
 							.toJSON(),
 					],
 				},
 			});
+			if (finished)
+				await closeMatchDay(this.api, env, leaderboard, parseInt(day!));
 			return;
 		}
 		if (Date.now() >= time) {
@@ -694,7 +701,7 @@ ORDER BY matchDate`,
 		}
 		reply({
 			type: InteractionResponseType.Modal,
-			data: showModal(
+			data: buildModal(
 				matches,
 				parseInt(partOrCategoryId!),
 				existingPredictions,

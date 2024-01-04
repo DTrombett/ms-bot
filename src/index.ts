@@ -10,7 +10,6 @@ import {
 	Command,
 	JsonResponse,
 	errorToResponse,
-	loadMatchDay,
 	verifyDiscordRequest,
 } from "./util";
 
@@ -75,11 +74,6 @@ const server: ExportedHandler<Env> = {
 				return new JsonResponse(result);
 			}
 			if (request.method === "GET") return new Response("Ready!");
-			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
-		}
-		if (url.pathname === "/predictions/loadMatchDay") {
-			if (request.method === "GET")
-				return Response.json(await loadMatchDay(rest, env));
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });

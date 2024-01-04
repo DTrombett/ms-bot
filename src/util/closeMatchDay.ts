@@ -5,10 +5,14 @@ import {
 	RESTPostAPIChannelMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
-import { normalizeTeamName } from ".";
-import { Env, MatchDay, MatchesData } from "./types";
+import { Env, Leaderboard, MatchDay, loadMatches, normalizeTeamName } from ".";
 
-export const loadMatchDay = async (api: REST, env: Env) => {
+export const closeMatchDay = async (
+	api: REST,
+	env: Env,
+	leaderboard: Leaderboard,
+	day: number,
+) => {
 	const matchDays = (await fetch(
 		"https://www.legaseriea.it/api/season/157617/championship/A/matchday",
 	).then((res) => res.json())) as
@@ -30,32 +34,14 @@ export const loadMatchDay = async (api: REST, env: Env) => {
 		(d) => d.category_status === "LIVE" || d.category_status === "TO BE PLAYED",
 	);
 
-	if (!matchDayData) return "No match to be played!";
+	if (!matchDayData) throw new TypeError("No match to be played!");
 	const matchDay: MatchDay = {
 		day: Number(matchDayData.description),
 		categoryId: Number(matchDayData.id_category),
 		startDate: "",
 	};
+	const matches = await loadMatches(matchDay.categoryId);
 
-	if (
-		await env.DB.prepare(
-			`SELECT 1
-FROM MatchDays
-WHERE day = ?
-LIMIT 1`,
-		)
-			.bind(matchDay.day)
-			.first("1")
-	)
-		return "Match day already loaded!";
-	const matches = await fetch(
-		`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayData.id_category}`,
-	).then((res) => res.json() as Promise<MatchesData>);
-
-	if (!matches.success)
-		throw new Error(`Couldn't load matches data: ${matches.message}`, {
-			cause: matches.errors,
-		});
 	if (!matches.data.length) throw new TypeError("No match found");
 	matchDay.startDate = matches.data
 		.reduce((time, match) => {
@@ -67,9 +53,19 @@ LIMIT 1`,
 	const startTime =
 		new Date(matches.data[0]!.date_time).getTime() - 1000 * 60 * 15;
 	const date = Math.round(startTime / 1_000);
+	const query = env.DB.prepare(`UPDATE Users
+SET dayPoints = COALESCE(dayPoints, 0) + ?1,
+	matchPointsHistory = COALESCE(matchPointsHistory, "${",".repeat(
+		day - 2,
+	)}") || ?2
+WHERE id = ?3`);
 
-	await Promise.all([
+	return Promise.all([
 		env.DB.batch([
+			...leaderboard.map(([user, matchPoints, dayPoints]) =>
+				query.bind(dayPoints, `,${matchPoints}`, user.id),
+			),
+			env.DB.prepare("DELETE FROM Predictions"),
 			env.DB.prepare(
 				"INSERT INTO MatchDays (day, categoryId, startDate) VALUES (?1, ?2, ?3)",
 			).bind(matchDay.day, matchDay.categoryId, matchDay.startDate),
@@ -87,7 +83,6 @@ LIMIT 1`,
 						.join(" - "),
 				]),
 			),
-			env.DB.prepare("DELETE FROM Predictions"),
 		]),
 		date - Date.now() / 1_000 > 1 &&
 			api.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
@@ -114,7 +109,4 @@ LIMIT 1`,
 				} satisfies RESTPostAPIChannelMessageJSONBody,
 			}),
 	]);
-	return "Done!";
 };
-
-export default loadMatchDay;

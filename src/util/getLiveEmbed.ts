@@ -317,43 +317,49 @@ export const getLiveEmbed = (
 		predictions: Prediction[];
 	})[],
 	matches: Extract<MatchesData, { success: true }>,
+	leaderboard: Leaderboard,
 	day: number,
-) => {
-	const leaderboard = resolveLeaderboard(users, matches);
-
-	return [
-		new EmbedBuilder()
-			.setThumbnail(
-				"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
-			)
-			.setTitle(`🔴 Risultati Live ${day}ª Giornata`)
-			.setDescription(resolveMatches(matches))
-			.setAuthor({
-				name: "Serie A TIM",
-				url: "https://legaseriea.it/it/serie-a",
-			})
-			.setColor(0xed4245)
-			.toJSON(),
-		new EmbedBuilder()
-			.setThumbnail(
-				"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
-			)
-			.setTitle(`🔴 Classifica Live Pronostici ${day}ª Giornata`)
-			.setDescription(createLeaderboardDescription(leaderboard))
-			.setFooter({ text: "Ultimo aggiornamento" })
-			.addFields(
-				{
-					name: "Classifica Generale Provvisoria",
-					value: createFinalLeaderboard(leaderboard),
-				},
-				resolveStats(users),
-			)
-			.setAuthor({
-				name: "Serie A TIM",
-				url: "https://legaseriea.it/it/serie-a",
-			})
-			.setColor(0x3498db)
-			.setTimestamp()
-			.toJSON(),
-	];
-};
+	finished = false,
+) => [
+	new EmbedBuilder()
+		.setThumbnail(
+			"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+		)
+		.setTitle(
+			finished
+				? `Risultati Finali ${day}ª Giornata`
+				: `🔴 Risultati Live ${day}ª Giornata`,
+		)
+		.setDescription(resolveMatches(matches))
+		.setAuthor({
+			name: "Serie A TIM",
+			url: "https://legaseriea.it/it/serie-a",
+		})
+		.setColor(0xed4245)
+		.toJSON(),
+	new EmbedBuilder()
+		.setThumbnail(
+			"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+		)
+		.setTitle(
+			finished
+				? `⚽ Classifica Definitiva Pronostici ${day}ª Giornata`
+				: `🔴 Classifica Live Pronostici ${day}ª Giornata`,
+		)
+		.setDescription(createLeaderboardDescription(leaderboard))
+		.setFooter({ text: "Ultimo aggiornamento" })
+		.addFields(
+			{
+				name: "Classifica Generale Provvisoria",
+				value: createFinalLeaderboard(leaderboard),
+			},
+			resolveStats(users),
+		)
+		.setAuthor({
+			name: "Serie A TIM",
+			url: "https://legaseriea.it/it/serie-a",
+		})
+		.setColor(0x3498db)
+		.setTimestamp()
+		.toJSON(),
+];

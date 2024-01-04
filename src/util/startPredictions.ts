@@ -17,9 +17,11 @@ import {
 	Env,
 	Prediction,
 	User,
+	closeMatchDay,
 	getLiveEmbed,
 	loadMatches,
 	normalizeTeamName,
+	resolveLeaderboard,
 } from ".";
 
 export const startPredictions = async (
@@ -67,7 +69,10 @@ ORDER BY Users.id`,
 		interaction.application_id,
 		interaction.token,
 	);
+	const finished = matches.data.every((match) => match.match_status === 2);
+	const leaderboard = resolveLeaderboard(users, matches);
 
+	if (finished) promises.push(closeMatchDay(api, env, leaderboard, day));
 	for (let i = 0; i < users.length; i += 5) {
 		const chunk = users.slice(i, i + 5);
 
@@ -128,7 +133,7 @@ ORDER BY Users.id`,
 	await Promise.all(promises);
 	await api.post(followupRoute, {
 		body: {
-			embeds: getLiveEmbed(users, matches, day),
+			embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
 			components: [
 				new ActionRowBuilder<ButtonBuilder>()
 					.addComponents(
@@ -140,7 +145,8 @@ ORDER BY Users.id`,
 							)
 							.setEmoji({ name: "🔄" })
 							.setLabel("Aggiorna")
-							.setStyle(ButtonStyle.Primary),
+							.setStyle(ButtonStyle.Primary)
+							.setDisabled(finished),
 					)
 					.toJSON(),
 			],
