@@ -18,8 +18,11 @@ import {
 	Match,
 	MatchDay,
 	Prediction,
+	User,
 	capitalize,
 	createCommand,
+	getLiveEmbed,
+	loadMatches,
 	startPredictions,
 } from "../util";
 
@@ -40,12 +43,16 @@ const predictionExamples = [
 const predictionRegex =
 	/^(1|x|2|1x|12|x2|((?<prediction>1|2|x)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
 const showModal = (
-	matches: Match[],
+	matches: (Match & MatchDay)[],
 	part: number,
 	predictions?: Prediction[],
 ) =>
 	new ModalBuilder()
-		.setCustomId(`predictions-${matches[0]!.day}-${part}`)
+		.setCustomId(
+			`predictions-${matches[0]!.day}-${part}-${
+				new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
+			}`,
+		)
 		.setTitle(
 			`Pronostici ${matches[0]!.day}ª Giornata (${part}/${matches.length / 5})`,
 		)
@@ -221,6 +228,9 @@ ORDER BY matchDate`,
 			});
 			return;
 		}
+		const startTime =
+			new Date(matches[0]!.startDate).getTime() - 1000 * 60 * 15;
+
 		if (subCommand.name === "view") {
 			if (!matches.length) {
 				reply({
@@ -235,7 +245,7 @@ ORDER BY matchDate`,
 			if (
 				userId &&
 				userId !== (interaction.member ?? interaction).user!.id &&
-				Date.now() < new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
+				Date.now() < startTime
 			) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
@@ -313,10 +323,7 @@ ORDER BY matchDate`,
 			});
 			return;
 		}
-		if (
-			Date.now() >=
-			new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
-		) {
+		if (Date.now() >= startTime) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -340,7 +347,7 @@ ORDER BY matchDate`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matches[0]!.day}-1-1`)
+									.setCustomId(`predictions-${matches[0]!.day}-1-${startTime}`)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -358,6 +365,21 @@ ORDER BY matchDate`,
 		});
 	},
 	async modalSubmit(interaction, { reply, env }) {
+		const [, day, part, timestamp] = interaction.data.custom_id
+			.split("-")
+			.map((n) => Number(n));
+
+		if (Date.now() >= timestamp!) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
 		const userId = (interaction.member ?? interaction).user!.id;
 		const [{ results: matches }, { results: existingPredictions }] =
 			(await env.DB.batch([
@@ -389,23 +411,6 @@ ORDER BY matchDate`,
 			});
 			return;
 		}
-		if (
-			Date.now() >=
-			new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
-		) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content:
-						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
-					flags: MessageFlags.Ephemeral,
-				},
-			});
-			return;
-		}
-		const [, day, part] = interaction.data.custom_id
-			.split("-")
-			.map((n) => Number(n));
 		const total = matches.length / 5;
 
 		if (day !== matches[0]!.day) {
@@ -494,7 +499,9 @@ VALUES (?)`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matches[0]!.day}-${part}-1`)
+									.setCustomId(
+										`predictions-${matches[0]!.day}-${part}-${timestamp}`,
+									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -515,7 +522,7 @@ VALUES (?)`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matches[0]!.day}-1`)
+									.setCustomId(`predictions-${matches[0]!.day}-1-${timestamp}`)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -534,7 +541,9 @@ VALUES (?)`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matches[0]!.day}-${part! + 1}`)
+									.setCustomId(
+										`predictions-${matches[0]!.day}-${part! + 1}-${timestamp}`,
+									)
 									.setEmoji({ name: "⏩" })
 									.setLabel("Continua")
 									.setStyle(ButtonStyle.Primary),
@@ -546,8 +555,100 @@ VALUES (?)`,
 			});
 	},
 	async component(interaction, { reply, env }) {
-		if (interaction.data.custom_id === "predictions-start") {
-			await startPredictions(this.api, env, interaction, reply);
+		const [, actionOrDay, partOrCategoryId, timestamp, day] =
+			interaction.data.custom_id.split("-");
+		const time = parseInt(timestamp!);
+
+		if (actionOrDay === "start") {
+			// if (Date.now() < time) {
+			// 	reply({
+			// 		type: InteractionResponseType.ChannelMessageWithSource,
+			// 		data: {
+			// 			content: `La giornata inizia <t:${Math.round(time / 1000)}:R>!`,
+			// 			flags: MessageFlags.Ephemeral,
+			// 		},
+			// 	});
+			// 	return;
+			// }
+			await startPredictions(
+				this.api,
+				env,
+				interaction,
+				parseInt(day!),
+				parseInt(partOrCategoryId!),
+				reply,
+			);
+			return;
+		}
+		if (actionOrDay === "update") {
+			if (Date.now() < time) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content:
+							"I dati possono essere aggiornati solo una volta al minuto!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			const [{ results: existingPredictions }, matches] = await Promise.all([
+				env.DB.prepare(
+					`SELECT *
+FROM Predictions
+	JOIN Users ON Predictions.userId = Users.id
+ORDER BY Users.id`,
+				).all<Prediction & User>(),
+				loadMatches(parseInt(partOrCategoryId!)),
+			]);
+			const users = existingPredictions.reduce<
+				(User & { predictions: Prediction[] })[]
+			>((array, prediction) => {
+				const item = array.at(-1);
+
+				if (item?.id === prediction.userId) item.predictions.push(prediction);
+				else
+					array.push({
+						id: prediction.id,
+						dayPoints: prediction.dayPoints,
+						matchPointsHistory: prediction.matchPointsHistory,
+						predictions: [prediction],
+					});
+				return array;
+			}, []);
+
+			reply({
+				type: InteractionResponseType.UpdateMessage,
+				data: {
+					embeds: getLiveEmbed(users, matches, parseInt(day!)),
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(
+										`predictions-update-${partOrCategoryId}-${
+											Date.now() + 1_000 * 60
+										}-${day}`,
+									)
+									.setEmoji({ name: "🔄" })
+									.setLabel("Aggiorna")
+									.setStyle(ButtonStyle.Primary),
+							)
+							.toJSON(),
+					],
+				},
+			});
+			return;
+		}
+		if (Date.now() >= time) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
 			return;
 		}
 		const userId = (interaction.member ?? interaction).user!.id;
@@ -581,25 +682,7 @@ ORDER BY matchDate`,
 			});
 			return;
 		}
-		if (
-			Date.now() >=
-			new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
-		) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content:
-						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
-					flags: MessageFlags.Ephemeral,
-				},
-			});
-			return;
-		}
-		const [, day, part] = interaction.data.custom_id
-			.split("-")
-			.map((n) => parseInt(n));
-
-		if (day !== matches[0]!.day) {
+		if (parseInt(actionOrDay!) !== matches[0]!.day) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -611,7 +694,11 @@ ORDER BY matchDate`,
 		}
 		reply({
 			type: InteractionResponseType.Modal,
-			data: showModal(matches, part!, existingPredictions).toJSON(),
+			data: showModal(
+				matches,
+				parseInt(partOrCategoryId!),
+				existingPredictions,
+			).toJSON(),
 		});
 	},
 });

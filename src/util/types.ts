@@ -191,6 +191,13 @@ export type MatchesData =
 	  }
 	| { success: false; message: string; errors: unknown[] };
 
+export type Leaderboard = [
+	user: User,
+	matchPoints: number,
+	dayPoints: number,
+	maxPoints: number,
+][];
+
 export type SQLBoolean = 0 | 1;
 export type SQLDateTime = string;
 

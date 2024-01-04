@@ -64,9 +64,9 @@ LIMIT 1`,
 			return time < newTime ? time : newTime;
 		}, new Date(""))
 		.toISOString();
-	const date = Math.round(
-		(new Date(matches.data[0]!.date_time).getTime() - 1000 * 60 * 15) / 1_000,
-	);
+	const startTime =
+		new Date(matches.data[0]!.date_time).getTime() - 1000 * 60 * 15;
+	const date = Math.round(startTime / 1_000);
 
 	await Promise.all([
 		env.DB.batch([
@@ -89,7 +89,7 @@ LIMIT 1`,
 			),
 			env.DB.prepare("DELETE FROM Predictions"),
 		]),
-		date - Date.now() / 1_000 > 10 &&
+		date - Date.now() / 1_000 > 1 &&
 			api.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
 				body: {
 					content: `<@&${env.PREDICTIONS_ROLE}>, potete inviare i pronostici per la prossima giornata!\nPer farlo potete inviare il comando \`/predictions send\` e seguire le istruzioni o premere il pulsante qui in basso. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)!`,
@@ -97,12 +97,14 @@ LIMIT 1`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matchDay.day}-1`)
+									.setCustomId(`predictions-${matchDay.day}-1-${startTime}`)
 									.setEmoji({ name: "⚽" })
 									.setLabel("Invia pronostici")
 									.setStyle(ButtonStyle.Primary),
 								new ButtonBuilder()
-									.setCustomId("predictions-start")
+									.setCustomId(
+										`predictions-start-${matchDayData.id_category}-${startTime}-${matchDay.day}`,
+									)
 									.setEmoji({ name: "▶️" })
 									.setLabel("Inizia giornata")
 									.setStyle(ButtonStyle.Primary),
