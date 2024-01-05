@@ -561,16 +561,16 @@ VALUES (?)`,
 		const time = parseInt(timestamp!);
 
 		if (actionOrDay === "start") {
-			// if (Date.now() < time) {
-			// 	reply({
-			// 		type: InteractionResponseType.ChannelMessageWithSource,
-			// 		data: {
-			// 			content: `La giornata inizia <t:${Math.round(time / 1000)}:R>!`,
-			// 			flags: MessageFlags.Ephemeral,
-			// 		},
-			// 	});
-			// 	return;
-			// }
+			if (Date.now() < time) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `La giornata inizia <t:${Math.round(time / 1000)}:R>!`,
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
 			await startPredictions(
 				this.api,
 				env,
