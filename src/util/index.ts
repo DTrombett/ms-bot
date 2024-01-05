@@ -13,6 +13,7 @@ export * from "./normalizeError";
 export * from "./normalizeTeamName";
 export * from "./prepareMatchDayData";
 export * from "./randomNumber";
+export * from "./resolveLeaderboard";
 export * from "./startPredictions";
 export * from "./types";
 export * from "./verifyDiscordRequest";
