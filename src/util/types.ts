@@ -192,7 +192,7 @@ export type MatchesData =
 	| { success: false; message: string; errors: unknown[] };
 
 export type Leaderboard = [
-	user: User,
+	user: User & { predictions: Prediction[] },
 	matchPoints: number,
 	dayPoints: number,
 	maxPoints: number,

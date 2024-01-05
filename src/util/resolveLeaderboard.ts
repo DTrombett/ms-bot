@@ -69,6 +69,10 @@ export const resolveLeaderboard = (
 	const first = Math.ceil(leaderboard.length / 2);
 
 	for (const entry of leaderboard)
-		entry[2] = first - leaderboard.findIndex(([, p]) => entry[1] === p);
+		entry[2] =
+			first -
+			(entry[0].predictions.length
+				? leaderboard.findIndex(([, p]) => entry[1] === p)
+				: leaderboard.length - 1);
 	return leaderboard;
 };
