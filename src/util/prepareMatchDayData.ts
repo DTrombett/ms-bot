@@ -22,10 +22,12 @@ FROM Users`),
 			loadMatches(categoryId),
 		]);
 	return [
-		rawUsers.map((user) => ({
-			...user,
-			predictions: predictions.filter((p) => p.userId === user.id),
-		})),
+		rawUsers
+			.map((user) => ({
+				...user,
+				predictions: predictions.filter((p) => p.userId === user.id),
+			}))
+			.filter((u) => u.predictions.length || u.dayPoints != null),
 		matches,
 	];
 };
