@@ -7,6 +7,7 @@ export * from "./createCommand";
 export * from "./errorToResponse";
 export * from "./formatBytes";
 export * from "./getLiveEmbed";
+export * from "./loadMatchDay";
 export * from "./loadMatches";
 export * from "./normalizeError";
 export * from "./normalizeTeamName";

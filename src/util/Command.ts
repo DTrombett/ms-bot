@@ -156,9 +156,7 @@ export class Command {
 	) {
 		if (
 			this.isPrivate &&
-			!env.OWNER_ID.includes(
-				(interaction.user ?? interaction.member?.user)?.id ?? "--",
-			)
+			!env.OWNER_ID.includes((interaction.member ?? interaction).user!.id)
 		)
 			return undefined;
 		return new Promise<APIInteractionResponse>((resolve, reject) => {
