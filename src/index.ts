@@ -47,16 +47,32 @@ const server: ExportedHandler<Env> = {
 						result = {
 							type: InteractionResponseType.Pong,
 						};
+						console.log("Received ping interaction!");
 						break;
 					case InteractionType.ApplicationCommand:
 						command = applicationCommands.get(interaction.data.name);
 						result = await command?.run(interaction, env, context);
+						console.log(
+							`[${new Date().toISOString()}] Command ${
+								interaction.data.name
+							} executed by ${(interaction.member ?? interaction).user
+								?.username} in ${interaction.channel.name} (${
+								interaction.channel.id
+							}) - guild ${interaction.guild_id}`,
+						);
 						break;
 					case InteractionType.MessageComponent:
 						[action] = interaction.data.custom_id.split("-");
 						if (!action) break;
 						command = commands.get(action);
 						result = await command?.component(interaction, env, context);
+						console.log(
+							`[${new Date().toISOString()}] Component interaction ${action} executed by ${(
+								interaction.member ?? interaction
+							).user?.username} in ${interaction.channel.name} (${
+								interaction.channel.id
+							}) - guild ${interaction.guild_id}`,
+						);
 						break;
 					case InteractionType.ApplicationCommandAutocomplete:
 						command = commands.get(interaction.data.name);
@@ -67,6 +83,12 @@ const server: ExportedHandler<Env> = {
 						if (!action) break;
 						command = commands.get(action);
 						result = await command?.modalSubmit(interaction, env, context);
+						console.log(
+							`[${new Date().toISOString()}] Modal interaction ${action} executed by ${(
+								interaction.member ?? interaction
+							).user?.username} in ${interaction.channel?.name} (${interaction
+								.channel?.id}) - guild ${interaction.guild_id}`,
+						);
 						break;
 					default:
 						break;

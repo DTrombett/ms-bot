@@ -505,7 +505,7 @@ VALUES (?)`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
-									.setStyle(ButtonStyle.Success),
+									.setStyle(ButtonStyle.Danger),
 							)
 							.toJSON(),
 					],
