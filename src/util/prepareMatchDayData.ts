@@ -1,0 +1,31 @@
+import { Env, MatchesData, Prediction, User, loadMatches } from ".";
+
+export const prepareMatchDayData = async (
+	env: Env,
+	categoryId: number,
+): Promise<
+	[
+		users: (User & { predictions: Prediction[] })[],
+		matches: Extract<MatchesData, { success: true }>,
+	]
+> => {
+	const [[{ results: predictions }, { results: rawUsers }], matches] =
+		await Promise.all([
+			env.DB.batch([
+				env.DB.prepare(
+					`SELECT *
+FROM Predictions`,
+				),
+				env.DB.prepare(`SELECT *
+FROM Users`),
+			]) as Promise<[D1Result<Prediction>, D1Result<User>]>,
+			loadMatches(categoryId),
+		]);
+	return [
+		rawUsers.map((user) => ({
+			...user,
+			predictions: predictions.filter((p) => p.userId === user.id),
+		})),
+		matches,
+	];
+};

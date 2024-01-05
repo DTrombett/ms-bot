@@ -11,6 +11,7 @@ export * from "./loadMatchDay";
 export * from "./loadMatches";
 export * from "./normalizeError";
 export * from "./normalizeTeamName";
+export * from "./prepareMatchDayData";
 export * from "./randomNumber";
 export * from "./startPredictions";
 export * from "./types";

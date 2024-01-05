@@ -18,12 +18,11 @@ import {
 	Match,
 	MatchDay,
 	Prediction,
-	User,
 	capitalize,
 	closeMatchDay,
 	createCommand,
 	getLiveEmbed,
-	loadMatches,
+	prepareMatchDayData,
 	resolveLeaderboard,
 	startPredictions,
 } from "../util";
@@ -562,16 +561,16 @@ VALUES (?)`,
 		const time = parseInt(timestamp!);
 
 		if (actionOrDay === "start") {
-			if (Date.now() < time) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: `La giornata inizia <t:${Math.round(time / 1000)}:R>!`,
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-				return;
-			}
+			// if (Date.now() < time) {
+			// 	reply({
+			// 		type: InteractionResponseType.ChannelMessageWithSource,
+			// 		data: {
+			// 			content: `La giornata inizia <t:${Math.round(time / 1000)}:R>!`,
+			// 			flags: MessageFlags.Ephemeral,
+			// 		},
+			// 	});
+			// 	return;
+			// }
 			await startPredictions(
 				this.api,
 				env,
@@ -594,30 +593,10 @@ VALUES (?)`,
 				});
 				return;
 			}
-			const [{ results: existingPredictions }, matches] = await Promise.all([
-				env.DB.prepare(
-					`SELECT *
-FROM Predictions
-	JOIN Users ON Predictions.userId = Users.id
-ORDER BY Users.id`,
-				).all<Prediction & User>(),
-				loadMatches(parseInt(partOrCategoryId!)),
-			]);
-			const users = existingPredictions.reduce<
-				(User & { predictions: Prediction[] })[]
-			>((array, prediction) => {
-				const item = array.at(-1);
-
-				if (item?.id === prediction.userId) item.predictions.push(prediction);
-				else
-					array.push({
-						id: prediction.id,
-						dayPoints: prediction.dayPoints,
-						matchPointsHistory: prediction.matchPointsHistory,
-						predictions: [prediction],
-					});
-				return array;
-			}, []);
+			const [users, matches] = await prepareMatchDayData(
+				env,
+				parseInt(partOrCategoryId!),
+			);
 			const finished = matches.data.every((match) => match.match_status === 2);
 			const leaderboard = resolveLeaderboard(users, matches);
 

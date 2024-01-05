@@ -15,12 +15,10 @@ import {
 } from "discord-api-types/v10";
 import {
 	Env,
-	Prediction,
-	User,
 	closeMatchDay,
 	getLiveEmbed,
-	loadMatches,
 	normalizeTeamName,
+	prepareMatchDayData,
 	resolveLeaderboard,
 } from ".";
 
@@ -39,31 +37,7 @@ export const startPredictions = async (
 			| APIModalInteractionResponse,
 	) => void,
 ) => {
-	const [{ results: predictions }, matches] = await Promise.all([
-		env.DB.prepare(
-			`SELECT *
-FROM Predictions
-	JOIN Users ON Predictions.userId = Users.id
-ORDER BY Users.id`,
-		).all<Prediction & User>(),
-		loadMatches(categoryId),
-	]);
-	const users = predictions.reduce<(User & { predictions: Prediction[] })[]>(
-		(array, prediction) => {
-			const item = array.at(-1);
-
-			if (item?.id === prediction.userId) item.predictions.push(prediction);
-			else
-				array.push({
-					id: prediction.id,
-					dayPoints: prediction.dayPoints,
-					matchPointsHistory: prediction.matchPointsHistory,
-					predictions: [prediction],
-				});
-			return array;
-		},
-		[],
-	);
+	const [users, matches] = await prepareMatchDayData(env, categoryId);
 	const promises: Promise<any>[] = [];
 	const followupRoute = Routes.webhook(
 		interaction.application_id,
@@ -113,7 +87,6 @@ ORDER BY Users.id`,
 							url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 						},
 						title: `${day}ª Giornata Serie A TIM`,
-						url: "https://legaseriea.it/it/serie-a",
 					};
 				}),
 			).then((embeds) =>
