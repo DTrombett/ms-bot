@@ -18,7 +18,7 @@ FROM Predictions`,
 				),
 				env.DB.prepare(`SELECT *
 FROM Users
-ORDER BY dayPoints`),
+ORDER BY dayPoints DESC`),
 			]) as Promise<[D1Result<Prediction>, D1Result<User>]>,
 			loadMatches(categoryId),
 		]);

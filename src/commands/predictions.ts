@@ -586,8 +586,9 @@ VALUES (?)`,
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
-						content:
-							"I dati possono essere aggiornati solo una volta al minuto!",
+						content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
+							time / 1_000,
+						)}:R>`,
 						flags: MessageFlags.Ephemeral,
 					},
 				});
@@ -604,22 +605,29 @@ VALUES (?)`,
 				type: InteractionResponseType.UpdateMessage,
 				data: {
 					embeds: getLiveEmbed(users, matches, leaderboard, parseInt(day!)),
-					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-update-${partOrCategoryId}-${
-											Date.now() + 1_000 * 60
-										}-${day}`,
+					components: finished
+						? undefined
+						: [
+								new ActionRowBuilder<ButtonBuilder>()
+									.addComponents(
+										new ButtonBuilder()
+											.setCustomId(
+												`predictions-update-${partOrCategoryId}-${
+													matches.data.some((match) => match.match_status === 1)
+														? Date.now() + 1_000 * 60
+														: new Date(
+																matches.data.find(
+																	(match) => match.match_status === 0,
+																)?.date_time as number | string,
+															).getTime()
+												}-${day}`,
+											)
+											.setEmoji({ name: "🔄" })
+											.setLabel("Aggiorna")
+											.setStyle(ButtonStyle.Primary),
 									)
-									.setEmoji({ name: "🔄" })
-									.setLabel("Aggiorna")
-									.setStyle(ButtonStyle.Primary)
-									.setDisabled(finished),
-							)
-							.toJSON(),
-					],
+									.toJSON(),
+							],
 				},
 			});
 			if (finished)

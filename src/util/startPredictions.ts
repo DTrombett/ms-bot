@@ -107,22 +107,29 @@ export const startPredictions = async (
 	await api.post(followupRoute, {
 		body: {
 			embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
-			components: [
-				new ActionRowBuilder<ButtonBuilder>()
-					.addComponents(
-						new ButtonBuilder()
-							.setCustomId(
-								`predictions-update-${categoryId}-${
-									Date.now() + 1_000 * 60
-								}-${day}`,
+			components: finished
+				? undefined
+				: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(
+										`predictions-update-${categoryId}-${
+											matches.data.some((match) => match.match_status === 1)
+												? Date.now() + 1_000 * 60
+												: new Date(
+														matches.data.find(
+															(match) => match.match_status === 0,
+														)?.date_time as number | string,
+													).getTime()
+										}-${day}`,
+									)
+									.setEmoji({ name: "🔄" })
+									.setLabel("Aggiorna")
+									.setStyle(ButtonStyle.Primary),
 							)
-							.setEmoji({ name: "🔄" })
-							.setLabel("Aggiorna")
-							.setStyle(ButtonStyle.Primary)
-							.setDisabled(finished),
-					)
-					.toJSON(),
-			],
+							.toJSON(),
+					],
 		} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 	});
 };
