@@ -615,11 +615,14 @@ VALUES (?)`,
 												`predictions-update-${partOrCategoryId}-${
 													matches.data.some((match) => match.match_status === 1)
 														? Date.now() + 1_000 * 60
-														: new Date(
-																matches.data.find(
-																	(match) => match.match_status === 0,
-																)?.date_time as number | string,
-															).getTime()
+														: Math.max(
+																new Date(
+																	matches.data.find(
+																		(match) => match.match_status === 0,
+																	)?.date_time as number | string,
+																).getTime(),
+																Date.now() + 1_000 * 60,
+															)
 												}-${day}`,
 											)
 											.setEmoji({ name: "🔄" })
