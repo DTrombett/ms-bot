@@ -17,7 +17,8 @@ export const prepareMatchDayData = async (
 FROM Predictions`,
 				),
 				env.DB.prepare(`SELECT *
-FROM Users`),
+FROM Users
+ORDER BY dayPoints`),
 			]) as Promise<[D1Result<Prediction>, D1Result<User>]>,
 			loadMatches(categoryId),
 		]);
