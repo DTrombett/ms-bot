@@ -108,7 +108,7 @@ export const startPredictions = async (
 		body: {
 			embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
 			components: finished
-				? undefined
+				? []
 				: [
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
