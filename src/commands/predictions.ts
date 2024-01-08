@@ -604,9 +604,15 @@ VALUES (?)`,
 			reply({
 				type: InteractionResponseType.UpdateMessage,
 				data: {
-					embeds: getLiveEmbed(users, matches, leaderboard, parseInt(day!)),
+					embeds: getLiveEmbed(
+						users,
+						matches,
+						leaderboard,
+						parseInt(day!),
+						finished,
+					),
 					components: finished
-						? undefined
+						? []
 						: [
 								new ActionRowBuilder<ButtonBuilder>()
 									.addComponents(
