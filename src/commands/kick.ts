@@ -155,9 +155,9 @@ export const kick = createCommand({
 			});
 			return;
 		}
-		const guild = (await this.api
-			.get(Routes.guild(interaction.guild_id))
-			.catch(console.error)) as APIGuild;
+		const guild = (await this.api.get(
+			Routes.guild(interaction.guild_id),
+		)) as APIGuild;
 		const content = checkPerms(interaction.member, guild, user.id, member);
 
 		if (content) {

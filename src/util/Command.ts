@@ -5,12 +5,13 @@ import {
 	InteractionType,
 	RESTPutAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type {
-	Awaitable,
-	CommandOptions,
-	Env,
-	ExecutorContext,
-	InteractionByType,
+import {
+	error,
+	type Awaitable,
+	type CommandOptions,
+	type Env,
+	type ExecutorContext,
+	type InteractionByType,
 } from ".";
 
 /**
@@ -170,12 +171,12 @@ export class Command {
 					done = true;
 				},
 			})?.catch((err) => {
-				if (done) console.error(err);
+				if (done) error(err);
 				else reject(err);
 			});
 
 			if (promise) context.waitUntil(promise);
-		}).catch(console.error);
+		}).catch(error);
 	}
 }
 

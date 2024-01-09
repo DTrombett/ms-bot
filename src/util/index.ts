@@ -9,6 +9,7 @@ export * from "./formatBytes";
 export * from "./getLiveEmbed";
 export * from "./loadMatchDay";
 export * from "./loadMatches";
+export * from "./logger";
 export * from "./normalizeError";
 export * from "./normalizeTeamName";
 export * from "./prepareMatchDayData";

@@ -327,9 +327,9 @@ export const bann = createCommand({
 			return;
 		}
 		const member = interaction.data.resolved!.members?.[userId];
-		const guild = (await this.api
-			.get(Routes.guild(interaction.guild_id))
-			.catch(console.error)) as APIGuild;
+		const guild = (await this.api.get(
+			Routes.guild(interaction.guild_id),
+		)) as APIGuild;
 		const content = checkPerms(interaction.member, guild, user.id, member);
 
 		if (content) {
@@ -352,36 +352,32 @@ export const bann = createCommand({
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
 		if (subcommand!.name === "add") {
-			await this.api
-				.patch(
-					Routes.webhookMessage(interaction.application_id, interaction.token),
-					{
-						body: (await executeBan(
-							this.api,
-							interaction.guild_id,
-							user,
-							deleteMessageDays && deleteMessageDays * 60 * 60 * 24,
-							reason ?? undefined,
-						)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					},
-				)
-				.catch(console.error);
+			await this.api.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: (await executeBan(
+						this.api,
+						interaction.guild_id,
+						user,
+						deleteMessageDays && deleteMessageDays * 60 * 60 * 24,
+						reason ?? undefined,
+					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
 			return;
 		}
 		if (subcommand!.name === "remove")
-			await this.api
-				.patch(
-					Routes.webhookMessage(interaction.application_id, interaction.token),
-					{
-						body: (await unban(
-							this.api,
-							interaction.guild_id,
-							user,
-							reason ?? undefined,
-						)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					},
-				)
-				.catch(console.error);
+			await this.api.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: (await unban(
+						this.api,
+						interaction.guild_id,
+						user,
+						reason ?? undefined,
+					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
 	},
 	async modalSubmit(interaction, { reply }) {
 		if (!interaction.guild_id || !interaction.member)
@@ -419,16 +415,14 @@ export const bann = createCommand({
 
 		if (!guild) throw new TypeError("Guild not found", { cause: interaction });
 		if (!target) {
-			await this.api
-				.patch(
-					Routes.webhookMessage(interaction.application_id, interaction.token),
-					{
-						body: {
-							content: "Utente non trovato!",
-						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					},
-				)
-				.catch(console.error);
+			await this.api.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						content: "Utente non trovato!",
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
 			return;
 		}
 		const content = checkPerms(
@@ -439,34 +433,30 @@ export const bann = createCommand({
 		);
 
 		if (content) {
-			await this.api
-				.patch(
-					Routes.webhookMessage(interaction.application_id, interaction.token),
-					{
-						body: {
-							content,
-						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					},
-				)
-				.catch(console.error);
-			return;
-		}
-		await this.api
-			.patch(
+			await this.api.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
-					body: (await executeBan(
-						this.api,
-						interaction.guild_id,
-						target,
-						deleteMessageDays * 60 * 60 * 24,
-						interaction.data.components[0]?.components.find(
-							(v) => v.custom_id === "reason",
-						)?.value,
-					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					body: {
+						content,
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
-			)
-			.catch(console.error);
+			);
+			return;
+		}
+		await this.api.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{
+				body: (await executeBan(
+					this.api,
+					interaction.guild_id,
+					target,
+					deleteMessageDays * 60 * 60 * 24,
+					interaction.data.components[0]?.components.find(
+						(v) => v.custom_id === "reason",
+					)?.value,
+				)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			},
+		);
 	},
 	async component(interaction, { reply }) {
 		if (!interaction.guild_id || !interaction.member)
@@ -540,30 +530,26 @@ export const bann = createCommand({
 		);
 
 		if (content) {
-			await this.api
-				.patch(
-					Routes.webhookMessage(interaction.application_id, interaction.token),
-					{
-						body: {
-							content,
-						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					},
-				)
-				.catch(console.error);
+			await this.api.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						content,
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
 			return;
 		}
 		if (action === "r")
-			await this.api
-				.patch(
-					Routes.webhookMessage(interaction.application_id, interaction.token),
-					{
-						body: (await unban(
-							this.api,
-							interaction.guild_id,
-							target,
-						)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					},
-				)
-				.catch(console.error);
+			await this.api.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: (await unban(
+						this.api,
+						interaction.guild_id,
+						target,
+					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
 	},
 });
