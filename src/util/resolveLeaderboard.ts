@@ -5,7 +5,7 @@ export const resolveLeaderboard = (
 	matches: Extract<MatchesData, { success: true }>,
 ) => {
 	const leaderboard = users
-		.map((user): Leaderboard[number] => {
+		.map<Leaderboard[number]>((user) => {
 			let maxPoints = 0;
 
 			return [
@@ -73,6 +73,6 @@ export const resolveLeaderboard = (
 			first -
 			(entry[0].predictions.length
 				? leaderboard.findIndex(([, p]) => entry[1] === p)
-				: leaderboard.length - 1);
+				: leaderboard.length);
 	return leaderboard;
 };
