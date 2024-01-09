@@ -93,7 +93,12 @@ const server: ExportedHandler<Env> = {
 					default:
 						break;
 				}
-				return new JsonResponse(result);
+				return result
+					? new JsonResponse(result)
+					: new JsonResponse(
+							{ error: "Internal Server Error" },
+							{ status: 500 },
+						);
 			}
 			if (request.method === "GET") return new Response("Ready!");
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
