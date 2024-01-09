@@ -3,9 +3,9 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { createCommand, loadMatchDay, normalizeError } from "../util";
+import { Command, loadMatchDay, normalizeError } from "../util";
 
-export const getMatchDay = createCommand({
+export const getMatchDay = new Command({
 	data: [
 		{
 			name: "get-match-day",
@@ -17,9 +17,10 @@ export const getMatchDay = createCommand({
 	async run(_interaction, { reply, env }) {
 		let [queries, promise]:
 			| Awaited<ReturnType<typeof loadMatchDay>>
-			| [false, unknown] = await loadMatchDay(this.api, env).catch(
-			(err: unknown) => [false, err],
-		);
+			| [false, unknown] = await loadMatchDay(env).catch((err: unknown) => [
+			false,
+			err,
+		]);
 
 		if (queries)
 			await Promise.all([env.DB.batch(queries), promise]).catch((err) => {

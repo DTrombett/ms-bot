@@ -6,9 +6,9 @@ import {
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
-import { createCommand } from "../util";
+import { Command, rest } from "../util";
 
-export const ping = createCommand({
+export const ping = new Command({
 	data: [
 		{
 			name: "ping",
@@ -20,12 +20,12 @@ export const ping = createCommand({
 		const now = Date.now();
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		const { id, edited_timestamp } = (await this.api.get(
+		const { id, edited_timestamp } = (await rest.get(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 		)) as APIMessage;
 		const timestamp = DiscordSnowflake.timestampFrom(interaction.id);
 
-		await this.api.patch(
+		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
 				body: {

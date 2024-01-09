@@ -15,15 +15,16 @@ import {
 	TextInputStyle,
 } from "discord-api-types/v10";
 import {
+	Command,
 	Match,
 	MatchDay,
 	Prediction,
 	capitalize,
 	closeMatchDay,
-	createCommand,
 	getLiveEmbed,
 	prepareMatchDayData,
 	resolveLeaderboard,
+	rest,
 	startPredictions,
 } from "../util";
 
@@ -82,7 +83,7 @@ const buildModal = (
 			}),
 		);
 
-export const predictions = createCommand({
+export const predictions = new Command({
 	data: [
 		{
 			name: "predictions",
@@ -282,12 +283,12 @@ ORDER BY matchDate`,
 								name: user.global_name ?? user.username,
 								icon_url:
 									user.avatar == null
-										? this.api.cdn.defaultAvatar(
+										? rest.cdn.defaultAvatar(
 												user.discriminator === "0"
 													? Number(BigInt(user.id) >> 22n) % 6
 													: Number(user.discriminator) % 5,
 											)
-										: this.api.cdn.avatar(user.id, user.avatar, {
+										: rest.cdn.avatar(user.id, user.avatar, {
 												size: 4096,
 												extension: "png",
 											}),
@@ -572,7 +573,6 @@ VALUES (?)`,
 				return;
 			}
 			await startPredictions(
-				this.api,
 				env,
 				interaction,
 				parseInt(day!),
@@ -639,8 +639,7 @@ VALUES (?)`,
 							],
 				},
 			});
-			if (finished)
-				await closeMatchDay(this.api, env, leaderboard, parseInt(day!));
+			if (finished) await closeMatchDay(env, leaderboard, parseInt(day!));
 			return;
 		}
 		if (Date.now() >= time) {

@@ -10,7 +10,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { createCommand } from "../util";
+import { Command } from "../util";
 
 const queloAnswers: [phrase: string, url?: string][] = [
 	["La seconda che hai detto!"],
@@ -211,7 +211,7 @@ const askQuelo = ({
 	};
 };
 
-export const quelo = createCommand({
+export const quelo = new Command({
 	data: [
 		{
 			name: "quelo",

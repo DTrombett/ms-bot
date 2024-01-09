@@ -1,5 +1,4 @@
 import { escapeMarkdown } from "@discordjs/formatters";
-import { REST } from "@discordjs/rest";
 import {
 	APIApplicationCommandInteractionDataOption,
 	APIApplicationCommandInteractionDataStringOption,
@@ -17,7 +16,7 @@ import {
 	Routes,
 	Snowflake,
 } from "discord-api-types/v10";
-import { Emojis, createCommand, normalizeError } from "../util";
+import { Command, Emojis, normalizeError, rest } from "../util";
 
 const checkPerms = (
 	executor: APIInteractionGuildMember,
@@ -60,13 +59,12 @@ const checkPerms = (
 	return undefined;
 };
 const executeKick = async (
-	api: REST,
 	guildId: Snowflake,
 	user: APIUser,
 	reason?: string,
 ): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
 	reason = reason?.trim();
-	const result = await api
+	const result = await rest
 		.delete(Routes.guildMember(guildId, user.id), { reason })
 		.then(() => {})
 		.catch(normalizeError);
@@ -91,7 +89,7 @@ const executeKick = async (
 	};
 };
 
-export const kick = createCommand({
+export const kick = new Command({
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,
@@ -155,7 +153,7 @@ export const kick = createCommand({
 			});
 			return;
 		}
-		const guild = (await this.api.get(
+		const guild = (await rest.get(
 			Routes.guild(interaction.guild_id),
 		)) as APIGuild;
 		const content = checkPerms(interaction.member, guild, user.id, member);
@@ -174,11 +172,10 @@ export const kick = createCommand({
 		)?.value;
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		await this.api.patch(
+		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
 				body: await executeKick(
-					this.api,
 					interaction.guild_id,
 					user,
 					reason ?? undefined,

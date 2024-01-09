@@ -8,9 +8,9 @@ import {
 	MessageFlags,
 	Routes,
 } from "discord-api-types/v10";
-import { createCommand } from "../util";
+import { Command, rest } from "../util";
 
-export const icon = createCommand({
+export const icon = new Command({
 	data: [
 		{
 			name: "icon",
@@ -30,7 +30,7 @@ export const icon = createCommand({
 			});
 			return;
 		}
-		const guild = (await this.api.get(
+		const guild = (await rest.get(
 			Routes.guild(interaction.guild_id),
 		)) as APIGuild;
 
@@ -44,7 +44,7 @@ export const icon = createCommand({
 			});
 			return;
 		}
-		const url = this.api.cdn.icon(interaction.guild_id, guild.icon, {
+		const url = rest.cdn.icon(interaction.guild_id, guild.icon, {
 			size: 4096,
 			extension: "png",
 		});

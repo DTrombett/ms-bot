@@ -8,7 +8,7 @@ import {
 	Routes,
 } from "discord-api-types/v10";
 import type { DogResponse } from "../util";
-import { createCommand } from "../util";
+import { Command, rest } from "../util";
 
 const getDog = async (
 	key: string,
@@ -49,7 +49,7 @@ const getDog = async (
 	};
 };
 
-export const dog = createCommand({
+export const dog = new Command({
 	data: [
 		{
 			name: "dog",
@@ -59,7 +59,7 @@ export const dog = createCommand({
 	],
 	async run(interaction, { reply, env }) {
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		await this.api.patch(
+		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{ body: await getDog(env.DOG_API_KEY) },
 		);
@@ -69,7 +69,7 @@ export const dog = createCommand({
 			type: InteractionResponseType.DeferredChannelMessageWithSource,
 			data: { flags: MessageFlags.Ephemeral },
 		});
-		await this.api.patch(
+		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{ body: await getDog(env.DOG_API_KEY) },
 		);

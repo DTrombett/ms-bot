@@ -1,5 +1,4 @@
 import { escapeMarkdown } from "@discordjs/formatters";
-import { REST } from "@discordjs/rest";
 import {
 	APIApplicationCommandInteractionDataNumberOption,
 	APIApplicationCommandInteractionDataOption,
@@ -25,7 +24,7 @@ import {
 	Snowflake,
 	TextInputStyle,
 } from "discord-api-types/v10";
-import { Emojis, createCommand, normalizeError } from "../util";
+import { Command, Emojis, normalizeError, rest } from "../util";
 
 const checkPerms = (
 	executor: APIInteractionGuildMember,
@@ -68,14 +67,13 @@ const checkPerms = (
 	return undefined;
 };
 const executeBan = async (
-	api: REST,
 	guildId: Snowflake,
 	user: APIUser,
 	deleteMessageSeconds?: number,
 	reason?: string,
 ): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
 	reason = reason?.trim();
-	const result = await api
+	const result = await rest
 		.put(Routes.guildBan(guildId, user.id), {
 			reason,
 			body: {
@@ -118,13 +116,12 @@ const executeBan = async (
 	};
 };
 const unban = async (
-	api: REST,
 	guildId: Snowflake,
 	user: APIUser,
 	reason?: string,
 ): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
 	reason = reason?.trim();
-	const result = await api
+	const result = await rest
 		.delete(Routes.guildBan(guildId, user.id), { reason })
 		.then(() => {})
 		.catch(normalizeError);
@@ -165,7 +162,7 @@ const unban = async (
 	};
 };
 
-export const bann = createCommand({
+export const bann = new Command({
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,
@@ -267,7 +264,7 @@ export const bann = createCommand({
 		const user = interaction.data.resolved!.users![userId]!;
 
 		if (subcommand!.name === "check") {
-			const bannData = (await this.api
+			const bannData = (await rest
 				.get(Routes.guildBan(interaction.guild_id, userId))
 				.catch(() => undefined)) as APIBan | undefined;
 
@@ -327,7 +324,7 @@ export const bann = createCommand({
 			return;
 		}
 		const member = interaction.data.resolved!.members?.[userId];
-		const guild = (await this.api.get(
+		const guild = (await rest.get(
 			Routes.guild(interaction.guild_id),
 		)) as APIGuild;
 		const content = checkPerms(interaction.member, guild, user.id, member);
@@ -352,11 +349,10 @@ export const bann = createCommand({
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
 		if (subcommand!.name === "add") {
-			await this.api.patch(
+			await rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: (await executeBan(
-						this.api,
 						interaction.guild_id,
 						user,
 						deleteMessageDays && deleteMessageDays * 60 * 60 * 24,
@@ -367,11 +363,10 @@ export const bann = createCommand({
 			return;
 		}
 		if (subcommand!.name === "remove")
-			await this.api.patch(
+			await rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: (await unban(
-						this.api,
 						interaction.guild_id,
 						user,
 						reason ?? undefined,
@@ -402,9 +397,9 @@ export const bann = createCommand({
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
 		const [guild, target, targetMember] = (await Promise.allSettled([
-			this.api.get(Routes.guild(interaction.guild_id)),
-			this.api.get(Routes.user(id)),
-			this.api.get(Routes.guildMember(interaction.guild_id, id)),
+			rest.get(Routes.guild(interaction.guild_id)),
+			rest.get(Routes.user(id)),
+			rest.get(Routes.guildMember(interaction.guild_id, id)),
 		]).then((results) =>
 			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
 		)) as [
@@ -415,7 +410,7 @@ export const bann = createCommand({
 
 		if (!guild) throw new TypeError("Guild not found", { cause: interaction });
 		if (!target) {
-			await this.api.patch(
+			await rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -433,7 +428,7 @@ export const bann = createCommand({
 		);
 
 		if (content) {
-			await this.api.patch(
+			await rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -443,11 +438,10 @@ export const bann = createCommand({
 			);
 			return;
 		}
-		await this.api.patch(
+		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
 				body: (await executeBan(
-					this.api,
 					interaction.guild_id,
 					target,
 					deleteMessageDays * 60 * 60 * 24,
@@ -462,7 +456,7 @@ export const bann = createCommand({
 		if (!interaction.guild_id || !interaction.member)
 			throw new TypeError("Invalid interaction", { cause: interaction });
 		const [, id, action] = interaction.data.custom_id.split("-");
-		const target = (await this.api.get(Routes.user(id))) as APIUser | undefined;
+		const target = (await rest.get(Routes.user(id))) as APIUser | undefined;
 
 		if (!target) {
 			reply({
@@ -515,8 +509,8 @@ export const bann = createCommand({
 		}
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
 		const [guild, targetMember] = (await Promise.allSettled([
-			this.api.get(Routes.guild(interaction.guild_id)),
-			this.api.get(Routes.guildMember(interaction.guild_id, id)),
+			rest.get(Routes.guild(interaction.guild_id)),
+			rest.get(Routes.guildMember(interaction.guild_id, id)),
 		]).then((results) =>
 			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
 		)) as [APIGuild | undefined, APIGuildMember | undefined];
@@ -530,7 +524,7 @@ export const bann = createCommand({
 		);
 
 		if (content) {
-			await this.api.patch(
+			await rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -541,11 +535,10 @@ export const bann = createCommand({
 			return;
 		}
 		if (action === "r")
-			await this.api.patch(
+			await rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: (await unban(
-						this.api,
 						interaction.guild_id,
 						target,
 					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,

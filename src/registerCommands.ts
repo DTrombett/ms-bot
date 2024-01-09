@@ -7,7 +7,7 @@ import {
 import { config } from "dotenv";
 import { env, exit } from "node:process";
 import * as commandsObject from "./commands";
-import { CommandOptions, EnvVars } from "./util";
+import { EnvVars } from "./util";
 
 const label = "Register slash commands";
 
@@ -21,7 +21,7 @@ const {
 	NODE_ENV: nodeEnv,
 } = env as EnvVars;
 const rest = new REST({ version: APIVersion }).setToken(token);
-const commands = Object.values(commandsObject) as CommandOptions[];
+const commands = Object.values(commandsObject);
 const [privateAPICommands, publicAPICommands] = await Promise.all([
 	rest.put(Routes.applicationGuildCommands(applicationId, guildId), {
 		body: commands
@@ -30,9 +30,7 @@ const [privateAPICommands, publicAPICommands] = await Promise.all([
 	}) as Promise<APIApplicationCommand[]>,
 	nodeEnv === "production"
 		? (rest.put(Routes.applicationCommands(applicationId), {
-				body: commands
-					.filter((c) => c.isPrivate !== true)
-					.flatMap((file) => file.data),
+				body: commands.filter((c) => !c.isPrivate).flatMap((file) => file.data),
 			}) as Promise<APIApplicationCommand[]>)
 		: [],
 ]);

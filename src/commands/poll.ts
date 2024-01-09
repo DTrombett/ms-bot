@@ -7,9 +7,9 @@ import {
 	MessageFlags,
 	Routes,
 } from "discord-api-types/v10";
-import { createCommand } from "../util";
+import { Command, rest } from "../util";
 
-export const poll = createCommand({
+export const poll = new Command({
 	data: [
 		{
 			name: "poll",
@@ -58,12 +58,12 @@ export const poll = createCommand({
 							name: user.username,
 							icon_url:
 								user.avatar == null
-									? this.api.cdn.defaultAvatar(
+									? rest.cdn.defaultAvatar(
 											user.discriminator === "0"
 												? Number(BigInt(user.id) >> 22n) % 6
 												: Number(user.discriminator) % 5,
 										)
-									: this.api.cdn.avatar(user.id, user.avatar, {
+									: rest.cdn.avatar(user.id, user.avatar, {
 											size: 4096,
 											extension: "png",
 										}),
@@ -75,19 +75,19 @@ export const poll = createCommand({
 				],
 			},
 		});
-		const original = (await this.api.get(
+		const original = (await rest.get(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 		)) as APIMessage;
 
 		await Promise.all([
-			this.api.put(
+			rest.put(
 				Routes.channelMessageOwnReaction(
 					original.channel_id,
 					original.id,
 					"✅",
 				),
 			),
-			this.api.put(
+			rest.put(
 				Routes.channelMessageOwnReaction(
 					original.channel_id,
 					original.id,

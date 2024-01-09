@@ -75,7 +75,7 @@ export type CommandOptions<
 	 * @param interaction - The interaction received
 	 */
 	autocomplete?(
-		this: Command,
+		this: Command<T>,
 		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
 		context: ExecutorContext<APIApplicationCommandAutocompleteResponse>,
 	): Awaitable<void>;
@@ -86,7 +86,7 @@ export type CommandOptions<
 	 * @param interaction - The interaction received
 	 */
 	component?(
-		this: Command,
+		this: Command<T>,
 		interaction: InteractionByType<InteractionType.MessageComponent>,
 		context: ExecutorContext<
 			| APIInteractionResponseChannelMessageWithSource
@@ -103,7 +103,7 @@ export type CommandOptions<
 	 * @param interaction - The interaction received
 	 */
 	modalSubmit?(
-		this: Command,
+		this: Command<T>,
 		interaction: InteractionByType<InteractionType.ModalSubmit>,
 		context: ExecutorContext<
 			| APIInteractionResponseChannelMessageWithSource
@@ -118,7 +118,7 @@ export type CommandOptions<
 	 * @param interaction - The interaction received
 	 */
 	run(
-		this: Command,
+		this: Command<T>,
 		interaction: CommandInteractionByType<T>,
 		context: ExecutorContext<
 			| APIInteractionResponseChannelMessageWithSource

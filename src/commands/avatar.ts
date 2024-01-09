@@ -8,9 +8,9 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { createCommand } from "../util";
+import { Command, rest } from "../util";
 
-export const avatar = createCommand({
+export const avatar = new Command({
 	data: [
 		{
 			name: "avatar",
@@ -49,16 +49,16 @@ export const avatar = createCommand({
 		const url =
 			member?.avatar == null
 				? user.avatar == null
-					? this.api.cdn.defaultAvatar(
+					? rest.cdn.defaultAvatar(
 							user.discriminator === "0"
 								? Number(BigInt(user.id) >> 22n) % 6
 								: Number(user.discriminator) % 5,
 						)
-					: this.api.cdn.avatar(user.id, user.avatar, {
+					: rest.cdn.avatar(user.id, user.avatar, {
 							size: 4096,
 							extension: "png",
 						})
-				: this.api.cdn.guildMemberAvatar(
+				: rest.cdn.guildMemberAvatar(
 						interaction.guild_id!,
 						user.id,
 						member.avatar,

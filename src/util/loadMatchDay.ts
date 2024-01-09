@@ -1,15 +1,13 @@
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { REST } from "@discordjs/rest";
 import {
 	ButtonStyle,
 	RESTPostAPIChannelMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
-import { loadMatches, normalizeTeamName } from ".";
+import { loadMatches, normalizeTeamName, rest } from ".";
 import { Env, MatchDay } from "./types";
 
 export const loadMatchDay = async (
-	api: REST,
 	env: Env,
 ): Promise<[D1PreparedStatement[], Promise<any> | false]> => {
 	const matchDays = (await fetch(
@@ -74,7 +72,7 @@ export const loadMatchDay = async (
 			),
 		],
 		date - Date.now() / 1_000 > 1 &&
-			api.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
+			rest.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
 				body: {
 					content: `<@&${env.PREDICTIONS_ROLE}>, potete inviare i pronostici per la prossima giornata!\nPer farlo potete inviare il comando \`/predictions send\` e seguire le istruzioni o premere il pulsante qui in basso. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)!`,
 					components: [

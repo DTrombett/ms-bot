@@ -8,7 +8,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { createCommand, randomNumber } from "../util";
+import { Command, randomNumber } from "../util";
 
 const roll = (
 	count = 1,
@@ -52,7 +52,7 @@ const roll = (
 	};
 };
 
-export const dice = createCommand({
+export const dice = new Command({
 	data: [
 		{
 			name: "dice",

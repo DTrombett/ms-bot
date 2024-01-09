@@ -1,5 +1,4 @@
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { REST } from "@discordjs/rest";
 import {
 	APIInteractionResponseChannelMessageWithSource,
 	APIInteractionResponseDeferredChannelMessageWithSource,
@@ -20,10 +19,10 @@ import {
 	normalizeTeamName,
 	prepareMatchDayData,
 	resolveLeaderboard,
+	rest,
 } from ".";
 
 export const startPredictions = async (
-	api: REST,
 	env: Env,
 	interaction: APIMessageComponentInteraction,
 	day: number,
@@ -46,16 +45,16 @@ export const startPredictions = async (
 	const finished = matches.data.every((match) => match.match_status === 2);
 	const leaderboard = resolveLeaderboard(users, matches);
 
-	if (finished) promises.push(closeMatchDay(api, env, leaderboard, day));
+	if (finished) promises.push(closeMatchDay(env, leaderboard, day));
 	for (let i = 0; i < users.length; i += 5) {
 		const chunk = users.slice(i, i + 5);
 
 		promises.push(
 			Promise.all(
 				chunk.map(async (data) => {
-					const user = (await api.get(Routes.user(data.id)).catch(() => {})) as
-						| APIUser
-						| undefined;
+					const user = (await rest
+						.get(Routes.user(data.id))
+						.catch(() => {})) as APIUser | undefined;
 
 					return {
 						author: {
@@ -63,12 +62,12 @@ export const startPredictions = async (
 							icon_url:
 								user &&
 								(user.avatar == null
-									? api.cdn.defaultAvatar(
+									? rest.cdn.defaultAvatar(
 											user.discriminator === "0"
 												? Number(BigInt(user.id) >> 22n) % 6
 												: Number(user.discriminator) % 5,
 										)
-									: api.cdn.avatar(user.id, user.avatar, {
+									: rest.cdn.avatar(user.id, user.avatar, {
 											size: 4096,
 											extension: "png",
 										})),
@@ -90,7 +89,7 @@ export const startPredictions = async (
 					};
 				}),
 			).then((embeds) =>
-				api.post(followupRoute, {
+				rest.post(followupRoute, {
 					body: { embeds } satisfies RESTPostAPIWebhookWithTokenJSONBody,
 				}),
 			),
@@ -104,7 +103,7 @@ export const startPredictions = async (
 		},
 	});
 	await Promise.all(promises);
-	await api.post(followupRoute, {
+	await rest.post(followupRoute, {
 		body: {
 			embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
 			components: finished

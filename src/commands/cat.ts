@@ -8,7 +8,7 @@ import {
 	Routes,
 } from "discord-api-types/v10";
 import type { CatResponse } from "../util";
-import { createCommand } from "../util";
+import { Command, rest } from "../util";
 
 const getCat = async (
 	key: string,
@@ -49,7 +49,7 @@ const getCat = async (
 	};
 };
 
-export const cat = createCommand({
+export const cat = new Command({
 	data: [
 		{
 			name: "cat",
@@ -59,7 +59,7 @@ export const cat = createCommand({
 	],
 	async run(interaction, { reply, env }) {
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		await this.api.patch(
+		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{ body: await getCat(env.CAT_API_KEY) },
 		);
@@ -69,7 +69,7 @@ export const cat = createCommand({
 			type: InteractionResponseType.DeferredChannelMessageWithSource,
 			data: { flags: MessageFlags.Ephemeral },
 		});
-		await this.api.patch(
+		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{ body: await getCat(env.CAT_API_KEY) },
 		);

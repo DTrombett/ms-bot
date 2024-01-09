@@ -1,6 +1,4 @@
-import { REST } from "@discordjs/rest";
 import {
-	APIVersion,
 	InteractionResponseType,
 	InteractionType,
 } from "discord-api-types/v10";
@@ -11,22 +9,13 @@ import {
 	JsonResponse,
 	errorToResponse,
 	info,
+	rest,
 	verifyDiscordRequest,
 } from "./util";
 
-const rest = new REST({
-	version: APIVersion,
-	hashSweepInterval: 0,
-	handlerSweepInterval: 0,
-});
-const commands = new Map(
-	Object.entries(commandsObject).map(([key, command]) => [
-		key,
-		new Command(rest, command),
-	]),
-);
+const commands: Record<string, Command> = commandsObject;
 const applicationCommands = new Map(
-	[...commands].flatMap(([, cmd]) => cmd.data.map((d) => [d.name, cmd])),
+	Object.values(commands).flatMap((cmd) => cmd.data.map((d) => [d.name, cmd])),
 );
 
 const server: ExportedHandler<Env> = {
@@ -41,7 +30,7 @@ const server: ExportedHandler<Env> = {
 				);
 
 				if (interaction instanceof Response) return interaction;
-				let action: string | undefined, command: Command | undefined, result;
+				let action: string | undefined, result;
 
 				switch (interaction.type) {
 					case InteractionType.Ping:
@@ -51,8 +40,9 @@ const server: ExportedHandler<Env> = {
 						info("Received ping interaction!");
 						break;
 					case InteractionType.ApplicationCommand:
-						command = applicationCommands.get(interaction.data.name);
-						result = await command?.run(interaction, env, context);
+						result = await applicationCommands
+							.get(interaction.data.name)
+							?.run(interaction, env, context);
 						info(
 							`Command ${interaction.data.name} executed by ${(
 								interaction.member ?? interaction
@@ -64,8 +54,11 @@ const server: ExportedHandler<Env> = {
 					case InteractionType.MessageComponent:
 						[action] = interaction.data.custom_id.split("-");
 						if (!action) break;
-						command = commands.get(action);
-						result = await command?.component(interaction, env, context);
+						result = await commands[action]?.component(
+							interaction,
+							env,
+							context,
+						);
 						info(
 							`Component interaction ${action} executed by ${(
 								interaction.member ?? interaction
@@ -75,14 +68,20 @@ const server: ExportedHandler<Env> = {
 						);
 						break;
 					case InteractionType.ApplicationCommandAutocomplete:
-						command = commands.get(interaction.data.name);
-						result = await command?.autocomplete(interaction, env, context);
+						result = await commands[interaction.data.name]?.autocomplete(
+							interaction,
+							env,
+							context,
+						);
 						break;
 					case InteractionType.ModalSubmit:
 						[action] = interaction.data.custom_id.split("-");
 						if (!action) break;
-						command = commands.get(action);
-						result = await command?.modalSubmit(interaction, env, context);
+						result = await commands[action]?.modalSubmit(
+							interaction,
+							env,
+							context,
+						);
 						info(
 							`Modal interaction ${action} executed by ${(
 								interaction.member ?? interaction

@@ -1,11 +1,12 @@
-import { REST } from "@discordjs/rest";
 import {
 	APIInteraction,
 	APIInteractionResponse,
+	ApplicationCommandType,
 	InteractionType,
 	RESTPutAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
+	CommandInteractionByType,
 	error,
 	type Awaitable,
 	type CommandOptions,
@@ -17,16 +18,11 @@ import {
 /**
  * A class representing a Discord slash command
  */
-export class Command {
-	/**
-	 * The rest for discord requests
-	 */
-	readonly api: REST;
-
+export class Command<T extends ApplicationCommandType = any> {
 	/**
 	 * The Discord data for this command
 	 */
-	data!: RESTPutAPIApplicationCommandsJSONBody;
+	data: RESTPutAPIApplicationCommandsJSONBody;
 
 	/**
 	 * Whether this command is private
@@ -36,29 +32,36 @@ export class Command {
 	/**
 	 * The function to handle the autocomplete of this command
 	 */
-	private _autocomplete: OmitThisParameter<CommandOptions["autocomplete"]>;
+	private _autocomplete: OmitThisParameter<CommandOptions<T>["autocomplete"]>;
 
 	/**
 	 * The function to handle a message component received
 	 */
-	private _component: OmitThisParameter<CommandOptions["component"]>;
+	private _component: OmitThisParameter<CommandOptions<T>["component"]>;
 
 	/**
 	 * The function to handle a submitted modal
 	 */
-	private _modalSubmit: OmitThisParameter<CommandOptions["modalSubmit"]>;
+	private _modalSubmit: OmitThisParameter<CommandOptions<T>["modalSubmit"]>;
 
 	/**
 	 * The function provided to handle the command received
 	 */
-	private _execute!: OmitThisParameter<CommandOptions["run"]>;
+	private _execute: OmitThisParameter<CommandOptions<T>["run"]>;
 
 	/**
 	 * @param options - Options for this command
 	 */
-	constructor(api: REST, options: CommandOptions<any>) {
-		this.api = api;
-		this.patch(options);
+	constructor(options: CommandOptions<T>) {
+		this.data = options.data;
+		this._execute = options.run.bind(this);
+		if (options.autocomplete !== undefined)
+			this._autocomplete = options.autocomplete.bind(this);
+		if (options.component !== undefined)
+			this._component = options.component.bind(this);
+		if (options.modalSubmit !== undefined)
+			this._modalSubmit = options.modalSubmit.bind(this);
+		if (options.isPrivate !== undefined) this.isPrivate = options.isPrivate;
 	}
 
 	/**
@@ -116,28 +119,11 @@ export class Command {
 	}
 
 	/**
-	 * Patch this command.
-	 * @param options - Options for this command
-	 */
-	patch(options: Partial<CommandOptions>) {
-		if (options.data !== undefined) this.data = options.data;
-		if (options.autocomplete !== undefined)
-			this._autocomplete = options.autocomplete.bind(this);
-		if (options.component !== undefined)
-			this._component = options.component.bind(this);
-		if (options.modalSubmit !== undefined)
-			this._modalSubmit = options.modalSubmit.bind(this);
-		if (options.isPrivate !== undefined) this.isPrivate = options.isPrivate;
-		if (options.run !== undefined) this._execute = options.run.bind(this);
-		return this;
-	}
-
-	/**
 	 * Run this command.
 	 * @param interaction - The interaction received
 	 */
 	async run(
-		interaction: InteractionByType<InteractionType.ApplicationCommand>,
+		interaction: CommandInteractionByType<T>,
 		env: Env,
 		context: ExecutionContext,
 	) {

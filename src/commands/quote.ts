@@ -5,7 +5,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { createCommand } from "../util";
+import { Command } from "../util";
 
 const messages: [id: string, quote: string][] = [
 	[
@@ -100,7 +100,7 @@ const formatQuote = ([id, content]: (typeof messages)[number]): {
 	};
 };
 
-export const quote = createCommand({
+export const quote = new Command({
 	data: [
 		{
 			name: "quote",

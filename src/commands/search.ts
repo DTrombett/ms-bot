@@ -8,9 +8,9 @@ import {
 	ComponentType,
 	InteractionResponseType,
 } from "discord-api-types/v10";
-import { createCommand } from "../util";
+import { Command } from "../util";
 
-export const search = createCommand({
+export const search = new Command({
 	data: [
 		{
 			name: "search",

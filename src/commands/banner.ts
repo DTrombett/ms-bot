@@ -10,9 +10,9 @@ import {
 	MessageFlags,
 	Routes,
 } from "discord-api-types/v10";
-import { createCommand } from "../util";
+import { Command, rest } from "../util";
 
-export const banner = createCommand({
+export const banner = new Command({
 	data: [
 		{
 			name: "banner",
@@ -46,7 +46,7 @@ export const banner = createCommand({
 		}
 		const bannerHash =
 			user.banner === undefined
-				? ((await this.api.get(Routes.user(user.id))) as APIUser).banner
+				? ((await rest.get(Routes.user(user.id))) as APIUser).banner
 				: user.banner;
 
 		if (bannerHash == null) {
@@ -59,7 +59,7 @@ export const banner = createCommand({
 			});
 			return;
 		}
-		const url = this.api.cdn.banner(user.id, bannerHash, {
+		const url = rest.cdn.banner(user.id, bannerHash, {
 			size: 4096,
 			extension: "png",
 		});
