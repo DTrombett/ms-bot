@@ -482,7 +482,7 @@ ORDER BY matchDate`,
 VALUES (?)`,
 				).bind(userId),
 				env.DB.prepare(
-					`INSERT INTO Predictions (matchId, userId, prediction) VALUES ${"\n(?, ?, ?),".repeat(
+					`INSERT OR REPLACE INTO Predictions (matchId, userId, prediction) VALUES ${"\n(?, ?, ?),".repeat(
 						newPredictions.length,
 					)}`.slice(0, -1),
 				).bind(
