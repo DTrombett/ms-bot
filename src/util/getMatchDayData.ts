@@ -27,9 +27,10 @@ WHERE Users.id = ?`,
 		D1Result<Pick<Prediction, "matchId" | "prediction">>,
 	];
 
-	if (!matchDay?.categoryId) return [];
+	if (!matchDay) return [];
 	const { data: matches } = await loadMatches(matchDay.categoryId);
 
+	if (!matches.length) return [];
 	matches.sort((a, b) =>
 		new Date(a.date_time) > new Date(b.date_time) ? 1 : -1,
 	);
