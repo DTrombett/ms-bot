@@ -4,11 +4,12 @@ import {
 	RESTPostAPIChannelMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
-import { loadMatches, normalizeTeamName, rest } from ".";
+import { loadMatches, rest } from ".";
 import { Env, MatchDay } from "./types";
 
 export const loadMatchDay = async (
 	env: Env,
+	last = 0,
 ): Promise<[D1PreparedStatement[], Promise<any> | false]> => {
 	const matchDays = (await fetch(
 		"https://www.legaseriea.it/api/season/157617/championship/A/matchday",
@@ -28,7 +29,9 @@ export const loadMatchDay = async (
 			cause: matchDays.errors,
 		});
 	const matchDayData = matchDays.data.find(
-		(d) => d.category_status === "LIVE" || d.category_status === "TO BE PLAYED",
+		(d) =>
+			d.id_category > last &&
+			(d.category_status === "LIVE" || d.category_status === "TO BE PLAYED"),
 	);
 
 	if (!matchDayData) throw new TypeError("No match to be played!");
@@ -56,20 +59,6 @@ export const loadMatchDay = async (
 			env.DB.prepare(
 				"INSERT INTO MatchDays (day, categoryId, startDate) VALUES (?1, ?2, ?3)",
 			).bind(matchDay.day, matchDay.categoryId, matchDay.startDate),
-			env.DB.prepare(
-				`INSERT INTO Matches (id, day, matchDate, teams) VALUES ${"\n(?, ?, ?, ?),".repeat(
-					matches.data.length,
-				)}`.slice(0, -1),
-			).bind(
-				...matches.data.flatMap((m) => [
-					m.match_id,
-					matchDay.day,
-					m.date_time,
-					[m.home_team_name, m.away_team_name]
-						.map(normalizeTeamName)
-						.join(" - "),
-				]),
-			),
 		],
 		date - Date.now() / 1_000 > 1 &&
 			rest.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {

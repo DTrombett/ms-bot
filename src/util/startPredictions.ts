@@ -10,8 +10,8 @@ import {
 	Env,
 	closeMatchDay,
 	getLiveEmbed,
+	getPredictionsData,
 	normalizeTeamName,
-	prepareMatchDayData,
 	resolveLeaderboard,
 	rest,
 } from ".";
@@ -22,7 +22,7 @@ export const startPredictions = async (
 	day: number,
 	categoryId: number,
 ) => {
-	const [users, matches] = await prepareMatchDayData(env, categoryId);
+	const [users, matches] = await getPredictionsData(env, categoryId);
 	const promises: Promise<any>[] = [];
 	const followupRoute = Routes.webhook(
 		interaction.application_id,

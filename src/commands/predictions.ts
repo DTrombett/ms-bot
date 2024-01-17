@@ -16,13 +16,14 @@ import {
 } from "discord-api-types/v10";
 import {
 	Command,
-	Match,
 	MatchDay,
+	MatchesData,
 	Prediction,
-	capitalize,
 	closeMatchDay,
 	getLiveEmbed,
-	prepareMatchDayData,
+	getMatchDayData,
+	getPredictionsData,
+	normalizeTeamName,
 	resolveLeaderboard,
 	rest,
 	startPredictions,
@@ -45,24 +46,29 @@ const predictionExamples = [
 const predictionRegex =
 	/^(1|x|2|1x|12|x2|((?<prediction>1|2|x)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
 const buildModal = (
-	matches: (Match & MatchDay)[],
+	matches: Extract<MatchesData, { success: true }>["data"],
+	matchDay: MatchDay,
 	part: number,
-	predictions?: Prediction[],
+	predictions?: Pick<Prediction, "matchId" | "prediction">[],
 ) =>
 	new ModalBuilder()
 		.setCustomId(
-			`predictions-${matches[0]!.day}-${part}-${
-				new Date(matches[0]!.startDate).getTime() - 1_000 * 60 * 15
+			`predictions-${matchDay.day}-${part}-${
+				new Date(matchDay.startDate).getTime() - 1_000 * 60 * 15
 			}`,
 		)
 		.setTitle(
-			`Pronostici ${matches[0]!.day}ª Giornata (${part}/${matches.length / 5})`,
+			`Pronostici ${matchDay.day}ª Giornata (${part}/${matches.length / 5})`,
 		)
 		.addComponents(
-			matches.slice((part - 1) * 5, part * 5).map((match) => {
+			matches.slice((part - 1) * 5, part * 5).map((m) => {
 				const textInput = new TextInputBuilder()
-					.setCustomId(match.id.toString())
-					.setLabel(match.teams)
+					.setCustomId(m.match_id.toString())
+					.setLabel(
+						[m.home_team_name, m.away_team_name]
+							.map(normalizeTeamName)
+							.join(" - "),
+					)
 					.setStyle(TextInputStyle.Short)
 					.setRequired(true)
 					.setPlaceholder(
@@ -73,7 +79,7 @@ const buildModal = (
 						}`,
 					);
 				const found = predictions?.find(
-					(prediction) => prediction.matchId === match.id,
+					(prediction) => prediction.matchId === m.match_id,
 				);
 
 				if (found) textInput.setValue(found.prediction);
@@ -137,113 +143,37 @@ export const predictions = new Command({
 			(o): o is APIApplicationCommandInteractionDataSubcommandOption =>
 				o.type === ApplicationCommandOptionType.Subcommand,
 		)!;
-		const options: Record<string, boolean | number | string> = {};
-
-		if (subCommand.options)
-			for (const option of subCommand.options)
-				options[option.name] = option.value;
-		const userId = options.user as string | undefined;
-		const [{ results: matches }, { results: existingPredictions }] =
-			(await env.DB.batch([
-				env.DB.prepare(
-					`SELECT *
-FROM Matches
-	JOIN MatchDays ON Matches.day = MatchDays.day
-WHERE Matches.day = (
-		SELECT MAX(day)
-		FROM MatchDays
-	)
-ORDER BY matchDate`,
-				),
-				env.DB.prepare(
-					`SELECT Predictions.*
-				FROM Predictions
-				JOIN Users ON Predictions.userId = Users.id
-				WHERE Users.id = ?`,
-				).bind(userId ?? (interaction.member ?? interaction).user!.id),
-			])) as [D1Result<Match & MatchDay>, D1Result<Prediction>];
 
 		if (subCommand.name === "reminder") {
-			// 	const before = ms(interaction.options.getString("before", true));
-			// 	const user =
-			// 		(await User.findById(interaction.user.id)) ??
-			// 		new User({ _id: interaction.user.id });
-			// 	const existing = Object.values(timeoutCache).find(
-			// 		(t) =>
-			// 			t?.action === "predictionRemind" &&
-			// 			t.options[0] === interaction.user.id,
-			// 	);
-
-			// 	if (before === 0) {
-			// 		if (user.predictionReminder == null) {
-			// 			await interaction.reply({
-			// 				ephemeral: true,
-			// 				content: "Non hai impostato alcun promemoria!",
-			// 			});
-			// 			return;
-			// 		}
-			// 		user.predictionReminder = undefined;
-			// 		await Promise.all([
-			// 			user.save(),
-			// 			existing && removePermanentTimeout(existing.id),
-			// 		]);
-			// 		await interaction.reply({
-			// 			ephemeral: true,
-			// 			content: "Promemoria rimosso con successo!",
-			// 		});
-			// 		return;
-			// 	}
-			// 	if (Number.isNaN(before) || before < 1_000 || before > 604_800_000) {
-			// 		await interaction.reply({
-			// 			ephemeral: true,
-			// 			content:
-			// 				"Durata non valida! Imposta il promemoria almeno a un secondo e al massimo una settimana dall'inizio della giornata.",
-			// 		});
-			// 		return;
-			// 	}
-			// 	user.predictionReminder = before;
-			// 	const promises: unknown[] = [
-			// 		user.save(),
-			// 		existing && removePermanentTimeout(existing.id),
-			// 	];
-
-			// 	if (matchDay?.predictionsSent === false) {
-			// 		const date = matchDay.matches[0].date - 1000 * 60 * 15 - before;
-
-			// 		if (date - Date.now() > 1_000)
-			// 			promises.push(
-			// 				setPermanentTimeout(this.client, {
-			// 					action: "predictionRemind",
-			// 					date,
-			// 					options: [interaction.user.id],
-			// 				}),
-			// 			);
-			// 	}
-			// 	await Promise.all(promises);
-			// 	await interaction.reply({
-			// 		ephemeral: true,
-			// 		content: "Promemoria impostato con successo!",
-			// 	});
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: { content: "Questo comando non è ancora disponibile :(" },
 			});
 			return;
 		}
-		const startTime =
-			new Date(matches[0]!.startDate).getTime() - 1000 * 60 * 15;
+		const options: Record<string, boolean | number | string> = {};
+
+		if (subCommand.options)
+			for (const option of subCommand.options)
+				options[option.name] = option.value;
+		const userId = options.user as string | undefined;
+		const [matchDay, matches, existingPredictions] = await getMatchDayData(
+			env,
+			userId ?? (interaction.member ?? interaction).user!.id,
+		);
+		if (!(matchDay as MatchDay | null)) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					flags: MessageFlags.Ephemeral,
+					content: "Non c'è nessuna giornata disponibile al momento!",
+				},
+			});
+			return;
+		}
+		const startTime = new Date(matchDay.startDate).getTime() - 1000 * 60 * 15;
 
 		if (subCommand.name === "view") {
-			if (!matches.length) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Non c'è alcun pronostico da visualizzare al momento!",
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-				return;
-			}
 			if (
 				userId &&
 				userId !== (interaction.member ?? interaction).user!.id &&
@@ -294,32 +224,24 @@ ORDER BY matchDate`,
 											}),
 							},
 							color: 0x3498db,
-							fields: matches.map((match) => ({
-								name: `${match.teams} (<t:${Math.round(
-									new Date(match.matchDate).getTime() / 1000,
+							fields: matches.map((m) => ({
+								name: `${[m.home_team_name, m.away_team_name]
+									.map(normalizeTeamName)
+									.join(" - ")} (<t:${Math.round(
+									new Date(m.date_time).getTime() / 1000,
 								)}:F>)`,
 								value:
 									existingPredictions.find(
-										(predict) => predict.matchId === match.id,
+										(predict) => predict.matchId === m.match_id,
 									)?.prediction ?? "*Non presente*",
 							})),
 							thumbnail: {
 								url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
 							},
-							title: `${matches[0]!.day}ª Giornata Serie A TIM`,
+							title: `${matchDay.day}ª Giornata Serie A TIM`,
 							url: "https://legaseriea.it/it/serie-a",
 						},
 					],
-					flags: MessageFlags.Ephemeral,
-				},
-			});
-			return;
-		}
-		if (!matches.length) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "Non c'è alcun pronostico da inviare al momento!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});
@@ -349,7 +271,7 @@ ORDER BY matchDate`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matches[0]!.day}-1-${startTime}`)
+									.setCustomId(`predictions-${matchDay.day}-1-${startTime}`)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -363,7 +285,7 @@ ORDER BY matchDate`,
 		}
 		reply({
 			type: InteractionResponseType.Modal,
-			data: buildModal(matches, 1, existingPredictions).toJSON(),
+			data: buildModal(matches, matchDay, 1, existingPredictions).toJSON(),
 		});
 	},
 	async modalSubmit(interaction, { reply, env }) {
@@ -383,39 +305,24 @@ ORDER BY matchDate`,
 			return;
 		}
 		const userId = (interaction.member ?? interaction).user!.id;
-		const [{ results: matches }, { results: existingPredictions }] =
-			(await env.DB.batch([
-				env.DB.prepare(
-					`SELECT *
-FROM Matches
-	JOIN MatchDays ON Matches.day = MatchDays.day
-WHERE Matches.day = (
-		SELECT MAX(day)
-		FROM MatchDays
-	)
-ORDER BY matchDate`,
-				),
-				env.DB.prepare(
-					`SELECT Predictions.*
-				FROM Predictions
-				JOIN Users ON Predictions.userId = Users.id
-				WHERE Users.id = ?`,
-				).bind(userId),
-			])) as [D1Result<Match & MatchDay>, D1Result<Prediction>];
+		const [matchDay, matches, existingPredictions] = await getMatchDayData(
+			env,
+			userId,
+		);
 
-		if (!matches.length) {
+		if (!(matchDay as MatchDay | null)) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
-					content: "Non c'è alcun pronostico da inviare al momento!",
 					flags: MessageFlags.Ephemeral,
+					content: "Non c'è nessuna giornata disponibile al momento!",
 				},
 			});
 			return;
 		}
 		const total = matches.length / 5;
 
-		if (day !== matches[0]!.day) {
+		if (day !== matchDay.day) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -449,18 +356,7 @@ ORDER BY matchDate`,
 				(match.groups.first && Number(match.groups.first) > 999) ||
 				(match.groups.second && Number(match.groups.second) > 999)
 			)
-				invalid.push(
-					matches
-						.find((m) => m.id === matchId)!
-						.teams.split("-")
-						.map((team) =>
-							team
-								.split(" ")
-								.map((word) => capitalize(word))
-								.join(" "),
-						)
-						.join(" - "),
-				);
+				invalid.push(matches.find((m) => m.match_id === matchId)!.match_name);
 			else if (
 				existingPredictions.find((p) => p.matchId === matchId)?.prediction !==
 				(resolved[field!.value] ??= match.groups.prediction
@@ -502,7 +398,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matches[0]!.day}-${part}-${timestamp}`,
+										`predictions-${matchDay.day}-${part}-${timestamp}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -524,7 +420,7 @@ VALUES (?)`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matches[0]!.day}-1-${timestamp}`)
+									.setCustomId(`predictions-${matchDay.day}-1-${timestamp}`)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -544,7 +440,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matches[0]!.day}-${part! + 1}-${timestamp}`,
+										`predictions-${matchDay.day}-${part! + 1}-${timestamp}`,
 									)
 									.setEmoji({ name: "⏩" })
 									.setLabel("Continua")
@@ -600,7 +496,7 @@ VALUES (?)`,
 				});
 				return;
 			}
-			const [users, matches] = await prepareMatchDayData(
+			const [users, matches] = await getPredictionsData(
 				env,
 				parseInt(partOrCategoryId!),
 			);
@@ -659,38 +555,22 @@ VALUES (?)`,
 			});
 			return;
 		}
-		const userId = (interaction.member ?? interaction).user!.id;
-		const [{ results: matches }, { results: existingPredictions }] =
-			(await env.DB.batch([
-				env.DB.prepare(
-					`SELECT *
-FROM Matches
-	JOIN MatchDays ON Matches.day = MatchDays.day
-WHERE Matches.day = (
-		SELECT MAX(day)
-		FROM MatchDays
-	)
-ORDER BY matchDate`,
-				),
-				env.DB.prepare(
-					`SELECT Predictions.*
-				FROM Predictions
-				JOIN Users ON Predictions.userId = Users.id
-				WHERE Users.id = ?`,
-				).bind(userId),
-			])) as [D1Result<Match & MatchDay>, D1Result<Prediction>];
+		const [matchDay, matches, existingPredictions] = await getMatchDayData(
+			env,
+			(interaction.member ?? interaction).user!.id,
+		);
 
-		if (!matches.length) {
+		if (!(matchDay as MatchDay | null)) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
-					content: "Non c'è alcun pronostico da inviare al momento!",
 					flags: MessageFlags.Ephemeral,
+					content: "Non c'è nessuna giornata disponibile al momento!",
 				},
 			});
 			return;
 		}
-		if (parseInt(actionOrDay!) !== matches[0]!.day) {
+		if (parseInt(actionOrDay!) !== matchDay.day) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -704,6 +584,7 @@ ORDER BY matchDate`,
 			type: InteractionResponseType.Modal,
 			data: buildModal(
 				matches,
+				matchDay,
 				parseInt(partOrCategoryId!),
 				existingPredictions,
 			).toJSON(),

@@ -1,6 +1,6 @@
 import { Env, MatchesData, Prediction, User, loadMatches } from ".";
 
-export const prepareMatchDayData = async (
+export const getPredictionsData = async (
 	env: Env,
 	categoryId: number,
 ): Promise<

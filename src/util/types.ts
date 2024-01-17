@@ -187,6 +187,7 @@ export type MatchesData =
 				match_status: number;
 				slug: string;
 				match_id: number;
+				match_name: string;
 			}[];
 	  }
 	| { success: false; message: string; errors: unknown[] };
