@@ -7,10 +7,7 @@ import {
 import { loadMatches, rest } from ".";
 import { Env, MatchDay } from "./types";
 
-export const loadMatchDay = async (
-	env: Env,
-	last = 0,
-): Promise<[D1PreparedStatement[], Promise<any> | false]> => {
+export const loadMatchDay = async (env: Env, last = 0) => {
 	const matchDays = (await fetch(
 		"https://www.legaseriea.it/api/season/157617/championship/A/matchday",
 	).then((res) => res.json())) as
@@ -42,28 +39,27 @@ export const loadMatchDay = async (
 	};
 	const matches = await loadMatches(matchDay.categoryId);
 
-	if (!matches.data.length) throw new TypeError("No match found");
-	matchDay.startDate = matches.data
+	if (!matches.length) throw new TypeError("No match found");
+	matchDay.startDate = matches
 		.reduce((time, match) => {
 			const newTime = new Date(match.date_time);
 
 			return time < newTime ? time : newTime;
 		}, new Date(""))
 		.toISOString();
-	const startTime =
-		new Date(matches.data[0]!.date_time).getTime() - 1000 * 60 * 15;
+	const startTime = new Date(matchDay.startDate).getTime() - 1000 * 60 * 15;
 	const date = Math.round(startTime / 1_000);
 
-	return [
-		[
-			env.DB.prepare(
-				"INSERT INTO MatchDays (day, categoryId, startDate) VALUES (?1, ?2, ?3)",
-			).bind(matchDay.day, matchDay.categoryId, matchDay.startDate),
-		],
+	await Promise.all([
+		env.DB.prepare(
+			"INSERT INTO MatchDays (day, categoryId, startDate) VALUES (?1, ?2, ?3)",
+		)
+			.bind(matchDay.day, matchDay.categoryId, matchDay.startDate)
+			.run(),
 		date - Date.now() / 1_000 > 1 &&
 			rest.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
 				body: {
-					content: `<@&${env.PREDICTIONS_ROLE}>, potete inviare i pronostici per la prossima giornata!\nPer farlo potete inviare il comando \`/predictions send\` e seguire le istruzioni o premere il pulsante qui in basso. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)!`,
+					content: `<@&${env.PREDICTIONS_ROLE}>, potete inviare da ora i pronostici per la prossima giornata!\nPer farlo inviate il comando \`/predictions send\` e seguire le istruzioni o premete il pulsante qui in basso. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)!`,
 					components: [
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
@@ -84,5 +80,5 @@ export const loadMatchDay = async (
 					],
 				} satisfies RESTPostAPIChannelMessageJSONBody,
 			}),
-	];
+	]);
 };

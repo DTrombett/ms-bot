@@ -9,5 +9,5 @@ export const loadMatches = async (id: number) => {
 		throw new Error(`Couldn't load matches data: ${matches.message}`, {
 			cause: matches.errors,
 		});
-	return matches;
+	return matches.data;
 };

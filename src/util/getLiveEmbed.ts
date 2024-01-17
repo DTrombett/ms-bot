@@ -58,8 +58,10 @@ const createLeaderboardDescription = (
 		})
 		.join("\n");
 };
-const resolveMatches = (matches: Extract<MatchesData, { success: true }>) =>
-	matches.data
+const resolveMatches = (
+	matches: Extract<MatchesData, { success: true }>["data"],
+) =>
+	matches
 		.map(
 			(match) =>
 				`- ${match.match_status === 1 ? "🔴 " : ""}[${normalizeTeamName(
@@ -246,7 +248,7 @@ export const getLiveEmbed = (
 	users: (User & {
 		predictions: Prediction[];
 	})[],
-	matches: Extract<MatchesData, { success: true }>,
+	matches: Extract<MatchesData, { success: true }>["data"],
 	leaderboard: Leaderboard,
 	day: number,
 	finished = false,

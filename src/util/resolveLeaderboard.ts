@@ -2,7 +2,7 @@ import { Leaderboard, MatchesData, Prediction, User } from ".";
 
 export const resolveLeaderboard = (
 	users: (User & { predictions: Prediction[] })[],
-	matches: Extract<MatchesData, { success: true }>,
+	matches: Extract<MatchesData, { success: true }>["data"],
 ) => {
 	const leaderboard = users
 		.map<Leaderboard[number]>((user) => {
@@ -10,7 +10,7 @@ export const resolveLeaderboard = (
 
 			return [
 				user,
-				matches.data.reduce((points, match) => {
+				matches.reduce((points, match) => {
 					const matched = user.predictions
 						.find((p) => match.match_id === p.matchId)
 						?.prediction.match(

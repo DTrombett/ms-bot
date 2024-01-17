@@ -11,6 +11,7 @@ import {
 	closeMatchDay,
 	getLiveEmbed,
 	getPredictionsData,
+	loadMatchDay,
 	normalizeTeamName,
 	resolveLeaderboard,
 	rest,
@@ -28,10 +29,8 @@ export const startPredictions = async (
 		interaction.application_id,
 		interaction.token,
 	);
-	const finished = matches.data.every((match) => match.match_status === 2);
 	const leaderboard = resolveLeaderboard(users, matches);
 
-	if (finished) promises.push(closeMatchDay(env, leaderboard, day));
 	for (let i = 0; i < users.length; i += 5) {
 		const chunk = users.slice(i, i + 5);
 
@@ -59,7 +58,7 @@ export const startPredictions = async (
 										})),
 						},
 						color: user?.accent_color ?? 0x3498db,
-						fields: matches.data.map((match) => ({
+						fields: matches.map((match) => ({
 							name: [match.home_team_name, match.away_team_name]
 								.map(normalizeTeamName)
 								.join(" - "),
@@ -81,36 +80,42 @@ export const startPredictions = async (
 			),
 		);
 	}
+	const finished = matches.every((match) => match.match_status === 2);
+
+	if (finished) promises.push(closeMatchDay(env, leaderboard, matches, day));
 	await Promise.all(promises);
-	await rest.post(followupRoute, {
-		body: {
-			embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
-			components: finished
-				? []
-				: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-update-${categoryId}-${
-											matches.data.some((match) => match.match_status === 1)
-												? Date.now() + 1_000 * 60
-												: Math.max(
-														new Date(
-															matches.data.find(
-																(match) => match.match_status === 0,
-															)?.date_time as number | string,
-														).getTime(),
-														Date.now() + 1_000 * 60,
-													)
-										}-${day}`,
-									)
-									.setEmoji({ name: "🔄" })
-									.setLabel("Aggiorna")
-									.setStyle(ButtonStyle.Primary),
-							)
-							.toJSON(),
-					],
-		} satisfies RESTPostAPIWebhookWithTokenJSONBody,
-	});
+	await Promise.all([
+		rest.post(followupRoute, {
+			body: {
+				embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
+				components: finished
+					? []
+					: [
+							new ActionRowBuilder<ButtonBuilder>()
+								.addComponents(
+									new ButtonBuilder()
+										.setCustomId(
+											`predictions-update-${categoryId}-${
+												matches.some((match) => match.match_status === 1)
+													? Date.now() + 1_000 * 60
+													: Math.max(
+															new Date(
+																matches.find(
+																	(match) => match.match_status === 0,
+																)?.date_time as number | string,
+															).getTime(),
+															Date.now() + 1_000 * 60,
+														)
+											}-${day}`,
+										)
+										.setEmoji({ name: "🔄" })
+										.setLabel("Aggiorna")
+										.setStyle(ButtonStyle.Primary),
+								)
+								.toJSON(),
+						],
+			} satisfies RESTPostAPIWebhookWithTokenJSONBody,
+		}),
+		loadMatchDay(env, categoryId),
+	]);
 };

@@ -1,27 +1,20 @@
-import { Env, MatchesData, Prediction, User, loadMatches } from ".";
+import { Env, Prediction, User, loadMatches } from ".";
 
-export const getPredictionsData = async (
-	env: Env,
-	categoryId: number,
-): Promise<
-	[
-		users: (User & { predictions: Prediction[] })[],
-		matches: Extract<MatchesData, { success: true }>,
-	]
-> => {
-	const [[{ results: predictions }, { results: rawUsers }], matches] =
-		await Promise.all([
-			env.DB.batch([
-				env.DB.prepare(
-					`SELECT *
-FROM Predictions`,
-				),
-				env.DB.prepare(`SELECT *
+export const getPredictionsData = async (env: Env, categoryId: number) => {
+	const matches = await loadMatches(categoryId);
+	const [{ results: predictions }, { results: rawUsers }] = (await env.DB.batch(
+		[
+			env.DB.prepare(
+				`SELECT *
+FROM Predictions
+WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+			).bind(...matches.map((m) => m.match_id)),
+			env.DB.prepare(`SELECT *
 FROM Users
 ORDER BY dayPoints DESC`),
-			]) as Promise<[D1Result<Prediction>, D1Result<User>]>,
-			loadMatches(categoryId),
-		]);
+		],
+	)) as [D1Result<Prediction>, D1Result<User>];
+
 	return [
 		rawUsers
 			.map((user) => ({
@@ -30,5 +23,5 @@ ORDER BY dayPoints DESC`),
 			}))
 			.filter((u) => u.predictions.length || u.dayPoints != null),
 		matches,
-	];
+	] as const;
 };

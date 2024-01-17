@@ -15,24 +15,14 @@ export const getMatchDay = new Command({
 	],
 	isPrivate: true,
 	async run(_interaction, { reply, env }) {
-		let [queries, promise]:
-			| Awaited<ReturnType<typeof loadMatchDay>>
-			| [false, unknown] = await loadMatchDay(env).catch((err: unknown) => [
-			false,
-			err,
-		]);
+		const error = await loadMatchDay(env).catch((err: unknown) => err);
 
-		if (queries)
-			await Promise.all([env.DB.batch(queries), promise]).catch((err) => {
-				queries = false;
-				promise = err;
-			});
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: {
-				content: queries
-					? "Done!"
-					: `An error occurred: \`${normalizeError(promise).message}\``,
+				content: error
+					? `An error occurred: \`${normalizeError(error).message}\``
+					: "Done!",
 				flags: MessageFlags.Ephemeral,
 			},
 		});

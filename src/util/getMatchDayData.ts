@@ -1,36 +1,31 @@
 import { Env, MatchDay, Prediction, loadMatches } from ".";
 
-export const getMatchDayData = async (env: Env, userId: string) => {
-	const [
-		{
-			results: [matchDay],
-		},
-		{ results: existingPredictions },
-	] = (await env.DB.batch([
-		env.DB.prepare(
-			`SELECT *
+export const getMatchDayData = async (
+	env: Env,
+	userId: string,
+	day?: number,
+) => {
+	const matchDay = await env.DB.prepare(
+		`SELECT *
 FROM MatchDays
-WHERE day = (
-		SELECT MAX(day)
-		FROM MatchDays
-	)`,
-		),
-		env.DB.prepare(
-			`SELECT matchId,
-	prediction
-FROM Predictions
-	JOIN Users ON Predictions.userId = Users.id
-WHERE Users.id = ?`,
-		).bind(userId),
-	])) as [
-		D1Result<MatchDay>,
-		D1Result<Pick<Prediction, "matchId" | "prediction">>,
-	];
+WHERE day = ${day ?? "(SELECT MAX(day) FROM MatchDays)"}`,
+	).first<MatchDay>();
 
 	if (!matchDay) return [];
-	const { data: matches } = await loadMatches(matchDay.categoryId);
+	const matches = await loadMatches(matchDay.categoryId);
 
 	if (!matches.length) return [];
+	const { results: existingPredictions } = await env.DB.prepare(
+		`SELECT Predictions.matchId,
+	Predictions.prediction
+FROM Predictions
+	JOIN Users ON Predictions.userId = Users.id
+WHERE Users.id = ?
+	AND Predictions.matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+	)
+		.bind(userId, ...matches.map((m) => m.match_id))
+		.all<Pick<Prediction, "matchId" | "prediction">>();
+
 	matches.sort((a, b) =>
 		new Date(a.date_time) > new Date(b.date_time) ? 1 : -1,
 	);

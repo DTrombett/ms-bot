@@ -1,12 +1,11 @@
-import { Env, Leaderboard } from ".";
-import { loadMatchDay } from "./loadMatchDay";
+import { Env, Leaderboard, MatchesData } from ".";
 
 export const closeMatchDay = async (
 	env: Env,
 	leaderboard: Leaderboard,
+	matches: Extract<MatchesData, { success: true }>["data"],
 	day: number,
 ) => {
-	const [queries, promise] = await loadMatchDay(env);
 	const query = env.DB.prepare(`UPDATE Users
 SET dayPoints = COALESCE(dayPoints, 0) + ?1,
 	matchPointsHistory = COALESCE(matchPointsHistory, "${",".repeat(
@@ -14,14 +13,17 @@ SET dayPoints = COALESCE(dayPoints, 0) + ?1,
 	)}") || ?2
 WHERE id = ?3`);
 
-	return Promise.all([
-		env.DB.batch([
-			...leaderboard.map(([user, matchPoints, dayPoints]) =>
-				query.bind(dayPoints, `,${matchPoints}`, user.id),
-			),
-			env.DB.prepare("DELETE FROM Predictions"),
-			...queries,
-		]),
-		promise,
+	return env.DB.batch([
+		...leaderboard.map(([user, matchPoints, dayPoints]) =>
+			query.bind(dayPoints, `,${matchPoints}`, user.id),
+		),
+		env.DB.prepare(
+			`DELETE FROM Predictions
+WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+		).bind(...matches.map((m) => m.match_id)),
+		env.DB.prepare(
+			`DELETE FROM MatchDays
+WHERE day = ?1`,
+		).bind(day),
 	]);
 };

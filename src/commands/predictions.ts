@@ -112,13 +112,6 @@ export const predictions = new Command({
 					description:
 						"Visualizza i tuoi pronostici o quelli di un altro utente",
 					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							type: ApplicationCommandOptionType.User,
-							name: "user",
-							description: "L'utente di cui vedere i pronostici",
-						},
-					],
 				},
 				{
 					name: "reminder",
@@ -156,11 +149,11 @@ export const predictions = new Command({
 		if (subCommand.options)
 			for (const option of subCommand.options)
 				options[option.name] = option.value;
-		const userId = options.user as string | undefined;
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
-			userId ?? (interaction.member ?? interaction).user!.id,
+			(interaction.member ?? interaction).user!.id,
 		);
+
 		if (!(matchDay as MatchDay | null)) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -174,31 +167,13 @@ export const predictions = new Command({
 		const startTime = new Date(matchDay.startDate).getTime() - 1000 * 60 * 15;
 
 		if (subCommand.name === "view") {
-			if (
-				userId &&
-				userId !== (interaction.member ?? interaction).user!.id &&
-				Date.now() < startTime
-			) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content:
-							"Non puoi vedere i pronostici degli altri utenti prima dell'inizio della giornata!",
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-				return;
-			}
-			const user = userId
-				? interaction.data.resolved!.users![userId]!
-				: (interaction.member ?? interaction).user!;
+			const user = (interaction.member ?? interaction).user!;
 
 			if (!existingPredictions.length) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
-						content:
-							"L'utente non ha inviato alcun pronostico per la giornata!",
+						content: "Non hai inviato alcun pronostico per la giornata!",
 						flags: MessageFlags.Ephemeral,
 					},
 				});
@@ -266,7 +241,7 @@ export const predictions = new Command({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Hai già inviato i pronostici per questa giornata! Clicca il pulsante se vuoi modificarli...",
+						"Hai già inviato i pronostici per questa giornata! Clicca il pulsante se vuoi modificarli.",
 					components: [
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
@@ -308,6 +283,7 @@ export const predictions = new Command({
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
 			userId,
+			day,
 		);
 
 		if (!(matchDay as MatchDay | null)) {
@@ -321,17 +297,6 @@ export const predictions = new Command({
 			return;
 		}
 		const total = matches.length / 5;
-
-		if (day !== matchDay.day) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "Questi pronostici sono scaduti!",
-					flags: MessageFlags.Ephemeral,
-				},
-			});
-			return;
-		}
 		const invalid: string[] = [];
 		const resolved: Record<string, string | undefined> = {};
 		const newPredictions: Prediction[] = [];
@@ -371,21 +336,26 @@ export const predictions = new Command({
 					prediction: resolved[field!.value]!,
 				});
 		}
-		if (newPredictions.length)
-			await env.DB.batch([
-				env.DB.prepare(
-					`INSERT
+		if (newPredictions.length) {
+			const predictionsQuery = env.DB.prepare(
+				`INSERT OR REPLACE INTO Predictions (matchId, userId, prediction) VALUES ${"\n(?, ?, ?),".repeat(
+					newPredictions.length,
+				)}`.slice(0, -1),
+			).bind(
+				...newPredictions.flatMap((m) => [m.matchId, userId, m.prediction]),
+			);
+
+			if (existingPredictions.length) await predictionsQuery.run();
+			else
+				await env.DB.batch([
+					env.DB.prepare(
+						`INSERT
 	OR IGNORE INTO Users(id)
 VALUES (?)`,
-				).bind(userId),
-				env.DB.prepare(
-					`INSERT OR REPLACE INTO Predictions (matchId, userId, prediction) VALUES ${"\n(?, ?, ?),".repeat(
-						newPredictions.length,
-					)}`.slice(0, -1),
-				).bind(
-					...newPredictions.flatMap((m) => [m.matchId, userId, m.prediction]),
-				),
-			]);
+					).bind(userId),
+					predictionsQuery,
+				]);
+		}
 		if (invalid.length) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -500,7 +470,7 @@ VALUES (?)`,
 				env,
 				parseInt(partOrCategoryId!),
 			);
-			const finished = matches.data.every((match) => match.match_status === 2);
+			const finished = matches.every((match) => match.match_status === 2);
 			const leaderboard = resolveLeaderboard(users, matches);
 
 			reply({
@@ -521,11 +491,11 @@ VALUES (?)`,
 										new ButtonBuilder()
 											.setCustomId(
 												`predictions-update-${partOrCategoryId}-${
-													matches.data.some((match) => match.match_status === 1)
+													matches.some((match) => match.match_status === 1)
 														? Date.now() + 1_000 * 60
 														: Math.max(
 																new Date(
-																	matches.data.find(
+																	matches.find(
 																		(match) => match.match_status === 0,
 																	)?.date_time as number | string,
 																).getTime(),
@@ -541,7 +511,8 @@ VALUES (?)`,
 							],
 				},
 			});
-			if (finished) await closeMatchDay(env, leaderboard, parseInt(day!));
+			if (finished)
+				await closeMatchDay(env, leaderboard, matches, parseInt(day!));
 			return;
 		}
 		if (Date.now() >= time) {
