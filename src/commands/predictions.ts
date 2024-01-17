@@ -572,12 +572,18 @@ VALUES (?)`,
 				});
 				return;
 			}
+			reply({
+				type: InteractionResponseType.UpdateMessage,
+				data: {
+					content: `## ${day}ª Giornata iniziata!\n\nSegui i risultati live e controlla i pronostici degli altri utenti qui in basso.`,
+					components: [],
+				},
+			});
 			await startPredictions(
 				env,
 				interaction,
 				parseInt(day!),
 				parseInt(partOrCategoryId!),
-				reply,
 			);
 			return;
 		}

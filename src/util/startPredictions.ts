@@ -1,14 +1,8 @@
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
-	APIInteractionResponseChannelMessageWithSource,
-	APIInteractionResponseDeferredChannelMessageWithSource,
-	APIInteractionResponseDeferredMessageUpdate,
-	APIInteractionResponseUpdateMessage,
 	APIMessageComponentInteraction,
-	APIModalInteractionResponse,
 	APIUser,
 	ButtonStyle,
-	InteractionResponseType,
 	RESTPostAPIWebhookWithTokenJSONBody,
 	Routes,
 } from "discord-api-types/v10";
@@ -27,14 +21,6 @@ export const startPredictions = async (
 	interaction: APIMessageComponentInteraction,
 	day: number,
 	categoryId: number,
-	reply: (
-		result:
-			| APIInteractionResponseChannelMessageWithSource
-			| APIInteractionResponseDeferredChannelMessageWithSource
-			| APIInteractionResponseDeferredMessageUpdate
-			| APIInteractionResponseUpdateMessage
-			| APIModalInteractionResponse,
-	) => void,
 ) => {
 	const [users, matches] = await prepareMatchDayData(env, categoryId);
 	const promises: Promise<any>[] = [];
@@ -95,13 +81,6 @@ export const startPredictions = async (
 			),
 		);
 	}
-	reply({
-		type: InteractionResponseType.UpdateMessage,
-		data: {
-			content: `## ${day}ª Giornata iniziata!\n\nSegui i risultati live e controlla i pronostici degli altri utenti qui in basso.`,
-			components: [],
-		},
-	});
 	await Promise.all(promises);
 	await rest.post(followupRoute, {
 		body: {

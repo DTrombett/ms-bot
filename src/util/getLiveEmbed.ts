@@ -276,11 +276,13 @@ export const getLiveEmbed = (
 				? `⚽ Classifica Definitiva Pronostici ${day}ª Giornata`
 				: `🔴 Classifica Live Pronostici ${day}ª Giornata`,
 		)
-		.setDescription(createLeaderboardDescription(leaderboard))
+		.setDescription(createLeaderboardDescription(leaderboard, finished))
 		.setFooter({ text: "Ultimo aggiornamento" })
 		.addFields(
 			{
-				name: "Classifica Generale Provvisoria",
+				name: finished
+					? "Classifica Generale"
+					: "Classifica Generale Provvisoria",
 				value: createFinalLeaderboard(leaderboard),
 			},
 			resolveStats(users),
