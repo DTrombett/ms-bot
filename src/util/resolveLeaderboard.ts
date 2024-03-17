@@ -35,7 +35,8 @@ export const resolveLeaderboard = (
 								? "2"
 								: "X";
 					let diffPoints = 0;
-					const toBePlayed = match.match_status === 0;
+					const toBePlayed =
+						match.match_status === 0 || match.match_status === 3;
 
 					if (!toBePlayed)
 						if (type === result)

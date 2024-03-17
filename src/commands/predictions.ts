@@ -472,6 +472,7 @@ VALUES (?)`,
 			);
 			const finished = matches.every((match) => match.match_status === 2);
 			const leaderboard = resolveLeaderboard(users, matches);
+			const minute = Date.now() + 1000 * 60;
 
 			reply({
 				type: InteractionResponseType.UpdateMessage,
@@ -492,14 +493,14 @@ VALUES (?)`,
 											.setCustomId(
 												`predictions-update-${partOrCategoryId}-${
 													matches.some((match) => match.match_status === 1)
-														? Date.now() + 1_000 * 60
+														? Date.now() + minute
 														: Math.max(
-																new Date(
+																Date.parse(
 																	matches.find(
 																		(match) => match.match_status === 0,
-																	)?.date_time as number | string,
-																).getTime(),
-																Date.now() + 1_000 * 60,
+																	)?.date_time ?? "",
+																) || minute,
+																minute,
 															)
 												}-${day}`,
 											)
