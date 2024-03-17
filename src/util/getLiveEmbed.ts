@@ -71,7 +71,9 @@ const resolveMatches = (
 				}): ${
 					match.match_status === 0
 						? `<t:${Math.round(new Date(match.date_time).getTime() / 1_000)}:F>`
-						: `**${match.home_goal ?? 0} - ${match.away_goal ?? 0}**`
+						: match.match_status === 3
+							? "*Posticipata*"
+							: `**${match.home_goal ?? 0} - ${match.away_goal ?? 0}**`
 				}`,
 		)
 		.join("\n");
