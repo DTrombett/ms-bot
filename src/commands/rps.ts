@@ -1,8 +1,11 @@
 import {
+	APIApplicationCommandInteractionDataStringOption,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-} from "discord.js";
-import { createCommand, randomNumber } from "../util";
+	InteractionResponseType,
+	MessageFlags,
+} from "discord-api-types/v10";
+import { Command, randomNumber } from "../util";
 
 type PossibleChoice = (typeof choices)[number];
 
@@ -18,7 +21,7 @@ const winners: Record<PossibleChoice, PossibleChoice> = {
 	scissors: "rock",
 };
 
-export const rpsCommand = createCommand({
+export const rps = new Command({
 	data: [
 		{
 			name: "rps",
@@ -48,28 +51,37 @@ export const rpsCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		const choice = interaction.options.data[0].value as PossibleChoice;
+	async run(interaction, { reply }) {
+		const choice = interaction.data.options!.find(
+			(o): o is APIApplicationCommandInteractionDataStringOption =>
+				o.name === "choice" && o.type === ApplicationCommandOptionType.String,
+		)!.value as PossibleChoice;
 
 		if (!choices.includes(choice)) {
-			await interaction.reply({
-				content: "La tua scelta non è valida!",
-				ephemeral: true,
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "La tua scelta non è valida!",
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
-		const myChoice = choices[randomNumber(0, 2)];
+		const myChoice = choices[randomNumber(0, 2)]!;
 
-		await interaction.reply({
-			content: `Hai scelto ${emojis[choice]}\nLa mia scelta è ${
-				emojis[myChoice]
-			}\n\n**${
-				myChoice === choice
-					? "Pareggio"
-					: winners[myChoice] === choice
-					? "Hai vinto"
-					: "Hai perso"
-			}**!`,
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: {
+				content: `Hai scelto ${emojis[choice]}\nLa mia scelta è ${
+					emojis[myChoice]
+				}\n\n**${
+					myChoice === choice
+						? "Pareggio"
+						: winners[myChoice] === choice
+							? "Hai vinto"
+							: "Hai perso"
+				}**!`,
+			},
 		});
 	},
 });

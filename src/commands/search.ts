@@ -1,13 +1,16 @@
+import { escapeMarkdown } from "@discordjs/formatters";
 import {
+	APIApplicationCommandInteractionDataBasicOption,
+	APIApplicationCommandInteractionDataSubcommandOption,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	escapeMarkdown,
-} from "discord.js";
-import { createCommand } from "../util";
+	InteractionResponseType,
+} from "discord-api-types/v10";
+import { Command } from "../util";
 
-export const searchCommand = createCommand({
+export const search = new Command({
 	data: [
 		{
 			name: "search",
@@ -155,183 +158,211 @@ export const searchCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		let query: string;
+	async run(interaction, { reply }) {
+		const options: Record<
+			string,
+			APIApplicationCommandInteractionDataBasicOption
+		> = {};
+		const subcommand = interaction.data.options!.find(
+			(o): o is APIApplicationCommandInteractionDataSubcommandOption =>
+				o.type === ApplicationCommandOptionType.Subcommand,
+		)!;
+		let query: string, url: string;
 
-		switch (interaction.options.getSubcommand()) {
+		if (subcommand.options)
+			for (const option of subcommand.options) options[option.name] = option;
+		switch (subcommand.name) {
 			case "google":
-				query = interaction.options.getString("query", true);
-				await interaction.reply({
-					content: `Risultati di Google per la ricerca "**${escapeMarkdown(
-						query,
-					)}**":`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri nel browser!",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://google.com/search?q=${encodeURIComponent(
-										query,
-									)}`,
-								},
-							],
-						},
-					],
+				query = options.query!.value as string;
+				url = `https://google.com/search?q=${encodeURIComponent(query)}`;
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Risultati di Google per la ricerca "**[${escapeMarkdown(
+							query,
+						)}](${url} )**":`,
+						components: [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										label: "Apri nel browser!",
+										style: ButtonStyle.Link,
+										emoji: { name: "🔍" },
+										url,
+									},
+								],
+							},
+						],
+					},
 				});
 				break;
 			case "spotify":
-				query = interaction.options.getString("search", true);
-				await interaction.reply({
-					content: `Risultati di Spotify per la ricerca "**${escapeMarkdown(
-						query,
-					)}**":`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri su spotify",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://open.spotify.com/search/${encodeURIComponent(
-										query,
-									)}`,
-								},
-							],
-						},
-					],
+				query = options.search!.value as string;
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Risultati di Spotify per la ricerca "**${escapeMarkdown(
+							query,
+						)}**":`,
+						components: [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										label: "Apri su spotify",
+										style: ButtonStyle.Link,
+										emoji: { name: "🔍" },
+										url: `https://open.spotify.com/search/${encodeURIComponent(
+											query,
+										)}`,
+									},
+								],
+							},
+						],
+					},
 				});
 				break;
 			case "youtube":
-				query = interaction.options.getString("query", true);
-				await interaction.reply({
-					content: `Risultati di YouTube per la ricerca "**${escapeMarkdown(
-						query,
-					)}**":`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in YouTube",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://youtube.com/results?search_query=${encodeURIComponent(
-										query,
-									)}`,
-								},
-							],
-						},
-					],
+				query = options.query!.value as string;
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Risultati di YouTube per la ricerca "**${escapeMarkdown(
+							query,
+						)}**":`,
+						components: [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										label: "Apri in YouTube",
+										style: ButtonStyle.Link,
+										emoji: { name: "🔍" },
+										url: `https://youtube.com/results?search_query=${encodeURIComponent(
+											query,
+										)}`,
+									},
+								],
+							},
+						],
+					},
 				});
 				break;
 			case "yt-music":
-				query = interaction.options.getString("query", true);
-				await interaction.reply({
-					content: `Risultati di YouTube Music per la ricerca "**${escapeMarkdown(
-						query,
-					)}**":`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in YouTube Music",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://music.youtube.com/search?q=${encodeURIComponent(
-										query,
-									)}`,
-								},
-							],
-						},
-					],
+				query = options.query!.value as string;
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Risultati di YouTube Music per la ricerca "**${escapeMarkdown(
+							query,
+						)}**":`,
+						components: [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										label: "Apri in YouTube Music",
+										style: ButtonStyle.Link,
+										emoji: { name: "🔍" },
+										url: `https://music.youtube.com/search?q=${encodeURIComponent(
+											query,
+										)}`,
+									},
+								],
+							},
+						],
+					},
 				});
 				break;
 			case "github":
-				const type = interaction.options.getString("type");
+				const type = options.type?.value as string | undefined;
 
-				query = interaction.options.getString("query", true);
-				await interaction.reply({
-					content: `Risultati di GitHub per la ricerca "**${escapeMarkdown(
-						query,
-					)}**":`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in GitHub",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://github.com/search?q=${encodeURIComponent(
-										query,
-									)}${type == null ? "" : `&type=${type}`}`,
-								},
-							],
-						},
-					],
+				query = options.query!.value as string;
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Risultati di GitHub per la ricerca "**${escapeMarkdown(
+							query,
+						)}**":`,
+						components: [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										label: "Apri in GitHub",
+										style: ButtonStyle.Link,
+										emoji: { name: "🔍" },
+										url: `https://github.com/search?q=${encodeURIComponent(
+											query,
+										)}${type == null ? "" : `&type=${type}`}`,
+									},
+								],
+							},
+						],
+					},
 				});
 				break;
 			case "google-translate":
-				query = interaction.options.getString("text", true);
-				await interaction.reply({
-					content: `Traduzione di "**${escapeMarkdown(query)}**":`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in Google Translate",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://translate.google.com/?sl=auto&tl=${
-										interaction.locale
-									}&text=${encodeURIComponent(query)}&op=translate`,
-								},
-							],
-						},
-					],
+				query = options.text!.value as string;
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Traduzione di "**${escapeMarkdown(query)}**":`,
+						components: [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										label: "Apri in Google Translate",
+										style: ButtonStyle.Link,
+										emoji: { name: "🔍" },
+										url: `https://translate.google.com/?sl=auto&tl=${
+											interaction.locale
+										}&text=${encodeURIComponent(query)}&op=translate`,
+									},
+								],
+							},
+						],
+					},
 				});
 				break;
 			case "wikipedia":
-				query = interaction.options.getString("query", true);
-				await interaction.reply({
-					content: `Risultati di Wikipedia per la ricerca "**${escapeMarkdown(
-						query,
-					)}**":`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in Wikipedia",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://wikipedia.org/w/index.php?search=${encodeURIComponent(
-										query,
-									)}`,
-								},
-							],
-						},
-					],
+				query = options.query!.value as string;
+				url = `https://wikipedia.org/w/index.php?search=${encodeURIComponent(
+					query,
+				)}`;
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Risultati di Wikipedia per la ricerca "**[${escapeMarkdown(
+							query,
+						)}](${url} )**":`,
+						components: [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										label: "Apri in Wikipedia",
+										style: ButtonStyle.Link,
+										emoji: { name: "🔍" },
+										url,
+									},
+								],
+							},
+						],
+					},
 				});
 				break;
 			default:
-				await interaction.reply({
-					content: "Comando non valido!",
-				});
-				break;
+				throw new TypeError("Invalid subcommand", { cause: interaction });
 		}
 	},
 });

@@ -1,10 +1,15 @@
 import {
+	APIApplicationCommandInteractionDataStringOption,
+	APIMessage,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-} from "discord.js";
-import { createCommand } from "../util";
+	InteractionResponseType,
+	MessageFlags,
+	Routes,
+} from "discord-api-types/v10";
+import { Command, rest } from "../util";
 
-export const pollCommand = createCommand({
+export const poll = new Command({
 	data: [
 		{
 			name: "poll",
@@ -22,32 +27,73 @@ export const pollCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		const title = interaction.options.data[0].value;
+	async run(interaction, { reply }) {
+		const title = interaction.data.options
+			?.find(
+				(o): o is APIApplicationCommandInteractionDataStringOption =>
+					o.name === "question" &&
+					o.type === ApplicationCommandOptionType.String,
+			)
+			?.value.trim();
 
-		if (typeof title !== "string") {
-			await interaction.reply({
-				content: "Domanda non valida!",
+		if (!title?.length) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Domanda non valida!",
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
-		await interaction
-			.reply({
+		const user = interaction.user ?? interaction.member!.user;
+
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: {
 				embeds: [
 					{
 						title,
 						author: {
-							name: interaction.user.tag,
+							name: user.username,
 							icon_url:
-								interaction.user.avatarURL({ extension: "png" }) ?? undefined,
+								user.avatar == null
+									? rest.cdn.defaultAvatar(
+											user.discriminator === "0"
+												? Number(BigInt(user.id) >> 22n) % 6
+												: Number(user.discriminator) % 5,
+										)
+									: rest.cdn.avatar(user.id, user.avatar, {
+											size: 4096,
+											extension: "png",
+										}),
 						},
 						color: 0xfd6500,
-						description: "✅ **Sì**\n\n❌ **No**",
+						description: "- ✅ ** Sì**\n- ❌ ** No**",
 						timestamp: new Date().toISOString(),
 					},
 				],
-				fetchReply: true,
-			})
-			.then((r) => Promise.all([r.react("✅"), r.react("❌")]));
+			},
+		});
+		const original = (await rest.get(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+		)) as APIMessage;
+
+		await Promise.all([
+			rest.put(
+				Routes.channelMessageOwnReaction(
+					original.channel_id,
+					original.id,
+					"✅",
+				),
+			),
+			rest.put(
+				Routes.channelMessageOwnReaction(
+					original.channel_id,
+					original.id,
+					"❌",
+				),
+			),
+		]);
 	},
 });

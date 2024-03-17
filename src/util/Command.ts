@@ -1,25 +1,28 @@
-/* eslint-disable @typescript-eslint/member-ordering */
-import type {
+import {
+	APIInteraction,
+	APIInteractionResponse,
+	ApplicationCommandType,
 	InteractionType,
 	RESTPutAPIApplicationCommandsJSONBody,
-} from "discord.js";
-import { env } from "node:process";
-import { printToStderr, type CommandOptions, type InteractionByType } from ".";
-import CustomClient from "./CustomClient";
+} from "discord-api-types/v10";
+import {
+	CommandInteractionByType,
+	error,
+	type Awaitable,
+	type CommandOptions,
+	type Env,
+	type ExecutorContext,
+	type InteractionByType,
+} from ".";
 
 /**
  * A class representing a Discord slash command
  */
-export class Command {
-	/**
-	 * The client that instantiated this
-	 */
-	readonly client: CustomClient<true>;
-
+export class Command<T extends ApplicationCommandType = any> {
 	/**
 	 * The Discord data for this command
 	 */
-	data!: RESTPutAPIApplicationCommandsJSONBody;
+	data: RESTPutAPIApplicationCommandsJSONBody;
 
 	/**
 	 * Whether this command is private
@@ -29,29 +32,36 @@ export class Command {
 	/**
 	 * The function to handle the autocomplete of this command
 	 */
-	private _autocomplete: OmitThisParameter<CommandOptions["autocomplete"]>;
+	private _autocomplete: OmitThisParameter<CommandOptions<T>["autocomplete"]>;
 
 	/**
 	 * The function to handle a message component received
 	 */
-	private _component: OmitThisParameter<CommandOptions["component"]>;
+	private _component: OmitThisParameter<CommandOptions<T>["component"]>;
 
 	/**
 	 * The function to handle a submitted modal
 	 */
-	private _modalSubmit: OmitThisParameter<CommandOptions["modalSubmit"]>;
+	private _modalSubmit: OmitThisParameter<CommandOptions<T>["modalSubmit"]>;
 
 	/**
 	 * The function provided to handle the command received
 	 */
-	private _execute!: OmitThisParameter<CommandOptions["run"]>;
+	private _execute: OmitThisParameter<CommandOptions<T>["run"]>;
 
 	/**
 	 * @param options - Options for this command
 	 */
-	constructor(client: CustomClient, options: CommandOptions) {
-		this.client = client;
-		this.patch(options);
+	constructor(options: CommandOptions<T>) {
+		this.data = options.data;
+		this._execute = options.run.bind(this);
+		if (options.autocomplete !== undefined)
+			this._autocomplete = options.autocomplete.bind(this);
+		if (options.component !== undefined)
+			this._component = options.component.bind(this);
+		if (options.modalSubmit !== undefined)
+			this._modalSubmit = options.modalSubmit.bind(this);
+		if (options.isPrivate !== undefined) this.isPrivate = options.isPrivate;
 	}
 
 	/**
@@ -60,16 +70,16 @@ export class Command {
 	 */
 	async autocomplete(
 		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
+		env: Env,
+		context: ExecutionContext,
 	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_IDS?.includes(interaction.user.id) === true
-			)
-				await this._autocomplete?.(interaction);
-		} catch (message) {
-			printToStderr(message);
-		}
+		if (!this._autocomplete) return undefined;
+		return this.execute(
+			interaction,
+			env,
+			context,
+			this._autocomplete.bind(this, interaction),
+		);
 	}
 
 	/**
@@ -78,16 +88,16 @@ export class Command {
 	 */
 	async component(
 		interaction: InteractionByType<InteractionType.MessageComponent>,
+		env: Env,
+		context: ExecutionContext,
 	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_IDS?.includes(interaction.user.id) === true
-			)
-				await this._component?.(interaction);
-		} catch (message) {
-			printToStderr(message);
-		}
+		if (!this._component) return undefined;
+		return this.execute(
+			interaction,
+			env,
+			context,
+			this._component.bind(this, interaction),
+		);
 	}
 
 	/**
@@ -96,33 +106,16 @@ export class Command {
 	 */
 	async modalSubmit(
 		interaction: InteractionByType<InteractionType.ModalSubmit>,
+		env: Env,
+		context: ExecutionContext,
 	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_IDS?.includes(interaction.user.id) === true
-			)
-				await this._modalSubmit?.(interaction);
-		} catch (message) {
-			printToStderr(message);
-		}
-	}
-
-	/**
-	 * Patch this command.
-	 * @param options - Options for this command
-	 */
-	patch(options: Partial<CommandOptions>) {
-		if (options.data !== undefined) this.data = options.data;
-		if (options.autocomplete !== undefined)
-			this._autocomplete = options.autocomplete.bind(this);
-		if (options.component !== undefined)
-			this._component = options.component.bind(this);
-		if (options.modalSubmit !== undefined)
-			this._modalSubmit = options.modalSubmit.bind(this);
-		if (options.isPrivate !== undefined) this.isPrivate = options.isPrivate;
-		if (options.run !== undefined) this._execute = options.run.bind(this);
-		return this;
+		if (!this._modalSubmit) return undefined;
+		return this.execute(
+			interaction,
+			env,
+			context,
+			this._modalSubmit.bind(this, interaction),
+		);
 	}
 
 	/**
@@ -130,17 +123,46 @@ export class Command {
 	 * @param interaction - The interaction received
 	 */
 	async run(
-		interaction: InteractionByType<InteractionType.ApplicationCommand>,
+		interaction: CommandInteractionByType<T>,
+		env: Env,
+		context: ExecutionContext,
 	) {
-		try {
-			if (
-				!this.isPrivate ||
-				env.OWNER_IDS?.includes(interaction.user.id) === true
-			)
-				await this._execute(interaction);
-		} catch (message) {
-			printToStderr(message);
-		}
+		return this.execute(
+			interaction,
+			env,
+			context,
+			this._execute.bind(this, interaction),
+		);
+	}
+
+	private async execute(
+		interaction: APIInteraction,
+		env: Env,
+		context: ExecutionContext,
+		executor: (context: ExecutorContext) => Awaitable<void>,
+	) {
+		if (
+			this.isPrivate &&
+			!env.OWNER_ID.includes((interaction.member ?? interaction).user!.id)
+		)
+			return undefined;
+		return new Promise<APIInteractionResponse>((resolve, reject) => {
+			let done = false;
+			const promise = executor({
+				env,
+				context,
+				reply: (value) => {
+					if (done) return;
+					resolve(value);
+					done = true;
+				},
+			})?.catch((err) => {
+				if (done) error(err);
+				else reject(err);
+			});
+
+			if (promise) context.waitUntil(promise);
+		}).catch(error);
 	}
 }
 

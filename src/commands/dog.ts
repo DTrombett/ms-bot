@@ -1,31 +1,31 @@
-import { ApplicationCommandType, ButtonStyle, ComponentType } from "discord.js";
-import { env } from "node:process";
-import { request } from "undici";
-import type { DogResponse, ReceivedInteraction } from "../util";
-import { createCommand } from "../util";
+import {
+	ApplicationCommandType,
+	ButtonStyle,
+	ComponentType,
+	InteractionResponseType,
+	MessageFlags,
+	RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	Routes,
+} from "discord-api-types/v10";
+import type { DogResponse } from "../util";
+import { Command, rest } from "../util";
 
-const dog = async (interaction: ReceivedInteraction, ephemeral?: boolean) => {
-	const data = await request(
+const getDog = async (
+	key: string,
+): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
+	const data = await fetch(
 		"https://api.thedogapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
-		{
-			method: "GET",
-			headers: {
-				"x-api-key": env.DOG_API_KEY!,
-			},
-		},
-	).then((res) => res.body.json() as Promise<DogResponse | null>);
+		{ headers: { "x-api-key": key } },
+	).then((res) => res.json() as Promise<DogResponse | null>);
 
-	if (!data?.[0]) {
-		await interaction.reply({
+	if (!data?.[0])
+		return {
 			content: "Si è verificato un errore nel caricamento dell'immagine!",
-		});
-		return;
-	}
+		};
 	const [{ url }] = data;
 
-	await interaction.reply({
+	return {
 		content: `[Woof!](${url}) 🐶`,
-		ephemeral,
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -46,10 +46,10 @@ const dog = async (interaction: ReceivedInteraction, ephemeral?: boolean) => {
 				],
 			},
 		],
-	});
+	};
 };
 
-export const dogCommand = createCommand({
+export const dog = new Command({
 	data: [
 		{
 			name: "dog",
@@ -57,10 +57,21 @@ export const dogCommand = createCommand({
 			type: ApplicationCommandType.ChatInput,
 		},
 	],
-	async run(interaction) {
-		await dog(interaction);
+	async run(interaction, { reply, env }) {
+		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
+		await rest.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{ body: await getDog(env.DOG_API_KEY) },
+		);
 	},
-	async component(interaction) {
-		await dog(interaction, true);
+	async component(interaction, { reply, env }) {
+		reply({
+			type: InteractionResponseType.DeferredChannelMessageWithSource,
+			data: { flags: MessageFlags.Ephemeral },
+		});
+		await rest.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{ body: await getDog(env.DOG_API_KEY) },
+		);
 	},
 });

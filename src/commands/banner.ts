@@ -1,13 +1,18 @@
+import { escapeMarkdown } from "@discordjs/formatters";
 import {
+	APIApplicationCommandInteractionDataUserOption,
+	APIUser,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	escapeMarkdown,
-} from "discord.js";
-import { createCommand } from "../util";
+	InteractionResponseType,
+	MessageFlags,
+	Routes,
+} from "discord-api-types/v10";
+import { Command, rest } from "../util";
 
-export const bannerCommand = createCommand({
+export const banner = new Command({
 	data: [
 		{
 			name: "banner",
@@ -22,40 +27,61 @@ export const bannerCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		const option =
-			interaction.options.data.find(
-				(o) => o.type === ApplicationCommandOptionType.User,
-			) ?? interaction;
-		let user = option.user ?? interaction.user;
-		if (user.banner === undefined) user = await user.fetch(true);
-		if (user.banner == null) {
-			await interaction.reply({
-				content: "L'utente non ha un banner!",
-				ephemeral: true,
+	async run(interaction, { reply }) {
+		const userId = interaction.data.options?.find(
+			(o): o is APIApplicationCommandInteractionDataUserOption =>
+				o.name === "user" && o.type === ApplicationCommandOptionType.User,
+		)?.value;
+		const user =
+			userId == null
+				? interaction.user ?? interaction.member?.user
+				: interaction.data.resolved?.users?.[userId];
+
+		if (!user) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: { flags: MessageFlags.Ephemeral, content: "Utente non trovato!" },
 			});
 			return;
 		}
-		const url = user.bannerURL({
-			extension: "png",
-			size: 4096,
-		})!;
+		const bannerHash =
+			user.banner === undefined
+				? ((await rest.get(Routes.user(user.id))) as APIUser).banner
+				: user.banner;
 
-		await interaction.reply({
-			content: `Banner di **[${escapeMarkdown(user.username)}](${url} )**:`,
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							url,
-							style: ButtonStyle.Link,
-							label: "Apri l'originale",
-						},
-					],
+		if (bannerHash == null) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "L'utente non ha un banner!",
+					flags: MessageFlags.Ephemeral,
 				},
-			],
+			});
+			return;
+		}
+		const url = rest.cdn.banner(user.id, bannerHash, {
+			size: 4096,
+			extension: "png",
+		});
+
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: {
+				content: `Banner di **[${escapeMarkdown(user.username)}](${url} )**:`,
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								url,
+								style: ButtonStyle.Link,
+								label: "Apri l'originale",
+							},
+						],
+					},
+				],
+			},
 		});
 	},
 });

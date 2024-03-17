@@ -1,32 +1,26 @@
 import {
+	APIInteractionResponseCallbackData,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord.js";
-import type { ReceivedInteraction } from "../util";
-import { createCommand, randomNumber } from "../util";
+	InteractionResponseType,
+	MessageFlags,
+} from "discord-api-types/v10";
+import { Command, randomNumber } from "../util";
 
-type RandomOptions = {
-	min?: number;
-	max?: number;
-};
-
-const random = async (
-	interaction: ReceivedInteraction,
-	options: RandomOptions = {},
-	ephemeral?: boolean,
-) => {
-	if (typeof options.min !== typeof options.max) {
-		await interaction.reply({
+const getRandom = (
+	{ min, max }: Partial<{ min: number; max: number }>,
+	ephemeral = false,
+): APIInteractionResponseCallbackData => {
+	if (typeof min !== typeof max)
+		return {
 			content:
 				"Devi specificare sia il minimo che il massimo o nessuno dei due se vuoi un numero decimale tra 0 e 1",
-			ephemeral: true,
-		});
-		return;
-	}
-	await interaction.reply({
-		content: `🎲 ${randomNumber(options.min!, options.max!)}`,
+			flags: MessageFlags.Ephemeral,
+		};
+	return {
+		content: `🎲 ${randomNumber(min, max)}`,
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -36,16 +30,16 @@ const random = async (
 						label: "Genera un altro!",
 						style: ButtonStyle.Primary,
 						emoji: { name: "🎲" },
-						custom_id: `random-${options.min ?? "."}-${options.max ?? "."}`,
+						custom_id: `random-${min ?? "NaN"}-${max ?? "NaN"}`,
 					},
 				],
 			},
 		],
-		ephemeral,
-	});
+		flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+	};
 };
 
-export const randomCommand = createCommand({
+export const random = new Command({
 	data: [
 		{
 			name: "random",
@@ -70,21 +64,27 @@ export const randomCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		const options: RandomOptions = {};
+	run(interaction, { reply }) {
+		const options: Partial<{ min: number; max: number }> = {};
 
-		for (const option of interaction.options.data)
-			if (typeof option.value === "number")
-				options[option.name as keyof RandomOptions] = option.value;
-		await random(interaction, options);
+		if (interaction.data.options?.length)
+			for (const option of interaction.data.options)
+				if (option.type === ApplicationCommandOptionType.Integer)
+					options[option.name as "max" | "min"] = option.value;
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: getRandom(options),
+		});
 	},
-	async component(interaction) {
-		const [, min, max] = interaction.customId.split("-");
+	component(interaction, { reply }) {
+		const [, min, max] = interaction.data.custom_id.split("-");
 
-		await random(
-			interaction,
-			{ min: Number(min) || undefined, max: Number(max) || undefined },
-			true,
-		);
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: getRandom(
+				{ min: Number(min) || undefined, max: Number(max) || undefined },
+				true,
+			),
+		});
 	},
 });

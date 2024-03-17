@@ -1,34 +1,31 @@
-import { ApplicationCommandType, ButtonStyle, ComponentType } from "discord.js";
-import { env } from "node:process";
-import { request } from "undici";
-import type { CatResponse, ReceivedInteraction } from "../util";
-import { createCommand } from "../util";
+import {
+	ApplicationCommandType,
+	ButtonStyle,
+	ComponentType,
+	InteractionResponseType,
+	MessageFlags,
+	RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	Routes,
+} from "discord-api-types/v10";
+import type { CatResponse } from "../util";
+import { Command, rest } from "../util";
 
-const sendCat = async (
-	interaction: ReceivedInteraction,
-	ephemeral?: boolean,
-) => {
-	const data = await request(
+const getCat = async (
+	key: string,
+): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
+	const data = await fetch(
 		"https://api.thecatapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
-		{
-			method: "GET",
-			headers: {
-				"x-api-key": env.CAT_API_KEY!,
-			},
-		},
-	).then((res) => res.body.json() as Promise<CatResponse | null>);
+		{ headers: { "x-api-key": key } },
+	).then((res) => res.json() as Promise<CatResponse | null>);
 
-	if (!data?.[0]) {
-		await interaction.reply({
+	if (!data?.[0])
+		return {
 			content: "Si è verificato un errore nel caricamento dell'immagine!",
-		});
-		return;
-	}
+		};
 	const [{ url }] = data;
 
-	await interaction.reply({
+	return {
 		content: `[Meow!](${url}) 🐱`,
-		ephemeral,
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -49,10 +46,10 @@ const sendCat = async (
 				],
 			},
 		],
-	});
+	};
 };
 
-export const catCommand = createCommand({
+export const cat = new Command({
 	data: [
 		{
 			name: "cat",
@@ -60,10 +57,21 @@ export const catCommand = createCommand({
 			type: ApplicationCommandType.ChatInput,
 		},
 	],
-	async run(interaction) {
-		await sendCat(interaction);
+	async run(interaction, { reply, env }) {
+		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
+		await rest.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{ body: await getCat(env.CAT_API_KEY) },
+		);
 	},
-	async component(interaction) {
-		await sendCat(interaction, true);
+	async component(interaction, { reply, env }) {
+		reply({
+			type: InteractionResponseType.DeferredChannelMessageWithSource,
+			data: { flags: MessageFlags.Ephemeral },
+		});
+		await rest.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{ body: await getCat(env.CAT_API_KEY) },
+		);
 	},
 });

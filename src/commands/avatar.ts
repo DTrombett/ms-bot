@@ -1,14 +1,16 @@
+import { escapeMarkdown } from "@discordjs/formatters";
 import {
+	APIApplicationCommandInteractionDataUserOption,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	GuildMember,
-	escapeMarkdown,
-} from "discord.js";
-import { createCommand } from "../util";
+	InteractionResponseType,
+	MessageFlags,
+} from "discord-api-types/v10";
+import { Command, rest } from "../util";
 
-export const avatarCommand = createCommand({
+export const avatar = new Command({
 	data: [
 		{
 			name: "avatar",
@@ -23,60 +25,70 @@ export const avatarCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		const { guild } = interaction;
-		const option =
-			interaction.options.data.find(
-				(o) => o.type === ApplicationCommandOptionType.User,
-			) ?? interaction;
-		const user = option.user ?? interaction.user;
-		const member = option.member
-			? option.member
-			: guild
-			? await guild.members.fetch(user.id).catch(() => user)
-			: user;
+	run(interaction, { reply }) {
+		const userId = interaction.data.options?.find(
+			(o): o is APIApplicationCommandInteractionDataUserOption =>
+				o.name === "user" && o.type === ApplicationCommandOptionType.User,
+		)?.value;
+		const user =
+			userId == null
+				? interaction.user ?? interaction.member?.user
+				: interaction.data.resolved?.users?.[userId];
+
+		if (!user) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: { flags: MessageFlags.Ephemeral, content: "Utente non trovato!" },
+			});
+			return;
+		}
+		const member =
+			userId == null
+				? interaction.member
+				: interaction.data.resolved?.members?.[userId];
 		const url =
-			"client" in member
-				? member.displayAvatarURL({
-						extension: "png",
-						size: 4096,
-				  })
-				: member.avatar != null
-				? this.client.rest.cdn.guildMemberAvatar(
-						guild!.id,
+			member?.avatar == null
+				? user.avatar == null
+					? rest.cdn.defaultAvatar(
+							user.discriminator === "0"
+								? Number(BigInt(user.id) >> 22n) % 6
+								: Number(user.discriminator) % 5,
+						)
+					: rest.cdn.avatar(user.id, user.avatar, {
+							size: 4096,
+							extension: "png",
+						})
+				: rest.cdn.guildMemberAvatar(
+						interaction.guild_id!,
 						user.id,
 						member.avatar,
 						{
 							size: 4096,
 							extension: "png",
 						},
-				  )
-				: user.displayAvatarURL({
-						extension: "png",
-						size: 4096,
-				  });
+					);
 
-		await interaction.reply({
-			content: `Avatar di **[${escapeMarkdown(
-				member instanceof GuildMember
-					? member.displayName
-					: "nick" in member && member.nick != null
-					? member.nick
-					: user.username,
-			)}](${url} )**:`,
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							url,
-							style: ButtonStyle.Link,
-							label: "Apri l'originale",
-						},
-					],
-				},
-			],
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: {
+				content: `Avatar di **[${escapeMarkdown(
+					member?.nick ?? user.global_name ?? user.username,
+				)}](${url} )**:`,
+				allowed_mentions: { parse: [] },
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								url,
+								style: ButtonStyle.Link,
+								label: "Apri l'originale",
+							},
+						],
+					},
+				],
+			},
 		});
 	},
 });
