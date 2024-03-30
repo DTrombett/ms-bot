@@ -454,18 +454,18 @@ VALUES (?)`,
 			return;
 		}
 		if (actionOrDay === "update") {
-			// if (Date.now() < time) {
-			// 	reply({
-			// 		type: InteractionResponseType.ChannelMessageWithSource,
-			// 		data: {
-			// 			content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
-			// 				time / 1_000,
-			// 			)}:R>`,
-			// 			flags: MessageFlags.Ephemeral,
-			// 		},
-			// 	});
-			// 	return;
-			// }
+			if (Date.now() < time) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
+							time / 1_000,
+						)}:R>`,
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
 			const [users, matches] = await getPredictionsData(
 				env,
 				parseInt(partOrCategoryId!),
