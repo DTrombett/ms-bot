@@ -454,6 +454,7 @@ VALUES (?)`,
 			return;
 		}
 		if (actionOrDay === "update") {
+			console.log(interaction.data.custom_id, timestamp);
 			if (Date.now() < time) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
