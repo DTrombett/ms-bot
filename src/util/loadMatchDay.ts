@@ -47,7 +47,7 @@ export const loadMatchDay = async (env: Env, last = 0) => {
 			return time < newTime ? time : newTime;
 		}, new Date(""))
 		.toISOString();
-	const startTime = new Date(matchDay.startDate).getTime() - 1000 * 60 * 15;
+	const startTime = new Date(matchDay.startDate).getTime() - 1_000 * 60 * 15;
 	const date = Math.round(startTime / 1_000);
 
 	await Promise.all([

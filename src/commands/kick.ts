@@ -73,7 +73,7 @@ const executeKick = async (
 		return {
 			content: `Si è verificato un errore: \`${result.message.slice(
 				0,
-				1000,
+				1_000,
 			)}\``,
 			allowed_mentions: { parse: [] },
 		};

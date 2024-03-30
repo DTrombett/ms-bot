@@ -81,7 +81,7 @@ export const startPredictions = async (
 		);
 	}
 	const finished = matches.every((match) => match.match_status === 2);
-	const minute = Date.now() + 1000 * 60;
+	const minute = Date.now() + 1_000 * 60;
 
 	if (finished) promises.push(closeMatchDay(env, leaderboard, matches, day));
 	await Promise.all(promises);
@@ -98,7 +98,7 @@ export const startPredictions = async (
 										.setCustomId(
 											`predictions-update-${categoryId}-${
 												matches.some((match) => match.match_status === 1)
-													? Date.now() + 1_000 * 60
+													? minute
 													: Math.max(
 															Date.parse(
 																matches.find(

@@ -164,7 +164,7 @@ export const predictions = new Command({
 			});
 			return;
 		}
-		const startTime = new Date(matchDay.startDate).getTime() - 1000 * 60 * 15;
+		const startTime = new Date(matchDay.startDate).getTime() - 1_000 * 60 * 15;
 
 		if (subCommand.name === "view") {
 			const user = (interaction.member ?? interaction).user!;
@@ -203,7 +203,7 @@ export const predictions = new Command({
 								name: `${[m.home_team_name, m.away_team_name]
 									.map(normalizeTeamName)
 									.join(" - ")} (<t:${Math.round(
-									new Date(m.date_time).getTime() / 1000,
+									new Date(m.date_time).getTime() / 1_000,
 								)}:F>)`,
 								value:
 									existingPredictions.find(
@@ -432,7 +432,7 @@ VALUES (?)`,
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
-						content: `La giornata inizia <t:${Math.round(time / 1000)}:R>!`,
+						content: `La giornata inizia <t:${Math.round(time / 1_000)}:R>!`,
 						flags: MessageFlags.Ephemeral,
 					},
 				});
@@ -454,26 +454,25 @@ VALUES (?)`,
 			return;
 		}
 		if (actionOrDay === "update") {
-			console.log(interaction.data.custom_id, timestamp);
-			if (Date.now() < time) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
-							time / 1_000,
-						)}:R>`,
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-				return;
-			}
+			// if (Date.now() < time) {
+			// 	reply({
+			// 		type: InteractionResponseType.ChannelMessageWithSource,
+			// 		data: {
+			// 			content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
+			// 				time / 1_000,
+			// 			)}:R>`,
+			// 			flags: MessageFlags.Ephemeral,
+			// 		},
+			// 	});
+			// 	return;
+			// }
 			const [users, matches] = await getPredictionsData(
 				env,
 				parseInt(partOrCategoryId!),
 			);
 			const finished = matches.every((match) => match.match_status === 2);
 			const leaderboard = resolveLeaderboard(users, matches);
-			const minute = Date.now() + 1000 * 60;
+			const minute = Date.now() + 1_000 * 60;
 
 			reply({
 				type: InteractionResponseType.UpdateMessage,
@@ -494,7 +493,7 @@ VALUES (?)`,
 											.setCustomId(
 												`predictions-update-${partOrCategoryId}-${
 													matches.some((match) => match.match_status === 1)
-														? Date.now() + minute
+														? minute
 														: Math.max(
 																Date.parse(
 																	matches.find(
