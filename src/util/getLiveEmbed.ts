@@ -104,24 +104,24 @@ const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 const resolveStats = (users: User[]) => {
 	let currentStreaks: { id: string; days: number }[] = [];
 	let totalPoints = 0;
-	const highestAvg: { users: string[]; avg: number } = {
-		users: [],
+	const highestAvg: { users: Set<string>; avg: number } = {
+		users: new Set(),
 		avg: -Infinity,
 	};
-	const highestDiff: { users: string[]; points: number } = {
-		users: [],
+	const highestDiff: { users: Set<string>; points: number } = {
+		users: new Set(),
 		points: 0,
 	};
-	const highestPoints: { users: string[]; points: number } = {
-		users: [],
+	const highestPoints: { users: Set<string>; points: number } = {
+		users: new Set(),
 		points: -Infinity,
 	};
-	const highestStreak: { users: string[]; days: number } = {
-		users: [],
+	const highestStreak: { users: Set<string>; days: number } = {
+		users: new Set(),
 		days: -Infinity,
 	};
 	const days: {
-		winners: string[];
+		winners: Set<string>;
 		totalPoints: number;
 		winnerPoints: number;
 		day: number;
@@ -142,17 +142,17 @@ const resolveStats = (users: User[]) => {
 					days[i]!.totalPoints += n;
 					if (n > days[i]!.winnerPoints) {
 						days[i]!.secondPoints = days[i]!.winnerPoints;
-						days[i]!.winners = [user.id];
+						days[i]!.winners = new Set([user.id]);
 						days[i]!.winnerPoints = n;
 					} else if (n === days[i]!.winnerPoints) {
 						days[i]!.secondPoints = days[i]!.winnerPoints;
-						days[i]!.winners.push(user.id);
+						days[i]!.winners.add(user.id);
 					} else if (n > days[i]!.secondPoints) days[i]!.secondPoints = n;
 				} else
 					days[i] = {
 						day: i,
 						totalPoints: n,
-						winners: [user.id],
+						winners: new Set([user.id]),
 						winnerPoints: n,
 						secondPoints: -Infinity,
 					};
@@ -160,10 +160,10 @@ const resolveStats = (users: User[]) => {
 		const avg = total[0] / total[1];
 
 		if (avg >= highestAvg.avg) {
-			highestAvg.users = [
+			highestAvg.users = new Set([
 				user.id,
 				...(avg === highestAvg.avg ? highestAvg.users : []),
-			];
+			]);
 			highestAvg.avg = avg;
 		}
 		totalPoints += total[0];
@@ -173,14 +173,15 @@ const resolveStats = (users: User[]) => {
 	for (const day of days) {
 		if (day.totalPoints > bestDay!.totalPoints) bestDay = day;
 		if (day.winnerPoints >= highestPoints.points) {
-			highestPoints.users = day.winners.concat(
-				day.winnerPoints === highestPoints.points ? highestPoints.users : [],
-			);
+			highestPoints.users = new Set([
+				...day.winners,
+				...(day.winnerPoints === highestPoints.points
+					? highestPoints.users
+					: []),
+			]);
 			highestPoints.points = day.winnerPoints;
 		}
-		currentStreaks = currentStreaks.filter(({ id }) =>
-			day.winners.includes(id),
-		);
+		currentStreaks = currentStreaks.filter(({ id }) => day.winners.has(id));
 		const diff = day.winnerPoints - day.secondPoints;
 		let updateDiff = false;
 
@@ -191,15 +192,15 @@ const resolveStats = (users: User[]) => {
 		for (const winner of day.winners) {
 			let found = currentStreaks.find(({ id }) => winner === id);
 
-			if (updateDiff && !highestDiff.users.includes(winner))
-				highestDiff.users.push(winner);
+			if (updateDiff && !highestDiff.users.has(winner))
+				highestDiff.users.add(winner);
 			if (found) found.days++;
 			else currentStreaks.push((found = { id: winner, days: 1 }));
 			if (found.days >= highestStreak.days) {
-				highestStreak.users = [
+				highestStreak.users = new Set([
 					found.id,
 					...(found.days === highestStreak.days ? highestStreak.users : []),
-				];
+				]);
 				highestStreak.days = found.days;
 			}
 		}
@@ -207,26 +208,26 @@ const resolveStats = (users: User[]) => {
 	return {
 		name: "Statistiche Serie A 2023/2024",
 		value: `- Punteggio più alto: ${
-			highestPoints.users.length
-				? `${highestPoints.users.map((id) => `<@${id}>`).join(", ")} • **${
+			highestPoints.users.size
+				? `${[...highestPoints.users].map((id) => `<@${id}>`).join(", ")} • **${
 						highestPoints.points
 					}** Punti Partita`
 				: "**N/A**"
 		}\n- Media più alta: ${
-			highestAvg.users.length
-				? `${highestAvg.users
+			highestAvg.users.size
+				? `${[...highestAvg.users]
 						.map((id) => `<@${id}>`)
 						.join(", ")} • **${highestAvg.avg.toFixed(2)}** Punti Partita`
 				: "**N/A**"
 		}\n- Vittoria con maggior distacco: ${
-			highestDiff.users.length
-				? `${highestDiff.users.map((id) => `<@${id}>`).join(", ")} • **${
+			highestDiff.users.size
+				? `${[...highestDiff.users].map((id) => `<@${id}>`).join(", ")} • **${
 						highestDiff.points
 					}** Punti Partita`
 				: "**N/A**"
 		}\n- Combo vittorie più lunga: ${
-			highestStreak.users.length
-				? `${highestStreak.users.map((id) => `<@${id}>`).join(", ")} • **${
+			highestStreak.users.size
+				? `${[...highestStreak.users].map((id) => `<@${id}>`).join(", ")} • **${
 						highestStreak.days
 					}** Giornate`
 				: "**N/A**"
