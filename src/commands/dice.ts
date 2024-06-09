@@ -1,35 +1,37 @@
 import {
+	APIApplicationCommandInteractionDataIntegerOption,
+	APIInteractionResponseCallbackData,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord.js";
-import type { ReceivedInteraction } from "../util";
-import { createCommand, randomNumber } from "../util";
+	InteractionResponseType,
+	MessageFlags,
+} from "discord-api-types/v10";
+import { Command, randomNumber } from "../util";
 
-const dice = async (
-	interaction: ReceivedInteraction,
-	count: number,
-	ephemeral?: boolean,
-) => {
-	if (count < 1 || count > 100) {
-		await interaction.reply({
+const roll = (
+	count = 1,
+	ephemeral = false,
+): APIInteractionResponseCallbackData => {
+	if (count < 1 || count > 100)
+		return {
 			content: "Il numero dei dadi deve essere compreso tra 1 e 100!",
-			ephemeral: true,
-		});
-		return;
-	}
+			flags: MessageFlags.Ephemeral,
+		};
 	const results: number[] = [];
 	let result = 0;
 
 	for (let i = 0; i < count; i++) {
-		const roll = randomNumber(1, 6);
+		const n = randomNumber(1, 6);
 
-		result += roll;
-		results.push(roll);
+		result += n;
+		results.push(n);
 	}
-	await interaction.reply({
-		content: `🎲 **${result}** (${results.join(", ")}) con ${count} dadi!`,
+	return {
+		content: `🎲 **${result}** ${
+			count > 1 ? `(${results.join(", ")})` : ""
+		} con ${count} dad${count === 1 ? "o" : "i"}!`,
 		components: [
 			{
 				type: ComponentType.ActionRow,
@@ -46,11 +48,11 @@ const dice = async (
 				],
 			},
 		],
-		ephemeral,
-	});
+		flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+	};
 };
 
-export const diceCommand = createCommand({
+export const dice = new Command({
 	data: [
 		{
 			name: "dice",
@@ -67,28 +69,24 @@ export const diceCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		const count = interaction.options.data[0]?.value ?? 1;
-
-		if (typeof count !== "number") {
-			await interaction.reply({
-				content: "Numero di dadi non valido!",
-				ephemeral: true,
-			});
-			return;
-		}
-		await dice(interaction, count);
+	run(interaction, { reply }) {
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: roll(
+				interaction.data.options?.find(
+					(o): o is APIApplicationCommandInteractionDataIntegerOption =>
+						o.name === "count" &&
+						o.type === ApplicationCommandOptionType.Integer,
+				)?.value,
+			),
+		});
 	},
-	async component(interaction) {
-		const count = Number(interaction.customId.split("-")[1]);
+	component(interaction, { reply }) {
+		const [, count] = interaction.data.custom_id.split("-");
 
-		if (isNaN(count)) {
-			await interaction.reply({
-				content: "Numero di dadi non valido!",
-				ephemeral: true,
-			});
-			return;
-		}
-		await dice(interaction, count, true);
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: roll(parseInt(count!) || undefined, true),
+		});
 	},
 });

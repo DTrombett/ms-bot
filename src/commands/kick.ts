@@ -1,119 +1,95 @@
-import type { InteractionType, Snowflake } from "discord.js";
+import { escapeMarkdown } from "@discordjs/formatters";
 import {
+	APIApplicationCommandInteractionDataOption,
+	APIApplicationCommandInteractionDataStringOption,
+	APIApplicationCommandInteractionDataUserOption,
+	APIGuild,
+	APIInteractionDataResolvedGuildMember,
+	APIInteractionGuildMember,
+	APIUser,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	ComponentType,
-	GuildMember,
+	InteractionResponseType,
+	MessageFlags,
 	PermissionFlagsBits,
-	TextInputStyle,
-	escapeMarkdown,
-} from "discord.js";
-import type { InteractionByType, ReceivedInteraction } from "../util";
-import {
-	Emojis,
-	createCommand,
-	normalizeError,
-	printToStderr,
-	sendError,
-} from "../util";
+	RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	Routes,
+	Snowflake,
+} from "discord-api-types/v10";
+import { Command, Emojis, normalizeError, rest } from "../util";
 
-const checkPerms = async (
-	interaction: ReceivedInteraction<"cached">,
-	id: Snowflake,
-	ownerId: Snowflake,
-	member?: GuildMember,
-) => {
-	if (!member) {
-		await interaction.reply({
-			content: "L'utente non è nel server!",
-			ephemeral: true,
-		});
-		return true;
-	}
-	if (interaction.user.id !== ownerId) {
-		if (id === ownerId) {
-			await interaction.reply({
-				content: "Non puoi eseguire questa azione sul proprietario del server!",
-				ephemeral: true,
-			});
-			return true;
-		}
-		if (
-			member.roles.highest.comparePositionTo(
-				interaction.member.roles.highest,
-			) >= 0
-		) {
-			await interaction.reply({
-				content:
-					"Non puoi eseguire questa azione su un membro con una posizione superiore o uguale alla tua!",
-				ephemeral: true,
-			});
-			return true;
-		}
-	}
-	if (!member.kickable) {
-		await interaction.reply({
-			content: "Non ho abbastanza permessi per espellere questo membro!",
-			ephemeral: true,
-		});
-		return true;
-	}
-	return false;
+const checkPerms = (
+	executor: APIInteractionGuildMember,
+	guild: APIGuild,
+	target: Snowflake,
+	targetMember?: Omit<APIInteractionDataResolvedGuildMember, "permissions">,
+): string | undefined => {
+	if (executor.user.id === guild.owner_id) return undefined;
+	if (target === guild.owner_id)
+		return "Non puoi eseguire questa azione sul proprietario del server!";
+	if (!targetMember) return undefined;
+	const roles = new Map(guild.roles.map((role) => [role.id, role]));
+	const highest = executor.roles.reduce((prev, role, i) => {
+		if (i === 0) return prev;
+		const resolved = roles.get(role);
+
+		if (!prev) return resolved;
+		if (!resolved) return prev;
+		if (resolved.position > prev.position) return resolved;
+		if (resolved.position < prev.position) return prev;
+		if (BigInt(role) < BigInt(prev.id)) return resolved;
+		return prev;
+	}, roles.get(executor.roles[0]!));
+
+	if (!highest) return undefined;
+	const highestId = BigInt(highest.id);
+
+	if (
+		targetMember.roles.some((role) => {
+			const resolved = roles.get(role);
+
+			return (
+				resolved &&
+				(resolved.position > highest.position ||
+					(resolved.position === highest.position && highestId > BigInt(role)))
+			);
+		})
+	)
+		return "Non puoi espellere un membro con una posizione superiore o uguale alla tua!";
+	return undefined;
 };
 const executeKick = async (
-	interaction: ReceivedInteraction<"cached">,
-	member: GuildMember,
-	reason = "",
-) => {
-	const [error] = await Promise.all([
-		member
-			.kick(reason || undefined)
-			.then(() => undefined)
-			.catch(normalizeError),
-		interaction.deferReply().catch(printToStderr),
-	]);
+	guildId: Snowflake,
+	user: APIUser,
+	reason?: string,
+): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
+	reason = reason?.trim();
+	const result = await rest
+		.delete(Routes.guildMember(guildId, user.id), { reason })
+		.then(() => {})
+		.catch(normalizeError);
 
-	if (error) {
-		await sendError(interaction, error);
-		return;
-	}
-	await interaction.editReply({
-		content: `<:kick:${Emojis.kick}> <@${member.user.id}> (${escapeMarkdown(
-			member.user.tag,
-		)} - ${member.user.id}) è stato espulso!\n\nMotivo: ${
-			reason.length ? reason.slice(0, 1_000) : "*Nessun motivo*"
+	if (result)
+		return {
+			content: `Si è verificato un errore: \`${result.message.slice(
+				0,
+				1_000,
+			)}\``,
+			allowed_mentions: { parse: [] },
+		};
+	return {
+		content: `<:kick:${Emojis.kick}> <@${user.id}> (${escapeMarkdown(
+			user.username,
+		)} - ${user.id}) è stato espulso!\n\nMotivo: ${
+			reason !== undefined && reason.length > 0
+				? reason.slice(0, 1_000)
+				: "*Nessun motivo*"
 		}`,
-	});
+		allowed_mentions: { parse: [] },
+	};
 };
-const showModal = (
-	interaction: InteractionByType<
-		InteractionType.ApplicationCommand | InteractionType.MessageComponent
-	>,
-	member: GuildMember,
-) =>
-	interaction.showModal({
-		title: `Espelli ${member.user.username} dal server`,
-		custom_id: `kick-${member.id}`,
-		components: [
-			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.TextInput,
-						custom_id: "reason",
-						label: "Motivo dell'espulsione",
-						placeholder:
-							"Inserisci un motivo. Sarà visibile solo nel registro attività e non sarà mostrato al membro.",
-						max_length: 512,
-						style: TextInputStyle.Paragraph,
-						required: false,
-					},
-				],
-			},
-		],
-	});
 
-export const kickCommand = createCommand({
+export const kick = new Command({
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,
@@ -135,79 +111,76 @@ export const kickCommand = createCommand({
 				},
 			],
 		},
-		{
-			type: ApplicationCommandType.User,
-			name: "Espelli",
-			default_member_permissions: String(PermissionFlagsBits.KickMembers),
-		},
 	],
-	async run(interaction) {
-		if (!interaction.inCachedGuild()) {
-			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
-				ephemeral: true,
+	async run(interaction, { reply }) {
+		if (
+			!(BigInt(interaction.app_permissions) & PermissionFlagsBits.KickMembers)
+		) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						'Ho bisogno del permesso "Espellere i membri" per eseguire questo comando!',
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
-		const option = interaction.options.data.find(
-			(o) => o.type === ApplicationCommandOptionType.User,
-		);
-		const user = option?.user;
+		if (
+			!(interaction.data.options && interaction.member && interaction.guild_id)
+		)
+			throw new TypeError("Invalid interaction", { cause: interaction });
+		const options = new Map<
+			string,
+			APIApplicationCommandInteractionDataOption
+		>();
 
-		if (!user) {
-			await interaction.reply({
-				content: "Utente non trovato!",
-				ephemeral: true,
+		for (const option of interaction.data.options)
+			options.set(option.name, option);
+		const { value: userId } = options.get(
+			"member",
+		) as APIApplicationCommandInteractionDataUserOption;
+		const user = interaction.data.resolved!.users![userId]!;
+		const member = interaction.data.resolved!.members?.[userId];
+
+		if (!member) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Questo utente non è nel server!",
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
-		const { guild } = interaction;
-		const member =
-			option.member instanceof GuildMember
-				? option.member
-				: await guild.members.fetch(user.id).catch(() => undefined);
+		const guild = (await rest.get(
+			Routes.guild(interaction.guild_id),
+		)) as APIGuild;
+		const content = checkPerms(interaction.member, guild, user.id, member);
 
-		if (await checkPerms(interaction, user.id, guild.ownerId, member)) return;
-		if (interaction.commandName === "Espelli") {
-			await showModal(interaction, member!);
-			return;
-		}
-		const reason = interaction.options.data.find((o) => o.name === "reason")
-			?.value;
-
-		await executeKick(
-			interaction,
-			member!,
-			typeof reason === "string" ? reason : undefined,
-		);
-	},
-	async modalSubmit(interaction) {
-		const [, id] = interaction.customId.split("-");
-
-		if (!id) {
-			await interaction.reply({
-				content: "Utente non trovato!",
-				ephemeral: true,
+		if (content) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: { content, flags: MessageFlags.Ephemeral },
 			});
 			return;
 		}
-		if (!interaction.inCachedGuild()) {
-			await interaction.reply({
-				content:
-					"Questo comando può essere usato solo all'interno di un server!",
-				ephemeral: true,
-			});
-			return;
-		}
-		const { guild } = interaction;
-		const member = await guild.members.fetch(id).catch(() => undefined);
+		const reason = (
+			options.get("reason") as
+				| APIApplicationCommandInteractionDataStringOption
+				| undefined
+		)?.value;
 
-		if (await checkPerms(interaction, id, guild.ownerId, member)) return;
-		await executeKick(
-			interaction,
-			member!,
-			interaction.fields.fields.get("reason")?.value,
+		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
+		await rest.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{
+				body: await executeKick(
+					interaction.guild_id,
+					user,
+					reason ?? undefined,
+				),
+			},
 		);
 	},
 });

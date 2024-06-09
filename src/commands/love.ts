@@ -1,8 +1,10 @@
 import {
+	APIUser,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-} from "discord.js";
-import { createCommand } from "../util";
+	InteractionResponseType,
+} from "discord-api-types/v10";
+import { Command } from "../util";
 
 const emojis = [
 	":broken_heart:",
@@ -18,7 +20,7 @@ const emojis = [
 	":heart_on_fire:",
 ];
 
-export const loveCommand = createCommand({
+export const love = new Command({
 	data: [
 		{
 			name: "love",
@@ -39,28 +41,46 @@ export const loveCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		// eslint-disable-next-line prefer-const
-		let [{ user: user1 }, { user: user2 }] = interaction.options.data;
+	async run(interaction, { reply }) {
+		let user1!: APIUser,
+			user2 = interaction.user ?? interaction.member!.user;
 
-		user2 ??= interaction.user;
-		if (!user1) {
-			await interaction.reply({
-				content: "Utente non trovato!",
-				ephemeral: true,
-			});
-			return;
-		}
-		const bigint1 = BigInt(user1.id) * BigInt(user1.discriminator);
-		const bigint2 = BigInt(user2.id) * BigInt(user2.discriminator);
+		for (const option of interaction.data.options!)
+			if (option.type === ApplicationCommandOptionType.User)
+				if (option.name === "user1")
+					user1 = interaction.data.resolved!.users![option.value]!;
+				else if (option.name === "user2")
+					user2 = interaction.data.resolved!.users![option.value]!;
+		const length = Math.max(
+			Math.min(user1.username.length, user2.username.length),
+			10,
+		);
+		const bigint1 =
+			BigInt(user1.id) *
+				[...user1.username.slice(0, length)].reduce(
+					(sum, c) => sum + BigInt(c.charCodeAt(0)),
+					BigInt(0),
+				) +
+			BigInt(10 ** Math.abs(user1.username.length - length));
+		const bigint2 =
+			BigInt(user2.id) *
+				[...user2.username.slice(0, length)].reduce(
+					(sum, c) => sum + BigInt(c.charCodeAt(0)),
+					BigInt(0),
+				) +
+			BigInt(10 ** Math.abs(user2.username.length - length));
 		const loveRate =
 			bigint1 > bigint2
 				? (bigint2 * 100n) / bigint1
 				: (bigint1 * 100n) / bigint2;
 		const emoji = emojis[Math.floor(Number(loveRate) / 10)] ?? "❤️";
 
-		await interaction.reply({
-			content: `${emoji} L'amore tra <@${user1.id}> e <@${user2.id}> è del **${loveRate}%** ${emoji}`,
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: {
+				content: `${emoji} L'amore tra <@${user1.id}> e <@${user2.id}> è del **${loveRate}%** ${emoji}`,
+				allowed_mentions: { parse: [] },
+			},
 		});
 	},
 });

@@ -1,20 +1,16 @@
-import { GuildTextBasedChannel } from "discord.js";
-import { env } from "node:process";
-import { request } from "undici";
-import { MatchDay, User } from "../models";
-import CustomClient from "./CustomClient";
-import { printToStderr } from "./logger";
-import normalizeTeamName from "./normalizeTeamName";
-import { setPermanentTimeout } from "./permanentTimeouts";
-import { MatchesData } from "./types";
+import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
+import {
+	ButtonStyle,
+	RESTPostAPIChannelMessageJSONBody,
+	Routes,
+} from "discord-api-types/v10";
+import { loadMatches, rest } from ".";
+import { Env, MatchDay } from "./types";
 
-export const loadMatchDay = async (
-	client: CustomClient,
-	channel: GuildTextBasedChannel,
-) => {
-	const matchDays = (await request(
+export const loadMatchDay = async (env: Env, last = 0) => {
+	const matchDays = (await fetch(
 		"https://www.legaseriea.it/api/season/157617/championship/A/matchday",
-	).then((res) => res.body.json())) as
+	).then((res) => res.json())) as
 		| {
 				success: true;
 				data: {
@@ -25,65 +21,64 @@ export const loadMatchDay = async (
 		  }
 		| { success: false; message: string; errors: unknown[] };
 
-	if (!matchDays.success) {
-		printToStderr(matchDays.message);
-		printToStderr(matchDays.errors);
-		throw new Error("Couldn't load season data");
-	}
+	if (!matchDays.success)
+		throw new Error(`Couldn't load season data: ${matchDays.message}`, {
+			cause: matchDays.errors,
+		});
 	const matchDayData = matchDays.data.find(
-		(d) => d.category_status === "LIVE" || d.category_status === "TO BE PLAYED",
+		(d) =>
+			d.id_category > last &&
+			(d.category_status === "LIVE" || d.category_status === "TO BE PLAYED"),
 	);
 
-	if (matchDayData == null) throw new Error("No match to be played!");
-	const [matches, users] = await Promise.all([
-		request(
-			`https://www.legaseriea.it/api/stats/live/match?match_day_id=${matchDayData.id_category}`,
-		).then((res) => res.body.json() as Promise<MatchesData>),
-		User.find({
-			predictionReminder: { $exists: true, $ne: null },
-		}),
-	]);
-
-	if (!matches.success) {
-		printToStderr(matches.message);
-		printToStderr(matches.errors);
-		throw new Error("Couldn't load matches data");
-	}
-	const matchDay = new MatchDay({
-		_id: matchDayData.id_category,
-		matches: matches.data.map((match) => ({
-			date: new Date(match.date_time).getTime(),
-			teams: [match.home_team_name, match.away_team_name]
-				.map(normalizeTeamName)
-				.join(" - "),
-		})),
+	if (!matchDayData) throw new TypeError("No match to be played!");
+	const matchDay: MatchDay = {
 		day: Number(matchDayData.description),
-	});
-	let date = matchDay.matches[0].date - 1000 * 60 * 15;
+		categoryId: Number(matchDayData.id_category),
+		startDate: "",
+	};
+	const matches = await loadMatches(matchDay.categoryId);
+
+	if (!matches.length) throw new TypeError("No match found");
+	matchDay.startDate = matches
+		.reduce((time, match) => {
+			const newTime = new Date(match.date_time);
+
+			return time < newTime ? time : newTime;
+		}, new Date(""))
+		.toISOString();
+	const startTime = new Date(matchDay.startDate).getTime() - 1_000 * 60 * 15;
+	const date = Math.round(startTime / 1_000);
 
 	await Promise.all([
-		matchDay.save(),
-		User.updateMany(
-			{
-				predictions: { $exists: true, $type: "array", $ne: [] },
-			},
-			{ $unset: { predictions: 1 } },
-		),
-		...users.map((u) =>
-			setPermanentTimeout(client, {
-				action: "predictionRemind",
-				date: matchDay.matches[0].date - 1000 * 60 * 15 - u.predictionReminder!,
-				options: [u._id],
+		env.DB.prepare(
+			"INSERT INTO MatchDays (day, categoryId, startDate) VALUES (?1, ?2, ?3)",
+		)
+			.bind(matchDay.day, matchDay.categoryId, matchDay.startDate)
+			.run(),
+		date - Date.now() / 1_000 > 1 &&
+			rest.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
+				body: {
+					content: `<@&${env.PREDICTIONS_ROLE}>, potete inviare da ora i pronostici per la prossima giornata!\nPer farlo inviate il comando \`/predictions send\` e seguire le istruzioni o premete il pulsante qui in basso. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)!`,
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(`predictions-${matchDay.day}-1-${startTime}`)
+									.setEmoji({ name: "⚽" })
+									.setLabel("Invia pronostici")
+									.setStyle(ButtonStyle.Primary),
+								new ButtonBuilder()
+									.setCustomId(
+										`predictions-start-${matchDayData.id_category}-${startTime}-${matchDay.day}`,
+									)
+									.setEmoji({ name: "▶️" })
+									.setLabel("Inizia giornata")
+									.setStyle(ButtonStyle.Primary),
+							)
+							.toJSON(),
+					],
+				} satisfies RESTPostAPIChannelMessageJSONBody,
 			}),
-		),
 	]);
-	date = Math.round(date / 1_000);
-	if (date - Date.now() / 1_000 > 10)
-		await channel.send({
-			content: `<@&${env.PREDICTIONS_ROLE!}>, potete ora inviare i pronostici per la prossima giornata! Per inviare i pronostici potete usare il comando \`/predictions send\` e seguire le istruzioni. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)! Vi ricordo che potete aggiungere un promemoria valido per ogni giornata per ricordarvi di inviare i pronostici con il comando \`/predictions reminder\`.`,
-			allowedMentions: { roles: [env.PREDICTIONS_ROLE!] },
-		});
-	return matchDay;
 };
-
-export default loadMatchDay;

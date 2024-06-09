@@ -1,11 +1,13 @@
 import {
+	APIInteractionResponseCallbackData,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord.js";
-import type { ReceivedInteraction } from "../util";
-import { createCommand } from "../util";
+	InteractionResponseType,
+	MessageFlags,
+} from "discord-api-types/v10";
+import { Command } from "../util";
 
 const replies = [
 	"Sì",
@@ -27,34 +29,31 @@ const replies = [
 	"Non ne ho la più pallida idea",
 ];
 
-const predict = async (
-	interaction: ReceivedInteraction,
-	ephemeral?: boolean,
-) => {
-	await interaction.reply({
-		content:
-			Math.random() < 0.95
-				? replies[Math.floor(Math.random() * replies.length)]
-				: "MA IO CHE CABBO NE POSSO SAPERE!!!",
-		components: [
-			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.Button,
-						label: "Chiedi nuovamente",
-						style: ButtonStyle.Primary,
-						emoji: { name: "💬" },
-						custom_id: "predict",
-					},
-				],
-			},
-		],
-		ephemeral,
-	});
-};
+const makePrediction = (
+	ephemeral = false,
+): APIInteractionResponseCallbackData => ({
+	content:
+		Math.random() < 0.95
+			? replies[Math.floor(Math.random() * replies.length)]
+			: "MA IO CHE CABBO NE SO?!?!?!",
+	components: [
+		{
+			type: ComponentType.ActionRow,
+			components: [
+				{
+					type: ComponentType.Button,
+					label: "Chiedi nuovamente",
+					style: ButtonStyle.Primary,
+					emoji: { name: "💬" },
+					custom_id: "predict",
+				},
+			],
+		},
+	],
+	flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+});
 
-export const predictCommand = createCommand({
+export const predict = new Command({
 	data: [
 		{
 			name: "predict",
@@ -70,10 +69,16 @@ export const predictCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		await predict(interaction);
+	run(_, { reply }) {
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: makePrediction(),
+		});
 	},
-	async component(interaction) {
-		await predict(interaction, true);
+	component(_, { reply }) {
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: makePrediction(true),
+		});
 	},
 });

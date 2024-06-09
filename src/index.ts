@@ -1,84 +1,109 @@
-import { GlobalFonts } from "@napi-rs/canvas";
-import { config } from "dotenv";
-import express from "express";
-import mongoose from "mongoose";
-import ms from "ms";
-import { createWriteStream } from "node:fs";
-import { join } from "node:path";
-import process, { cwd, env, stderr, stdout } from "node:process";
-import Constants, {
-	CustomClient,
-	loadPredictions,
-	logMemoryUsage,
-	printToStderr,
-	printToStdout,
+import {
+	InteractionResponseType,
+	InteractionType,
+} from "discord-api-types/v10";
+import * as commandsObject from "./commands";
+import type { Env } from "./util";
+import {
+	Command,
+	JsonResponse,
+	errorToResponse,
+	info,
+	rest,
+	verifyDiscordRequest,
 } from "./util";
 
-printToStdout("Starting...");
-// eslint-disable-next-line no-console
-console.time(Constants.clientOnlineLabel);
-const stream = createWriteStream("./.log", { flags: "a" });
-const old = {
-	stdout: stdout.write.bind(stdout),
-	stderr: stderr.write.bind(stderr),
+const commands: Record<string, Command> = commandsObject;
+const applicationCommands = new Map(
+	Object.values(commands).flatMap((cmd) => cmd.data.map((d) => [d.name, cmd])),
+);
+
+const server: ExportedHandler<Env> = {
+	fetch: async (request, env, context) => {
+		const url = new URL(request.url);
+
+		rest.setToken(env.DISCORD_TOKEN);
+		if (url.pathname === "/") {
+			if (request.method === "POST") {
+				const interaction = await verifyDiscordRequest(request, env).catch(
+					errorToResponse,
+				);
+
+				if (interaction instanceof Response) return interaction;
+				let action: string | undefined, result;
+
+				switch (interaction.type) {
+					case InteractionType.Ping:
+						result = {
+							type: InteractionResponseType.Pong,
+						};
+						info("Received ping interaction!");
+						break;
+					case InteractionType.ApplicationCommand:
+						result = await applicationCommands
+							.get(interaction.data.name)
+							?.run(interaction, env, context);
+						info(
+							`Command ${interaction.data.name} executed by ${(
+								interaction.member ?? interaction
+							).user?.username} in ${interaction.channel.name} (${
+								interaction.channel.id
+							}) - guild ${interaction.guild_id}`,
+						);
+						break;
+					case InteractionType.MessageComponent:
+						[action] = interaction.data.custom_id.split("-");
+						if (!action) break;
+						result = await commands[action]?.component(
+							interaction,
+							env,
+							context,
+						);
+						info(
+							`Component interaction ${action} executed by ${(
+								interaction.member ?? interaction
+							).user?.username} in ${interaction.channel.name} (${
+								interaction.channel.id
+							}) - guild ${interaction.guild_id}`,
+						);
+						break;
+					case InteractionType.ApplicationCommandAutocomplete:
+						result = await commands[interaction.data.name]?.autocomplete(
+							interaction,
+							env,
+							context,
+						);
+						break;
+					case InteractionType.ModalSubmit:
+						[action] = interaction.data.custom_id.split("-");
+						if (!action) break;
+						result = await commands[action]?.modalSubmit(
+							interaction,
+							env,
+							context,
+						);
+						info(
+							`Modal interaction ${action} executed by ${(
+								interaction.member ?? interaction
+							).user?.username} in ${interaction.channel?.name} (${interaction
+								.channel?.id}) - guild ${interaction.guild_id}`,
+						);
+						break;
+					default:
+						break;
+				}
+				return result
+					? new JsonResponse(result)
+					: new JsonResponse(
+							{ error: "Internal Server Error" },
+							{ status: 500 },
+						);
+			}
+			if (request.method === "GET") return new Response("Ready!");
+			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+		}
+		return new JsonResponse({ error: "Not Found" }, { status: 404 });
+	},
 };
 
-stream.write(`${"_".repeat(80)}\n\n`);
-stdout.write = (...args) =>
-	old.stdout(...(args as [string])) && stream.write(args[0]);
-stderr.write = (...args) =>
-	old.stderr(...(args as [string])) && stream.write(args[0]);
-if (!("DISCORD_TOKEN" in env)) config();
-const client = new CustomClient();
-const app = express().use((_, res) => {
-	res.send(
-		client.isReady()
-			? `Online! Ping: ${client.ws.ping}ms, uptime: ${ms(client.uptime, {
-					long: true,
-			  })}`
-			: "Offline! The bot is restarting, wait around 10 seconds and reload this page...",
-	);
-});
-logMemoryUsage().catch(printToStderr);
-const server = app.listen(3000);
-const fonts: Record<string, string> = {
-	impact: "Impact",
-	arial: "Arial",
-	comic: "Comic Sans MS",
-	times: "Times New Roman",
-	cour: "Courier New",
-	verdana: "Verdana",
-	georgia: "Georgia",
-	gara: "Garamond",
-	trebuc: "Trebuchet MS",
-};
-
-process
-	.on("exit", (code) => {
-		printToStdout(`Process exiting with code ${code}...`);
-		server.close();
-	})
-	.on("uncaughtException", (error) => {
-		printToStderr(error);
-		process.exit(1);
-	})
-	.on("unhandledRejection", (error) => {
-		printToStderr(error);
-	})
-	.on("warning", (message) => {
-		printToStderr(message);
-	});
-
-if (env.NODE_ENV === "development")
-	import(`./dev.js?${Date.now()}`)
-		.then(({ configureDev }: typeof import("./dev")) => configureDev(client))
-		.catch(printToStderr);
-for (const font in fonts)
-	if (Object.hasOwn(fonts, font))
-		GlobalFonts.registerFromPath(
-			join(cwd(), "fonts", `${font}.ttf`),
-			fonts[font],
-		);
-await mongoose.connect(env["MONGODB_URL"]!);
-await client.login();
-await loadPredictions(client);
+export default server;

@@ -1,34 +1,14 @@
-import { stderr, stdout } from "node:process";
-import { inspect as nodeInspect } from "node:util";
-import color, { Colors } from "./colors";
+const getDate = () => `[${new Date().toISOString()}]`;
 
-/**
- * Inspects a value.
- * @param value - The value to check
- */
-export const inspect = (value: unknown) => {
-	switch (typeof value) {
-		case "string":
-			return value;
-		case "function":
-			return value.toString();
-		default:
-			return nodeInspect(value, { colors: true });
-	}
+export const log = (...args: unknown[]) => {
+	console.log(getDate(), ...args);
 };
-
-/**
- * Prints a message to stdout.
- * @param message - The string to print
- */
-export const printToStdout = (message: unknown) => {
-	stdout.write(`${inspect(message)}\n`);
+export const info = (...args: unknown[]) => {
+	console.info("\x1b[2m", getDate(), ...args, "\x1b[0m");
 };
-
-/**
- * Prints a message to stderr.
- * @param message - The string to print
- */
-export const printToStderr = (message: unknown) => {
-	stderr.write(color(`${inspect(message)}\n`, Colors.FgRed));
+export const error = (...args: unknown[]) => {
+	console.error("\x1b[31m", getDate(), ...args, "\x1b[0m");
+};
+export const warn = (...args: unknown[]) => {
+	console.warn("\x1b[33m", getDate(), ...args, "\x1b[0m");
 };

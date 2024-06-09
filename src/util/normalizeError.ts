@@ -1,4 +1,4 @@
-import { printToStderr } from "./logger";
+import { error } from ".";
 
 /**
  * Normalize a promise rejection to a plain error object.
@@ -6,7 +6,7 @@ import { printToStderr } from "./logger";
  * @returns An Error object
  */
 export const normalizeError = (err: unknown) => {
-	printToStderr(err);
+	error(err);
 	return err instanceof Error
 		? err
 		: new Error(typeof err === "string" ? err : "Unknown error");

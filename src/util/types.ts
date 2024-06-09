@@ -1,27 +1,32 @@
-import type {
+import {
+	APIApplicationCommandAutocompleteResponse,
 	APIApplicationCommandOption,
+	APIInteraction,
+	APIInteractionResponse,
+	APIInteractionResponseChannelMessageWithSource,
+	APIInteractionResponseDeferredChannelMessageWithSource,
+	APIInteractionResponseDeferredMessageUpdate,
+	APIInteractionResponseUpdateMessage,
+	APIModalInteractionResponse,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	Awaitable,
-	CacheType,
-	ClientEvents,
-	Interaction,
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
-} from "discord.js";
-import type { Command, Event } from ".";
+} from "discord-api-types/v10";
+import type { Command } from ".";
+
+export type Awaitable<T> = Promise<T> | T;
 
 export type InteractionByType<
 	T extends InteractionType,
-	C extends CacheType = CacheType,
-	I extends Interaction<C> = Interaction<C>,
-> = I extends Interaction<C> & { type: T } ? I : never;
+	I extends APIInteraction = APIInteraction,
+> = I extends APIInteraction & { type: T } ? I : never;
 export type CommandInteractionByType<
 	T extends ApplicationCommandType,
 	I extends
 		InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>,
 > = I extends InteractionByType<InteractionType.ApplicationCommand> & {
-	commandType: T;
+	data: { type: T };
 }
 	? I
 	: never;
@@ -36,6 +41,14 @@ export type CommandData<
 		type: O;
 	})[];
 	name: N;
+};
+
+export type ExecutorContext<
+	T extends APIInteractionResponse = APIInteractionResponse,
+> = {
+	env: Env;
+	context: ExecutionContext;
+	reply: (result: T) => void;
 };
 
 /**
@@ -62,8 +75,9 @@ export type CommandOptions<
 	 * @param interaction - The interaction received
 	 */
 	autocomplete?(
-		this: Command,
+		this: Command<T>,
 		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
+		context: ExecutorContext<APIApplicationCommandAutocompleteResponse>,
 	): Awaitable<void>;
 
 	/**
@@ -72,8 +86,15 @@ export type CommandOptions<
 	 * @param interaction - The interaction received
 	 */
 	component?(
-		this: Command,
+		this: Command<T>,
 		interaction: InteractionByType<InteractionType.MessageComponent>,
+		context: ExecutorContext<
+			| APIInteractionResponseChannelMessageWithSource
+			| APIInteractionResponseDeferredChannelMessageWithSource
+			| APIInteractionResponseDeferredMessageUpdate
+			| APIInteractionResponseUpdateMessage
+			| APIModalInteractionResponse
+		>,
 	): Awaitable<void>;
 
 	/**
@@ -82,8 +103,13 @@ export type CommandOptions<
 	 * @param interaction - The interaction received
 	 */
 	modalSubmit?(
-		this: Command,
+		this: Command<T>,
 		interaction: InteractionByType<InteractionType.ModalSubmit>,
+		context: ExecutorContext<
+			| APIInteractionResponseChannelMessageWithSource
+			| APIInteractionResponseDeferredChannelMessageWithSource
+			| APIInteractionResponseDeferredMessageUpdate
+		>,
 	): Awaitable<void>;
 
 	/**
@@ -92,41 +118,20 @@ export type CommandOptions<
 	 * @param interaction - The interaction received
 	 */
 	run(
-		this: Command,
-		interaction: CommandInteractionByType<T> & {
-			commandName: N;
-			commandType: T;
-		},
+		this: Command<T>,
+		interaction: CommandInteractionByType<T>,
+		context: ExecutorContext<
+			| APIInteractionResponseChannelMessageWithSource
+			| APIInteractionResponseDeferredChannelMessageWithSource
+			| APIModalInteractionResponse
+		>,
 	): Awaitable<void>;
 };
-
-/**
- * The data for an event
- */
-export type EventOptions<K extends keyof ClientEvents = keyof ClientEvents> = {
-	/**
-	 * The name of the event
-	 */
-	name: K;
-
-	/**
-	 * The function to execute when the event is received
-	 */
-	on?: (this: Event<K>, ...args: ClientEvents[K]) => Awaitable<void>;
-
-	/**
-	 * The function to execute when the event is received once
-	 */
-	once?: EventOptions<K>["on"];
-};
-
-export type ReceivedInteraction<C extends CacheType = CacheType> =
-	InteractionByType<
-		| InteractionType.ApplicationCommand
-		| InteractionType.MessageComponent
-		| InteractionType.ModalSubmit,
-		C
-	>;
+export type ReceivedInteraction = InteractionByType<
+	| InteractionType.ApplicationCommand
+	| InteractionType.MessageComponent
+	| InteractionType.ModalSubmit
+>;
 
 /**
  * A response from thecatapi.com
@@ -182,6 +187,56 @@ export type MatchesData =
 				match_status: number;
 				slug: string;
 				match_id: number;
+				match_name: string;
 			}[];
 	  }
 	| { success: false; message: string; errors: unknown[] };
+
+export type Leaderboard = [
+	user: User & { predictions: Prediction[] },
+	matchPoints: number,
+	dayPoints: number,
+	maxPoints: number,
+][];
+
+export type SQLBoolean = 0 | 1;
+export type SQLDateTime = string;
+
+export type Match = {
+	id: number;
+	day: number;
+	matchDate: SQLDateTime;
+	teams: string;
+};
+export type MatchDay = {
+	day: number;
+	categoryId: number;
+	startDate: SQLDateTime;
+};
+export type Prediction = {
+	matchId: number;
+	userId: string;
+	prediction: string;
+};
+export type User = {
+	id: string;
+	dayPoints?: number | null;
+	matchPointsHistory?: string | null;
+};
+
+export type EnvVars = {
+	NODE_ENV?: string;
+	DISCORD_APPLICATION_ID: string;
+	DISCORD_PUBLIC_KEY: string;
+	DISCORD_TOKEN: string;
+	OWNER_ID: string;
+	TEST_GUILD: string;
+	CAT_API_KEY: string;
+	DOG_API_KEY: string;
+	PREDICTIONS_CHANNEL: string;
+	PREDICTIONS_ROLE: string;
+};
+export type Env = EnvVars & {
+	DB: D1Database;
+	KV: KVNamespace;
+};

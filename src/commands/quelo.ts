@@ -1,14 +1,18 @@
-import type { APIMessageActionRowComponent } from "discord.js";
+import { blockQuote, escapeBulletedList } from "@discordjs/formatters";
 import {
+	APIApplicationCommandInteractionDataStringOption,
+	APIInteractionResponseCallbackData,
+	APIMessageActionRowComponent,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-} from "discord.js";
-import type { ReceivedInteraction } from "../util";
-import { createCommand } from "../util";
+	InteractionResponseType,
+	MessageFlags,
+} from "discord-api-types/v10";
+import { Command } from "../util";
 
-const queloAnswers = [
+const queloAnswers: [phrase: string, url?: string][] = [
 	["La seconda che hai detto!"],
 	["Te c'hai grossa grisi!"],
 	[
@@ -64,7 +68,7 @@ const queloAnswers = [
 		"https://youtu.be/zCbmW_wV_Do?t=411",
 	],
 	[
-		"- Maestro c'è vita nell'universo?\n- Mah, giusto un po' il sabato sera?",
+		"- Maestro c'è vita nell'universo?\n- Mah, giusto un po' il sabato sera...",
 		"https://youtu.be/MwfY552THjo?t=320",
 	],
 	[
@@ -161,25 +165,23 @@ const queloAnswers = [
 	],
 ];
 const phrases = queloAnswers.map(([phrase]) => phrase);
+const askQuelo = ({
+	phrase,
+	ephemeral = false,
+}: Partial<{
+	phrase: string;
+	ephemeral: boolean;
+}> = {}): APIInteractionResponseCallbackData => {
+	const q = phrase?.trim().toLowerCase();
+	const answer = q
+		? queloAnswers.find(([p]) => p.toLowerCase().includes(q))
+		: queloAnswers[Math.floor(Math.random() * queloAnswers.length)];
 
-const quelo = async (
-	interaction: ReceivedInteraction,
-	phrase?: string,
-	ephemeral?: boolean,
-) => {
-	const s = phrase?.toLowerCase();
-	const answer =
-		s === undefined
-			? queloAnswers[Math.floor(Math.random() * queloAnswers.length)]
-			: queloAnswers.find(([p]) => p.toLowerCase().includes(s));
-
-	if (!answer) {
-		await interaction.reply({
+	if (!answer)
+		return {
 			content: "Frase non trovata!",
-			ephemeral: true,
-		});
-		return;
-	}
+			flags: MessageFlags.Ephemeral,
+		};
 	const components: APIMessageActionRowComponent[] = [
 		{
 			type: ComponentType.Button,
@@ -197,19 +199,19 @@ const quelo = async (
 			style: ButtonStyle.Link,
 			url: answer[1],
 		});
-	await interaction.reply({
-		content: answer[0],
+	return {
+		content: blockQuote(escapeBulletedList(answer[0])),
 		components: [
 			{
 				type: ComponentType.ActionRow,
 				components,
 			},
 		],
-		ephemeral,
-	});
+		flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+	};
 };
 
-export const queloCommand = createCommand({
+export const quelo = new Command({
 	data: [
 		{
 			name: "quelo",
@@ -226,31 +228,52 @@ export const queloCommand = createCommand({
 			],
 		},
 	],
-	async run(interaction) {
-		await quelo(
-			interaction,
-			interaction.options.getString("phrase") ?? undefined,
-		);
+	run(interaction, { reply }) {
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: askQuelo({
+				phrase: interaction.data.options?.find(
+					(o): o is APIApplicationCommandInteractionDataStringOption =>
+						o.name === "phrase" &&
+						o.type === ApplicationCommandOptionType.String,
+				)?.value,
+			}),
+		});
 	},
-	async component(interaction) {
-		await quelo(interaction, undefined, true);
+	component(_, { reply }) {
+		reply({
+			type: InteractionResponseType.ChannelMessageWithSource,
+			data: askQuelo({ ephemeral: true }),
+		});
 	},
-	async autocomplete(interaction) {
-		const option = interaction.options.getFocused().toLowerCase();
+	autocomplete(interaction, { reply }) {
+		const option = interaction.data.options
+			.find(
+				(o): o is APIApplicationCommandInteractionDataStringOption =>
+					o.name === "phrase" &&
+					o.type === ApplicationCommandOptionType.String &&
+					o.focused!,
+			)
+			?.value.toLowerCase();
 
-		await interaction.respond(
-			phrases
-				.filter((p) => p.toLowerCase().includes(option))
-				.slice(0, 25)
-				.map((p) => {
-					const name = p.replaceAll("\n", " ");
+		reply({
+			type: InteractionResponseType.ApplicationCommandAutocompleteResult,
+			data: {
+				choices: (option
+					? phrases.filter((p) => p.toLowerCase().includes(option))
+					: phrases
+				)
+					.slice(0, 25)
+					.map((p) => {
+						const name = p.replaceAll("\n", " ");
 
-					return {
-						name:
-							name.length > 100 ? `${name.slice(0, 97).trimEnd()}...` : name,
-						value: p.slice(0, 100),
-					};
-				}),
-		);
+						return {
+							name:
+								name.length > 100 ? `${name.slice(0, 97).trimEnd()}...` : name,
+							value: p.slice(0, 100),
+						};
+					}),
+			},
+		});
 	},
 });
