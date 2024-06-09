@@ -54,7 +54,7 @@
     "prettier": "^3.2.5",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5",
-    "wrangler": "^3.34.2"
+    "wrangler": "^3.60.0"
   },
   "optionalDependencies": {
     "erlpack": "github:discord/erlpack",
