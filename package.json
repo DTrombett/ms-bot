@@ -30,7 +30,7 @@
   },
   "keywords": [],
   "dependencies": {
-    "@discordjs/builders": "^1.7.0",
+    "@discordjs/builders": "^1.8.2",
     "@discordjs/formatters": "^0.4.0",
     "@discordjs/rest": "^2.3.0",
     "@sapphire/snowflake": "^3.5.3",
