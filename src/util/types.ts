@@ -175,22 +175,191 @@ export type UrbanResponse = {
 	}[];
 };
 
+export type Translations = Record<string, string | undefined>;
+
+export type MatchData = {
+	awayTeam: {
+		associationId: string;
+		associationLogoUrl: string;
+		bigLogoUrl: string;
+		confederationType: string;
+		countryCode: string;
+		id: string;
+		idProvider: string;
+		internationalName: string;
+		isPlaceHolder: boolean;
+		logoUrl: string;
+		mediumLogoUrl: string;
+		organizationId: string;
+		teamCode: string;
+		teamTypeDetail: string;
+		translations: {
+			countryName: Translations;
+			displayName: Translations;
+			displayOfficialName: Translations;
+			displayTeamCode: Translations;
+		};
+		typeIsNational: boolean;
+		typeTeam: string;
+	};
+	behindClosedDoors: boolean;
+	competition: {
+		age: string;
+		code: string;
+		id: string;
+		images: { FULL_LOGO: string };
+		metaData: { name: string };
+		region: string;
+		sex: string;
+		sportsType: string;
+		teamCategory: string;
+		translations: {
+			name: Translations;
+			prequalifyingName: Translations;
+			qualifyingName: Translations;
+			tournamentName: Translations;
+		};
+		type: string;
+	};
+	group: {
+		competitionId: string;
+		id: string;
+		metaData: { groupName: string; groupShortName: string };
+		order: number;
+		phase: string;
+		roundId: string;
+		seasonYear: string;
+		teams: string[];
+		teamsQualifiedNumber: number;
+		translations: {
+			name: Translations;
+			shortName: Translations;
+		};
+		type: string;
+	};
+	homeTeam: {
+		associationId: string;
+		associationLogoUrl: string;
+		bigLogoUrl: string;
+		confederationType: string;
+		countryCode: string;
+		id: string;
+		idProvider: string;
+		internationalName: string;
+		isPlaceHolder: boolean;
+		logoUrl: string;
+		mediumLogoUrl: string;
+		organizationId: string;
+		teamCode: string;
+		teamTypeDetail: string;
+		translations: {
+			countryName: Translations;
+			displayName: Translations;
+			displayOfficialName: Translations;
+			displayTeamCode: Translations;
+		};
+		typeIsNational: boolean;
+		typeTeam: string;
+	};
+	id: string;
+	kickOffTime: { date: string; dateTime: string; utcOffsetInHours: number };
+	lineupStatus: string;
+	matchNumber: number;
+	matchday: {
+		competitionId: string;
+		dateFrom: string;
+		dateTo: string;
+		format: string;
+		id: string;
+		longName: string;
+		name: string;
+		roundId: string;
+		seasonYear: string;
+		sequenceNumber: string;
+		translations: {
+			longName: Translations;
+			name: Translations;
+		};
+		type: string;
+	};
+	referees: {
+		images: { SMALL_SQUARE: string };
+		person: {
+			countryCode: string;
+			gender: string;
+			id: string;
+			translations: {
+				countryName: Translations;
+				firstName: Translations;
+				lastName: Translations;
+				name: Translations;
+				shortName: Translations;
+			};
+		};
+		role: string;
+		translations: { roleName: Translations };
+	}[];
+	round: {
+		active: boolean;
+		benchGKCount: number;
+		benchPlayersCount: number;
+		benchStaffCount: number;
+		coefficientWinnerBonus: number;
+		competitionId: string;
+		dateFrom: string;
+		dateTo: string;
+		fieldPlayersCount: number;
+		groupCount: number;
+		id: string;
+		metaData: { name: string; type: string };
+		mode: string;
+		modeDetail: string;
+		orderInCompetition: number;
+		phase: string;
+		seasonYear: string;
+		secondaryType: string;
+		stadiumNameType: string;
+		status: string;
+		substitutionCount: number;
+		teamCount: number;
+		teams: string[];
+		translations: {
+			abbreviation: Translations;
+			name: Translations;
+			shortName: Translations;
+		};
+	};
+	seasonYear: string;
+	sessionNumber: number;
+	stadium: {
+		address: string;
+		capacity: number;
+		city: {
+			countryCode: string;
+			id: string;
+			translations: { name: Translations };
+		};
+		countryCode: string;
+		geolocation: { latitude: number; longitude: number };
+		id: string;
+		images: { MEDIUM_WIDE: string; LARGE_ULTRA_WIDE: string };
+		openingDate: string;
+		pitch: { length: number; width: number };
+		translations: {
+			mediaName: Translations;
+			name: Translations;
+			officialName: Translations;
+			specialEventsName: Translations;
+			sponsorName: Translations;
+		};
+	};
+	status: string;
+	type: string;
+};
+
 export type MatchesData =
-	| {
-			success: true;
-			data: {
-				home_goal: number | null;
-				away_goal: number | null;
-				home_team_name: Uppercase<string>;
-				away_team_name: Uppercase<string>;
-				date_time: string;
-				match_status: number;
-				slug: string;
-				match_id: number;
-				match_name: string;
-			}[];
-	  }
-	| { success: false; message: string; errors: unknown[] };
+	| MatchData[]
+	| { error: { message: string; status: number; title: string } };
 
 export type Leaderboard = [
 	user: User & { predictions: Prediction[] },
@@ -214,7 +383,7 @@ export type MatchDay = {
 	startDate: SQLDateTime;
 };
 export type Prediction = {
-	matchId: number;
+	matchId: string;
 	userId: string;
 	prediction: string;
 };
