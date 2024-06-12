@@ -1,8 +1,8 @@
-import { Leaderboard, MatchesData, Prediction, User } from ".";
+import { Leaderboard, Prediction, User, type MatchData } from ".";
 
 export const resolveLeaderboard = (
 	users: (User & { predictions: Prediction[] })[],
-	matches: Extract<MatchesData, { success: true }>["data"],
+	matches: MatchData[],
 ) => {
 	const leaderboard = users
 		.map<Leaderboard[number]>((user) => {
@@ -12,7 +12,7 @@ export const resolveLeaderboard = (
 				user,
 				matches.reduce((points, match) => {
 					const matched = user.predictions
-						.find((p) => match.match_id === p.matchId)
+						.find((p) => match.id === p.matchId)
 						?.prediction.match(
 							/(?<type>(X|1|2){1,2})( \((?<home>(?<=\()\d+) - (?<away>\d+(?=\))))?/,
 						)?.groups;
@@ -21,40 +21,41 @@ export const resolveLeaderboard = (
 						maxPoints--;
 						return points - 1;
 					}
-					match.home_goal ??= 0;
-					match.away_goal ??= 0;
+					match.score ??= {
+						total: { away: 0, home: 0 },
+						regular: { away: 0, home: 0 },
+					};
 					const { type, home, away } = matched as {
 						type: "1" | "1X" | "2" | "12" | "X" | "X2";
 						home?: `${number}`;
 						away?: `${number}`;
 					};
 					const result =
-						match.home_goal > match.away_goal
+						match.score.total.home > match.score.total.away
 							? "1"
-							: match.home_goal < match.away_goal
+							: match.score.total.home < match.score.total.away
 								? "2"
 								: "X";
 					let diffPoints = 0;
-					const toBePlayed =
-						match.match_status === 0 || match.match_status === 3;
+					const toBePlayed = match.status === "UPCOMING";
 
 					if (!toBePlayed)
 						if (type === result)
 							if (
 								home != null &&
-								Number(home) === match.home_goal &&
-								Number(away) === match.away_goal
+								Number(home) === match.score.total.home &&
+								Number(away) === match.score.total.away
 							)
 								diffPoints = 3;
 							else diffPoints = 2;
 						else if (type.includes(result)) diffPoints = 1;
 						else if (type.length === 2) diffPoints = -1;
-					if (match.match_status === 2) maxPoints += diffPoints;
+					if (match.status === "FINISHED") maxPoints += diffPoints;
 					else if (home != null)
 						if (
 							toBePlayed ||
-							(match.home_goal <= Number(home) &&
-								match.away_goal <= Number(away))
+							(match.score.total.home <= Number(home) &&
+								match.score.total.away <= Number(away))
 						)
 							maxPoints += 3;
 						else maxPoints += 2;

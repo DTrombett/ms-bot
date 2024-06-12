@@ -175,33 +175,71 @@ export type UrbanResponse = {
 	}[];
 };
 
-export type Translations = Record<string, string | undefined>;
+export type Translations = Record<string, string | undefined> | undefined;
+
+export type PlayerData = {
+	age: string;
+	birthDate: string;
+	clubId: string;
+	clubJerseyNumber: string;
+	clubShirtName: string;
+	countryCode: string;
+	countryOfBirthCode: string;
+	detailedFieldPosition: string;
+	fieldPosition: string;
+	gender: string;
+	height: number;
+	id: string;
+	imageUrl: string;
+	internationalName: string;
+	nationalFieldPosition: string;
+	nationalJerseyNumber: string;
+	nationalShirtName: string;
+	nationalTeamId: string;
+	weight: number;
+	translations?: {
+		countryName: Translations;
+		countryOfBirthName: Translations;
+		fieldPosition: Translations;
+		firstName: Translations;
+		lastName: Translations;
+		name: Translations;
+		nationalFieldPosition: Translations;
+		shortName: Translations;
+	};
+};
+
+export type ScoreData = { away: number; home: number };
+
+export type ImagesData = { PLAYER_CELEBRATING: string };
+
+export type TeamData = {
+	associationId: string;
+	associationLogoUrl: string;
+	bigLogoUrl: string;
+	confederationType: string;
+	countryCode: string;
+	id: string;
+	idProvider: string;
+	internationalName: string;
+	isPlaceHolder: boolean;
+	logoUrl: string;
+	mediumLogoUrl: string;
+	organizationId: string;
+	teamCode: string;
+	teamTypeDetail: string;
+	translations?: {
+		countryName: Translations;
+		displayName: Translations;
+		displayOfficialName: Translations;
+		displayTeamCode: Translations;
+	};
+	typeIsNational: boolean;
+	typeTeam: string;
+};
 
 export type MatchData = {
-	awayTeam: {
-		associationId: string;
-		associationLogoUrl: string;
-		bigLogoUrl: string;
-		confederationType: string;
-		countryCode: string;
-		id: string;
-		idProvider: string;
-		internationalName: string;
-		isPlaceHolder: boolean;
-		logoUrl: string;
-		mediumLogoUrl: string;
-		organizationId: string;
-		teamCode: string;
-		teamTypeDetail: string;
-		translations: {
-			countryName: Translations;
-			displayName: Translations;
-			displayOfficialName: Translations;
-			displayTeamCode: Translations;
-		};
-		typeIsNational: boolean;
-		typeTeam: string;
-	};
+	awayTeam: TeamData;
 	behindClosedDoors: boolean;
 	competition: {
 		age: string;
@@ -213,7 +251,7 @@ export type MatchData = {
 		sex: string;
 		sportsType: string;
 		teamCategory: string;
-		translations: {
+		translations?: {
 			name: Translations;
 			prequalifyingName: Translations;
 			qualifyingName: Translations;
@@ -221,7 +259,7 @@ export type MatchData = {
 		};
 		type: string;
 	};
-	group: {
+	group?: {
 		competitionId: string;
 		id: string;
 		metaData: { groupName: string; groupShortName: string };
@@ -231,40 +269,19 @@ export type MatchData = {
 		seasonYear: string;
 		teams: string[];
 		teamsQualifiedNumber: number;
-		translations: {
+		translations?: {
 			name: Translations;
 			shortName: Translations;
 		};
 		type: string;
 	};
-	homeTeam: {
-		associationId: string;
-		associationLogoUrl: string;
-		bigLogoUrl: string;
-		confederationType: string;
-		countryCode: string;
-		id: string;
-		idProvider: string;
-		internationalName: string;
-		isPlaceHolder: boolean;
-		logoUrl: string;
-		mediumLogoUrl: string;
-		organizationId: string;
-		teamCode: string;
-		teamTypeDetail: string;
-		translations: {
-			countryName: Translations;
-			displayName: Translations;
-			displayOfficialName: Translations;
-			displayTeamCode: Translations;
-		};
-		typeIsNational: boolean;
-		typeTeam: string;
-	};
+	fullTimeAt?: string;
+	homeTeam: TeamData;
 	id: string;
 	kickOffTime: { date: string; dateTime: string; utcOffsetInHours: number };
 	lineupStatus: string;
-	matchNumber: number;
+	matchNumber?: number;
+	matchAttendance?: number;
 	matchday: {
 		competitionId: string;
 		dateFrom: string;
@@ -276,11 +293,41 @@ export type MatchData = {
 		roundId: string;
 		seasonYear: string;
 		sequenceNumber: string;
-		translations: {
+		translations?: {
 			longName: Translations;
 			name: Translations;
 		};
 		type: string;
+	};
+	playerEvents?: {
+		penaltyScorers?: {
+			id: string;
+			images: ImagesData;
+			penaltyType: string;
+			phase: string;
+			player: PlayerData;
+			teamId: string;
+			teamIdProvider: string;
+		}[];
+		redCards?: {
+			id: string;
+			images: ImagesData;
+			phase: string;
+			player: PlayerData;
+			teamId: string;
+			teamIdProvider: string;
+			time: { injuryMinute: number; minute: number; second: number };
+		}[];
+		scorers?: {
+			goalType: string;
+			id: string;
+			images: ImagesData;
+			phase: string;
+			player: PlayerData;
+			teamId: string;
+			teamIdProvider: string;
+			time: { minute: number; second: number };
+		}[];
 	};
 	referees: {
 		images: { SMALL_SQUARE: string };
@@ -288,7 +335,7 @@ export type MatchData = {
 			countryCode: string;
 			gender: string;
 			id: string;
-			translations: {
+			translations?: {
 				countryName: Translations;
 				firstName: Translations;
 				lastName: Translations;
@@ -297,7 +344,7 @@ export type MatchData = {
 			};
 		};
 		role: string;
-		translations: { roleName: Translations };
+		translations?: { roleName: Translations };
 	}[];
 	round: {
 		active: boolean;
@@ -323,12 +370,13 @@ export type MatchData = {
 		substitutionCount: number;
 		teamCount: number;
 		teams: string[];
-		translations: {
+		translations?: {
 			abbreviation: Translations;
 			name: Translations;
 			shortName: Translations;
 		};
 	};
+	score?: { penalty?: ScoreData; regular: ScoreData; total: ScoreData };
 	seasonYear: string;
 	sessionNumber: number;
 	stadium: {
@@ -337,7 +385,7 @@ export type MatchData = {
 		city: {
 			countryCode: string;
 			id: string;
-			translations: { name: Translations };
+			translations?: { name: Translations };
 		};
 		countryCode: string;
 		geolocation: { latitude: number; longitude: number };
@@ -345,7 +393,7 @@ export type MatchData = {
 		images: { MEDIUM_WIDE: string; LARGE_ULTRA_WIDE: string };
 		openingDate: string;
 		pitch: { length: number; width: number };
-		translations: {
+		translations?: {
 			mediaName: Translations;
 			name: Translations;
 			officialName: Translations;
@@ -355,6 +403,11 @@ export type MatchData = {
 	};
 	status: string;
 	type: string;
+	winner?: {
+		reason: string;
+		team: TeamData;
+		translations?: { reasonText: Translations; reasonTextAbbr: Translations };
+	};
 };
 
 export type MatchesData =

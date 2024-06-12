@@ -1,35 +1,29 @@
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
-	APIMessageComponentInteraction,
 	APIUser,
-	ButtonStyle,
-	RESTPostAPIWebhookWithTokenJSONBody,
 	Routes,
+	type RESTPostAPIChannelMessageJSONBody,
+	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
 import {
 	Env,
 	closeMatchDay,
-	getLiveEmbed,
+	getLiveEmbeds,
 	getPredictionsData,
-	loadMatchDay,
-	normalizeTeamName,
 	resolveLeaderboard,
 	rest,
+	type MatchData,
 } from ".";
 
 export const startPredictions = async (
 	env: Env,
-	interaction: APIMessageComponentInteraction,
-	day: number,
-	categoryId: number,
+	matchDayId: string,
+	matches: MatchData[],
 ) => {
-	const [users, matches] = await getPredictionsData(env, categoryId);
+	const users = await getPredictionsData(env, matches);
 	const promises: Promise<any>[] = [];
-	const followupRoute = Routes.webhook(
-		interaction.application_id,
-		interaction.token,
-	);
+	const route = Routes.channelMessages(env.PREDICTIONS_CHANNEL);
 	const leaderboard = resolveLeaderboard(users, matches);
+	const title = `${matches[0]!.round.metaData.name}${matches[0]!.round.metaData.type === "GROUP_STANDINGS" ? ` - ${matches[0]!.matchday.longName}` : ""}`;
 
 	for (let i = 0; i < users.length; i += 5) {
 		const chunk = users.slice(i, i + 5);
@@ -57,66 +51,35 @@ export const startPredictions = async (
 											extension: "png",
 										})),
 						},
-						color: user?.accent_color ?? 0x3498db,
+						color: user?.accent_color ?? 0x004f9f,
 						fields: matches.map((match) => ({
-							name: [match.home_team_name, match.away_team_name]
-								.map(normalizeTeamName)
-								.join(" - "),
+							name: `${match.homeTeam.internationalName} - ${match.awayTeam.internationalName}`,
 							value:
-								data.predictions.find(
-									(predict) => predict.matchId === match.match_id,
-								)?.prediction ?? "*Non presente*",
+								data.predictions.find((predict) => predict.matchId === match.id)
+									?.prediction ?? "*Non presente*",
 						})),
 						thumbnail: {
-							url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+							url: "https://upload.wikimedia.org/wikipedia/it/f/f0/UEFA_Euro_2024_Logo.png",
 						},
-						title: `${day}ª Giornata Serie A TIM`,
+						title,
 					};
 				}),
 			).then((embeds) =>
-				rest.post(followupRoute, {
-					body: { embeds } satisfies RESTPostAPIWebhookWithTokenJSONBody,
+				rest.post(route, {
+					body: { embeds } satisfies RESTPostAPIChannelMessageJSONBody,
 				}),
 			),
 		);
 	}
-	const finished = matches.every((match) => match.match_status === 2);
-	const minute = Date.now() + 1_000 * 60;
+	const finished = matches.every((match) => match.status === "FINISHED");
 
-	if (finished) promises.push(closeMatchDay(env, leaderboard, matches, day));
+	if (finished) promises.push(closeMatchDay(env, leaderboard, matches));
 	await Promise.all(promises);
-	await Promise.all([
-		rest.post(followupRoute, {
-			body: {
-				embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
-				components: finished
-					? []
-					: [
-							new ActionRowBuilder<ButtonBuilder>()
-								.addComponents(
-									new ButtonBuilder()
-										.setCustomId(
-											`predictions-update-${categoryId}-${
-												matches.some((match) => match.match_status === 1)
-													? minute
-													: Math.max(
-															Date.parse(
-																matches.find(
-																	(match) => match.match_status === 0,
-																)?.date_time ?? "",
-															) || minute,
-															minute,
-														)
-											}-${day}`,
-										)
-										.setEmoji({ name: "🔄" })
-										.setLabel("Aggiorna")
-										.setStyle(ButtonStyle.Primary),
-								)
-								.toJSON(),
-						],
-			} satisfies RESTPostAPIWebhookWithTokenJSONBody,
-		}),
-		loadMatchDay(env, categoryId),
-	]);
+	const message = (await rest.post(route, {
+		body: {
+			embeds: getLiveEmbeds(users, matches, leaderboard, title, finished),
+		} satisfies RESTPostAPIChannelMessageJSONBody,
+	})) as RESTPostAPIChannelMessageResult;
+
+	await env.KV.put(`matchDayMessage-${matchDayId}`, message.id);
 };
