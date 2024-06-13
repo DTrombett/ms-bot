@@ -25,6 +25,7 @@ import {
 	rest,
 	startPredictions,
 	type MatchData,
+	type TeamData,
 } from "../util";
 
 const predictionExamples = [
@@ -125,6 +126,19 @@ export const predictions = new Command({
 					type: ApplicationCommandOptionType.Subcommand,
 				},
 				{
+					name: "set-favorite",
+					description: "Imposta il tuo team preferito",
+					type: ApplicationCommandOptionType.Subcommand,
+					options: [
+						{
+							name: "team",
+							description: "Il team che vincerà il torneo",
+							type: ApplicationCommandOptionType.String,
+							required: true,
+						},
+					],
+				},
+				{
 					name: "reminder",
 					description:
 						"Imposta un promemoria per ricordarti di inserire i pronostici",
@@ -152,6 +166,56 @@ export const predictions = new Command({
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: { content: "Questo comando non è ancora disponibile :(" },
+			});
+			return;
+		}
+		const userId = (interaction.member ?? interaction).user!.id;
+		const options: Record<string, boolean | number | string> = {};
+
+		if (subCommand.options)
+			for (const option of subCommand.options)
+				options[option.name] = option.value;
+		if (subCommand.name === "set-favorite") {
+			const teams = (await fetch(
+				"https://comp.uefa.com/v2/teams?competitionId=3&limit=500&offset=0&seasonYear=2024",
+			).then((res) => res.json())) as TeamData[];
+			const locale = interaction.locale.split("-")[0]!.toUpperCase();
+			const selected = (options.team as string).toLowerCase();
+			const team = teams.find(
+				(t) =>
+					t.internationalName.toLowerCase() === selected ||
+					t.translations?.displayName?.[locale]?.toLowerCase() === selected ||
+					t.translations?.displayName?.IT?.toLowerCase() === selected,
+			);
+
+			if (!team) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: "Squadra non trovata!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			await env.DB.batch([
+				env.DB.prepare(
+					`INSERT
+	OR IGNORE INTO Users(id)
+VALUES (?)`,
+				).bind(userId),
+				env.DB.prepare(
+					`UPDATE Users
+SET team = ?1
+WHERE id = ?2`,
+				).bind(team.id, userId),
+			]);
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: `La tua squadra preferita è ora **${team.translations?.displayName?.[locale] ?? team.internationalName}**!`,
+					flags: MessageFlags.Ephemeral,
+				},
 			});
 			return;
 		}
@@ -196,12 +260,6 @@ export const predictions = new Command({
 				return;
 			}
 		}
-		const options: Record<string, boolean | number | string> = {};
-
-		if (subCommand.options)
-			for (const option of subCommand.options)
-				options[option.name] = option.value;
-		const userId = (interaction.member ?? interaction).user!.id;
 		const isDifferentUser = options.user && options.user !== userId;
 
 		reply({
@@ -586,7 +644,7 @@ VALUES (?)`,
 							thumbnail: {
 								url: "https://upload.wikimedia.org/wikipedia/it/f/f0/UEFA_Euro_2024_Logo.png",
 							},
-							title: `${matches[0]!.round.translations?.name?.[locale] ?? matches[0]!.round.metaData.name}${matches[0]!.round.metaData.type === "GROUP_STANDINGS" ? ` - ${matches[0]!.matchday.translations?.longName?.[locale] ?? matches[0]!.matchday.longName}` : ""} UEFA EURO 2024`,
+							title: `${matches[0]!.round.metaData.type === "GROUP_STANDINGS" ? `${matches[0]!.round.translations?.name?.[locale] ?? "Fase a gironi"} - ${matches[0]!.matchday.translations?.longName?.[locale] ?? matches[0]!.matchday.longName}` : matches[0]!.round.translations?.name?.[locale] ?? matches[0]!.round.metaData.name} UEFA EURO 2024`,
 							url: "https://uefa.com/euro2024",
 						},
 					],

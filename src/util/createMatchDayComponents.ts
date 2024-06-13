@@ -28,7 +28,7 @@ export const createMatchDayComponents = (
 			type: ComponentType.Button,
 			custom_id: `predictions-${matchDayId}-${action}`,
 			style: firstRound ? ButtonStyle.Primary : ButtonStyle.Success,
-			label: `${firstMatch.round.translations?.name?.[locale] ?? firstMatch.round.metaData.name}${firstRound ? ` - ${firstMatch.matchday.translations?.longName?.[locale] ?? firstMatch.matchday.longName}` : ""}`,
+			label: `${firstMatch.round.translations?.name?.[locale] ?? "Fase a gironi"}${firstRound ? ` - ${firstMatch.matchday.translations?.longName?.[locale] ?? firstMatch.matchday.longName}` : ""}`,
 			disabled:
 				matchDay.some(
 					(m) =>

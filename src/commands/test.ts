@@ -3,7 +3,7 @@ import {
 	ApplicationCommandType,
 	InteractionResponseType,
 } from "discord-api-types/v10";
-import { Command, createMatchDayComponents } from "../util";
+import { Command, createMatchDayComponents, loadMatches } from "../util";
 
 export const test = new Command({
 	data: [
@@ -26,11 +26,14 @@ export const test = new Command({
 		// .options![0] as APIApplicationCommandInteractionDataStringOption;
 
 		// reply(JSON.parse(data.value));
+		const matches = await loadMatches();
+
 		reply({
 			data: {
 				content:
 					"Invia i pronostici per il torneo tramite i pulsanti qui sotto. Hai tempo fino a 15 minuti prima dell'inizio di ciascuna giornata.",
-				components: await createMatchDayComponents(
+				components: createMatchDayComponents(
+					matches,
 					interaction.locale.split("-")[0]!.toUpperCase(),
 				),
 			},

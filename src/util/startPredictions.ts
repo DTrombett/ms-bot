@@ -23,7 +23,7 @@ export const startPredictions = async (
 	const promises: Promise<any>[] = [];
 	const route = Routes.channelMessages(env.PREDICTIONS_CHANNEL);
 	const leaderboard = resolveLeaderboard(users, matches);
-	const title = `${matches[0]!.round.metaData.name}${matches[0]!.round.metaData.type === "GROUP_STANDINGS" ? ` - ${matches[0]!.matchday.longName}` : ""}`;
+	const title = `${matches[0]!.round.metaData.type === "GROUP_STANDINGS" ? `Group stage - ${matches[0]!.matchday.longName}` : matches[0]!.round.metaData.name}`;
 
 	for (let i = 0; i < users.length; i += 5) {
 		const chunk = users.slice(i, i + 5);
