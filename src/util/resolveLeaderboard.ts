@@ -1,5 +1,13 @@
 import { Leaderboard, Prediction, User, type MatchData } from ".";
 
+const multipliers: Record<string, number | undefined> = {
+	GROUP_STANDINGS: 1,
+	ROUND_OF_16: 1,
+	QUARTER_FINALS: 1.5,
+	SEMIFINAL: 2,
+	FINAL: 3,
+};
+
 export const resolveLeaderboard = (
 	users: (User & { predictions: Prediction[] })[],
 	matches: MatchData[],
@@ -65,16 +73,17 @@ export const resolveLeaderboard = (
 				}, 0),
 				0,
 				maxPoints,
-			];
+			] as const;
 		})
 		.sort((a, b) => b[1] - a[1]);
 	const first = Math.ceil(leaderboard.length / 2);
 
 	for (const entry of leaderboard)
 		entry[2] =
-			first -
-			(entry[0].predictions.length
-				? leaderboard.findIndex(([, p]) => entry[1] === p)
-				: leaderboard.length);
+			(first -
+				(entry[0].predictions.length
+					? leaderboard.findIndex(([, p]) => entry[1] === p)
+					: leaderboard.length)) *
+			(multipliers[matches[0]?.round.metaData.type ?? ""] ?? 1);
 	return leaderboard;
 };
