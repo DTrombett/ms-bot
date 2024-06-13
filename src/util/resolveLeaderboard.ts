@@ -58,6 +58,12 @@ export const resolveLeaderboard = (
 							else diffPoints = 2;
 						else if (type.includes(result)) diffPoints = 1;
 						else if (type.length === 2) diffPoints = -1;
+					if (
+						user.team &&
+						// eslint-disable-next-line no-sparse-arrays
+						[, match.homeTeam, match.awayTeam][Number(result)]?.id === user.team
+					)
+						diffPoints++;
 					if (match.status === "FINISHED") maxPoints += diffPoints;
 					else if (home != null)
 						if (

@@ -432,7 +432,7 @@ export type User = {
 	id: string;
 	dayPoints?: number | null;
 	matchPointsHistory?: string | null;
-	team?: number | null;
+	team?: string | null;
 };
 
 export type EnvVars = {
