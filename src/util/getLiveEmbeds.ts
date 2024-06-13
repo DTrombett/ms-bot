@@ -1,11 +1,5 @@
 import { EmbedBuilder } from "@discordjs/builders";
-import {
-	Leaderboard,
-	normalizeTeamName,
-	type MatchesData,
-	type Prediction,
-	type User,
-} from ".";
+import { Leaderboard, type MatchData, type Prediction, type User } from ".";
 
 const finalEmojis: Record<number, string | undefined> = {
 	[-2]: "⏬",
@@ -58,22 +52,18 @@ const createLeaderboardDescription = (
 		})
 		.join("\n");
 };
-const resolveMatches = (
-	matches: Extract<MatchesData, { success: true }>["data"],
-) =>
+const resolveMatches = (matches: MatchData[]) =>
 	matches
 		.map(
 			(match) =>
-				`- ${match.match_status === 1 ? "🔴 " : ""}[${normalizeTeamName(
-					match.home_team_name,
-				)} - ${normalizeTeamName(match.away_team_name)}](https://legaseriea.it${
-					match.slug
-				}): ${
-					match.match_status === 0
-						? `<t:${Math.round(new Date(match.date_time).getTime() / 1_000)}:F>`
-						: match.match_status === 3
+				// TODO: Check this status
+				`- ${match.status === "LIVE" ? "🔴 " : ""}[${match.homeTeam.internationalName} - ${match.awayTeam.internationalName}](https://uefa.com/euro2024/match/${match.id}): ${
+					match.status === "UPCOMING"
+						? `<t:${Math.round(Date.parse(match.kickOffTime.dateTime) / 1_000)}:F>`
+						: // TODO: Check this status
+							match.status === ""
 							? "*Posticipata*"
-							: `**${match.home_goal ?? 0} - ${match.away_goal ?? 0}**`
+							: `**${match.score?.total.home ?? 0} - ${match.score?.total.away ?? 0}**`
 				}`,
 		)
 		.join("\n");
@@ -206,7 +196,7 @@ const resolveStats = (users: User[]) => {
 		}
 	}
 	return {
-		name: "Statistiche Serie A 2023/2024",
+		name: "Statistiche UEFA EURO 2024",
 		value: `- Punteggio più alto: ${
 			highestPoints.users.size
 				? `${[...highestPoints.users].map((id) => `<@${id}>`).join(", ")} • **${
@@ -247,39 +237,37 @@ const resolveStats = (users: User[]) => {
 	};
 };
 
-export const getLiveEmbed = (
+export const getLiveEmbeds = (
 	users: (User & {
 		predictions: Prediction[];
 	})[],
-	matches: Extract<MatchesData, { success: true }>["data"],
+	matches: MatchData[],
 	leaderboard: Leaderboard,
-	day: number,
+	title: string,
 	finished = false,
 ) => [
 	new EmbedBuilder()
 		.setThumbnail(
-			"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+			"https://upload.wikimedia.org/wikipedia/it/f/f0/UEFA_Euro_2024_Logo.png",
 		)
 		.setTitle(
-			finished
-				? `Risultati Finali ${day}ª Giornata`
-				: `🔴 Risultati Live ${day}ª Giornata`,
+			finished ? `Risultati finali ${title}` : `🔴 Risultati Live ${title}`,
 		)
 		.setDescription(resolveMatches(matches))
 		.setAuthor({
-			name: "Serie A TIM",
-			url: "https://legaseriea.it/it/serie-a",
+			name: "UEFA EURO 2024",
+			url: "https://uefa.com/euro2024",
 		})
-		.setColor(0xed4245)
+		.setColor(0x004f9f)
 		.toJSON(),
 	new EmbedBuilder()
 		.setThumbnail(
-			"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+			"https://upload.wikimedia.org/wikipedia/it/f/f0/UEFA_Euro_2024_Logo.png",
 		)
 		.setTitle(
 			finished
-				? `⚽ Classifica Definitiva Pronostici ${day}ª Giornata`
-				: `🔴 Classifica Live Pronostici ${day}ª Giornata`,
+				? `⚽ Classifica Definitiva Pronostici ${title}`
+				: `🔴 Classifica Live Pronostici ${title}`,
 		)
 		.setDescription(createLeaderboardDescription(leaderboard, finished))
 		.setFooter({ text: "Ultimo aggiornamento" })
@@ -293,8 +281,8 @@ export const getLiveEmbed = (
 			resolveStats(users),
 		)
 		.setAuthor({
-			name: "Serie A TIM",
-			url: "https://legaseriea.it/it/serie-a",
+			name: "UEFA EURO 2024",
+			url: "https://uefa.com/euro2024",
 		})
 		.setColor(0x3498db)
 		.setTimestamp()
