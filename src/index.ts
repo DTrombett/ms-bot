@@ -113,6 +113,7 @@ const server: ExportedHandler<Env> = {
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
 	scheduled: async (_controller, env) => {
+		rest.setToken(env.DISCORD_TOKEN);
 		const messages = (
 			await env.KV.list({ prefix: "matchDayMessage-" })
 		).keys.filter((k) => !k.metadata);
