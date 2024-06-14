@@ -56,7 +56,6 @@ const resolveMatches = (matches: MatchData[]) =>
 	matches
 		.map(
 			(match) =>
-				// TODO: Check this status
 				`- ${match.status === "LIVE" ? "🔴 " : ""}[${match.homeTeam.internationalName} - ${match.awayTeam.internationalName}](https://uefa.com/euro2024/match/${match.id}): ${
 					match.status === "UPCOMING"
 						? `<t:${Math.round(Date.parse(match.kickOffTime.dateTime) / 1_000)}:F>`

@@ -259,6 +259,17 @@ export type MatchData = {
 		};
 		type: string;
 	};
+	condition?: {
+		humidity: number;
+		pitchCondition: string;
+		temperature: number;
+		translations: {
+			pitchConditionName: Translations;
+			weatherConditionName: Translations;
+		};
+		weatherCondition: string;
+		windSpeed: number;
+	};
 	group?: {
 		competitionId: string;
 		id: string;
@@ -299,6 +310,8 @@ export type MatchData = {
 		};
 		type: string;
 	};
+	minute?: { normal: number };
+	phase?: string;
 	playerEvents?: {
 		penaltyScorers?: {
 			id: string;
