@@ -605,7 +605,20 @@ VALUES (?)`,
 							| APIUser
 							| undefined);
 			const locale = interaction.locale.split("-")[0]!.toUpperCase();
+			let [{ team }] = existingPredictions;
 
+			for (const { awayTeam, homeTeam } of matches)
+				if (awayTeam.id === team) {
+					team =
+						awayTeam.translations?.displayName?.[locale] ??
+						awayTeam.internationalName;
+					break;
+				} else if (homeTeam.id === team) {
+					team =
+						homeTeam.translations?.displayName?.[locale] ??
+						homeTeam.internationalName;
+					break;
+				}
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -626,6 +639,7 @@ VALUES (?)`,
 											}),
 							},
 							color: 0x3498db,
+							description: `Squadra favorita: ${team ? `**${team}**` : "*Non presente*"}`,
 							fields: matches.map((match) => ({
 								name: `${
 									match.homeTeam.translations?.displayName?.[locale] ??
