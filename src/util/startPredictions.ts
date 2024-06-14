@@ -27,14 +27,22 @@ export const startPredictions = async (
 
 	for (let i = 0; i < users.length; i += 5) {
 		const chunk = users.slice(i, i + 5);
-
 		promises.push(
 			Promise.all(
 				chunk.map(async (data) => {
 					const user = (await rest
 						.get(Routes.user(data.id))
 						.catch(() => {})) as APIUser | undefined;
+					let { team } = data;
 
+					for (const { awayTeam, homeTeam } of matches)
+						if (awayTeam.id === team) {
+							team = awayTeam.internationalName;
+							break;
+						} else if (homeTeam.id === team) {
+							team = homeTeam.internationalName;
+							break;
+						}
 					return {
 						author: {
 							name: user?.global_name ?? user?.username ?? data.id,
@@ -52,6 +60,7 @@ export const startPredictions = async (
 										})),
 						},
 						color: user?.accent_color ?? 0x004f9f,
+						description: `Squadra favorita: ${team ? `**${team}**` : "*Non presente*"}`,
 						fields: matches.map((match) => ({
 							name: `${match.homeTeam.internationalName} - ${match.awayTeam.internationalName}`,
 							value:

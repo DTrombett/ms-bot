@@ -25,7 +25,6 @@ import {
 	rest,
 	startPredictions,
 	type MatchData,
-	type TeamData,
 } from "../util";
 
 const predictionExamples = [
@@ -175,10 +174,27 @@ export const predictions = new Command({
 		if (subCommand.options)
 			for (const option of subCommand.options)
 				options[option.name] = option.value;
+		const matches = await loadMatches();
+		const now = Date.now();
+
 		if (subCommand.name === "set-favorite") {
-			const teams = (await fetch(
-				"https://comp.uefa.com/v2/teams?competitionId=3&limit=500&offset=0&seasonYear=2024",
-			).then((res) => res.json())) as TeamData[];
+			if (
+				now >=
+				Date.parse(matches[0]!.kickOffTime.dateTime) - 15 * 60 * 1000
+			) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content:
+							"Puoi impostare la squadra favorita solo prima dell'inizio della prima giornata!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			const teams = matches
+				.filter((m) => m.matchday.id === matches[0]!.matchday.id)
+				.flatMap((m) => [m.awayTeam, m.homeTeam]);
 			const locale = interaction.locale.split("-")[0]!.toUpperCase();
 			const selected = (options.team as string).toLowerCase();
 			const team = teams.find(
@@ -219,8 +235,6 @@ WHERE id = ?2`,
 			});
 			return;
 		}
-		const matches = await loadMatches();
-		const now = Date.now();
 		let existingMessages: string[] | undefined;
 
 		if (subCommand.name === "start") {
