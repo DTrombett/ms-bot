@@ -278,7 +278,7 @@ WHERE id = ?2`,
 						? (startTime) => now >= startTime
 						: subCommand.name === "start"
 							? (startTime, matchDayId) =>
-									now < startTime &&
+									now < startTime ||
 									existingMessages!.includes(`matchDayMessage-${matchDayId}`)
 							: isDifferentUser
 								? (startTime) => now < startTime
@@ -658,6 +658,16 @@ VALUES (?)`,
 			return;
 		}
 		if (action === "s") {
+			if (
+				Date.now() <
+				Date.parse(matches[0]!.kickOffTime.dateTime) - 15 * 60 * 1000
+			) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: { content: "La giornata non è ancora iniziata!" },
+				});
+				return;
+			}
 			const message = await env.KV.get(`matchDayMessage-${matchDayId}`);
 
 			if (message) {

@@ -10,7 +10,7 @@
 	"scripts": {
 		"build": "tsup",
 		"commands": "npm run build && node --trace-warnings --enable-source-maps ./dist/registerCommands.js",
-		"dev": "concurrently \"tsup --watch\" \"wrangler dev\" \"cloudflared tunnel --url localhost:8787\"",
+		"dev": "concurrently \"tsup --watch\" \"wrangler dev --test-scheduled\" \"cloudflared tunnel --url localhost:8787\"",
 		"fix": "eslint --fix '**/*.js'",
 		"lint": "eslint src --fix",
 		"prepare": "npm run build",

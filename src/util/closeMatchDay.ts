@@ -10,13 +10,18 @@ SET dayPoints = COALESCE(dayPoints, 0) + ?1,
 	matchPointsHistory = COALESCE(matchPointsHistory, "") || ?2
 WHERE id = ?3`);
 
-	return env.DB.batch([
-		...leaderboard.map(([user, matchPoints, dayPoints]) =>
-			query.bind(dayPoints, `,${matchPoints}`, user.id),
-		),
-		env.DB.prepare(
-			`DELETE FROM Predictions
+	return Promise.all([
+		env.DB.batch([
+			...leaderboard.map(([user, matchPoints, dayPoints]) =>
+				query.bind(dayPoints, `,${matchPoints}`, user.id),
+			),
+			env.DB.prepare(
+				`DELETE FROM Predictions
 WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
-		).bind(...matches.map((m) => m.id)),
+			).bind(...matches.map((m) => m.id)),
+		]),
+		env.KV.put(`matchDayMessage-${matches[0]!.matchday.id}`, "-", {
+			metadata: true,
+		}),
 	]);
 };
