@@ -605,7 +605,7 @@ VALUES (?)`,
 							| APIUser
 							| undefined);
 			const locale = interaction.locale.split("-")[0]!.toUpperCase();
-			let [{ team }] = existingPredictions;
+			let { team } = existingPredictions[0]!;
 
 			for (const { awayTeam, homeTeam } of matches)
 				if (awayTeam.id === team) {
