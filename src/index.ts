@@ -114,7 +114,6 @@ const server: ExportedHandler<Env> = {
 	},
 	scheduled: async (controller, env) => {
 		rest.setToken(env.DISCORD_TOKEN);
-		console.log(controller.scheduledTime);
 		const messages = (
 			await env.KV.list({ prefix: "matchDayMessage-" })
 		).keys.filter((k) => controller.scheduledTime >= Number(k.metadata ?? 0));
