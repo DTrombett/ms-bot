@@ -124,19 +124,21 @@ const server: ExportedHandler<Env> = {
 		}
 		await Promise.all(
 			messages.map(async (m) => {
-				const messageId = await env.KV.get(m.name);
-
-				if (!messageId || messageId === "-") {
-					console.log("Wrong message id encountered!");
-					return undefined;
-				}
 				const [, matchDayId] = m.name.split("-");
 
 				if (!matchDayId) {
 					console.log("Wrong match day id encountered!");
 					return undefined;
 				}
-				const matches = await loadMatches(matchDayId);
+				const [messageId, matches] = await Promise.all([
+					env.KV.get(m.name),
+					loadMatches(matchDayId),
+				]);
+
+				if (!messageId || messageId === "-") {
+					console.log("Wrong message id encountered!");
+					return undefined;
+				}
 				const users = await getPredictionsData(env, matches);
 				const leaderboard = resolveLeaderboard(users, matches);
 				const finished = matches.every((match) => match.status === "FINISHED");
