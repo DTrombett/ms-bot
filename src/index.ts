@@ -112,34 +112,48 @@ const server: ExportedHandler<Env> = {
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
-	scheduled: async (_controller, env) => {
+	scheduled: async (controller, env) => {
 		rest.setToken(env.DISCORD_TOKEN);
+		console.log(controller.scheduledTime);
 		const messages = (
 			await env.KV.list({ prefix: "matchDayMessage-" })
-		).keys.filter((k) => !k.metadata);
+		).keys.filter((k) => controller.scheduledTime >= Number(k.metadata ?? 0));
 
 		if (!messages.length) {
 			console.log("Nessuna giornata in corso!");
 			return;
 		}
 		await Promise.all(
-			messages.map(async (m) => {
-				const [, matchDayId] = m.name.split("-");
+			messages.map(async ({ name }) => {
+				const [, matchDayId] = name.split("-");
 
 				if (!matchDayId) {
 					console.log("Wrong match day id encountered!");
 					return undefined;
 				}
 				const [messageId, matches] = await Promise.all([
-					env.KV.get(m.name),
+					env.KV.get(name),
 					loadMatches(matchDayId),
 				]);
+				let nextTimestamp: number | undefined;
 
+				if (!matches.some((m) => m.status === "LIVE")) {
+					const next = matches.find((m) => m.status === "UPCOMING")?.kickOffTime
+						.dateTime;
+
+					if (next) nextTimestamp = Date.parse(next);
+				}
 				if (!messageId || messageId === "-") {
 					console.log("Wrong message id encountered!");
 					return undefined;
 				}
-				const users = await getPredictionsData(env, matches);
+				const [users] = await Promise.all([
+					getPredictionsData(env, matches),
+					nextTimestamp &&
+						env.KV.put(`matchDayMessage-${matchDayId}`, messageId, {
+							metadata: nextTimestamp,
+						}),
+				]);
 				const leaderboard = resolveLeaderboard(users, matches);
 				const finished = matches.every((match) => match.status === "FINISHED");
 
