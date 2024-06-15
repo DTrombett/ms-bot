@@ -17,3 +17,4 @@ export * from "./random";
 export * from "./rps";
 export * from "./search";
 export * from "./test";
+export * from "./uefaEuro2024";

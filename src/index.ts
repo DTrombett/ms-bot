@@ -149,6 +149,7 @@ const server: ExportedHandler<Env> = {
 				const [users] = await Promise.all([
 					getPredictionsData(env, matches),
 					nextTimestamp &&
+						nextTimestamp > controller.scheduledTime &&
 						env.KV.put(`matchDayMessage-${matchDayId}`, messageId, {
 							metadata: nextTimestamp,
 						}),
