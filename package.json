@@ -33,7 +33,7 @@
 		"@discordjs/formatters": "^0.4.0",
 		"@discordjs/rest": "^2.3.0",
 		"@sapphire/snowflake": "^3.5.3",
-		"cloudflared": "^0.5.1",
+		"cloudflared": "^0.5.2",
 		"discord-api-types": "^0.37.89",
 		"htmlparser2": "^9.1.0",
 		"ms": "^2.1.3",
