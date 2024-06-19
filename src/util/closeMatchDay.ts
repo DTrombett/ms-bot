@@ -23,7 +23,7 @@ WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
 			).bind(...matches.map((m) => m.id)),
 		]),
 		env.KV.put(`matchDayMessage-${matches[0]!.matchday.id}`, "-", {
-			metadata: Infinity,
+			metadata: "Infinity",
 		}),
 	]);
 };
