@@ -128,6 +128,7 @@ const resolveStats = (users: User[]) => {
 				total[1]++;
 				total[0] += n;
 				if (days[i]) {
+					console.log("days[i]", days[i]);
 					days[i]!.totalPoints += n;
 					if (n > days[i]!.winnerPoints) {
 						days[i]!.secondPoints = days[i]!.winnerPoints;
@@ -160,6 +161,8 @@ const resolveStats = (users: User[]) => {
 	let [bestDay] = days;
 
 	for (const day of days) {
+		console.log("day", day);
+		console.log("bestDay", bestDay);
 		if (day.totalPoints > bestDay!.totalPoints) bestDay = day;
 		if (day.winnerPoints >= highestPoints.points) {
 			highestPoints.users = new Set([
