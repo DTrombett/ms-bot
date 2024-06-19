@@ -65,16 +65,23 @@ export const resolveLeaderboard = (
 					)
 						diffPoints++;
 					if (match.status === "FINISHED") maxPoints += diffPoints;
-					else if (home != null)
+					else {
 						if (
-							toBePlayed ||
-							(match.score.total.home <= Number(home) &&
-								match.score.total.away <= Number(away))
+							user.team &&
+							[match.homeTeam.id, match.awayTeam.id].includes(user.team)
 						)
-							maxPoints += 3;
-						else maxPoints += 2;
-					else if (type.length === 1) maxPoints += 2;
-					else maxPoints++;
+							maxPoints++;
+						if (home != null)
+							if (
+								toBePlayed ||
+								(match.score.total.home <= Number(home) &&
+									match.score.total.away <= Number(away))
+							)
+								maxPoints += 3;
+							else maxPoints += 2;
+						else if (type.length === 1) maxPoints += 2;
+						else maxPoints++;
+					}
 					return toBePlayed ? points : points + diffPoints;
 				}, 0),
 				0,
