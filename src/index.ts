@@ -142,7 +142,7 @@ const server: ExportedHandler<Env> = {
 
 					if (next) nextTimestamp = Date.parse(next);
 				}
-				if (!messageId || messageId === "-") {
+				if (!messageId || messageId.length < 18) {
 					console.log("Wrong message id encountered!");
 					return undefined;
 				}
