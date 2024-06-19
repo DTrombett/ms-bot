@@ -116,10 +116,7 @@ const server: ExportedHandler<Env> = {
 		rest.setToken(env.DISCORD_TOKEN);
 		const messages = (
 			await env.KV.list({ prefix: "matchDayMessage-" })
-		).keys.filter(
-			(k) =>
-				k.name !== "-" && controller.scheduledTime >= Number(k.metadata ?? 0),
-		);
+		).keys.filter((k) => controller.scheduledTime >= Number(k.metadata ?? 0));
 
 		if (!messages.length) {
 			console.log("Nessuna giornata in corso!");
