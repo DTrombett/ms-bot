@@ -114,68 +114,55 @@ const server: ExportedHandler<Env> = {
 	},
 	scheduled: async (controller, env) => {
 		rest.setToken(env.DISCORD_TOKEN);
-		const messages = (
-			await env.KV.list({ prefix: "matchDayMessage-" })
-		).keys.filter((k) => controller.scheduledTime >= Number(k.metadata ?? 0));
+		const current = await env.KV.getWithMetadata("currentMatchDay");
 
-		if (!messages.length) {
+		if (
+			!current.value ||
+			controller.scheduledTime >= Number(current.metadata ?? 0)
+		) {
 			console.log("Nessuna giornata in corso!");
 			return;
 		}
-		await Promise.all(
-			messages.map(async ({ name }) => {
-				const [, matchDayId] = name.split("-");
+		const [matchDayId, messageId] = current.value.split("-");
 
-				if (!matchDayId) {
-					console.log("Wrong match day id encountered!");
-					return undefined;
-				}
-				const [messageId, matches] = await Promise.all([
-					env.KV.get(name),
-					loadMatches(matchDayId),
-				]);
-				let nextTimestamp: number | undefined;
+		if (!messageId || messageId.length < 18) {
+			console.log("Wrong message id encountered!");
+			return;
+		}
+		const matches = await loadMatches(matchDayId);
+		let nextTimestamp: number | undefined;
 
-				if (!matches.some((m) => m.status === "LIVE")) {
-					const next = matches.find((m) => m.status === "UPCOMING")?.kickOffTime
-						.dateTime;
+		if (!matches.some((m) => m.status === "LIVE")) {
+			const next = matches.find((m) => m.status === "UPCOMING")?.kickOffTime
+				.dateTime;
 
-					if (next) nextTimestamp = Date.parse(next);
-				}
-				if (!messageId || messageId.length < 18) {
-					console.log("Wrong message id encountered!");
-					return undefined;
-				}
-				const [users] = await Promise.all([
-					getPredictionsData(env, matches),
-					nextTimestamp &&
-						nextTimestamp > controller.scheduledTime &&
-						env.KV.put(`matchDayMessage-${matchDayId}`, messageId, {
-							metadata: nextTimestamp,
-						}),
-				]);
-				const leaderboard = resolveLeaderboard(users, matches);
-				const finished = matches.every((match) => match.status === "FINISHED");
+			if (next) nextTimestamp = Date.parse(next);
+		}
+		const [users] = await Promise.all([
+			getPredictionsData(env, matches),
+			nextTimestamp &&
+				nextTimestamp > controller.scheduledTime &&
+				env.KV.put("currentMatchDay", `${matchDayId}-${messageId}`, {
+					metadata: nextTimestamp,
+				}),
+		]);
+		const leaderboard = resolveLeaderboard(users, matches);
+		const finished = matches.every((match) => match.status === "FINISHED");
 
-				return Promise.all([
-					rest.patch(
-						Routes.channelMessage(env.PREDICTIONS_CHANNEL, messageId),
-						{
-							body: {
-								embeds: getLiveEmbeds(
-									users,
-									matches,
-									leaderboard,
-									`${matches[0]!.round.metaData.type === "GROUP_STANDINGS" ? `Group stage - ${matches[0]!.matchday.longName}` : matches[0]!.round.metaData.name}`,
-									finished,
-								),
-							} satisfies RESTPatchAPIChannelMessageJSONBody,
-						},
+		await Promise.all([
+			rest.patch(Routes.channelMessage(env.PREDICTIONS_CHANNEL, messageId), {
+				body: {
+					embeds: getLiveEmbeds(
+						users,
+						matches,
+						leaderboard,
+						`${matches[0]!.round.metaData.type === "GROUP_STANDINGS" ? `Group stage - ${matches[0]!.matchday.longName}` : matches[0]!.round.metaData.name}`,
+						finished,
 					),
-					finished && closeMatchDay(env, leaderboard, matches),
-				]);
+				} satisfies RESTPatchAPIChannelMessageJSONBody,
 			}),
-		);
+			finished && closeMatchDay(env, leaderboard, matches),
+		]);
 	},
 };
 

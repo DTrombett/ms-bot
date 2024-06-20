@@ -90,5 +90,8 @@ export const startPredictions = async (
 		} satisfies RESTPostAPIChannelMessageJSONBody,
 	})) as RESTPostAPIChannelMessageResult;
 
-	await env.KV.put(`matchDayMessage-${matchDayId}`, message.id);
+	await Promise.all([
+		env.KV.put(`matchDayMessage-${matchDayId}`, message.id),
+		env.KV.put("currentMatchDay", `${matchDayId}-${message.id}`),
+	]);
 };

@@ -235,42 +235,17 @@ WHERE id = ?2`,
 			});
 			return;
 		}
-		let existingMessages: string[] | undefined;
-
 		if (subCommand.name === "start") {
-			existingMessages = (
-				await env.KV.list({ prefix: "matchDayMessage-" })
-			).keys.map(({ name }) => name);
-			const matchDays = matches.filter(
-				(m, i) =>
-					m.matchday.id !== matches[i - 1]?.matchday.id &&
-					now >= Date.parse(m.kickOffTime.dateTime) - 15 * 60 * 1000 &&
-					!existingMessages!.includes(`matchDayMessage-${m.matchday.id}`),
-			);
+			const current = await env.KV.get("currentMatchDay");
 
-			if (!matchDays.length) {
+			if (current) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
-						content: "Non c'è alcuna giornata da iniziare!",
+						content: "Una giornata è già in corso!",
 						flags: MessageFlags.Ephemeral,
 					},
 				});
-				return;
-			}
-			if (matchDays.length === 1) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Giornata iniziata!",
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-				await startPredictions(
-					env,
-					matchDays[0]!.matchday.id,
-					matches.filter((m) => m.matchday.id === matchDays[0]!.matchday.id),
-				);
 				return;
 			}
 		}
@@ -290,13 +265,9 @@ WHERE id = ?2`,
 							: `v${isDifferentUser ? `-${options.user}` : ""}`,
 					subCommand.name === "send"
 						? (startTime) => now >= startTime
-						: subCommand.name === "start"
-							? (startTime, matchDayId) =>
-									now < startTime ||
-									existingMessages!.includes(`matchDayMessage-${matchDayId}`)
-							: isDifferentUser
-								? (startTime) => now < startTime
-								: undefined,
+						: subCommand.name === "start" || isDifferentUser
+							? (startTime) => now < startTime
+							: undefined,
 				),
 				flags: MessageFlags.Ephemeral,
 			},

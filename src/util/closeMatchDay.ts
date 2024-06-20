@@ -22,8 +22,6 @@ WHERE id = ?3`);
 WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
 			).bind(...matches.map((m) => m.id)),
 		]),
-		env.KV.put(`matchDayMessage-${matches[0]!.matchday.id}`, "-", {
-			metadata: 1e128,
-		}),
+		env.KV.delete("currentMatchDay"),
 	]);
 };
