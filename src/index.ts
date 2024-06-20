@@ -116,6 +116,7 @@ const server: ExportedHandler<Env> = {
 		rest.setToken(env.DISCORD_TOKEN);
 		const current = await env.KV.getWithMetadata("currentMatchDay");
 
+		console.log(current);
 		if (!current.value) {
 			console.log("Nessuna giornata in corso!");
 			return;
