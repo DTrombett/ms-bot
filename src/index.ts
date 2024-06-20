@@ -116,11 +116,12 @@ const server: ExportedHandler<Env> = {
 		rest.setToken(env.DISCORD_TOKEN);
 		const current = await env.KV.getWithMetadata("currentMatchDay");
 
-		if (
-			!current.value ||
-			controller.scheduledTime >= Number(current.metadata ?? 0)
-		) {
+		if (!current.value) {
 			console.log("Nessuna giornata in corso!");
+			return;
+		}
+		if (controller.scheduledTime >= Number(current.metadata ?? 0)) {
+			console.log("Skipped!");
 			return;
 		}
 		const [matchDayId, messageId] = current.value.split("-");
