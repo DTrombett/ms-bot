@@ -120,14 +120,7 @@ const server: ExportedHandler<Env> = {
 			console.log("Nessuna giornata in corso!");
 			return;
 		}
-		console.log(
-			current,
-			controller.scheduledTime,
-			current.metadata ?? 0,
-			Number(current.metadata ?? 0),
-			controller.scheduledTime >= Number(current.metadata ?? 0),
-		);
-		if (controller.scheduledTime >= Number(current.metadata ?? 0)) {
+		if (controller.scheduledTime < Number(current.metadata ?? 0)) {
 			console.log("Skipped!");
 			return;
 		}
