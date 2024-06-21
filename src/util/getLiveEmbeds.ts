@@ -228,11 +228,7 @@ const resolveStats = (users: User[]) => {
 					}** Punti Partita`
 				: "**N/A**"
 		}\n- Punti totali accumulati: ${
-			days.length
-				? `**${totalPoints}** Punti Partita • Avg. **${(
-						totalPoints / days.length
-					).toFixed(2)}**/day`
-				: "**N/A**"
+			days.length ? `**${totalPoints}** Punti Partita` : "**N/A**"
 		}`,
 	};
 };

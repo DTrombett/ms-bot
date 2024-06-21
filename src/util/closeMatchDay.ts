@@ -1,6 +1,6 @@
 import { Env, Leaderboard, type MatchData } from ".";
 
-export const closeMatchDay = async (
+export const closeMatchDay = (
 	env: Env,
 	leaderboard: Leaderboard,
 	matches: MatchData[],
