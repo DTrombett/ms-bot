@@ -57,14 +57,16 @@ const buildModal = (
 ) => {
 	const { matchday, round } = matches[0]!;
 	const firstRound = round.metaData.type === "GROUP_STANDINGS";
+	const parts = Math.ceil(matches.length / 5);
+	const perPart = Math.ceil(matches.length / parts);
 
 	return new ModalBuilder()
 		.setCustomId(`predictions-${matchday.id}-${part}`)
 		.setTitle(
-			`Pronostici ${firstRound ? matchday.translations?.longName?.[locale] ?? matchday.longName : round.translations?.name?.[locale] ?? round.metaData.name} (${part + 1}/${Math.ceil(matches.length / 5)})`,
+			`Pronostici ${firstRound ? matchday.translations?.longName?.[locale] ?? matchday.longName : round.translations?.name?.[locale] ?? round.metaData.name} (${part + 1}/${parts})`,
 		)
 		.addComponents(
-			matches.slice(part * 5, (part + 1) * 5).map((match) => {
+			matches.slice(part * perPart, (part + 1) * perPart).map((match) => {
 				const textInput = new TextInputBuilder()
 					.setCustomId(match.id)
 					.setLabel(
@@ -277,8 +279,10 @@ WHERE id = ?2`,
 		const [, matchDayId, partString] = interaction.data.custom_id.split("-");
 		const part = Number(partString) || 0;
 		const matches = await loadMatches(matchDayId);
+		const parts = Math.ceil(matches.length / 5);
+		const perPart = Math.ceil(matches.length / parts);
 
-		if (matches.length <= part * 5) {
+		if (matches.length <= part * perPart) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -319,7 +323,6 @@ WHERE id = ?2`,
 			return;
 		}
 		const userId = (interaction.member ?? interaction).user!.id;
-		const total = Math.ceil(matches.length / 5);
 		const invalid: string[] = [];
 		const resolved: Record<string, string | undefined> = {};
 		const newPredictions: Prediction[] = [];
@@ -418,7 +421,7 @@ VALUES (?)`,
 			});
 			return;
 		}
-		if (part + 1 === total)
+		if (part + 1 === parts)
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -441,7 +444,7 @@ VALUES (?)`,
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
-					content: `Parte **${part + 1} di ${total}** inviata correttamente! Clicca il pulsante per continuare...`,
+					content: `Parte **${part + 1} di ${parts}** inviata correttamente! Clicca il pulsante per continuare...`,
 					components: [
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
@@ -460,12 +463,14 @@ VALUES (?)`,
 	async component(interaction, { reply, env }) {
 		const [, matchDayId, action, arg0] = interaction.data.custom_id.split("-");
 		const matches = await loadMatches(matchDayId);
+		const parts = Math.ceil(matches.length / 5);
+		const perPart = Math.ceil(matches.length / parts);
 
 		if (!matchDayId) return;
 		if (action === "e") {
 			const part = Number(arg0) || 0;
 
-			if (matches.length <= part * 5) {
+			if (matches.length <= part * perPart) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
