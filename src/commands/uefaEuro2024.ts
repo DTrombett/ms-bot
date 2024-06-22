@@ -6,34 +6,7 @@ import {
 	MessageFlags,
 	type APIApplicationCommandInteractionDataSubcommandOption,
 } from "discord-api-types/v10";
-import { Command, loadMatches, type MatchData } from "../util";
-
-const emojis: Record<string, string | undefined> = {
-	POL: ":flag_pl:",
-	POR: ":flag_pt:",
-	ROU: ":flag_ro:",
-	SCO: ":scotland:",
-	ESP: ":flag_es:",
-	SUI: ":flag_ch:",
-	ALB: ":flag_al:",
-	TUR: ":flag_tr:",
-	AUT: ":flag_at:",
-	BEL: ":flag_be:",
-	SRB: ":flag_rs:",
-	DEN: ":flag_dk:",
-	ENG: ":england:",
-	FRA: ":flag_fr:",
-	GER: ":flag_de:",
-	CRO: ":flag_hr:",
-	HUN: ":flag_hu:",
-	ITA: ":flag_it:",
-	GEO: ":flag_ge:",
-	SVN: ":flag_si:",
-	UKR: ":flag_ua:",
-	SVK: ":flag_sk:",
-	CZE: ":flag_cz:",
-	NED: ":flag_nl:",
-};
+import { Command, flagEmojis, loadMatches, type MatchData } from "../util";
 
 export const uefaEuro2024 = new Command({
 	data: [
@@ -145,7 +118,7 @@ export const uefaEuro2024 = new Command({
 							)
 							.addFields(
 								dayMatches.map((m) => ({
-									name: `${emojis[m.homeTeam.countryCode] ?? ""} ${m.homeTeam.translations?.displayName?.[locale] ?? m.homeTeam.internationalName}${m.score ? ` **${m.score.total.home}**` : ""} - ${m.score ? `**${m.score.total.away}** ` : ""}${m.awayTeam.translations?.displayName?.[locale] ?? m.awayTeam.internationalName} ${emojis[m.awayTeam.countryCode] ?? ""}`,
+									name: `${flagEmojis[m.homeTeam.countryCode] ?? ""} ${m.homeTeam.translations?.displayName?.[locale] ?? m.homeTeam.internationalName}${m.score ? ` **${m.score.total.home}**` : ""} - ${m.score ? `**${m.score.total.away}** ` : ""}${m.awayTeam.translations?.displayName?.[locale] ?? m.awayTeam.internationalName} ${flagEmojis[m.awayTeam.countryCode] ?? ""}`,
 									value: `${m.status === "UPCOMING" ? time(new Date(m.kickOffTime.dateTime)) : m.status === "LIVE" ? (m.phase === "HALF_TIME_BREAK" ? "🔴 **Live** - Intervallo" : `🔴 **Live** - ${m.minute?.normal}'`) : ""}\n${m.group ? m.group.translations?.name?.[locale] ?? m.group.metaData.groupName : ""}`,
 								})),
 							)

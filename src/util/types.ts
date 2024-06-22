@@ -427,6 +427,241 @@ export type MatchesData =
 	| MatchData[]
 	| { error: { message: string; status: number; title: string } };
 
+export type PostsData = {
+	count: number;
+	result: {
+		id: string;
+		version: string;
+		timestamp: string;
+		parentId: string;
+		foreignId: string;
+		title: string;
+		description: string;
+		summary: string;
+		sys: {
+			kind: string;
+			baseType: string;
+			type: string;
+			creationTime: string;
+			updateTime: string;
+		};
+		pubInfo: {
+			siteName: string;
+			status: string;
+			publicationTime: string;
+			sectionPath: string;
+			visible: boolean;
+		};
+		attributes: {
+			tags: [];
+			cpcversion: string;
+			masterStoryUuid: string;
+			liveblogPostData: {
+				lbPostType: string;
+				lbPostPublisher: string;
+				lbPostTimestamp: string;
+				isSticky: boolean;
+				forceNeutral: boolean;
+				lbPostEvent: Partial<{
+					eventId: string;
+					eventDateTimeUTC: string;
+					eventMinute: string;
+					eventSecond: string;
+					eventDisplayMinute?: string;
+					eventTranslation: string;
+					eventTranslationFormatted: string;
+					idMatch: string;
+					idPlayer: string;
+					namePlayer: string;
+					fieldPositionPlayer: string;
+					imageUrlPlayer: string;
+					idTeam: string;
+				}>;
+				lbPostFSPEvent: Partial<{
+					eventId: string;
+					eventType: string;
+					eventSubType: string;
+					eventDateTimeUTC: string;
+					eventPhase: string;
+					eventMinute: string;
+					eventStrTime?: string;
+					eventSecond: string;
+					eventDisplayMinute: string;
+					eventTranslation: string;
+					eventTranslationFormatted: string;
+					idMatch: string;
+					idPlayer: string;
+					namePlayer: string;
+					fieldPositionPlayer: string;
+					imageUrlPlayer: string;
+					idTeam: string;
+					varInfo?: {
+						incident: string;
+						reason: string;
+						result: string;
+						status: string;
+					};
+				}>;
+			};
+			liveblogpost: {
+				status: string;
+				type: string;
+			};
+			creator: string;
+			last_modifier: string;
+			created: string;
+			modified: string;
+			eventTime: string;
+			workFolder: string;
+			"content.json": {
+				fileName: string;
+				partName: string;
+				mimeType: string;
+				size: number;
+				data: {
+					article: {
+						_elements: [
+							{
+								_html?: string;
+								figure?: {
+									img: {
+										src: string;
+										"emk-softCrop": string;
+										"data-id": string;
+										"emk-width": string;
+										"emk-height": string;
+									}[];
+								}[];
+								_attributes?: {
+									"emk-type": string;
+									"emk-class"?: string;
+									href?: string;
+									"emk-posturl"?: string;
+									"emk-postid"?: string;
+									"data-id"?: string;
+								};
+								_type: string;
+							},
+						];
+					};
+				};
+			};
+			nodes?: Record<
+				string,
+				{
+					id: string;
+					version: string;
+					timestamp: string;
+					foreignId: string;
+					title: string;
+					description: string;
+					summary: string;
+					sys: {
+						kind: string;
+						baseType: string;
+						type: string;
+						creationTime: string;
+						updateTime: string;
+					};
+					pubInfo: {
+						siteName: string;
+						status: string;
+						publicationTime: string;
+						sectionPath: string;
+						visible: boolean;
+					};
+					attributes: {
+						tags: string[];
+						cpcversion: string;
+						language: string;
+						wordCount: string;
+						charCount: string;
+						firstPublicationDate: string;
+						lastPublicationDate: string;
+						visibleInLists: boolean;
+						hideFromWeb: boolean;
+						hideFromApp: boolean;
+						hideMainPhoto: boolean;
+						hideFromAppleNews: boolean;
+						needsRegistration: boolean;
+						switchOffAds: boolean;
+						main: {
+							kind: string;
+							contentScoring: string;
+							section: string;
+							competition: string;
+							season: string;
+							phase: string;
+						};
+						sections: string[];
+						competitions: string[];
+						mediaInfo?: {
+							caption: string;
+							credit: string;
+							duration: string;
+							width: string;
+							height: string;
+							mediaUrl: string;
+						};
+						workFolder: string;
+						webReference: string;
+					};
+					files: {
+						"content.json": {
+							fileName: string;
+							mimeType: string;
+							updateTime: string;
+							size: number;
+							data: {
+								document: {
+									_elements: {
+										_html: string;
+										_type: string;
+										_attributes: {
+											"emk-type": string;
+											"emk-class"?: string;
+										}[];
+										mediagroup?: {
+											figure: {
+												img: {
+													src: string;
+													"emk-softCrop": string;
+													"data-id": string;
+												}[];
+												figcredits: string;
+												figcaption: string;
+											}[];
+											_type: string;
+										}[];
+										headgroup: {
+											"emk-type": string;
+											"emk-class"?: string;
+										}[];
+									};
+								};
+							};
+						};
+						url: string;
+						resourceUrl: string;
+						picture: string;
+						lastModified: number;
+						dataType: string;
+						etag: string;
+					};
+				}
+			>;
+		};
+		url: string;
+		lastModified: number;
+		dataType: string;
+		etag: string;
+	}[];
+	version: string;
+	reset: boolean;
+	totalPosts: number;
+	staticized: boolean;
+};
+
 export type Leaderboard = [
 	user: User & { predictions: Prediction[] },
 	matchPoints: number,
@@ -459,6 +694,7 @@ export type EnvVars = {
 	DOG_API_KEY: string;
 	PREDICTIONS_CHANNEL: string;
 	PREDICTIONS_ROLE: string;
+	LIVE_CHANNEL: string;
 };
 export type Env = EnvVars & {
 	DB: D1Database;

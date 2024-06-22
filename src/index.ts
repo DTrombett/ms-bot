@@ -5,7 +5,7 @@ import {
 	type RESTPatchAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
 import * as commandsObject from "./commands";
-import type { Env } from "./util";
+import type { Env, MatchData } from "./util";
 import {
 	Command,
 	JsonResponse,
@@ -13,6 +13,7 @@ import {
 	errorToResponse,
 	getLiveEmbeds,
 	getPredictionsData,
+	handleLiveData,
 	info,
 	loadMatches,
 	resolveLeaderboard,
@@ -131,13 +132,19 @@ const server: ExportedHandler<Env> = {
 			return;
 		}
 		const matches = await loadMatches(matchDayId);
+		const liveMatches = matches.filter((m) => m.status === "LIVE");
 		let nextTimestamp: number | undefined;
 
-		if (!matches.some((m) => m.status === "LIVE")) {
-			const next = matches.find((m) => m.status === "UPCOMING")?.kickOffTime
-				.dateTime;
+		if (!liveMatches.length) {
+			const nextMatch = matches.find((m) => m.status === "UPCOMING");
+			const next = nextMatch?.kickOffTime.dateTime;
 
 			if (next) nextTimestamp = Date.parse(next);
+			liveMatches.push(
+				!nextTimestamp || nextTimestamp > Date.now()
+					? matches.findLast((m) => m.status === "FINISHED")!
+					: nextMatch!,
+			);
 		}
 		const [users] = await Promise.all([
 			getPredictionsData(env, matches),
@@ -162,6 +169,13 @@ const server: ExportedHandler<Env> = {
 					),
 				} satisfies RESTPatchAPIChannelMessageJSONBody,
 			}),
+			...liveMatches
+				.filter((m) => m as MatchData | null)
+				.map((m) =>
+					fetch(`https://uefa.com/euro2024/match/${m.id}`)
+						.then((res) => res.text())
+						.then(handleLiveData(env, m, controller.scheduledTime)),
+				),
 			finished && closeMatchDay(env, leaderboard, matches),
 		]);
 	},
