@@ -70,20 +70,15 @@ export const handleLiveData =
 				`https://editorial.uefa.com/api/liveblogs/${found.blogId}/posts?aggregator=lightliveblogjson&limit=10`,
 			).then((res) => res.json())) as PostsData
 		).result.filter(
-			(v) =>
-				Date.parse(
-					// v.sys.creationTime,
-					v.timestamp,
-				) +
-					61_000 >=
-				now,
+			(p) =>
+				Date.parse(p.timestamp) + 61_000 >= now &&
+				p.attributes.liveblogPostData.lbPostType === "MATCH_EVENT",
 		);
 
 		if (posts.length)
 			await rest.post(Routes.channelMessages(env.LIVE_CHANNEL), {
 				body: {
 					embeds: posts.reverse().map((p) => {
-						const creator = p.attributes.creator.split(":").at(-1)!;
 						const node =
 							p.attributes.nodes && Object.values(p.attributes.nodes)[0];
 						const img = node
@@ -92,48 +87,19 @@ export const handleLiveData =
 							: p.attributes["content.json"].data.article._elements.find(
 									(a) => a.figure?.length,
 								)?.figure![0]!.img[0]?.src;
-						const description = p.attributes[
-							"content.json"
-						].data.article._elements
-							.map((a) =>
-								a._type === "SOCIAL"
-									? a._attributes?.["emk-posturl"]
-									: a._type === "EXTRA" &&
-										  a._attributes?.["emk-type"] === "standings"
-										? "[View live standings](https://uefa.com/euro2024/standings)"
-										: a._html,
-							)
-							.filter((a) => a)
-							.join("\n")
-							.replace(/<p>|<\/p>|<b><\/b>|<u><\/u>|<\/b><b>|<\/u><u>/g, "")
-							.replace(/<b>|<\/b>/g, "**")
-							.replace(/<u>|<\/u>/g, "__")
-							.replaceAll("<br/>", "\n");
 
 						return new EmbedBuilder()
 							.setTitle(
-								p.attributes.liveblogPostData.lbPostFSPEvent.eventType &&
-									p.attributes.liveblogPostData.lbPostFSPEvent.eventType in
-										titles
-									? titles[
-											p.attributes.liveblogPostData.lbPostFSPEvent.eventType
-										]!(p.attributes.liveblogPostData.lbPostFSPEvent)
-									: node
-										? node.title
-										: creator === "integrations.liveblog"
-											? null
-											: creator.replace(".", " "),
+								titles[
+									p.attributes.liveblogPostData.lbPostFSPEvent.eventType!
+								]?.(p.attributes.liveblogPostData.lbPostFSPEvent) ?? null,
 							)
 							.setAuthor({
 								name: `${p.attributes.liveblogPostData.lbPostEvent.eventDisplayMinute ?? ""} ${match.homeTeam.internationalName} ${match.score!.total.home} - ${match.score!.total.away} ${match.awayTeam.internationalName}`,
 							})
 							.setDescription(
-								(p.attributes.liveblogPostData.lbPostType === "MATCH_EVENT"
-									? p.attributes.liveblogPostData.lbPostFSPEvent
-											.eventTranslation ?? ""
-									: node
-										? node.description
-										: description) || null,
+								p.attributes.liveblogPostData.lbPostFSPEvent
+									.eventTranslation! || null,
 							)
 							.setImage(img ? `https://editorial.uefa.com${img}` : null)
 							.setURL(
@@ -147,7 +113,7 @@ export const handleLiveData =
 									? colors[
 											p.attributes.liveblogPostData.lbPostFSPEvent.eventType
 										]!(p.attributes.liveblogPostData.lbPostFSPEvent)
-									: 0x2b2d31,
+									: null,
 							)
 							.toJSON();
 					}),
