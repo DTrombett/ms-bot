@@ -10,6 +10,7 @@ SET dayPoints = COALESCE(dayPoints, 0) + ?1,
 	matchPointsHistory = CASE
 		WHEN matchPointsHistory IS NULL THEN ?2
 		ELSE matchPointsHistory || "," || ?2
+	END
 WHERE id = ?3`);
 
 	return Promise.all([
