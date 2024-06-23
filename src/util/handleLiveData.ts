@@ -26,7 +26,11 @@ const titles: Record<
 	GOAL: () => "⚽ Gooooal!",
 	OFFSIDE: () => `🚩 Offside`,
 	END_PHASE: () => `⌚ Half time`,
-	START_PHASE: () => `⌚ Half time end`,
+	FOUL: () => "🏴 Foul",
+	FREE_KICK: () => "🦵 Free kick",
+	ASSIST: () => "🏃 Assist",
+	CORNER: () => "🚩 Corner",
+	SAVE: () => "👐 Save",
 };
 const colors: Record<
 	string,
@@ -46,6 +50,13 @@ const colors: Record<
 	GOAL: () => 0x5865f2,
 	OFFSIDE: () => 0xed4245,
 	END_PHASE: () => 0x5865f2,
+	START_PHASE: () => 0x57f287,
+	FOUL: () => 0xe67e22,
+	FREE_KICK: () => 0x1abc9c,
+	ASSIST: () => 0xeb459e,
+	SHOT_WIDE: () => 0x34495e,
+	CORNER: () => 0x1f8b4c,
+	SAVE: () => 0xc27c0e,
 };
 
 export const handleLiveData =
@@ -71,8 +82,11 @@ export const handleLiveData =
 			).then((res) => res.json())) as PostsData
 		).result.filter(
 			(p) =>
-				Date.parse(p.timestamp) + 61_000 >= now &&
-				p.attributes.liveblogPostData.lbPostType === "MATCH_EVENT",
+				Date.parse(
+					p.timestamp === p.sys.updateTime ? p.sys.creationTime : p.timestamp,
+				) +
+					61_000 >=
+					now && p.attributes.liveblogPostData.lbPostType === "MATCH_EVENT",
 		);
 
 		if (posts.length)
