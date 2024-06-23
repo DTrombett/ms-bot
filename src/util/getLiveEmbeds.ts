@@ -22,7 +22,6 @@ const createLeaderboardDescription = (
 	);
 
 	return leaderboard
-		.toSorted((a, b) => b[1] - a[1])
 		.map(([user, points, dayPoints, maxPoints]) => {
 			const position = user.predictions.length
 				? leaderboard.findIndex(([, p]) => points === p) + 1
