@@ -153,6 +153,13 @@ const server: ExportedHandler<Env> = {
 				env.KV.put("currentMatchDay", `${matchDayId}-${messageId}`, {
 					metadata: nextTimestamp,
 				}),
+			...liveMatches
+				.filter((m) => m as MatchData | null)
+				.map((m) =>
+					fetch(`https://uefa.com/euro2024/match/${m.id}`)
+						.then((res) => res.text())
+						.then(handleLiveData(env, m, controller.scheduledTime)),
+				),
 		]);
 		const leaderboard = resolveLeaderboard(users, matches);
 		const finished = matches.every((match) => match.status === "FINISHED");
@@ -169,13 +176,6 @@ const server: ExportedHandler<Env> = {
 					),
 				} satisfies RESTPatchAPIChannelMessageJSONBody,
 			}),
-			...liveMatches
-				.filter((m) => m as MatchData | null)
-				.map((m) =>
-					fetch(`https://uefa.com/euro2024/match/${m.id}`)
-						.then((res) => res.text())
-						.then(handleLiveData(env, m, controller.scheduledTime)),
-				),
 			finished && closeMatchDay(env, leaderboard, matches),
 		]);
 	},
