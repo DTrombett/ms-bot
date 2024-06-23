@@ -31,6 +31,7 @@ const titles: Record<
 	ASSIST: () => "🏃 Assist",
 	CORNER: () => "🚩 Corner",
 	SAVE: () => "👐 Save",
+	SHOT_WIDE: () => "❌ Out",
 };
 const colors: Record<
 	string,
@@ -54,7 +55,7 @@ const colors: Record<
 	FOUL: () => 0xe67e22,
 	FREE_KICK: () => 0x1abc9c,
 	ASSIST: () => 0xeb459e,
-	SHOT_WIDE: () => 0x34495e,
+	SHOT_WIDE: () => 0xed4245,
 	CORNER: () => 0x1f8b4c,
 	SAVE: () => 0xc27c0e,
 };
