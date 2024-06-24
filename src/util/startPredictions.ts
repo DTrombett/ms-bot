@@ -7,10 +7,8 @@ import {
 import {
 	Env,
 	closeMatchDay,
-	createMatchDayComponents,
 	getLiveEmbeds,
 	getPredictionsData,
-	loadMatches,
 	resolveLeaderboard,
 	rest,
 	type MatchData,
@@ -87,25 +85,16 @@ export const startPredictions = async (
 
 	if (finished) promises.push(closeMatchDay(env, leaderboard, matches));
 	await Promise.all(promises);
-	const [message, allMatches] = await Promise.all([
-		rest.post(route, {
-			body: {
-				embeds: getLiveEmbeds(users, matches, leaderboard, title, finished),
-			} satisfies RESTPostAPIChannelMessageJSONBody,
-		}) as Promise<RESTPostAPIChannelMessageResult>,
-		loadMatches(),
-	]);
+	const message = await (rest.post(route, {
+		body: {
+			embeds: getLiveEmbeds(users, matches, leaderboard, title, finished),
+		} satisfies RESTPostAPIChannelMessageJSONBody,
+	}) as Promise<RESTPostAPIChannelMessageResult>);
 
 	await Promise.all([
 		env.KV.put(`matchDayMessage-${matchDayId}`, message.id),
 		finished
 			? null
 			: env.KV.put("currentMatchDay", `${matchDayId}-${message.id}`),
-		rest.post(Routes.channelMessages(env.PREDICTIONS_CHANNEL), {
-			body: {
-				content: `**Giornata iniziata!** <@&${env.PREDICTIONS_ROLE}>\nInvia i pronostici per le prossime giornate tramite i pulsanti qui sotto. Hai tempo fino a 15 minuti prima dell'inizio di ciascuna giornata!`,
-				components: createMatchDayComponents(allMatches),
-			} satisfies RESTPostAPIChannelMessageJSONBody,
-		}),
 	]);
 };
