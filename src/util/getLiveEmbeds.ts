@@ -61,7 +61,7 @@ const resolveMatches = (matches: MatchData[]) =>
 						: // TODO: Check this status
 							match.status === ""
 							? "*Posticipata*"
-							: `**${match.score?.total.home ?? 0} - ${match.score?.total.away ?? 0}**`
+							: `**${match.score?.total.home ?? 0} - ${match.score?.total.away ?? 0}**${match.score?.total.home !== match.score?.regular.home || match.score?.total.away !== match.score?.regular.away ? ` (${match.score?.regular.home ?? 0} - ${match.score?.regular.away ?? 0})` : ""}`
 				}`,
 		)
 		.join("\n");

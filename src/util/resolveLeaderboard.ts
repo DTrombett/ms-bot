@@ -39,9 +39,9 @@ export const resolveLeaderboard = (
 						away?: `${number}`;
 					};
 					const result =
-						match.score.total.home > match.score.total.away
+						match.score.regular.home > match.score.regular.away
 							? "1"
-							: match.score.total.home < match.score.total.away
+							: match.score.regular.home < match.score.regular.away
 								? "2"
 								: "X";
 					let diffPoints = 0;
@@ -51,8 +51,8 @@ export const resolveLeaderboard = (
 						if (type === result)
 							if (
 								home != null &&
-								Number(home) === match.score.total.home &&
-								Number(away) === match.score.total.away
+								Number(home) === match.score.regular.home &&
+								Number(away) === match.score.regular.away
 							)
 								diffPoints = 3;
 							else diffPoints = 2;
@@ -74,8 +74,8 @@ export const resolveLeaderboard = (
 						if (home != null)
 							if (
 								toBePlayed ||
-								(match.score.total.home <= Number(home) &&
-									match.score.total.away <= Number(away))
+								(match.score.regular.home <= Number(home) &&
+									match.score.regular.away <= Number(away))
 							)
 								maxPoints += 3;
 							else maxPoints += 2;
