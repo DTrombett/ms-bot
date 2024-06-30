@@ -111,6 +111,7 @@ export const handleLiveData =
 							)
 							.setAuthor({
 								name: `${p.attributes.liveblogPostData.lbPostEvent.eventDisplayMinute ?? ""} ${match.homeTeam.internationalName} ${match.score!.total.home} - ${match.score!.total.away} ${match.awayTeam.internationalName}`,
+								url: `https://uefa.com/euro2024/match/${match.id}`,
 							})
 							.setDescription(
 								p.attributes.liveblogPostData.lbPostFSPEvent
