@@ -235,6 +235,7 @@ export type EnvVars = {
 	DOG_API_KEY: string;
 	PREDICTIONS_CHANNEL: string;
 	PREDICTIONS_ROLE: string;
+	SEASON_ID: string;
 };
 export type Env = EnvVars & {
 	DB: D1Database;
