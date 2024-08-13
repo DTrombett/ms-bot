@@ -9,7 +9,7 @@ import { Env, MatchDay } from "./types";
 
 export const loadMatchDay = async (env: Env, last = 0) => {
 	const matchDays = (await fetch(
-		"https://www.legaseriea.it/api/season/157617/championship/A/matchday",
+		`https://www.legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
 	).then((res) => res.json())) as
 		| {
 				success: true;
