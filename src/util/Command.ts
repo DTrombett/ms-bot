@@ -156,7 +156,7 @@ export class Command<T extends ApplicationCommandType = any> {
 					resolve(value);
 					done = true;
 				},
-			})?.catch((err) => {
+			})?.catch((err: Error) => {
 				if (done) error(err);
 				else reject(err);
 			});
