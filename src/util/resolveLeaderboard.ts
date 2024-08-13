@@ -37,6 +37,7 @@ export const resolveLeaderboard = (
 					let diffPoints = 0;
 					const toBePlayed =
 						match.match_status === 0 || match.match_status === 3;
+					const isStarred = match.match_id === user.match;
 
 					if (!toBePlayed)
 						if (type === result)
@@ -49,6 +50,7 @@ export const resolveLeaderboard = (
 							else diffPoints = 2;
 						else if (type.includes(result)) diffPoints = 1;
 						else if (type.length === 2) diffPoints = -1;
+					if (isStarred) diffPoints *= 2;
 					if (match.match_status === 2) maxPoints += diffPoints;
 					else if (home != null)
 						if (
@@ -56,15 +58,15 @@ export const resolveLeaderboard = (
 							(match.home_goal <= Number(home) &&
 								match.away_goal <= Number(away))
 						)
-							maxPoints += 3;
-						else maxPoints += 2;
-					else if (type.length === 1) maxPoints += 2;
-					else maxPoints++;
+							maxPoints += isStarred ? 6 : 3;
+						else maxPoints += isStarred ? 4 : 2;
+					else if (type.length === 1) maxPoints += isStarred ? 4 : 2;
+					else maxPoints += isStarred ? 2 : 1;
 					return toBePlayed ? points : points + diffPoints;
 				}, 0),
 				0,
 				maxPoints,
-			];
+			] as const;
 		})
 		.sort((a, b) => b[1] - a[1]);
 	const first = Math.ceil(leaderboard.length / 2);

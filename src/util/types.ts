@@ -222,6 +222,7 @@ export type User = {
 	id: string;
 	dayPoints?: number | null;
 	matchPointsHistory?: string | null;
+	match?: number | null;
 };
 
 export type EnvVars = {

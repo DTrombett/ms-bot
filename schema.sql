@@ -9,6 +9,7 @@ CREATE TABLE MatchDays (
 CREATE TABLE Users (
 	id VARCHAR(31) PRIMARY KEY,
 	dayPoints INTEGER,
+	match INTEGER,
 	matchPointsHistory VARCHAR(255)
 );
 CREATE TABLE Predictions (
