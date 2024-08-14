@@ -114,7 +114,7 @@ const server: ExportedHandler<Env> = {
 		const { results } = await env.DB.prepare(
 			`SELECT u.id, m.day, m.startDate
 			FROM Users u
-			JOIN MatchDays m ON u.matchDayId = m.id
+			JOIN MatchDays m ON 1 = 1
 			WHERE u.reminded = 0
 			  AND u.remindMinutes >= (strftime('%s', m.startDate) - strftime('%s', 'now', '+15 minutes')) / 60
 			  AND m.startDate > datetime('now', '+15 minutes')
