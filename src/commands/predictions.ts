@@ -3,6 +3,8 @@ import {
 	ButtonBuilder,
 	ModalActionRowComponentBuilder,
 	ModalBuilder,
+	SelectMenuBuilder,
+	SelectMenuOptionBuilder,
 	TextInputBuilder,
 } from "@discordjs/builders";
 import {
@@ -10,6 +12,7 @@ import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
+	ComponentType,
 	InteractionResponseType,
 	MessageFlags,
 	TextInputStyle,
@@ -120,11 +123,11 @@ export const predictions = new Command({
 					type: ApplicationCommandOptionType.Subcommand,
 					options: [
 						{
-							type: ApplicationCommandOptionType.String,
+							type: ApplicationCommandOptionType.Integer,
 							name: "before",
 							required: true,
 							description:
-								"Quanto tempo prima dell'inizio della giornata inviare il promemoria. Imposta 0 per eliminarlo",
+								"Quanti minuti prima dell'inizio della giornata inviare il promemoria. Imposta 0 per eliminarlo",
 						},
 					],
 				},
@@ -136,19 +139,30 @@ export const predictions = new Command({
 			(o): o is APIApplicationCommandInteractionDataSubcommandOption =>
 				o.type === ApplicationCommandOptionType.Subcommand,
 		)!;
-
-		if (subCommand.name === "reminder") {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: { content: "Questo comando non è ancora disponibile :(" },
-			});
-			return;
-		}
 		const options: Record<string, boolean | number | string> = {};
 
 		if (subCommand.options)
 			for (const option of subCommand.options)
 				options[option.name] = option.value;
+		if (subCommand.name === "reminder") {
+			if (typeof options.before !== "number") return;
+			await env.DB.prepare(
+				`UPDATE Users SET remindMinutes = ?1, reminded = 0 WHERE id = ?2`,
+			)
+				.bind(
+					options.before || null,
+					(interaction.member ?? interaction).user!.id,
+				)
+				.run();
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Promemoria impostato correttamente!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
 			(interaction.member ?? interaction).user!.id,
@@ -211,9 +225,9 @@ export const predictions = new Command({
 									)?.prediction ?? "*Non presente*",
 							})),
 							thumbnail: {
-								url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+								url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 							},
-							title: `${matchDay.day}ª Giornata Serie A TIM`,
+							title: `${matchDay.day}ª Giornata Serie A Enilive`,
 							url: "https://legaseriea.it/it/serie-a",
 						},
 					],
@@ -385,8 +399,29 @@ VALUES (?)`,
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
-					content: "Pronostici inviati correttamente!",
+					content: `Parte **${part} di ${total}** inviata correttamente!\nSeleziona il **Match of the Match** dal menù qui sotto`,
 					components: [
+						new ActionRowBuilder<SelectMenuBuilder>()
+							.addComponents(
+								new SelectMenuBuilder()
+									.setCustomId(`predictions-match--${timestamp}`)
+									.addOptions(
+										matches.map((m) =>
+											new SelectMenuOptionBuilder()
+												.setLabel(
+													[m.home_team_name, m.away_team_name]
+														.map(normalizeTeamName)
+														.join(" - "),
+												)
+												.setValue(m.match_id.toString())
+												.setDefault(
+													m.match_id === existingPredictions[0]?.match,
+												),
+										),
+									)
+									.setPlaceholder("Seleziona il Match of the Match"),
+							)
+							.toJSON(),
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
@@ -521,7 +556,7 @@ VALUES (?)`,
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+						"Puoi modificare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});
@@ -538,6 +573,49 @@ VALUES (?)`,
 				data: {
 					flags: MessageFlags.Ephemeral,
 					content: "Non c'è nessuna giornata disponibile al momento!",
+				},
+			});
+			return;
+		}
+		if (actionOrDay === "match") {
+			if (interaction.data.component_type !== ComponentType.StringSelect)
+				return;
+			if (!interaction.data.values.length) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: "Non hai selezionato alcun match!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			await env.DB.prepare(
+				`UPDATE Users
+				SET match = ?1
+				WHERE id = ?2;`,
+			)
+				.bind(
+					interaction.data.values[0],
+					(interaction.member ?? interaction).user!.id,
+				)
+				.run();
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Pronostici inviati correttamente!",
+					flags: MessageFlags.Ephemeral,
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(`predictions-${matchDay.day}-1-${timestamp}`)
+									.setEmoji({ name: "✏️" })
+									.setLabel("Modifica")
+									.setStyle(ButtonStyle.Success),
+							)
+							.toJSON(),
+					],
 				},
 			});
 			return;

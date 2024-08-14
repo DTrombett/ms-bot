@@ -63,14 +63,15 @@ export const startPredictions = async (
 								.map(normalizeTeamName)
 								.join(" - "),
 							value:
-								data.predictions.find(
+								(data.match === match.match_id ? "⭐ " : "") +
+								(data.predictions.find(
 									(predict) => predict.matchId === match.match_id,
-								)?.prediction ?? "*Non presente*",
+								)?.prediction ?? "*Non presente*"),
 						})),
 						thumbnail: {
-							url: "https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+							url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 						},
-						title: `${day}ª Giornata Serie A TIM`,
+						title: `${day}ª Giornata Serie A Enilive`,
 					};
 				}),
 			).then((embeds) =>

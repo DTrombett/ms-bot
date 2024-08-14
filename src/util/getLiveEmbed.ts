@@ -206,7 +206,7 @@ const resolveStats = (users: User[]) => {
 		}
 	}
 	return {
-		name: "Statistiche Serie A 2023/2024",
+		name: "Statistiche Serie A 2024/2025",
 		value: `- Punteggio più alto: ${
 			highestPoints.users.size
 				? `${[...highestPoints.users].map((id) => `<@${id}>`).join(", ")} • **${
@@ -258,7 +258,7 @@ export const getLiveEmbed = (
 ) => [
 	new EmbedBuilder()
 		.setThumbnail(
-			"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+			"https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 		)
 		.setTitle(
 			finished
@@ -267,14 +267,14 @@ export const getLiveEmbed = (
 		)
 		.setDescription(resolveMatches(matches))
 		.setAuthor({
-			name: "Serie A TIM",
+			name: "Serie A Enilive",
 			url: "https://legaseriea.it/it/serie-a",
 		})
 		.setColor(0xed4245)
 		.toJSON(),
 	new EmbedBuilder()
 		.setThumbnail(
-			"https://img.legaseriea.it/vimages/64df31f4/Logo-SerieA_TIM_RGB.jpg",
+			"https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 		)
 		.setTitle(
 			finished
@@ -293,7 +293,7 @@ export const getLiveEmbed = (
 			resolveStats(users),
 		)
 		.setAuthor({
-			name: "Serie A TIM",
+			name: "Serie A Enilive",
 			url: "https://legaseriea.it/it/serie-a",
 		})
 		.setColor(0x3498db)
