@@ -10,7 +10,8 @@ export const closeMatchDay = async (
 SET dayPoints = COALESCE(dayPoints, 0) + ?1,
 	matchPointsHistory = COALESCE(matchPointsHistory, "${",".repeat(
 		day - 2,
-	)}") || ?2
+	)}") || ?2,
+	reminded = 0
 WHERE id = ?3`);
 
 	return env.DB.batch([

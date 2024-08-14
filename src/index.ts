@@ -122,8 +122,8 @@ const server: ExportedHandler<Env> = {
 		).all<Pick<MatchDay, "day" | "startDate"> & Pick<User, "id">>();
 
 		console.log(results);
-		await Promise.all(
-			results.map(async ({ id: recipient_id, day, startDate }) => {
+		await Promise.all([
+			...results.map(async ({ id: recipient_id, day, startDate }) => {
 				const { id } = (await rest.post(Routes.userChannels(), {
 					body: {
 						recipient_id,
@@ -150,7 +150,12 @@ const server: ExportedHandler<Env> = {
 					},
 				});
 			}),
-		);
+			env.DB.prepare(
+				`UPDATE Users SET reminded = 1 WHERE id IN (${Array(results.length).fill("?").join(", ")})`,
+			)
+				.bind(...results.map(({ id }) => id))
+				.run(),
+		]);
 	},
 };
 
