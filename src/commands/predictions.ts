@@ -127,7 +127,7 @@ export const predictions = new Command({
 							name: "before",
 							required: true,
 							description:
-								"Quanto tempo prima dell'inizio della giornata inviare il promemoria. Imposta 0 per eliminarlo",
+								"Quanti minuti prima dell'inizio della giornata inviare il promemoria. Imposta 0 per eliminarlo",
 						},
 					],
 				},
@@ -139,19 +139,30 @@ export const predictions = new Command({
 			(o): o is APIApplicationCommandInteractionDataSubcommandOption =>
 				o.type === ApplicationCommandOptionType.Subcommand,
 		)!;
-
-		if (subCommand.name === "reminder") {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: { content: "Questo comando non è ancora disponibile :(" },
-			});
-			return;
-		}
 		const options: Record<string, boolean | number | string> = {};
 
 		if (subCommand.options)
 			for (const option of subCommand.options)
 				options[option.name] = option.value;
+		if (subCommand.name === "reminder") {
+			if (typeof options.before !== "number") return;
+			await env.DB.prepare(
+				`UPDATE Users SET remindMinutes = ?1, reminded = 0 WHERE id = ?2`,
+			)
+				.bind(
+					options.before || null,
+					(interaction.member ?? interaction).user!.id,
+				)
+				.run();
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content: "Promemoria impostato correttamente!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
 			(interaction.member ?? interaction).user!.id,

@@ -10,6 +10,8 @@ CREATE TABLE Users (
 	id VARCHAR(31) PRIMARY KEY,
 	dayPoints INTEGER,
 	match INTEGER,
+	remindMinutes INTEGER,
+	reminded INTEGER DEFAULT 0,
 	matchPointsHistory VARCHAR(255)
 );
 CREATE TABLE Predictions (
