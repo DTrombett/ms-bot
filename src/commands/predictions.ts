@@ -123,7 +123,7 @@ export const predictions = new Command({
 					type: ApplicationCommandOptionType.Subcommand,
 					options: [
 						{
-							type: ApplicationCommandOptionType.String,
+							type: ApplicationCommandOptionType.Integer,
 							name: "before",
 							required: true,
 							description:
