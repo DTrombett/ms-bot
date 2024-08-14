@@ -121,6 +121,7 @@ const server: ExportedHandler<Env> = {
 			  AND m.day = (SELECT MAX(day) FROM MatchDays);`,
 		).all<Pick<MatchDay, "day" | "startDate"> & Pick<User, "id">>();
 
+		if (!results.length) return;
 		console.log(results);
 		await Promise.all([
 			...results.map(async ({ id: recipient_id, day, startDate }) => {
