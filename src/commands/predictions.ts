@@ -413,6 +413,16 @@ VALUES (?)`,
 														.map(normalizeTeamName)
 														.join(" - "),
 												)
+												.setDescription(
+													(
+														newPredictions.find(
+															({ matchId }) => matchId === m.match_id,
+														) ??
+														existingPredictions.find(
+															({ matchId }) => matchId === m.match_id,
+														)
+													)?.prediction ?? "",
+												)
 												.setValue(m.match_id.toString())
 												.setDefault(
 													m.match_id === existingPredictions[0]?.match,
