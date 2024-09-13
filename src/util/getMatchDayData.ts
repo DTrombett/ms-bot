@@ -27,8 +27,5 @@ WHERE Users.id = ?
 		.bind(userId, ...matches.map((m) => m.match_id))
 		.all<Pick<Prediction, "matchId" | "prediction"> & Pick<User, "match">>();
 
-	matches.sort((a, b) =>
-		new Date(a.date_time) > new Date(b.date_time) ? 1 : -1,
-	);
 	return [matchDay, matches, existingPredictions] as const;
 };

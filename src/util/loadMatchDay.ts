@@ -40,13 +40,7 @@ export const loadMatchDay = async (env: Env, last = 0) => {
 	const matches = await loadMatches(matchDay.categoryId);
 
 	if (!matches.length) throw new TypeError("No match found");
-	matchDay.startDate = matches
-		.reduce((time, match) => {
-			const newTime = new Date(match.date_time);
-
-			return time < newTime ? time : newTime;
-		}, new Date(""))
-		.toISOString();
+	matchDay.startDate = new Date(matches[0]?.date_time ?? "").toISOString();
 	const startTime = new Date(matchDay.startDate).getTime() - 1_000 * 60 * 15;
 	const date = Math.round(startTime / 1_000);
 
