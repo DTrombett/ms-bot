@@ -119,13 +119,14 @@ const server: ExportedHandler<Env> = {
 			FROM Users u
 			JOIN MatchDays m ON 1 = 1
 			WHERE u.reminded = 0
-			  AND u.remindMinutes >= (strftime('%s', m.startDate) - strftime('%s', 'now', '+15 minutes')) / 60
+			AND u.remindMinutes >= (strftime('%s', m.startDate) - strftime('%s', 'now', '+15 minutes')) / 60
 			  AND m.startDate > datetime('now', '+15 minutes')
 			  AND m.day = (SELECT MAX(day) FROM MatchDays);`,
 		).all<Pick<MatchDay, "day" | "startDate"> & Pick<User, "id">>();
 
 		if (!results.length) return;
 		console.log(results);
+		rest.setToken(env.DISCORD_TOKEN);
 		await Promise.all([
 			...results.map(async ({ id: recipient_id, day, startDate }) => {
 				const { id } = (await rest.post(Routes.userChannels(), {
