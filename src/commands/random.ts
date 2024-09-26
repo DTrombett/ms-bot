@@ -64,7 +64,7 @@ export const random = new Command({
 			],
 		},
 	],
-	run(interaction, { reply }) {
+	run: (reply, { interaction }) => {
 		const options: Partial<{ min: number; max: number }> = {};
 
 		if (interaction.data.options?.length)
@@ -76,7 +76,7 @@ export const random = new Command({
 			data: getRandom(options),
 		});
 	},
-	component(interaction, { reply }) {
+	component: (reply, { interaction }) => {
 		const [, min, max] = interaction.data.custom_id.split("-");
 
 		reply({

@@ -117,7 +117,7 @@ export const quote = new Command({
 			],
 		},
 	],
-	run(interaction, { reply }) {
+	run: (reply, { interaction }) => {
 		const option = interaction.data.options?.find(
 			(o): o is APIApplicationCommandInteractionDataStringOption =>
 				o.name === "quote" && o.type === ApplicationCommandOptionType.String,
@@ -142,7 +142,7 @@ export const quote = new Command({
 			data: { content: found[1] },
 		});
 	},
-	autocomplete(interaction, { reply }) {
+	autocomplete: (reply, { interaction }) => {
 		const option = interaction.data.options
 			.find(
 				(o): o is APIApplicationCommandInteractionDataStringOption =>

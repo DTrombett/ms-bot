@@ -228,7 +228,7 @@ export const quelo = new Command({
 			],
 		},
 	],
-	run(interaction, { reply }) {
+	run: (reply, { interaction }) => {
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: askQuelo({
@@ -240,13 +240,13 @@ export const quelo = new Command({
 			}),
 		});
 	},
-	component(_, { reply }) {
+	component: (reply) => {
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: askQuelo({ ephemeral: true }),
 		});
 	},
-	autocomplete(interaction, { reply }) {
+	autocomplete: (reply, { interaction }) => {
 		const option = interaction.data.options
 			.find(
 				(o): o is APIApplicationCommandInteractionDataStringOption =>

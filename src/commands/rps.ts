@@ -51,7 +51,7 @@ export const rps = new Command({
 			],
 		},
 	],
-	async run(interaction, { reply }) {
+	run: (reply, { interaction }) => {
 		const choice = interaction.data.options!.find(
 			(o): o is APIApplicationCommandInteractionDataStringOption =>
 				o.name === "choice" && o.type === ApplicationCommandOptionType.String,

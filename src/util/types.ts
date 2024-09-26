@@ -13,7 +13,6 @@ import {
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type { Command } from ".";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -49,12 +48,14 @@ export type Handler<T extends APIInteraction> = (options: {
 	context: ExecutionContext;
 }) => Awaitable<APIInteractionResponse | undefined>;
 
-export type ExecutorContext<
+export type ReplyFunction<
 	T extends APIInteractionResponse = APIInteractionResponse,
-> = {
+> = (result: T) => void;
+
+export type ExecutorContext<T extends APIInteraction = APIInteraction> = {
 	env: Env;
 	context: ExecutionContext;
-	reply: (result: T) => void;
+	interaction: T;
 };
 
 /**
@@ -80,64 +81,59 @@ export type CommandOptions<
 	 * @param this - The command object that called this
 	 * @param interaction - The interaction received
 	 */
-	autocomplete?(
-		this: Command<T>,
-		interaction: InteractionByType<InteractionType.ApplicationCommandAutocomplete>,
-		context: ExecutorContext<APIApplicationCommandAutocompleteResponse>,
-	): Awaitable<void>;
+	autocomplete?: (
+		reply: ReplyFunction<APIApplicationCommandAutocompleteResponse>,
+		context: ExecutorContext<
+			InteractionByType<InteractionType.ApplicationCommandAutocomplete>
+		>,
+	) => Awaitable<void>;
 
 	/**
 	 * A function to run when an interaction from a message component with the custom_id of this command is received.
 	 * @param this - The command object that called this
 	 * @param interaction - The interaction received
 	 */
-	component?(
-		this: Command<T>,
-		interaction: InteractionByType<InteractionType.MessageComponent>,
-		context: ExecutorContext<
+	component?: (
+		reply: ReplyFunction<
 			| APIInteractionResponseChannelMessageWithSource
 			| APIInteractionResponseDeferredChannelMessageWithSource
 			| APIInteractionResponseDeferredMessageUpdate
 			| APIInteractionResponseUpdateMessage
 			| APIModalInteractionResponse
 		>,
-	): Awaitable<void>;
+		context: ExecutorContext<
+			InteractionByType<InteractionType.MessageComponent>
+		>,
+	) => Awaitable<void>;
 
 	/**
 	 * A function to run when a modal is submitted with the custom_id of this command is received.
 	 * @param this - The command object that called this
 	 * @param interaction - The interaction received
 	 */
-	modalSubmit?(
-		this: Command<T>,
-		interaction: InteractionByType<InteractionType.ModalSubmit>,
-		context: ExecutorContext<
+	modalSubmit?: (
+		reply: ReplyFunction<
 			| APIInteractionResponseChannelMessageWithSource
 			| APIInteractionResponseDeferredChannelMessageWithSource
 			| APIInteractionResponseDeferredMessageUpdate
 		>,
-	): Awaitable<void>;
+		context: ExecutorContext<InteractionByType<InteractionType.ModalSubmit>>,
+	) => Awaitable<void>;
 
 	/**
 	 * A function to run when this command is received.
 	 * @param this - The command object that called this
 	 * @param interaction - The interaction received
 	 */
-	run(
-		this: Command<T>,
-		interaction: CommandInteractionByType<T>,
-		context: ExecutorContext<
+	run: (
+		reply: ReplyFunction<
 			| APIInteractionResponseChannelMessageWithSource
 			| APIInteractionResponseDeferredChannelMessageWithSource
 			| APIModalInteractionResponse
 		>,
-	): Awaitable<void>;
+		context: ExecutorContext<CommandInteractionByType<T>>,
+	) => Awaitable<void>;
 };
-export type ReceivedInteraction = InteractionByType<
-	| InteractionType.ApplicationCommand
-	| InteractionType.MessageComponent
-	| InteractionType.ModalSubmit
->;
 
 /**
  * A response from thecatapi.com
@@ -161,25 +157,6 @@ export type DogResponse = {
 	url: string;
 	width: number;
 }[];
-
-/**
- * A response from api.urbandictionary.com
- */
-export type UrbanResponse = {
-	list: {
-		definition: string;
-		permalink: string;
-		thumbs_up: number;
-		sound_urls: string[];
-		author: string;
-		word: string;
-		defid: number;
-		current_vote: "";
-		written_on: string;
-		example: string;
-		thumbs_down: number;
-	}[];
-};
 
 export type MatchesData =
 	| {
@@ -208,12 +185,6 @@ export type Leaderboard = [
 export type SQLBoolean = 0 | 1;
 export type SQLDateTime = string;
 
-export type Match = {
-	id: number;
-	day: number;
-	matchDate: SQLDateTime;
-	teams: string;
-};
 export type MatchDay = {
 	day: number;
 	categoryId: number;

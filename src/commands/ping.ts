@@ -16,7 +16,7 @@ export const ping = new Command({
 			type: ApplicationCommandType.ChatInput,
 		},
 	],
-	async run(interaction, { reply }) {
+	run: async (reply, { interaction }) => {
 		const now = Date.now();
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });

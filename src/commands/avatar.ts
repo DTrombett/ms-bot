@@ -25,14 +25,14 @@ export const avatar = new Command({
 			],
 		},
 	],
-	run(interaction, { reply }) {
+	run: (reply, { interaction }) => {
 		const userId = interaction.data.options?.find(
 			(o): o is APIApplicationCommandInteractionDataUserOption =>
 				o.name === "user" && o.type === ApplicationCommandOptionType.User,
 		)?.value;
 		const user =
 			userId == null
-				? interaction.user ?? interaction.member?.user
+				? (interaction.user ?? interaction.member?.user)
 				: interaction.data.resolved?.users?.[userId];
 
 		if (!user) {

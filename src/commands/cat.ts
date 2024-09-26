@@ -57,14 +57,14 @@ export const cat = new Command({
 			type: ApplicationCommandType.ChatInput,
 		},
 	],
-	async run(interaction, { reply, env }) {
+	run: async (reply, { interaction, env }) => {
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
 		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{ body: await getCat(env.CAT_API_KEY) },
 		);
 	},
-	async component(interaction, { reply, env }) {
+	component: async (reply, { interaction, env }) => {
 		reply({
 			type: InteractionResponseType.DeferredChannelMessageWithSource,
 			data: { flags: MessageFlags.Ephemeral },

@@ -69,13 +69,13 @@ export const predict = new Command({
 			],
 		},
 	],
-	run(_, { reply }) {
+	run: (reply) => {
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: makePrediction(),
 		});
 	},
-	component(_, { reply }) {
+	component: (reply) => {
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: makePrediction(true),

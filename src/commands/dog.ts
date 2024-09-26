@@ -57,14 +57,14 @@ export const dog = new Command({
 			type: ApplicationCommandType.ChatInput,
 		},
 	],
-	async run(interaction, { reply, env }) {
+	run: async (reply, { interaction, env }) => {
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
 		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{ body: await getDog(env.DOG_API_KEY) },
 		);
 	},
-	async component(interaction, { reply, env }) {
+	component: async (reply, { interaction, env }) => {
 		reply({
 			type: InteractionResponseType.DeferredChannelMessageWithSource,
 			data: { flags: MessageFlags.Ephemeral },

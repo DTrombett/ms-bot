@@ -18,7 +18,7 @@ export const icon = new Command({
 			type: ApplicationCommandType.ChatInput,
 		},
 	],
-	async run(interaction, { reply }) {
+	run: async (reply, { interaction }) => {
 		if (!interaction.guild_id) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,

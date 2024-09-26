@@ -112,7 +112,7 @@ export const kick = new Command({
 			],
 		},
 	],
-	async run(interaction, { reply }) {
+	run: async (reply, { interaction }) => {
 		if (
 			!(BigInt(interaction.app_permissions) & PermissionFlagsBits.KickMembers)
 		) {

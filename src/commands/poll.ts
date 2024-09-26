@@ -27,7 +27,7 @@ export const poll = new Command({
 			],
 		},
 	],
-	async run(interaction, { reply }) {
+	run: async (reply, { interaction }) => {
 		const title = interaction.data.options
 			?.find(
 				(o): o is APIApplicationCommandInteractionDataStringOption =>

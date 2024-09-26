@@ -12,6 +12,7 @@ import {
 	type Env,
 	type ExecutorContext,
 	type InteractionByType,
+	type ReplyFunction,
 } from ".";
 
 /**
@@ -26,41 +27,38 @@ export class Command<T extends ApplicationCommandType = any> {
 	/**
 	 * Whether this command is private
 	 */
-	isPrivate = false;
+	isPrivate: boolean;
 
 	/**
 	 * The function to handle the autocomplete of this command
 	 */
-	private _autocomplete: OmitThisParameter<CommandOptions<T>["autocomplete"]>;
+	private _autocomplete: CommandOptions<T>["autocomplete"];
 
 	/**
 	 * The function to handle a message component received
 	 */
-	private _component: OmitThisParameter<CommandOptions<T>["component"]>;
+	private _component: CommandOptions<T>["component"];
 
 	/**
 	 * The function to handle a submitted modal
 	 */
-	private _modalSubmit: OmitThisParameter<CommandOptions<T>["modalSubmit"]>;
+	private _modalSubmit: CommandOptions<T>["modalSubmit"];
 
 	/**
 	 * The function provided to handle the command received
 	 */
-	private _execute: OmitThisParameter<CommandOptions<T>["run"]>;
+	private _execute: CommandOptions<T>["run"];
 
 	/**
 	 * @param options - Options for this command
 	 */
 	constructor(options: CommandOptions<T>) {
 		this.data = options.data;
-		this._execute = options.run.bind(this);
-		if (options.autocomplete !== undefined)
-			this._autocomplete = options.autocomplete.bind(this);
-		if (options.component !== undefined)
-			this._component = options.component.bind(this);
-		if (options.modalSubmit !== undefined)
-			this._modalSubmit = options.modalSubmit.bind(this);
-		if (options.isPrivate !== undefined) this.isPrivate = options.isPrivate;
+		this._execute = options.run;
+		this._autocomplete = options.autocomplete;
+		this._component = options.component;
+		this._modalSubmit = options.modalSubmit;
+		this.isPrivate = options.isPrivate ?? false;
 	}
 
 	/**
@@ -72,13 +70,7 @@ export class Command<T extends ApplicationCommandType = any> {
 		env: Env,
 		context: ExecutionContext,
 	) {
-		if (!this._autocomplete) return undefined;
-		return this.execute(
-			interaction,
-			env,
-			context,
-			this._autocomplete.bind(this, interaction),
-		);
+		return this.execute(interaction, env, context, this._autocomplete);
 	}
 
 	/**
@@ -90,13 +82,7 @@ export class Command<T extends ApplicationCommandType = any> {
 		env: Env,
 		context: ExecutionContext,
 	) {
-		if (!this._component) return undefined;
-		return this.execute(
-			interaction,
-			env,
-			context,
-			this._component.bind(this, interaction),
-		);
+		return this.execute(interaction, env, context, this._component);
 	}
 
 	/**
@@ -108,13 +94,7 @@ export class Command<T extends ApplicationCommandType = any> {
 		env: Env,
 		context: ExecutionContext,
 	) {
-		if (!this._modalSubmit) return undefined;
-		return this.execute(
-			interaction,
-			env,
-			context,
-			this._modalSubmit.bind(this, interaction),
-		);
+		return this.execute(interaction, env, context, this._modalSubmit);
 	}
 
 	/**
@@ -126,36 +106,34 @@ export class Command<T extends ApplicationCommandType = any> {
 		env: Env,
 		context: ExecutionContext,
 	) {
-		return this.execute(
-			interaction,
-			env,
-			context,
-			this._execute.bind(this, interaction),
-		);
+		return this.execute(interaction, env, context, this._execute);
 	}
 
-	private async execute(
-		interaction: APIInteraction,
+	private async execute<I extends APIInteraction>(
+		interaction: I,
 		env: Env,
 		context: ExecutionContext,
-		executor: (context: ExecutorContext) => Awaitable<void>,
+		executor?: (
+			reply: ReplyFunction,
+			context: ExecutorContext<I>,
+		) => Awaitable<void>,
 	) {
 		if (
-			this.isPrivate &&
-			!env.OWNER_ID.includes((interaction.member ?? interaction).user!.id)
+			!executor ||
+			(this.isPrivate &&
+				!env.OWNER_ID.includes((interaction.member ?? interaction).user!.id))
 		)
 			return undefined;
 		return new Promise<APIInteractionResponse>((resolve, reject) => {
 			let done = false;
-			const promise = executor({
-				env,
-				context,
-				reply: (value) => {
+			const promise = executor(
+				(value) => {
 					if (done) return;
 					resolve(value);
 					done = true;
 				},
-			})?.catch((err: Error) => {
+				{ env, context, interaction },
+			)?.catch((err: Error) => {
 				if (done) console.error(err);
 				else reject(err);
 			});

@@ -69,7 +69,7 @@ export const dice = new Command({
 			],
 		},
 	],
-	run(interaction, { reply }) {
+	run: (reply, { interaction }) => {
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: roll(
@@ -81,7 +81,7 @@ export const dice = new Command({
 			),
 		});
 	},
-	component(interaction, { reply }) {
+	component: (reply, { interaction }) => {
 		const [, count] = interaction.data.custom_id.split("-");
 
 		reply({

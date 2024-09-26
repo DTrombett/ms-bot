@@ -1,16 +1,16 @@
 /* eslint-disable no-sparse-arrays */
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
+	APIApplicationCommandAutocompleteInteraction,
+	APIApplicationCommandInteraction,
+	APIMessageComponentInteraction,
+	APIModalSubmitInteraction,
+	APIPingInteraction,
 	ButtonStyle,
 	InteractionResponseType,
 	RESTPostAPICurrentUserCreateDMChannelJSONBody,
 	RESTPostAPICurrentUserCreateDMChannelResult,
 	Routes,
-	type APIApplicationCommandAutocompleteInteraction,
-	type APIApplicationCommandInteraction,
-	type APIMessageComponentInteraction,
-	type APIModalSubmitInteraction,
-	type APIPingInteraction,
 } from "discord-api-types/v10";
 import * as commandsObject from "./commands";
 import type { Env, Handler, MatchDay, User } from "./util";
@@ -36,20 +36,20 @@ const handlers: [
 		applicationCommands
 			.get(interaction.data.name)
 			?.run(interaction, env, context),
-	({ interaction, env, context }) => {
-		const [action] = interaction.data.custom_id.split("-");
-
-		if (!action) return undefined;
-		return commands[action]?.component(interaction, env, context);
-	},
+	({ interaction, env, context }) =>
+		commands[interaction.data.custom_id.split("-")[0]!]?.component(
+			interaction,
+			env,
+			context,
+		),
 	({ interaction, env, context }) =>
 		commands[interaction.data.name]?.autocomplete(interaction, env, context),
-	({ interaction, env, context }) => {
-		const [action] = interaction.data.custom_id.split("-");
-
-		if (!action) return undefined;
-		return commands[action]?.modalSubmit(interaction, env, context);
-	},
+	({ interaction, env, context }) =>
+		commands[interaction.data.custom_id.split("-")[0]!]?.modalSubmit(
+			interaction,
+			env,
+			context,
+		),
 ];
 
 const server: ExportedHandler<Env> = {

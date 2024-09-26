@@ -158,7 +158,7 @@ export const search = new Command({
 			],
 		},
 	],
-	async run(interaction, { reply }) {
+	run: async (reply, { interaction }) => {
 		const options: Record<
 			string,
 			APIApplicationCommandInteractionDataBasicOption

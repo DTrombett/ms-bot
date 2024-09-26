@@ -14,7 +14,7 @@ export const getMatchDay = new Command({
 		},
 	],
 	isPrivate: true,
-	async run(_interaction, { reply, env }) {
+	run: async (reply, { env }) => {
 		const error = await loadMatchDay(env).catch((err: unknown) => err);
 
 		reply({

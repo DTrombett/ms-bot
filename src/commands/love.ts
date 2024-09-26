@@ -41,7 +41,7 @@ export const love = new Command({
 			],
 		},
 	],
-	async run(interaction, { reply }) {
+	run: async (reply, { interaction }) => {
 		let user1!: APIUser,
 			user2 = interaction.user ?? interaction.member!.user;
 

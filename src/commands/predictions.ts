@@ -134,7 +134,7 @@ export const predictions = new Command({
 			],
 		},
 	],
-	async run(interaction, { reply, env }) {
+	run: async (reply, { interaction, env }) => {
 		const subCommand = interaction.data.options!.find(
 			(o): o is APIApplicationCommandInteractionDataSubcommandOption =>
 				o.type === ApplicationCommandOptionType.Subcommand,
@@ -277,7 +277,7 @@ export const predictions = new Command({
 			data: buildModal(matches, matchDay, 1, existingPredictions).toJSON(),
 		});
 	},
-	async modalSubmit(interaction, { reply, env }) {
+	modalSubmit: async (reply, { interaction, env }) => {
 		const [, day, part, timestamp] = interaction.data.custom_id
 			.split("-")
 			.map((n) => Number(n));
@@ -467,7 +467,7 @@ VALUES (?)`,
 				},
 			});
 	},
-	async component(interaction, { reply, env }) {
+	component: async (reply, { interaction, env }) => {
 		const [, actionOrDay, partOrCategoryId, timestamp, day] =
 			interaction.data.custom_id.split("-");
 		const time = parseInt(timestamp!);

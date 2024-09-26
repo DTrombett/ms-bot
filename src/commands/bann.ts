@@ -232,7 +232,7 @@ export const bann = new Command({
 			],
 		},
 	],
-	async run(interaction, { reply }) {
+	run: async (reply, { interaction }) => {
 		if (
 			!(BigInt(interaction.app_permissions) & PermissionFlagsBits.BanMembers)
 		) {
@@ -374,7 +374,7 @@ export const bann = new Command({
 				},
 			);
 	},
-	async modalSubmit(interaction, { reply }) {
+	modalSubmit: async (reply, { interaction }) => {
 		if (!interaction.guild_id || !interaction.member)
 			throw new TypeError("Invalid interaction", { cause: interaction });
 		const deleteMessageDays =
@@ -452,7 +452,7 @@ export const bann = new Command({
 			},
 		);
 	},
-	async component(interaction, { reply }) {
+	component: async (reply, { interaction }) => {
 		if (!interaction.guild_id || !interaction.member)
 			throw new TypeError("Invalid interaction", { cause: interaction });
 		const [, id, action] = interaction.data.custom_id.split("-");
