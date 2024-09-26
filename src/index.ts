@@ -13,7 +13,6 @@ import {
 	Command,
 	JsonResponse,
 	errorToResponse,
-	info,
 	rest,
 	verifyDiscordRequest,
 } from "./util";
@@ -42,13 +41,13 @@ const server: ExportedHandler<Env> = {
 						result = {
 							type: InteractionResponseType.Pong,
 						};
-						info("Received ping interaction!");
+						console.log("Received ping interaction!");
 						break;
 					case InteractionType.ApplicationCommand:
 						result = await applicationCommands
 							.get(interaction.data.name)
 							?.run(interaction, env, context);
-						info(
+						console.log(
 							`Command ${interaction.data.name} executed by ${
 								(interaction.member ?? interaction).user?.username
 							} in ${interaction.channel.name} (${
@@ -64,7 +63,7 @@ const server: ExportedHandler<Env> = {
 							env,
 							context,
 						);
-						info(
+						console.log(
 							`Component interaction ${action} executed by ${
 								(interaction.member ?? interaction).user?.username
 							} in ${interaction.channel.name} (${
@@ -87,7 +86,7 @@ const server: ExportedHandler<Env> = {
 							env,
 							context,
 						);
-						info(
+						console.log(
 							`Modal interaction ${action} executed by ${
 								(interaction.member ?? interaction).user?.username
 							} in ${interaction.channel?.name} (${
@@ -125,7 +124,6 @@ const server: ExportedHandler<Env> = {
 		).all<Pick<MatchDay, "day" | "startDate"> & Pick<User, "id">>();
 
 		if (!results.length) return;
-		console.log(results);
 		rest.setToken(env.DISCORD_TOKEN);
 		await Promise.all([
 			...results.map(async ({ id: recipient_id, day, startDate }) => {

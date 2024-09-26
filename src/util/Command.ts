@@ -7,7 +7,6 @@ import {
 } from "discord-api-types/v10";
 import {
 	CommandInteractionByType,
-	error,
 	type Awaitable,
 	type CommandOptions,
 	type Env,
@@ -157,12 +156,12 @@ export class Command<T extends ApplicationCommandType = any> {
 					done = true;
 				},
 			})?.catch((err: Error) => {
-				if (done) error(err);
+				if (done) console.error(err);
 				else reject(err);
 			});
 
 			if (promise) context.waitUntil(promise);
-		}).catch(error);
+		}).catch(console.error);
 	}
 }
 
