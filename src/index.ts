@@ -26,9 +26,9 @@ const server: ExportedHandler<Env> = {
 	fetch: async (request, env, context) => {
 		const url = new URL(request.url);
 
-		rest.setToken(env.DISCORD_TOKEN);
 		if (url.pathname === "/") {
 			if (request.method === "POST") {
+				rest.setToken(env.DISCORD_TOKEN);
 				const interaction = await verifyDiscordRequest(request, env).catch(
 					errorToResponse,
 				);

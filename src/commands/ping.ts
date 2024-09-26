@@ -20,7 +20,7 @@ export const ping = new Command({
 		const now = Date.now();
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		const { id, edited_timestamp } = (await rest.get(
+		const { id } = (await rest.get(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 		)) as APIMessage;
 		const timestamp = DiscordSnowflake.timestampFrom(interaction.id);
@@ -32,9 +32,7 @@ export const ping = new Command({
 					content: `🏓 **Pong!**\nRitardo relativo: **${
 						now - timestamp
 					}ms**\nRitardo totale: **${
-						(edited_timestamp
-							? new Date(edited_timestamp).getTime()
-							: DiscordSnowflake.timestampFrom(id)) - timestamp
+						DiscordSnowflake.timestampFrom(id) - timestamp
 					}ms**`,
 				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			},
