@@ -7,8 +7,8 @@ import {
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
-import type { CatResponse } from "../util";
-import { Command, rest } from "../util";
+import type { CatResponse, CommandOptions } from "../util";
+import { rest } from "../util";
 
 const getCat = async (
 	key: string,
@@ -49,7 +49,7 @@ const getCat = async (
 	};
 };
 
-export const cat = new Command({
+export const cat: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "cat",
@@ -74,4 +74,4 @@ export const cat = new Command({
 			{ body: await getCat(env.CAT_API_KEY) },
 		);
 	},
-});
+};

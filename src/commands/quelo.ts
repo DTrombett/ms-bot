@@ -10,7 +10,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { Command } from "../util";
+import type { CommandOptions } from "../util";
 
 const queloAnswers: [phrase: string, url?: string][] = [
 	["La seconda che hai detto!"],
@@ -211,7 +211,7 @@ const askQuelo = ({
 	};
 };
 
-export const quelo = new Command({
+export const quelo: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "quelo",
@@ -276,4 +276,4 @@ export const quelo = new Command({
 			},
 		});
 	},
-});
+};

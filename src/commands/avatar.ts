@@ -8,9 +8,9 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { Command, rest } from "../util";
+import { rest, type CommandOptions } from "../util";
 
-export const avatar = new Command({
+export const avatar: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "avatar",
@@ -91,4 +91,4 @@ export const avatar = new Command({
 			},
 		});
 	},
-});
+};

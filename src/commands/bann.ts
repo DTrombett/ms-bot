@@ -24,7 +24,7 @@ import {
 	Snowflake,
 	TextInputStyle,
 } from "discord-api-types/v10";
-import { Command, Emojis, normalizeError, rest } from "../util";
+import { Emojis, normalizeError, rest, type CommandOptions } from "../util";
 
 const checkPerms = (
 	executor: APIInteractionGuildMember,
@@ -162,7 +162,7 @@ const unban = async (
 	};
 };
 
-export const bann = new Command({
+export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,
@@ -545,4 +545,4 @@ export const bann = new Command({
 				},
 			);
 	},
-});
+};

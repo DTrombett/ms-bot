@@ -5,7 +5,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { Command, randomNumber } from "../util";
+import { randomNumber, type CommandOptions } from "../util";
 
 type PossibleChoice = (typeof choices)[number];
 
@@ -21,7 +21,7 @@ const winners: Record<PossibleChoice, PossibleChoice> = {
 	scissors: "rock",
 };
 
-export const rps = new Command({
+export const rps: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "rps",
@@ -84,4 +84,4 @@ export const rps = new Command({
 			},
 		});
 	},
-});
+};

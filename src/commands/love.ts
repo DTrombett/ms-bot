@@ -4,7 +4,7 @@ import {
 	ApplicationCommandType,
 	InteractionResponseType,
 } from "discord-api-types/v10";
-import { Command } from "../util";
+import type { CommandOptions } from "../util";
 
 const emojis = [
 	":broken_heart:",
@@ -20,7 +20,7 @@ const emojis = [
 	":heart_on_fire:",
 ];
 
-export const love = new Command({
+export const love: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "love",
@@ -83,4 +83,4 @@ export const love = new Command({
 			},
 		});
 	},
-});
+};

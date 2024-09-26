@@ -16,7 +16,7 @@ import {
 	Routes,
 	Snowflake,
 } from "discord-api-types/v10";
-import { Command, Emojis, normalizeError, rest } from "../util";
+import { Emojis, normalizeError, rest, type CommandOptions } from "../util";
 
 const checkPerms = (
 	executor: APIInteractionGuildMember,
@@ -89,7 +89,7 @@ const executeKick = async (
 	};
 };
 
-export const kick = new Command({
+export const kick: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			type: ApplicationCommandType.ChatInput,
@@ -183,4 +183,4 @@ export const kick = new Command({
 			},
 		);
 	},
-});
+};

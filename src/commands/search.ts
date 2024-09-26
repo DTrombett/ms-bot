@@ -8,9 +8,9 @@ import {
 	ComponentType,
 	InteractionResponseType,
 } from "discord-api-types/v10";
-import { Command } from "../util";
+import type { CommandOptions } from "../util";
 
-export const search = new Command({
+export const search: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "search",
@@ -365,4 +365,4 @@ export const search = new Command({
 				throw new TypeError("Invalid subcommand", { cause: interaction });
 		}
 	},
-});
+};

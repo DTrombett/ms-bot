@@ -13,11 +13,16 @@ import {
 	Routes,
 } from "discord-api-types/v10";
 import * as commandsObject from "./commands";
-import type { Env, Handler, MatchDay, User } from "./util";
-import { Command, JsonResponse, rest, verifyDiscordRequest } from "./util";
+import type { CommandOptions, Env, Handler, MatchDay, User } from "./util";
+import {
+	executeInteraction,
+	JsonResponse,
+	rest,
+	verifyDiscordRequest,
+} from "./util";
 
-const commands: Record<string, Command> = commandsObject;
-const applicationCommands = new Map(
+const commands: Record<string, CommandOptions<any>> = commandsObject;
+const applicationCommands = Object.fromEntries(
 	Object.values(commands).flatMap((cmd) => cmd.data.map((d) => [d.name, cmd])),
 );
 const handlers: [
@@ -33,22 +38,36 @@ const handlers: [
 		type: InteractionResponseType.Pong,
 	}),
 	({ interaction, env, context }) =>
-		applicationCommands
-			.get(interaction.data.name)
-			?.run(interaction, env, context),
-	({ interaction, env, context }) =>
-		commands[interaction.data.custom_id.split("-")[0]!]?.component(
+		executeInteraction(
 			interaction,
 			env,
 			context,
+			"run",
+			applicationCommands[interaction.data.name],
 		),
 	({ interaction, env, context }) =>
-		commands[interaction.data.name]?.autocomplete(interaction, env, context),
-	({ interaction, env, context }) =>
-		commands[interaction.data.custom_id.split("-")[0]!]?.modalSubmit(
+		executeInteraction(
 			interaction,
 			env,
 			context,
+			"component",
+			commands[interaction.data.custom_id.split("-")[0]!],
+		),
+	({ interaction, env, context }) =>
+		executeInteraction(
+			interaction,
+			env,
+			context,
+			"autocomplete",
+			commands[interaction.data.name],
+		),
+	({ interaction, env, context }) =>
+		executeInteraction(
+			interaction,
+			env,
+			context,
+			"modalSubmit",
+			commands[interaction.data.custom_id.split("-")[0]!],
 		),
 ];
 

@@ -7,9 +7,9 @@ import {
 	MessageFlags,
 	Routes,
 } from "discord-api-types/v10";
-import { Command, rest } from "../util";
+import { rest, type CommandOptions } from "../util";
 
-export const poll = new Command({
+export const poll: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "poll",
@@ -96,4 +96,4 @@ export const poll = new Command({
 			),
 		]);
 	},
-});
+};

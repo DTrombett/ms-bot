@@ -7,7 +7,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { Command } from "../util";
+import type { CommandOptions } from "../util";
 
 const replies = [
 	"Sì",
@@ -53,7 +53,7 @@ const makePrediction = (
 	flags: ephemeral ? MessageFlags.Ephemeral : undefined,
 });
 
-export const predict = new Command({
+export const predict: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "predict",
@@ -81,4 +81,4 @@ export const predict = new Command({
 			data: makePrediction(true),
 		});
 	},
-});
+};

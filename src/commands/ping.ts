@@ -6,9 +6,9 @@ import {
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
-import { Command, rest } from "../util";
+import { rest, type CommandOptions } from "../util";
 
-export const ping = new Command({
+export const ping: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "ping",
@@ -38,4 +38,4 @@ export const ping = new Command({
 			},
 		);
 	},
-});
+};

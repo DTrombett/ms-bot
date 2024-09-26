@@ -7,7 +7,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { Command, randomNumber } from "../util";
+import { randomNumber, type CommandOptions } from "../util";
 
 const getRandom = (
 	{ min, max }: Partial<{ min: number; max: number }>,
@@ -39,7 +39,7 @@ const getRandom = (
 	};
 };
 
-export const random = new Command({
+export const random: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "random",
@@ -87,4 +87,4 @@ export const random = new Command({
 			),
 		});
 	},
-});
+};

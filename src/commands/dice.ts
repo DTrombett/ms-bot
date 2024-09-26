@@ -8,7 +8,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { Command, randomNumber } from "../util";
+import { randomNumber, type CommandOptions } from "../util";
 
 const roll = (
 	count = 1,
@@ -52,7 +52,7 @@ const roll = (
 	};
 };
 
-export const dice = new Command({
+export const dice: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "dice",
@@ -89,4 +89,4 @@ export const dice = new Command({
 			data: roll(parseInt(count!) || undefined, true),
 		});
 	},
-});
+};

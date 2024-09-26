@@ -3,9 +3,9 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { Command, loadMatchDay, normalizeError } from "../util";
+import { loadMatchDay, normalizeError, type CommandOptions } from "../util";
 
-export const getMatchDay = new Command({
+export const getMatchDay: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "get-match-day",
@@ -27,4 +27,4 @@ export const getMatchDay = new Command({
 			},
 		});
 	},
-});
+};

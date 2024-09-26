@@ -7,8 +7,8 @@ import {
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
-import type { DogResponse } from "../util";
-import { Command, rest } from "../util";
+import type { CommandOptions, DogResponse } from "../util";
+import { rest } from "../util";
 
 const getDog = async (
 	key: string,
@@ -49,7 +49,7 @@ const getDog = async (
 	};
 };
 
-export const dog = new Command({
+export const dog: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "dog",
@@ -74,4 +74,4 @@ export const dog = new Command({
 			{ body: await getDog(env.DOG_API_KEY) },
 		);
 	},
-});
+};

@@ -18,7 +18,6 @@ import {
 	TextInputStyle,
 } from "discord-api-types/v10";
 import {
-	Command,
 	MatchDay,
 	MatchesData,
 	Prediction,
@@ -30,6 +29,7 @@ import {
 	resolveLeaderboard,
 	rest,
 	startPredictions,
+	type CommandOptions,
 } from "../util";
 
 const predictionExamples = [
@@ -92,7 +92,7 @@ const buildModal = (
 			}),
 		);
 
-export const predictions = new Command({
+export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
 		{
 			name: "predictions",
@@ -650,4 +650,4 @@ VALUES (?)`,
 			).toJSON(),
 		});
 	},
-});
+};
