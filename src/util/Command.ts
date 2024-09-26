@@ -118,12 +118,13 @@ export class Command<T extends ApplicationCommandType = any> {
 			context: ExecutorContext<I>,
 		) => Awaitable<void>,
 	) {
-		if (
-			!executor ||
-			(this.isPrivate &&
-				!env.OWNER_ID.includes((interaction.member ?? interaction).user!.id))
-		)
+		const { user } = interaction.member ?? interaction;
+
+		if (!executor || (this.isPrivate && !env.OWNER_ID.includes(user!.id)))
 			return undefined;
+		console.log(
+			`Interaction ${InteractionType[interaction.type]} received in channel ${interaction.channel?.name ?? interaction.channel?.id} from user ${interaction.member?.nick ?? user?.username} (${user?.id})`,
+		);
 		return new Promise<APIInteractionResponse>((resolve, reject) => {
 			let done = false;
 			const promise = executor(

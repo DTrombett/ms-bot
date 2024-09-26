@@ -6,8 +6,8 @@ kv_namespaces = [
     { binding = "KV", id = "0f620c8b0c9e4b0786b894509f82e5d9" }
 ]
 
-[placement]
-mode = "smart"
+[observability]
+enabled = true
 
 [[d1_databases]]
 binding = "DB"
