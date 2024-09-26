@@ -1,26 +1,56 @@
+/* eslint-disable no-sparse-arrays */
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
 	ButtonStyle,
 	InteractionResponseType,
-	InteractionType,
 	RESTPostAPICurrentUserCreateDMChannelJSONBody,
 	RESTPostAPICurrentUserCreateDMChannelResult,
 	Routes,
+	type APIApplicationCommandAutocompleteInteraction,
+	type APIApplicationCommandInteraction,
+	type APIMessageComponentInteraction,
+	type APIModalSubmitInteraction,
+	type APIPingInteraction,
 } from "discord-api-types/v10";
 import * as commandsObject from "./commands";
-import type { Env, MatchDay, User } from "./util";
-import {
-	Command,
-	JsonResponse,
-	errorToResponse,
-	rest,
-	verifyDiscordRequest,
-} from "./util";
+import type { Env, Handler, MatchDay, User } from "./util";
+import { Command, JsonResponse, rest, verifyDiscordRequest } from "./util";
 
 const commands: Record<string, Command> = commandsObject;
 const applicationCommands = new Map(
 	Object.values(commands).flatMap((cmd) => cmd.data.map((d) => [d.name, cmd])),
 );
+const handlers: [
+	undefined,
+	Handler<APIPingInteraction>,
+	Handler<APIApplicationCommandInteraction>,
+	Handler<APIMessageComponentInteraction>,
+	Handler<APIApplicationCommandAutocompleteInteraction>,
+	Handler<APIModalSubmitInteraction>,
+] = [
+	,
+	() => ({
+		type: InteractionResponseType.Pong,
+	}),
+	({ interaction, env, context }) =>
+		applicationCommands
+			.get(interaction.data.name)
+			?.run(interaction, env, context),
+	({ interaction, env, context }) => {
+		const [action] = interaction.data.custom_id.split("-");
+
+		if (!action) return undefined;
+		return commands[action]?.component(interaction, env, context);
+	},
+	({ interaction, env, context }) =>
+		commands[interaction.data.name]?.autocomplete(interaction, env, context),
+	({ interaction, env, context }) => {
+		const [action] = interaction.data.custom_id.split("-");
+
+		if (!action) return undefined;
+		return commands[action]?.modalSubmit(interaction, env, context);
+	},
+];
 
 const server: ExportedHandler<Env> = {
 	fetch: async (request, env, context) => {
@@ -29,74 +59,15 @@ const server: ExportedHandler<Env> = {
 		if (url.pathname === "/") {
 			if (request.method === "POST") {
 				rest.setToken(env.DISCORD_TOKEN);
-				const interaction = await verifyDiscordRequest(request, env).catch(
-					errorToResponse,
-				);
+				const interaction = await verifyDiscordRequest(request, env);
 
 				if (interaction instanceof Response) return interaction;
-				let action: string | undefined, result;
+				const result = await handlers[interaction.type]({
+					interaction: interaction as never,
+					context,
+					env,
+				});
 
-				switch (interaction.type) {
-					case InteractionType.Ping:
-						result = {
-							type: InteractionResponseType.Pong,
-						};
-						console.log("Received ping interaction!");
-						break;
-					case InteractionType.ApplicationCommand:
-						result = await applicationCommands
-							.get(interaction.data.name)
-							?.run(interaction, env, context);
-						console.log(
-							`Command ${interaction.data.name} executed by ${
-								(interaction.member ?? interaction).user?.username
-							} in ${interaction.channel.name} (${
-								interaction.channel.id
-							}) - guild ${interaction.guild_id}`,
-						);
-						break;
-					case InteractionType.MessageComponent:
-						[action] = interaction.data.custom_id.split("-");
-						if (!action) break;
-						result = await commands[action]?.component(
-							interaction,
-							env,
-							context,
-						);
-						console.log(
-							`Component interaction ${action} executed by ${
-								(interaction.member ?? interaction).user?.username
-							} in ${interaction.channel.name} (${
-								interaction.channel.id
-							}) - guild ${interaction.guild_id}`,
-						);
-						break;
-					case InteractionType.ApplicationCommandAutocomplete:
-						result = await commands[interaction.data.name]?.autocomplete(
-							interaction,
-							env,
-							context,
-						);
-						break;
-					case InteractionType.ModalSubmit:
-						[action] = interaction.data.custom_id.split("-");
-						if (!action) break;
-						result = await commands[action]?.modalSubmit(
-							interaction,
-							env,
-							context,
-						);
-						console.log(
-							`Modal interaction ${action} executed by ${
-								(interaction.member ?? interaction).user?.username
-							} in ${interaction.channel?.name} (${
-								interaction.channel?.id
-							}) - guild ${interaction.guild_id}`,
-						);
-						break;
-					default:
-						break;
-				}
 				return result
 					? new JsonResponse(result)
 					: new JsonResponse(

@@ -161,7 +161,7 @@ export class Command<T extends ApplicationCommandType = any> {
 			});
 
 			if (promise) context.waitUntil(promise);
-		}).catch(console.error);
+		});
 	}
 }
 

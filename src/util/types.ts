@@ -43,6 +43,12 @@ export type CommandData<
 	name: N;
 };
 
+export type Handler<T extends APIInteraction> = (options: {
+	interaction: T;
+	env: Env;
+	context: ExecutionContext;
+}) => Awaitable<APIInteractionResponse | undefined>;
+
 export type ExecutorContext<
 	T extends APIInteractionResponse = APIInteractionResponse,
 > = {
