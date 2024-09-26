@@ -75,10 +75,7 @@ const server: ExportedHandler<Env> = {
 							{ status: 500 },
 						);
 			}
-			if (request.method === "GET") {
-				console.log(request.cf);
-				return new Response("Ready!");
-			}
+			if (request.method === "GET") return new Response("Ready!");
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
