@@ -170,7 +170,7 @@ const server: ExportedHandler<Env> = {
 									changed ||= true;
 								}
 							}
-							await rest.post(
+							await rest.patch(
 								Routes.channelMessage(
 									env.PREDICTIONS_CHANNEL,
 									found.messageId!,
