@@ -132,6 +132,7 @@ const server: ExportedHandler<Env> = {
 			});
 		let changed = false;
 
+		rest.setToken(env.DISCORD_TOKEN);
 		ctx.waitUntil(
 			Promise.all(
 				matchDays.data
@@ -239,7 +240,6 @@ const server: ExportedHandler<Env> = {
 			.all<Pick<User, "id">>();
 
 		if (!results.length) return;
-		rest.setToken(env.DISCORD_TOKEN);
 		await Promise.all([
 			...results.map(async ({ id: recipient_id }) => {
 				const { id } = (await rest.post(Routes.userChannels(), {
