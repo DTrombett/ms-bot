@@ -1,8 +1,8 @@
 import { MatchesData } from ".";
 
-export const loadMatches = async (id: number) => {
+export const loadMatches = async (id: number, limit?: number) => {
 	const matches = (await fetch(
-		`https://legaseriea.it/api/stats/live/match?match_day_id=${id}&order=oldest`,
+		`https://legaseriea.it/api/stats/live/match?match_day_id=${id}&order=oldest${limit ? `&limit=${limit}` : ""}`,
 	).then((res) => res.json())) as MatchesData;
 
 	if (!matches.success)

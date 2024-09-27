@@ -11,13 +11,27 @@ import {
 	RESTPostAPICurrentUserCreateDMChannelJSONBody,
 	RESTPostAPICurrentUserCreateDMChannelResult,
 	Routes,
+	type RESTPatchAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
 import * as commandsObject from "./commands";
-import type { CommandOptions, Env, Handler, MatchDay, User } from "./util";
+import type {
+	CommandOptions,
+	Env,
+	Handler,
+	MatchDayResponse,
+	User,
+} from "./util";
 import {
+	closeMatchDay,
 	executeInteraction,
+	getLiveEmbed,
+	getPredictionsData,
 	JsonResponse,
+	loadMatches,
+	MatchStatus,
+	resolveLeaderboard,
 	rest,
+	startPredictions,
 	verifyDiscordRequest,
 } from "./util";
 
@@ -99,21 +113,128 @@ const server: ExportedHandler<Env> = {
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
-	scheduled: async ({}, env) => {
+	scheduled: async ({}, env, ctx) => {
+		const [matchDays, liveMatchDays] = await Promise.all([
+			fetch(
+				`https://legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
+			).then((res) => res.json()) as Promise<MatchDayResponse>,
+			env.KV.get("liveMatchDays"),
+		]);
+		const resolvedLive = liveMatchDays?.split(",").map((day) => {
+			const [categoryId, messageId, nextUpdate] = day.split(":");
+
+			return { categoryId, messageId, nextUpdate };
+		});
+
+		if (!matchDays.success)
+			throw new Error(`Couldn't load season data: ${matchDays.message}`, {
+				cause: matchDays.errors,
+			});
+		let changed = false;
+
+		ctx.waitUntil(
+			Promise.all(
+				matchDays.data
+					.filter((d) => d.category_status === "LIVE")
+					.map(async (matchDay) => {
+						const found = resolvedLive?.find(
+							(day) => day.categoryId === matchDay.id_category.toString(),
+						);
+
+						if (found) {
+							if (Date.now() <= Number(found.nextUpdate)) return undefined;
+							const [users, matches] = await getPredictionsData(
+								env,
+								parseInt(found.categoryId!),
+							);
+							const finished = matches.every(
+								(match) => match.match_status === MatchStatus.Finished,
+							);
+							const match = matches.find(
+								(m) =>
+									m.match_status === MatchStatus.Live ||
+									m.match_status === MatchStatus.ToBePlayed,
+							);
+							const leaderboard = resolveLeaderboard(users, matches);
+
+							if (match?.match_status === MatchStatus.ToBePlayed) {
+								const newNextUpdate = Date.parse(match.date_time).toString();
+
+								if (newNextUpdate !== found.nextUpdate) {
+									found.nextUpdate = newNextUpdate;
+									changed ||= true;
+								}
+							}
+							await rest.post(
+								Routes.channelMessage(
+									env.PREDICTIONS_CHANNEL,
+									found.messageId!,
+								),
+								{
+									body: {
+										embeds: getLiveEmbed(
+											users,
+											matches,
+											leaderboard,
+											parseInt(matches[0]!.match_day_order),
+											finished,
+										),
+									} satisfies RESTPatchAPIChannelMessageJSONBody,
+								},
+							);
+							if (finished)
+								await closeMatchDay(
+									env,
+									leaderboard,
+									matches,
+									parseInt(matches[0]!.match_day_order),
+									liveMatchDays,
+								);
+							return undefined;
+						}
+						return startPredictions(
+							env,
+							parseInt(matchDay.description),
+							matchDay.id_category,
+							liveMatchDays,
+						);
+					}),
+			).then<any>(
+				() =>
+					changed &&
+					env.KV.put(
+						"liveMatchDays",
+						resolvedLive!
+							.map((l) => [l.categoryId, l.messageId, l.nextUpdate].join(":"))
+							.join(","),
+					),
+			),
+		);
+		const matchDayData = matchDays.data.find(
+			(d) => d.category_status === "TO BE PLAYED",
+		);
+
+		if (!matchDayData) return;
+		const [match] = await loadMatches(matchDayData.id_category, 1);
+
+		if (!match) return;
+		const startTime = Date.parse(match.date_time) - 900000;
+		const minutes = (startTime - Date.now()) / 60_000;
+
+		if (minutes <= 0) return;
 		const { results } = await env.DB.prepare(
-			`SELECT u.id, m.day, m.startDate
+			`SELECT u.id
 			FROM Users u
-			JOIN MatchDays m ON 1 = 1
 			WHERE u.reminded = 0
-			AND u.remindMinutes >= (strftime('%s', m.startDate) - strftime('%s', 'now', '+15 minutes')) / 60
-			  AND m.startDate > datetime('now', '+15 minutes')
-			  AND m.day = (SELECT MAX(day) FROM MatchDays);`,
-		).all<Pick<MatchDay, "day" | "startDate"> & Pick<User, "id">>();
+			AND u.remindMinutes >= ?1`,
+		)
+			.bind(Math.floor(minutes))
+			.all<Pick<User, "id">>();
 
 		if (!results.length) return;
 		rest.setToken(env.DISCORD_TOKEN);
 		await Promise.all([
-			...results.map(async ({ id: recipient_id, day, startDate }) => {
+			...results.map(async ({ id: recipient_id }) => {
 				const { id } = (await rest.post(Routes.userChannels(), {
 					body: {
 						recipient_id,
@@ -129,7 +250,7 @@ const server: ExportedHandler<Env> = {
 								.addComponents(
 									new ButtonBuilder()
 										.setCustomId(
-											`predictions-${day}-1-${new Date(startDate).getTime() - 1_000 * 60 * 15}`,
+											`predictions-${Number(matchDayData.description)}-1-${startTime}`,
 										)
 										.setEmoji({ name: "⚽" })
 										.setLabel("Invia pronostici")

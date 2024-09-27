@@ -19,17 +19,12 @@ import {
 } from "discord-api-types/v10";
 import {
 	MatchDay,
-	MatchesData,
 	Prediction,
-	closeMatchDay,
-	getLiveEmbed,
 	getMatchDayData,
-	getPredictionsData,
 	normalizeTeamName,
-	resolveLeaderboard,
 	rest,
-	startPredictions,
 	type CommandOptions,
+	type Match,
 } from "../util";
 
 const predictionExamples = [
@@ -49,19 +44,19 @@ const predictionExamples = [
 const predictionRegex =
 	/^(1|x|2|1x|12|x2|((?<prediction>1|2|x)\s*\(\s*(?<first>\d+)\s*-\s*(?<second>\d+)\s*\)))$/;
 const buildModal = (
-	matches: Extract<MatchesData, { success: true }>["data"],
+	matches: Match[],
 	matchDay: MatchDay,
 	part: number,
 	predictions?: Pick<Prediction, "matchId" | "prediction">[],
 ) =>
 	new ModalBuilder()
 		.setCustomId(
-			`predictions-${matchDay.day}-${part}-${
-				new Date(matchDay.startDate).getTime() - 1_000 * 60 * 15
+			`predictions-${matchDay.description}-${part}-${
+				Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15
 			}`,
 		)
 		.setTitle(
-			`Pronostici ${matchDay.day}ª Giornata (${part}/${matches.length / 5})`,
+			`Pronostici ${matchDay.description}ª Giornata (${part}/${matches.length / 5})`,
 		)
 		.addComponents(
 			matches.slice((part - 1) * 5, part * 5).map((m) => {
@@ -178,7 +173,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			});
 			return;
 		}
-		const startTime = new Date(matchDay.startDate).getTime() - 1_000 * 60 * 15;
+		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15;
 
 		if (subCommand.name === "view") {
 			const user = (interaction.member ?? interaction).user!;
@@ -227,7 +222,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							thumbnail: {
 								url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 							},
-							title: `${matchDay.day}ª Giornata Serie A Enilive`,
+							title: `${matchDay.description}ª Giornata Serie A Enilive`,
 							url: "https://legaseriea.it/it/serie-a",
 						},
 					],
@@ -260,7 +255,9 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matchDay.day}-1-${startTime}`)
+									.setCustomId(
+										`predictions-${matchDay.description}-1-${startTime}`,
+									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -382,7 +379,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.day}-${part}-${timestamp}`,
+										`predictions-${matchDay.description}-${part}-${timestamp}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -435,7 +432,9 @@ VALUES (?)`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matchDay.day}-1-${timestamp}`)
+									.setCustomId(
+										`predictions-${matchDay.description}-1-${timestamp}`,
+									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -455,7 +454,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.day}-${part! + 1}-${timestamp}`,
+										`predictions-${matchDay.description}-${part! + 1}-${timestamp}`,
 									)
 									.setEmoji({ name: "⏩" })
 									.setLabel("Continua")
@@ -468,99 +467,10 @@ VALUES (?)`,
 			});
 	},
 	component: async (reply, { interaction, env }) => {
-		const [, actionOrDay, partOrCategoryId, timestamp, day] =
+		const [, actionOrDay, part, timestamp] =
 			interaction.data.custom_id.split("-");
 		const time = parseInt(timestamp!);
 
-		if (actionOrDay === "start") {
-			if (Date.now() < time) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: `La giornata inizia <t:${Math.round(time / 1_000)}:R>!`,
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-				return;
-			}
-			reply({
-				type: InteractionResponseType.UpdateMessage,
-				data: {
-					content: `## ${day}ª Giornata iniziata!\n\nSegui i risultati live e controlla i pronostici degli altri utenti qui in basso.`,
-					components: [],
-				},
-			});
-			await startPredictions(
-				env,
-				interaction,
-				parseInt(day!),
-				parseInt(partOrCategoryId!),
-			);
-			return;
-		}
-		if (actionOrDay === "update") {
-			if (Date.now() < time) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
-							time / 1_000,
-						)}:R>`,
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-				return;
-			}
-			const [users, matches] = await getPredictionsData(
-				env,
-				parseInt(partOrCategoryId!),
-			);
-			const finished = matches.every((match) => match.match_status === 2);
-			const leaderboard = resolveLeaderboard(users, matches);
-			const minute = Date.now() + 1_000 * 60;
-
-			reply({
-				type: InteractionResponseType.UpdateMessage,
-				data: {
-					embeds: getLiveEmbed(
-						users,
-						matches,
-						leaderboard,
-						parseInt(day!),
-						finished,
-					),
-					components: finished
-						? []
-						: [
-								new ActionRowBuilder<ButtonBuilder>()
-									.addComponents(
-										new ButtonBuilder()
-											.setCustomId(
-												`predictions-update-${partOrCategoryId}-${
-													matches.some((match) => match.match_status === 1)
-														? minute
-														: Math.max(
-																Date.parse(
-																	matches.find(
-																		(match) => match.match_status === 0,
-																	)?.date_time ?? "",
-																) || minute,
-																minute,
-															)
-												}-${day}`,
-											)
-											.setEmoji({ name: "🔄" })
-											.setLabel("Aggiorna")
-											.setStyle(ButtonStyle.Primary),
-									)
-									.toJSON(),
-							],
-				},
-			});
-			if (finished)
-				await closeMatchDay(env, leaderboard, matches, parseInt(day!));
-			return;
-		}
 		if (Date.now() >= time) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -619,7 +529,9 @@ VALUES (?)`,
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
 								new ButtonBuilder()
-									.setCustomId(`predictions-${matchDay.day}-1-${timestamp}`)
+									.setCustomId(
+										`predictions-${matchDay.description}-1-${timestamp}`,
+									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
 									.setStyle(ButtonStyle.Success),
@@ -630,7 +542,7 @@ VALUES (?)`,
 			});
 			return;
 		}
-		if (parseInt(actionOrDay!) !== matchDay.day) {
+		if (parseInt(actionOrDay!) !== parseInt(matchDay.description)) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -645,7 +557,7 @@ VALUES (?)`,
 			data: buildModal(
 				matches,
 				matchDay,
-				parseInt(partOrCategoryId!),
+				parseInt(part!),
 				existingPredictions,
 			).toJSON(),
 		});

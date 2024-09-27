@@ -1,13 +1,12 @@
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
-	APIMessageComponentInteraction,
 	APIUser,
-	ButtonStyle,
-	RESTPostAPIWebhookWithTokenJSONBody,
 	Routes,
+	type RESTPostAPIChannelMessageJSONBody,
+	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
 import {
 	Env,
+	MatchStatus,
 	closeMatchDay,
 	getLiveEmbed,
 	getPredictionsData,
@@ -19,16 +18,16 @@ import {
 
 export const startPredictions = async (
 	env: Env,
-	interaction: APIMessageComponentInteraction,
 	day: number,
 	categoryId: number,
+	oldLive?: string | null,
 ) => {
-	const [users, matches] = await getPredictionsData(env, categoryId);
+	const [[users, matches], oldLiveMatchDays] = await Promise.all([
+		getPredictionsData(env, categoryId),
+		oldLive ?? env.KV.get("liveMatchDays"),
+	]);
 	const promises: Promise<any>[] = [];
-	const followupRoute = Routes.webhook(
-		interaction.application_id,
-		interaction.token,
-	);
+	const followupRoute = Routes.channelMessages(env.PREDICTIONS_CHANNEL);
 	const leaderboard = resolveLeaderboard(users, matches);
 
 	for (let i = 0; i < users.length; i += 5) {
@@ -76,48 +75,40 @@ export const startPredictions = async (
 				}),
 			).then((embeds) =>
 				rest.post(followupRoute, {
-					body: { embeds } satisfies RESTPostAPIWebhookWithTokenJSONBody,
+					body: { embeds } satisfies RESTPostAPIChannelMessageJSONBody,
 				}),
 			),
 		);
 	}
-	const finished = matches.every((match) => match.match_status === 2);
-	const minute = Date.now() + 1_000 * 60;
+	const finished = matches.every(
+		(match) => match.match_status === MatchStatus.Finished,
+	);
+	const match = matches.find(
+		(m) =>
+			m.match_status === MatchStatus.Live ||
+			m.match_status === MatchStatus.ToBePlayed,
+	);
 
-	if (finished) promises.push(closeMatchDay(env, leaderboard, matches, day));
+	if (finished)
+		promises.push(
+			closeMatchDay(env, leaderboard, matches, day, oldLiveMatchDays),
+		);
 	await Promise.all(promises);
 	await Promise.all([
-		rest.post(followupRoute, {
-			body: {
-				embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
-				components: finished
-					? []
-					: [
-							new ActionRowBuilder<ButtonBuilder>()
-								.addComponents(
-									new ButtonBuilder()
-										.setCustomId(
-											`predictions-update-${categoryId}-${
-												matches.some((match) => match.match_status === 1)
-													? minute
-													: Math.max(
-															Date.parse(
-																matches.find(
-																	(match) => match.match_status === 0,
-																)?.date_time ?? "",
-															) || minute,
-															minute,
-														)
-											}-${day}`,
-										)
-										.setEmoji({ name: "🔄" })
-										.setLabel("Aggiorna")
-										.setStyle(ButtonStyle.Primary),
-								)
-								.toJSON(),
-						],
-			} satisfies RESTPostAPIWebhookWithTokenJSONBody,
-		}),
+		rest
+			.post(followupRoute, {
+				body: {
+					embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
+				} satisfies RESTPostAPIChannelMessageJSONBody,
+			})
+			.then((message) =>
+				env.KV.put(
+					"liveMatchDays",
+					`${
+						oldLiveMatchDays ? `${oldLiveMatchDays},` : ""
+					}${categoryId}:${(message as RESTPostAPIChannelMessageResult).id}${match?.match_status === MatchStatus.ToBePlayed ? `:${Date.parse(match.date_time)}` : ""}`,
+				),
+			),
 		loadMatchDay(env, categoryId),
 	]);
 };

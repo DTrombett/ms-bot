@@ -1,6 +1,7 @@
 import { EmbedBuilder } from "@discordjs/builders";
 import {
 	Leaderboard,
+	MatchStatus,
 	normalizeTeamName,
 	type MatchesData,
 	type Prediction,
@@ -64,14 +65,14 @@ const resolveMatches = (
 	matches
 		.map(
 			(match) =>
-				`- ${match.match_status === 1 ? "🔴 " : ""}[${normalizeTeamName(
+				`- ${match.match_status === MatchStatus.Live ? "🔴 " : ""}[${normalizeTeamName(
 					match.home_team_name,
 				)} - ${normalizeTeamName(match.away_team_name)}](https://legaseriea.it${
 					match.slug
 				}): ${
-					match.match_status === 0
+					match.match_status === MatchStatus.ToBePlayed
 						? `<t:${Math.round(new Date(match.date_time).getTime() / 1_000)}:F>`
-						: match.match_status === 3
+						: match.match_status === MatchStatus.Postponed
 							? "*Posticipata*"
 							: `**${match.home_goal ?? 0} - ${match.away_goal ?? 0}**`
 				}`,

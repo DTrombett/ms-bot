@@ -158,22 +158,47 @@ export type DogResponse = {
 	width: number;
 }[];
 
+export enum MatchStatus {
+	ToBePlayed,
+	Live,
+	Finished,
+	Postponed,
+}
+
+export type Match = {
+	home_goal: number | null;
+	away_goal: number | null;
+	home_team_name: Uppercase<string>;
+	away_team_name: Uppercase<string>;
+	date_time: string;
+	match_status: MatchStatus;
+	slug: string;
+	match_id: number;
+	match_name: string;
+	match_day_id_category: number;
+	match_day_order: `${number}`;
+};
 export type MatchesData =
 	| {
 			success: true;
-			data: {
-				home_goal: number | null;
-				away_goal: number | null;
-				home_team_name: Uppercase<string>;
-				away_team_name: Uppercase<string>;
-				date_time: string;
-				match_status: number;
-				slug: string;
-				match_id: number;
-				match_name: string;
-			}[];
+			data: Match[];
 	  }
 	| { success: false; message: string; errors: unknown[] };
+export type MatchDay = {
+	category_status: "LIVE" | "PLAYED" | "TO BE PLAYED";
+	description: `${number}`;
+	id_category: number;
+};
+export type MatchDayResponse =
+	| {
+			success: false;
+			message: string;
+			errors: unknown[];
+	  }
+	| {
+			success: true;
+			data: MatchDay[];
+	  };
 
 export type Leaderboard = [
 	user: User & { predictions: Prediction[] },
@@ -185,11 +210,6 @@ export type Leaderboard = [
 export type SQLBoolean = 0 | 1;
 export type SQLDateTime = string;
 
-export type MatchDay = {
-	day: number;
-	categoryId: number;
-	startDate: SQLDateTime;
-};
 export type Prediction = {
 	matchId: number;
 	userId: string;

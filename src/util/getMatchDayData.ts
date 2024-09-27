@@ -1,18 +1,32 @@
-import { Env, MatchDay, Prediction, loadMatches, type User } from ".";
+import {
+	Env,
+	Prediction,
+	loadMatches,
+	type MatchDayResponse,
+	type User,
+} from ".";
 
 export const getMatchDayData = async (
 	env: Env,
 	userId: string,
 	day?: number,
 ) => {
-	const matchDay = await env.DB.prepare(
-		`SELECT *
-FROM MatchDays
-WHERE day = ${day ?? "(SELECT MAX(day) FROM MatchDays)"}`,
-	).first<MatchDay>();
+	const matchDays = (await fetch(
+		`https://legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
+	).then((res) => res.json())) as MatchDayResponse;
 
-	if (!matchDay) return [];
-	const matches = await loadMatches(matchDay.categoryId);
+	if (!matchDays.success)
+		throw new Error(`Couldn't load season data: ${matchDays.message}`, {
+			cause: matchDays.errors,
+		});
+	const matchDayData = matchDays.data.find(
+		day
+			? (d) => Number(d.description) === day
+			: (d) => d.category_status === "TO BE PLAYED",
+	);
+
+	if (!matchDayData) return [];
+	const matches = await loadMatches(matchDayData.id_category);
 
 	if (!matches.length) return [];
 	const { results: existingPredictions } = await env.DB.prepare(
@@ -27,5 +41,5 @@ WHERE Users.id = ?
 		.bind(userId, ...matches.map((m) => m.match_id))
 		.all<Pick<Prediction, "matchId" | "prediction"> & Pick<User, "match">>();
 
-	return [matchDay, matches, existingPredictions] as const;
+	return [matchDayData, matches, existingPredictions] as const;
 };

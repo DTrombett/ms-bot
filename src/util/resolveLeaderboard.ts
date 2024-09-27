@@ -1,4 +1,4 @@
-import { Leaderboard, MatchesData, Prediction, User } from ".";
+import { Leaderboard, MatchesData, MatchStatus, Prediction, User } from ".";
 
 export const resolveLeaderboard = (
 	users: (User & { predictions: Prediction[] })[],
@@ -36,7 +36,8 @@ export const resolveLeaderboard = (
 								: "X";
 					let diffPoints = 0;
 					const toBePlayed =
-						match.match_status === 0 || match.match_status === 3;
+						match.match_status === MatchStatus.ToBePlayed ||
+						match.match_status === MatchStatus.Postponed;
 					const isStarred = match.match_id === user.match;
 
 					if (!toBePlayed)
@@ -51,7 +52,8 @@ export const resolveLeaderboard = (
 						else if (type.includes(result)) diffPoints = 1;
 						else if (type.length === 2) diffPoints = -1;
 					if (isStarred) diffPoints *= 2;
-					if (match.match_status === 2) maxPoints += diffPoints;
+					if (match.match_status === MatchStatus.Finished)
+						maxPoints += diffPoints;
 					else if (home != null)
 						if (
 							toBePlayed ||
