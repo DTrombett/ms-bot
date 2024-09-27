@@ -142,7 +142,11 @@ const server: ExportedHandler<Env> = {
 						);
 
 						if (found) {
-							if (Date.now() <= Number(found.nextUpdate)) return undefined;
+							if (Date.now() <= Number(found.nextUpdate)) {
+								console.log(`Skipping match day`, found);
+								return undefined;
+							}
+							console.log(`Updating match day`, found);
 							const [users, matches] = await getPredictionsData(
 								env,
 								parseInt(found.categoryId!),
@@ -182,7 +186,8 @@ const server: ExportedHandler<Env> = {
 									} satisfies RESTPatchAPIChannelMessageJSONBody,
 								},
 							);
-							if (finished)
+							if (finished) {
+								console.log(`Closing match day`, found);
 								await closeMatchDay(
 									env,
 									leaderboard,
@@ -190,8 +195,10 @@ const server: ExportedHandler<Env> = {
 									parseInt(matches[0]!.match_day_order),
 									liveMatchDays,
 								);
+							}
 							return undefined;
 						}
+						console.log(`Starting match day`, matchDay);
 						return startPredictions(
 							env,
 							parseInt(matchDay.description),
