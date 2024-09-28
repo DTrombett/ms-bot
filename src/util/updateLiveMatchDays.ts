@@ -35,7 +35,12 @@ export const updateLiveMatchDays = async (matchDays: MatchDay[], env: Env) => {
 				const [users, matches] = await getPredictionsData(
 					env,
 					parseInt(found.categoryId!),
-				);
+				).catch((err) => {
+					console.error(err);
+					return [];
+				});
+
+				if (!(matches as any)) return;
 				const finished = matches.every(
 					(match) => match.match_status === MatchStatus.Finished,
 				);
