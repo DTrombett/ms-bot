@@ -145,7 +145,7 @@ const server: ExportedHandler<Env> = {
 						if (found) {
 							if (Date.now() <= Number(found.nextUpdate)) {
 								console.log(`Skipping match day`, found);
-								return undefined;
+								return;
 							}
 							console.log(`Updating match day`, found);
 							const [users, matches] = await getPredictionsData(
@@ -189,23 +189,26 @@ const server: ExportedHandler<Env> = {
 							);
 							if (finished) {
 								console.log(`Closing match day`, found);
+								changed ||= true;
+								resolvedLive?.splice(resolvedLive.indexOf(found), 1);
 								await closeMatchDay(
 									env,
 									leaderboard,
 									matches,
 									parseInt(matches[0]!.match_day_order),
-									liveMatchDays,
 								);
 							}
-							return undefined;
+							return;
 						}
 						console.log(`Starting match day`, matchDay);
-						return startPredictions(
+						const newMatch = await startPredictions(
 							env,
 							parseInt(matchDay.description),
 							matchDay.id_category,
-							liveMatchDays,
 						);
+
+						changed ||= true;
+						resolvedLive?.push(newMatch);
 					}),
 			).then<any>(
 				() =>

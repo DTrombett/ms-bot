@@ -20,12 +20,8 @@ export const startPredictions = async (
 	env: Env,
 	day: number,
 	categoryId: number,
-	oldLive?: string | null,
 ) => {
-	const [[users, matches], oldLiveMatchDays] = await Promise.all([
-		getPredictionsData(env, categoryId),
-		oldLive ?? env.KV.get("liveMatchDays"),
-	]);
+	const [users, matches] = await getPredictionsData(env, categoryId);
 	const promises: Promise<any>[] = [];
 	const followupRoute = Routes.channelMessages(env.PREDICTIONS_CHANNEL);
 	const leaderboard = resolveLeaderboard(users, matches);
@@ -89,26 +85,23 @@ export const startPredictions = async (
 			m.match_status === MatchStatus.ToBePlayed,
 	);
 
-	if (finished)
-		promises.push(
-			closeMatchDay(env, leaderboard, matches, day, oldLiveMatchDays),
-		);
+	if (finished) promises.push(closeMatchDay(env, leaderboard, matches, day));
 	await Promise.all(promises);
-	await Promise.all([
-		rest
-			.post(followupRoute, {
-				body: {
-					embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
-				} satisfies RESTPostAPIChannelMessageJSONBody,
-			})
-			.then((message) =>
-				env.KV.put(
-					"liveMatchDays",
-					`${
-						oldLiveMatchDays ? `${oldLiveMatchDays},` : ""
-					}${categoryId}:${(message as RESTPostAPIChannelMessageResult).id}${match?.match_status === MatchStatus.ToBePlayed ? `:${Date.parse(match.date_time)}` : ""}`,
-				),
-			),
+	const [{ id }] = await Promise.all([
+		rest.post(followupRoute, {
+			body: {
+				embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
+			} satisfies RESTPostAPIChannelMessageJSONBody,
+		}) as Promise<RESTPostAPIChannelMessageResult>,
 		loadMatchDay(env, categoryId),
 	]);
+
+	return {
+		categoryId: categoryId.toString(),
+		messageId: id,
+		nextUpdate:
+			match?.match_status === MatchStatus.ToBePlayed
+				? Date.parse(match.date_time).toString()
+				: undefined,
+	};
 };
