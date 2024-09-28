@@ -15,4 +15,5 @@ export * from "./resolveLeaderboard";
 export * from "./rest";
 export * from "./startPredictions";
 export * from "./types";
+export * from "./updateLiveMatchDays";
 export * from "./verifyDiscordRequest";
