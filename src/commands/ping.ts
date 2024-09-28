@@ -6,6 +6,7 @@ import {
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
+import { setTimeout } from "node:timers/promises";
 import { rest, type CommandOptions } from "../util";
 
 export const ping: CommandOptions<ApplicationCommandType.ChatInput> = {
@@ -20,6 +21,7 @@ export const ping: CommandOptions<ApplicationCommandType.ChatInput> = {
 		const now = Date.now();
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
+		await setTimeout(1_000);
 		const { id } = (await rest.get(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 		)) as APIMessage;
