@@ -108,14 +108,17 @@ const server: ExportedHandler<Env> = {
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
 	scheduled: async ({}, env, ctx) => {
-		const matchDays = (await fetch(
+		const matchDays = await fetch(
 			`https://legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
-		).then((res) => res.json())) as MatchDayResponse;
+		)
+			.then((res) => res.json() as Promise<MatchDayResponse>)
+			.catch(console.error);
 
-		if (!matchDays.success)
-			throw new Error(`Couldn't load season data: ${matchDays.message}`, {
-				cause: matchDays.errors,
-			});
+		if (!matchDays) return;
+		if (!matchDays.success) {
+			console.error("Couldn't load season data", matchDays);
+			return;
+		}
 		rest.setToken(env.DISCORD_TOKEN);
 		ctx.waitUntil(
 			updateLiveMatchDays(
