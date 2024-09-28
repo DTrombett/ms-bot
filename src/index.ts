@@ -223,7 +223,12 @@ const server: ExportedHandler<Env> = {
 		);
 
 		if (!matchDayData) return;
-		const [match] = await loadMatches(matchDayData.id_category, 1);
+		const [match] = await loadMatches(matchDayData.id_category, 1).catch(
+			(err) => {
+				console.error(err);
+				return [];
+			},
+		);
 
 		if (!match) return;
 		const startTime = Date.parse(match.date_time) - 900000;
