@@ -215,9 +215,10 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 									new Date(m.date_time).getTime() / 1_000,
 								)}:F>)`,
 								value:
-									existingPredictions.find(
+									(existingPredictions[0]?.match === m.match_id ? "⭐ " : "") +
+									(existingPredictions.find(
 										(predict) => predict.matchId === m.match_id,
-									)?.prediction ?? "*Non presente*",
+									)?.prediction ?? "*Non presente*"),
 							})),
 							thumbnail: {
 								url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
