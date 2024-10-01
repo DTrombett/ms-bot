@@ -93,8 +93,10 @@ export const updateLiveMatchDays = async (matchDays: MatchDay[], env: Env) => {
 				matchDay.id_category,
 			);
 
-			changed ||= true;
-			resolvedLive?.push(newMatch);
+			if (newMatch) {
+				changed ||= true;
+				resolvedLive?.push(newMatch);
+			}
 		}),
 	);
 	if (changed)

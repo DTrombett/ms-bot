@@ -7,7 +7,6 @@ import {
 import {
 	Env,
 	MatchStatus,
-	closeMatchDay,
 	getLiveEmbed,
 	getPredictionsData,
 	loadMatchDay,
@@ -22,6 +21,11 @@ export const startPredictions = async (
 	categoryId: number,
 ) => {
 	const [users, matches] = await getPredictionsData(env, categoryId);
+
+	if (matches.every((match) => match.match_status === MatchStatus.Finished)) {
+		console.log("Match day is already finished!", { day, categoryId });
+		return null;
+	}
 	const promises: Promise<any>[] = [];
 	const followupRoute = Routes.channelMessages(env.PREDICTIONS_CHANNEL);
 	const leaderboard = resolveLeaderboard(users, matches);
@@ -76,21 +80,17 @@ export const startPredictions = async (
 			),
 		);
 	}
-	const finished = matches.every(
-		(match) => match.match_status === MatchStatus.Finished,
-	);
 	const match = matches.find(
 		(m) =>
 			m.match_status === MatchStatus.Live ||
 			m.match_status === MatchStatus.ToBePlayed,
 	);
 
-	if (finished) promises.push(closeMatchDay(env, leaderboard, matches, day));
 	await Promise.all(promises);
 	const [{ id }] = await Promise.all([
 		rest.post(followupRoute, {
 			body: {
-				embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
+				embeds: getLiveEmbed(users, matches, leaderboard, day),
 			} satisfies RESTPostAPIChannelMessageJSONBody,
 		}) as Promise<RESTPostAPIChannelMessageResult>,
 		loadMatchDay(env, categoryId),
