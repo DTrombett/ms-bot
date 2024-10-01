@@ -99,13 +99,15 @@ export const updateLiveMatchDays = async (matchDays: MatchDay[], env: Env) => {
 			}
 		}),
 	);
-	if (changed)
+	if (changed) {
+		console.log("Updating live match days", resolvedLive);
 		await env.KV.put(
 			"liveMatchDays",
 			resolvedLive!
 				.map((l) => [l.categoryId, l.messageId, l.nextUpdate].join(":"))
 				.join(","),
 		);
+	}
 };
 
 export default updateLiveMatchDays;
