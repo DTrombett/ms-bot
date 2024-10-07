@@ -16,7 +16,7 @@ const getCat = async (
 	const data = await fetch(
 		"https://api.thecatapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
 		{ headers: { "x-api-key": key } },
-	).then((res) => res.json() as Promise<CatResponse | null>);
+	).then<CatResponse | null>((res) => res.json());
 
 	if (!data?.[0])
 		return {

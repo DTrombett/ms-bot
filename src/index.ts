@@ -111,7 +111,7 @@ const server: ExportedHandler<Env> = {
 		const matchDays = await fetch(
 			`https://legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
 		)
-			.then((res) => res.json() as Promise<MatchDayResponse>)
+			.then<MatchDayResponse>((res) => res.json())
 			.catch(console.error);
 
 		if (!matchDays) return;

@@ -16,7 +16,7 @@ const getDog = async (
 	const data = await fetch(
 		"https://api.thedogapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
 		{ headers: { "x-api-key": key } },
-	).then((res) => res.json() as Promise<DogResponse | null>);
+	).then<DogResponse | null>((res) => res.json());
 
 	if (!data?.[0])
 		return {
