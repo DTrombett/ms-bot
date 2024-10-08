@@ -18,6 +18,7 @@ import type {
 	Env,
 	Handler,
 	MatchDayResponse,
+	Reminder,
 	User,
 } from "./util";
 import {
@@ -108,18 +109,42 @@ const server: ExportedHandler<Env> = {
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
 	scheduled: async ({}, env, ctx) => {
-		const matchDays = await fetch(
-			`https://legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
-		)
-			.then<MatchDayResponse>((res) => res.json())
-			.catch(console.error);
+		const [matchDays, { results: reminders }] = await Promise.all([
+			fetch(
+				`https://legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
+			)
+				.then<MatchDayResponse>((res) => res.json())
+				.catch(console.error),
+			env.DB.prepare(
+				`DELETE FROM Reminders
+			WHERE date <= datetime('now')
+			RETURNING
+				remind,
+				userId
+			ORDER BY date ASC
+			LIMIT 2`,
+			).all<Pick<Reminder, "remind" | "userId">>(),
+		]);
 
+		rest.setToken(env.DISCORD_TOKEN);
+		ctx.waitUntil(
+			Promise.all(
+				reminders.map(async ({ userId: recipient_id, remind: content }) => {
+					const { id } = (await rest.post(Routes.userChannels(), {
+						body: {
+							recipient_id,
+						} satisfies RESTPostAPICurrentUserCreateDMChannelJSONBody,
+					})) as RESTPostAPICurrentUserCreateDMChannelResult;
+
+					return rest.post(Routes.channelMessages(id), { body: { content } });
+				}),
+			),
+		);
 		if (!matchDays) return;
 		if (!matchDays.success) {
 			console.error("Couldn't load season data", matchDays);
 			return;
 		}
-		rest.setToken(env.DISCORD_TOKEN);
 		ctx.waitUntil(
 			updateLiveMatchDays(
 				matchDays.data.filter((d) => d.category_status === "LIVE"),

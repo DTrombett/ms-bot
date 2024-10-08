@@ -15,5 +15,6 @@ export * from "./predictions";
 export * from "./quelo";
 export * from "./quote";
 export * from "./random";
+export * from "./remind";
 export * from "./rps";
 export * from "./search";

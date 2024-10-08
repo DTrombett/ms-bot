@@ -207,9 +207,6 @@ export type Leaderboard = [
 	maxPoints: number,
 ][];
 
-export type SQLBoolean = 0 | 1;
-export type SQLDateTime = string;
-
 export type Prediction = {
 	matchId: number;
 	userId: string;
@@ -220,6 +217,11 @@ export type User = {
 	dayPoints?: number | null;
 	matchPointsHistory?: string | null;
 	match?: number | null;
+};
+export type Reminder = {
+	date: string;
+	userId: string;
+	remind: string;
 };
 
 export type EnvVars = {

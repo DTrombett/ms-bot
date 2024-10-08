@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS Predictions;
 DROP TABLE IF EXISTS Users;
+DROP TABLE IF EXISTS Reminders;
 CREATE TABLE Users (
 	id VARCHAR(31) PRIMARY KEY,
 	dayPoints INTEGER,
@@ -13,4 +14,10 @@ CREATE TABLE Predictions (
 	userId VARCHAR(31) NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
 	prediction VARCHAR(255) NOT NULL,
 	PRIMARY KEY (userId, matchId)
+);
+CREATE TABLE Reminders (
+	date VARCHAR(255) NOT NULL,
+	userId VARCHAR(31) NOT NULL,
+	remind VARCHAR(1023) NOT NULL,
+	PRIMARY KEY (date, userId)
 );
