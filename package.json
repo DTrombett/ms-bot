@@ -33,7 +33,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20241004.0",
-		"@tsconfig/recommended": "^1.0.7",
+		"@tsconfig/recommended": "^1.0.8",
 		"@tsconfig/strictest": "^2.0.5",
 		"@types/ms": "^0.7.34",
 		"@typescript-eslint/eslint-plugin": "^8.8.0",
