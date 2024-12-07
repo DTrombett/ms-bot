@@ -45,12 +45,10 @@ export const loadMatchDay = async (env: Env, last = 0) => {
 									.setLabel("Invia pronostici")
 									.setStyle(ButtonStyle.Primary),
 								new ButtonBuilder()
-									.setCustomId(
-										`predictions-start-${matchDayData.id_category}-${startTime}-${matchDayData.description}`,
-									)
-									.setEmoji({ name: "▶️" })
-									.setLabel("Inizia giornata")
-									.setStyle(ButtonStyle.Primary),
+									.setURL("https://ms-bot.trombett.org/predictions")
+									.setEmoji({ name: "🌐" })
+									.setLabel("Utilizza la dashboard")
+									.setStyle(ButtonStyle.Link),
 							)
 							.toJSON(),
 					],

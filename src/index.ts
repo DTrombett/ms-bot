@@ -200,6 +200,11 @@ const server: ExportedHandler<Env> = {
 										.setEmoji({ name: "⚽" })
 										.setLabel("Invia pronostici")
 										.setStyle(ButtonStyle.Primary),
+									new ButtonBuilder()
+										.setURL("https://ms-bot.trombett.org/predictions")
+										.setEmoji({ name: "🌐" })
+										.setLabel("Utilizza la dashboard")
+										.setStyle(ButtonStyle.Link),
 								)
 								.toJSON(),
 						],
