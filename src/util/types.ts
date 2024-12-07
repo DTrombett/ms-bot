@@ -193,7 +193,7 @@ export type MatchDayResponse =
 	| {
 			success: false;
 			message: string;
-			errors: unknown[];
+			errors: Rpc.Serializable<unknown>[];
 	  }
 	| {
 			success: true;
@@ -217,6 +217,7 @@ export type User = {
 	dayPoints?: number | null;
 	matchPointsHistory?: string | null;
 	match?: number | null;
+	remindMinutes?: number | null;
 };
 export type Reminder = {
 	date: string;

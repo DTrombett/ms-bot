@@ -1,6 +1,6 @@
 name = "ms-bot"
 main = "./src/index.ts"
-compatibility_date = "2024-09-23"
+compatibility_date = "2024-12-07"
 compatibility_flags = ["nodejs_compat"]
 kv_namespaces = [
     { binding = "KV", id = "0f620c8b0c9e4b0786b894509f82e5d9" }

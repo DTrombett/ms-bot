@@ -220,4 +220,6 @@ const server: ExportedHandler<Env> = {
 	},
 };
 
+export { PredictionsReminders } from "./PredictionsReminders";
+
 export default server;
