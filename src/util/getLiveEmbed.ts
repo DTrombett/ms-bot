@@ -4,7 +4,7 @@ import {
 	MatchStatus,
 	normalizeTeamName,
 	type MatchesData,
-	type Prediction,
+	type ResolvedUser,
 	type User,
 } from ".";
 
@@ -249,9 +249,7 @@ const resolveStats = (users: User[]) => {
 };
 
 export const getLiveEmbed = (
-	users: (User & {
-		predictions: Prediction[];
-	})[],
+	users: ResolvedUser[],
 	matches: Extract<MatchesData, { success: true }>["data"],
 	leaderboard: Leaderboard,
 	day: number,

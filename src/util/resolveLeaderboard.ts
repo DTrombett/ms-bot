@@ -1,7 +1,7 @@
-import { Leaderboard, MatchesData, MatchStatus, Prediction, User } from ".";
+import { Leaderboard, MatchesData, MatchStatus, type ResolvedUser } from ".";
 
 export const resolveLeaderboard = (
-	users: (User & { predictions: Prediction[] })[],
+	users: ResolvedUser[],
 	matches: Extract<MatchesData, { success: true }>["data"],
 ) => {
 	const leaderboard = users

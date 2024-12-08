@@ -201,7 +201,7 @@ export type MatchDayResponse =
 	  };
 
 export type Leaderboard = [
-	user: User & { predictions: Prediction[] },
+	user: ResolvedUser,
 	matchPoints: number,
 	dayPoints: number,
 	maxPoints: number,
@@ -223,6 +223,13 @@ export type Reminder = {
 	date: string;
 	userId: string;
 	remind: string;
+};
+
+export type ResolvedUser = Pick<
+	User,
+	"dayPoints" | "id" | "match" | "matchPointsHistory"
+> & {
+	predictions: Pick<Prediction, "matchId" | "prediction">[];
 };
 
 export type EnvVars = {
