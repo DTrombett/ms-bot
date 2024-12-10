@@ -1,4 +1,4 @@
-import {
+import type {
 	APIApplicationCommandAutocompleteResponse,
 	APIApplicationCommandOption,
 	APIInteraction,
@@ -13,6 +13,7 @@ import {
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import type { Params } from "../PredictionsReminders";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -248,4 +249,5 @@ export type EnvVars = {
 export type Env = EnvVars & {
 	DB: D1Database;
 	KV: KVNamespace;
+	PREDICTIONS_REMINDERS: Workflow<Params>;
 };

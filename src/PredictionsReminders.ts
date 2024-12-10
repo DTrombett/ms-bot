@@ -27,7 +27,7 @@ import {
 	type User,
 } from "./util";
 
-type Params = {
+export type Params = {
 	matchDay?: { day: number; id: number };
 };
 
@@ -50,7 +50,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		);
 		const diff = startTime - event.timestamp.getTime();
 
-		if (diff > 12 * 60 * 60 * 1_000) {
+		if (diff > 24 * 60 * 60 * 1_000) {
 			console.log(`Next match day is in ${ms(diff, { long: true })}`);
 			return;
 		}
@@ -78,7 +78,6 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				);
 			}
 		}
-		// TODO: Refactor this to a new workflow
 		await step.sleepUntil("match day start", startTime);
 		const matches = await step.do(
 			"load matches",
@@ -90,7 +89,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		);
 		const promises: Promise<void>[] = [];
 
-		for (let i = 0; i < users.length; i += 5)
+		for (let i = 0; i < users.length; )
 			promises.push(
 				step.do<void>(
 					`send chunk ${i / 5}`,
@@ -98,7 +97,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 						this,
 						matchDay.day,
 						matches,
-						users.slice(i, i + 5),
+						users.slice(i, (i += 5)),
 					),
 				),
 			);
@@ -109,7 +108,6 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		);
 	}
 
-	// TODO: Check if alreaday started
 	private async getMatchDay() {
 		const matchDays = await fetch(
 			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
@@ -142,7 +140,6 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			>((u) => [u.id, startTime - u.remindMinutes! * 60 * 1000]);
 	}
 
-	// TODO: Extract these to a RPC?
 	private async createDM(recipient_id: string) {
 		const { id } = (await rest.post(Routes.userChannels(), {
 			body: {
@@ -225,50 +222,50 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		matches: Match[],
 		users: ResolvedUser[],
 	) {
-		await Promise.all(
-			users.map(async (data) => {
-				const user = (await rest.get(Routes.user(data.id)).catch(() => {})) as
-					| APIUser
-					| undefined;
+		await rest.post(Routes.channelMessages(this.env.PREDICTIONS_CHANNEL), {
+			body: {
+				embeds: await Promise.all(
+					users.map(async (data) => {
+						const user = (await rest
+							.get(Routes.user(data.id))
+							.catch(() => {})) as APIUser | undefined;
 
-				return {
-					author: {
-						name: user?.global_name ?? user?.username ?? data.id,
-						icon_url:
-							user &&
-							(user.avatar == null
-								? rest.cdn.defaultAvatar(
-										user.discriminator === "0"
-											? Number(BigInt(user.id) >> 22n) % 6
-											: Number(user.discriminator) % 5,
-									)
-								: rest.cdn.avatar(user.id, user.avatar, {
-										size: 4096,
-										extension: "png",
-									})),
-					},
-					color: user?.accent_color ?? 0x3498db,
-					fields: matches.map((match) => ({
-						name: [match.home_team_name, match.away_team_name]
-							.map(normalizeTeamName)
-							.join(" - "),
-						value:
-							(data.match === match.match_id ? "⭐ " : "") +
-							(data.predictions.find(
-								(predict) => predict.matchId === match.match_id,
-							)?.prediction ?? "*Non presente*"),
-					})),
-					thumbnail: {
-						url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
-					},
-					title: `${day}ª Giornata Serie A Enilive`,
-				};
-			}),
-		).then((embeds) =>
-			rest.post(Routes.channelMessages(this.env.PREDICTIONS_CHANNEL), {
-				body: { embeds } satisfies RESTPostAPIChannelMessageJSONBody,
-			}),
-		);
+						return {
+							author: {
+								name: user?.global_name ?? user?.username ?? data.id,
+								icon_url:
+									user &&
+									(user.avatar == null
+										? rest.cdn.defaultAvatar(
+												user.discriminator === "0"
+													? Number(BigInt(user.id) >> 22n) % 6
+													: Number(user.discriminator) % 5,
+											)
+										: rest.cdn.avatar(user.id, user.avatar, {
+												size: 4096,
+												extension: "png",
+											})),
+							},
+							color: user?.accent_color ?? 0x3498db,
+							fields: matches.map((match) => ({
+								name: [match.home_team_name, match.away_team_name]
+									.map(normalizeTeamName)
+									.join(" - "),
+								value:
+									(data.match === match.match_id ? "⭐ " : "") +
+									(data.predictions.find(
+										(predict) => predict.matchId === match.match_id,
+									)?.prediction ?? "*Non presente*"),
+							})),
+							thumbnail: {
+								url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
+							},
+							title: `${day}ª Giornata Serie A Enilive`,
+						};
+					}),
+				),
+			} satisfies RESTPostAPIChannelMessageJSONBody,
+		});
 	}
 
 	private async sendMatchDayMessage(

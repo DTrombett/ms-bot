@@ -21,3 +21,8 @@ crons = ["* * * * *"]
 binding = "DB"
 database_name = "database"
 database_id = "8a298455-ac11-4e0c-b160-4db807cf3572"
+
+[[workflows]]
+name = "predictions-reminders"
+binding = "PREDICTIONS_REMINDERS"
+class_name = "PredictionsReminders"
