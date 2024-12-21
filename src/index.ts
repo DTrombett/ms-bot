@@ -126,6 +126,7 @@ const server: ExportedHandler<Env> = {
 	},
 };
 
+export { LiveScore } from "./LiveScore";
 export { PredictionsReminders } from "./PredictionsReminders";
 
 export default server;

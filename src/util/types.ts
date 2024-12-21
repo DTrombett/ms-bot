@@ -13,7 +13,8 @@ import type {
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type { Params } from "../PredictionsReminders";
+import type { Params as LVParams } from "../LiveScore";
+import type { Params as PRParams } from "../PredictionsReminders";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -249,5 +250,6 @@ export type EnvVars = {
 export type Env = EnvVars & {
 	DB: D1Database;
 	KV: KVNamespace;
-	PREDICTIONS_REMINDERS: Workflow<Params>;
+	PREDICTIONS_REMINDERS: Workflow<PRParams>;
+	LIVE_SCORE: Workflow<LVParams>;
 };
