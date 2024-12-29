@@ -78,6 +78,7 @@ export const resolveLeaderboard = (
 			first -
 			(entry[0].predictions.length
 				? leaderboard.findIndex(([, p]) => entry[1] === p)
-				: leaderboard.length);
+				: leaderboard.length) +
+			1;
 	return leaderboard;
 };
