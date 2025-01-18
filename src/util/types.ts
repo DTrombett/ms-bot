@@ -226,6 +226,9 @@ export type Reminder = {
 
 export type EnvVars = {
 	NODE_ENV?: string;
+	CLOUDFLARE_API_TOKEN: string;
+	CLOUDFLARE_ACCOUNT_ID: string;
+	BULK_LIST_ID: string;
 	DISCORD_APPLICATION_ID: string;
 	DISCORD_PUBLIC_KEY: string;
 	DISCORD_TOKEN: string;
