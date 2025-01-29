@@ -33,6 +33,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 	) {
 		let time: number | void = event.timestamp.getTime();
 
+		rest.setToken(this.env.DISCORD_TOKEN);
 		do {
 			await step.sleepUntil(`sleep until ${time}`, time);
 			time = await step.do(
