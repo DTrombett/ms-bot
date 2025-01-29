@@ -155,21 +155,16 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 					.run(),
 			]);
 
-			if (workflow) {
-				const status = await workflow.status();
-
-				if (status.status === "waiting") await workflow.restart();
-				else {
-					reply({
-						type: InteractionResponseType.ChannelMessageWithSource,
-						data: {
-							content:
-								"Promemoria impostato correttamente!\n\nNota: il reminder potrebbe non essere recapitato correttamente per la giornata in arrivo.",
-							flags: MessageFlags.Ephemeral,
-						},
-					});
-					return;
-				}
+			if (await workflow?.restart().catch(() => true)) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content:
+							"Promemoria impostato correttamente!\n\nNota: il reminder potrebbe non essere recapitato correttamente per la giornata in arrivo.",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
 			}
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
