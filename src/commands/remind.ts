@@ -68,7 +68,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 			const { value: date } = options.get(
 				"in",
 			) as APIApplicationCommandInteractionDataStringOption;
-			const seconds = ms(date.replace(/\s+/g, "")) / 1_000 || 0;
+			const seconds = ms(date.replace(/\s+/g, "") as "0") / 1_000 || 0;
 
 			if (seconds > 315_360_000) {
 				reply({
