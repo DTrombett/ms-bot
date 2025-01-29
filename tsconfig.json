@@ -16,6 +16,6 @@
 		"outDir": "dist",
 		"pretty": true,
 		"target": "esnext",
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types/experimental"]
 	}
 }

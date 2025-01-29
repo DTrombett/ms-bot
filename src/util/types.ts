@@ -1,4 +1,4 @@
-import {
+import type {
 	APIApplicationCommandAutocompleteResponse,
 	APIApplicationCommandOption,
 	APIInteraction,
@@ -13,6 +13,8 @@ import {
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import type { Params as LVParams } from "../LiveScore";
+import type { Params as PRParams } from "../PredictionsReminders";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -193,7 +195,7 @@ export type MatchDayResponse =
 	| {
 			success: false;
 			message: string;
-			errors: unknown[];
+			errors: Rpc.Serializable<unknown>[];
 	  }
 	| {
 			success: true;
@@ -201,7 +203,7 @@ export type MatchDayResponse =
 	  };
 
 export type Leaderboard = [
-	user: User & { predictions: Prediction[] },
+	user: ResolvedUser,
 	matchPoints: number,
 	dayPoints: number,
 	maxPoints: number,
@@ -217,11 +219,19 @@ export type User = {
 	dayPoints?: number | null;
 	matchPointsHistory?: string | null;
 	match?: number | null;
+	remindMinutes?: number | null;
 };
 export type Reminder = {
 	date: string;
 	userId: string;
 	remind: string;
+};
+
+export type ResolvedUser = Pick<
+	User,
+	"dayPoints" | "id" | "match" | "matchPointsHistory"
+> & {
+	predictions: Pick<Prediction, "matchId" | "prediction">[];
 };
 
 export type EnvVars = {
@@ -240,4 +250,6 @@ export type EnvVars = {
 export type Env = EnvVars & {
 	DB: D1Database;
 	KV: KVNamespace;
+	PREDICTIONS_REMINDERS: Workflow<PRParams>;
+	LIVE_SCORE: Workflow<LVParams>;
 };

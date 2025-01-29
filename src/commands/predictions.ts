@@ -141,14 +141,31 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				options[option.name] = option.value;
 		if (subCommand.name === "reminder") {
 			if (typeof options.before !== "number") return;
-			await env.DB.prepare(
-				`UPDATE Users SET remindMinutes = ?1, reminded = 0 WHERE id = ?2`,
-			)
-				.bind(
-					options.before || null,
-					(interaction.member ?? interaction).user!.id,
+			const [workflow] = await Promise.all([
+				env.PREDICTIONS_REMINDERS.get(new Date().toDateString()).catch(
+					() => {},
+				),
+				env.DB.prepare(
+					`UPDATE Users SET remindMinutes = ?1, reminded = 0 WHERE id = ?2`,
 				)
-				.run();
+					.bind(
+						options.before || null,
+						(interaction.member ?? interaction).user!.id,
+					)
+					.run(),
+			]);
+
+			if (await workflow?.restart().catch(() => true)) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content:
+							"Promemoria impostato correttamente!\n\nNota: il reminder potrebbe non essere recapitato correttamente per la giornata in arrivo.",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
