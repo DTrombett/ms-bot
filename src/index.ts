@@ -98,8 +98,7 @@ const server: ExportedHandler<Env> = {
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
 	scheduled: async ({ cron }, env) => {
-		if (cron === "0 0 * * *")
-			await env.PREDICTIONS_REMINDERS.create({ id: new Date().toDateString() });
+		if (cron === "0 0 * * *") await env.PREDICTIONS_REMINDERS.create();
 		// TODO: Let's make this a workflow too?
 		const { results: reminders } = await env.DB.prepare(
 			`DELETE FROM Reminders
