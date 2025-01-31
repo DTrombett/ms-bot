@@ -68,7 +68,10 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					this.createDM.bind(this, recipient_id),
 				);
 
-				await step.sleepUntil(`${recipient_id} reminder`, date);
+				await step.sleepUntil(
+					`${recipient_id} reminder`,
+					Math.max(date, Date.now() + 1),
+				);
 				await step.do<void>(
 					`send ${recipient_id} reminder`,
 					this.sendReminder.bind(this, channelId, matchDay, startTime),
@@ -79,7 +82,10 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				);
 			}
 		}
-		await step.sleepUntil("match day start", startTime);
+		await step.sleepUntil(
+			"match day start",
+			Math.max(startTime, Date.now() + 1),
+		);
 		const matches = await step.do(
 			"load matches",
 			loadMatches.bind(null, matchDay.id),

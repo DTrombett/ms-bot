@@ -35,7 +35,10 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 
 		rest.setToken(this.env.DISCORD_TOKEN);
 		do {
-			await step.sleepUntil(`sleep until ${time}`, time);
+			await step.sleepUntil(
+				`sleep until ${time}`,
+				Math.max(time, Date.now() + 1),
+			);
 			time = await step.do(
 				`run live scores ${time}`,
 				{
