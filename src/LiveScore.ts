@@ -122,7 +122,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 					if (status === true) return undefined;
 					if (status === undefined)
 						throw new Error("Some matches were postponed");
-					if (status) return status;
+					if (status && status > Date.now()) return status;
 					return promise;
 				},
 			);
