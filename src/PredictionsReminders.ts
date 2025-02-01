@@ -70,7 +70,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 
 				await step.sleepUntil(
 					`${recipient_id} reminder`,
-					Math.max(date, Date.now() + 1),
+					Math.max(date, Date.now() + 1_000),
 				);
 				await step.do<void>(
 					`send ${recipient_id} reminder`,
@@ -84,7 +84,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		}
 		await step.sleepUntil(
 			"match day start",
-			Math.max(startTime, Date.now() + 1),
+			Math.max(startTime, Date.now() + 1_000),
 		);
 		const matches = await step.do(
 			"load matches",

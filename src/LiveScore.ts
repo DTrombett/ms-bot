@@ -37,7 +37,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 		do {
 			await step.sleepUntil(
 				`sleep until ${time}`,
-				Math.max(time, Date.now() + 1),
+				Math.max(time, Date.now() + 1_000),
 			);
 			time = await step.do(
 				`run live scores ${time}`,
