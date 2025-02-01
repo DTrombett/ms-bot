@@ -46,7 +46,13 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 					timeout: "1 day",
 				},
 				async () => {
-					const socket = io("wss://legaseriea.it", { tryAllTransports: true });
+					const socket = io("wss://www.legaseriea.it", {
+						tryAllTransports: true,
+					});
+
+					socket.on("connect", () => {
+						console.log("Live scores connected!");
+					});
 					const matches = await loadMatches(event.payload.matchDay.id);
 					let status = this.isFinished(matches);
 					const users = await this.loadPredictions(matches);
@@ -99,17 +105,13 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 												: undefined,
 								);
 						});
-						socket.once("connect_error", (error) => {
-							if (!socket.active) {
-								console.error(error);
-								resolve(Date.now() + 1000 * 20);
-							}
+						socket.on("connect_error", (error) => {
+							console.error(error);
+							if (!socket.active) resolve(Date.now() + 1000 * 20);
 						});
-						socket.once("disconnect", (error) => {
-							if (!socket.active) {
-								console.error(new Error(error));
-								resolve(Date.now() + 1000 * 20);
-							}
+						socket.on("disconnect", (error, description) => {
+							console.error(new Error(error), description);
+							if (!socket.active) resolve(Date.now() + 1000 * 20);
 						});
 					});
 
