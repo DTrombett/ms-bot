@@ -100,6 +100,17 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				});
 				return;
 			}
+			if (message.length > 1_000) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content:
+							"La lunghezza massima di un promemoria è di 1000 caratteri",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
 			const id = Array.from(
 				{ length: 8 },
 				() => Math.random().toString(36)[2],
