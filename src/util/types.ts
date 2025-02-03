@@ -246,11 +246,6 @@ export type User = {
 	match?: number | null;
 	remindMinutes?: number | null;
 };
-export type Reminder = {
-	date: string;
-	userId: string;
-	remind: string;
-};
 
 export type ResolvedUser = Pick<
 	User,
@@ -275,7 +270,6 @@ export type EnvVars = {
 };
 export type Env = EnvVars & {
 	DB: D1Database;
-	KV: KVNamespace;
 	PREDICTIONS_REMINDERS: Workflow<PRParams>;
 	LIVE_SCORE: Workflow<LVParams>;
 	LIVE_MATCH: Workflow<LMParams>;
