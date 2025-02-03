@@ -267,6 +267,8 @@ export type EnvVars = {
 	PREDICTIONS_ROLE: string;
 	SEASON_ID: string;
 	LIVE_MATCH_CHANNEL: string;
+	CLOUDFLARE_API_TOKEN: string;
+	CLOUDFLARE_ACCOUNT_ID: string;
 };
 export type Env = EnvVars & {
 	DB: D1Database;

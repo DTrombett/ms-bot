@@ -1,4 +1,11 @@
-import { inlineCode } from "@discordjs/formatters";
+import { EmbedBuilder } from "@discordjs/builders";
+import {
+	inlineCode,
+	quote,
+	time,
+	TimestampStyles,
+} from "@discordjs/formatters";
+import Cloudflare from "cloudflare";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -10,6 +17,7 @@ import {
 } from "discord-api-types/v10";
 import ms from "ms";
 import { ok } from "node:assert";
+import type { Params } from "../Reminder";
 import { normalizeError, type CommandOptions } from "../util";
 
 export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
@@ -143,41 +151,59 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				},
 			});
 		} else if (subcommand.name === "list") {
-			// TODO
-			// const { results } = await env.DB.prepare(
-			// 	`SELECT date,
-			// 		remind
-			// 	FROM Reminders
-			// 	WHERE userId = ?1
-			// 	ORDER BY date ASC`,
-			// )
-			// 	.bind((interaction.member ?? interaction).user?.id)
-			// 	.all<Pick<Reminder, "date" | "remind">>();
-			// reply({
-			// 	type: InteractionResponseType.ChannelMessageWithSource,
-			// 	data: {
-			// 		embeds: results.length
-			// 			? [
-			// 					new EmbedBuilder()
-			// 						.setTitle("⏰ Promemoria")
-			// 						.setColor(0x5865f2)
-			// 						.setDescription(
-			// 							results
-			// 								.map((r, i) => {
-			// 									const date = new Date(`${r.date.replace(" ", "T")}Z`);
-			// 									return `${i + 1}. ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
-			// 								})
-			// 								.join("\n"),
-			// 						)
-			// 						.toJSON(),
-			// 				]
-			// 			: undefined,
-			// 		content: results.length
-			// 			? undefined
-			// 			: "Non hai impostato alcun promemoria!",
-			// 		flags: MessageFlags.Ephemeral,
-			// 	},
-			// });
+			const client = new Cloudflare({
+				apiToken: env.CLOUDFLARE_API_TOKEN,
+			});
+			const reminderIds: Promise<Cloudflare.Workflows.Instances.InstanceGetResponse>[] =
+				[];
+			const userId = (interaction.user ?? interaction.member?.user)!.id;
+
+			for await (const instance of client.workflows.instances.list("reminder", {
+				account_id: env.CLOUDFLARE_ACCOUNT_ID,
+				status: "waiting",
+			}))
+				if (
+					instance.id.startsWith(`${userId}-`) &&
+					reminderIds.push(
+						client.workflows.instances.get("reminder", instance.id, {
+							account_id: env.CLOUDFLARE_ACCOUNT_ID,
+						}),
+					) === 5
+				)
+					break;
+			const reminders = (await Promise.all(
+				reminderIds,
+			)) as (Cloudflare.Workflows.Instances.InstanceGetResponse & {
+				params: Params;
+			})[];
+
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					embeds: reminders.length
+						? [
+								new EmbedBuilder()
+									.setTitle("⏰ Promemoria")
+									.setColor(0x5865f2)
+									.setDescription(
+										reminders
+											.map((r, i) => {
+												const seconds =
+													(r.params.duration + Date.parse(r.start!)) / 1_000;
+
+												return `${i + 1}. ${time(seconds, TimestampStyles.LongDateTime)} (${time(seconds, TimestampStyles.RelativeTime)})\n${r.params.message.slice(0, 256).split("\n").map(quote).join("\n")}`;
+											})
+											.join("\n"),
+									)
+									.toJSON(),
+							]
+						: undefined,
+					content: reminders.length
+						? undefined
+						: "Non hai impostato alcun promemoria!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
 		} else if (subcommand.name === "remove") {
 			const { value: id } = options.get(
 				"id",
