@@ -9,6 +9,7 @@ import {
 	type APIApplicationCommandInteractionDataSubcommandOption,
 } from "discord-api-types/v10";
 import ms from "ms";
+import { ok } from "node:assert";
 import { normalizeError, type CommandOptions } from "../util";
 
 export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
@@ -45,7 +46,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 					type: ApplicationCommandOptionType.Subcommand,
 				},
 				{
-					name: "delete",
+					name: "remove",
 					description: "Elimina un promemoria",
 					type: ApplicationCommandOptionType.Subcommand,
 					options: [
@@ -70,8 +71,9 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 		const [subcommand] = interaction.data
 			.options as APIApplicationCommandInteractionDataSubcommandOption[];
 
-		for (const option of subcommand!.options!) options.set(option.name, option);
-		if (subcommand?.name === "me") {
+		ok(subcommand);
+		for (const option of subcommand.options!) options.set(option.name, option);
+		if (subcommand.name === "me") {
 			const { value: message } = options.get(
 				"to",
 			) as APIApplicationCommandInteractionDataStringOption;
@@ -140,7 +142,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 					flags: MessageFlags.Ephemeral,
 				},
 			});
-		} else if (subcommand?.name === "list") {
+		} else if (subcommand.name === "list") {
 			// TODO
 			// const { results } = await env.DB.prepare(
 			// 	`SELECT date,
@@ -176,7 +178,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 			// 		flags: MessageFlags.Ephemeral,
 			// 	},
 			// });
-		} else if (subcommand?.name === "remove") {
+		} else if (subcommand.name === "remove") {
 			const { value: id } = options.get(
 				"id",
 			) as APIApplicationCommandInteractionDataStringOption;
