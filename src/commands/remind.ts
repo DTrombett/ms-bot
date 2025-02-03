@@ -11,14 +11,16 @@ import {
 	ApplicationCommandType,
 	InteractionResponseType,
 	MessageFlags,
+	Routes,
 	type APIApplicationCommandInteractionDataOption,
 	type APIApplicationCommandInteractionDataStringOption,
 	type APIApplicationCommandInteractionDataSubcommandOption,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
 import ms from "ms";
 import { ok } from "node:assert";
 import type { Params } from "../Reminder";
-import { normalizeError, type CommandOptions } from "../util";
+import { normalizeError, rest, type CommandOptions } from "../util";
 
 export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
@@ -151,6 +153,10 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				},
 			});
 		} else if (subcommand.name === "list") {
+			reply({
+				type: InteractionResponseType.DeferredChannelMessageWithSource,
+				data: { flags: MessageFlags.Ephemeral },
+			});
 			const client = new Cloudflare({
 				apiToken: env.CLOUDFLARE_API_TOKEN,
 			});
@@ -177,33 +183,35 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				params: Params;
 			})[];
 
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					embeds: reminders.length
-						? [
-								new EmbedBuilder()
-									.setTitle("⏰ Promemoria")
-									.setColor(0x5865f2)
-									.setDescription(
-										reminders
-											.map((r, i) => {
-												const seconds =
-													(r.params.duration + Date.parse(r.start!)) / 1_000;
+			await rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						embeds: reminders.length
+							? [
+									new EmbedBuilder()
+										.setTitle("⏰ Promemoria")
+										.setColor(0x5865f2)
+										.setDescription(
+											reminders
+												.map((r, i) => {
+													const seconds = Math.round(
+														(r.params.duration + Date.parse(r.start!)) / 1_000,
+													);
 
-												return `${i + 1}. ${time(seconds, TimestampStyles.LongDateTime)} (${time(seconds, TimestampStyles.RelativeTime)})\n${r.params.message.slice(0, 256).split("\n").map(quote).join("\n")}`;
-											})
-											.join("\n"),
-									)
-									.toJSON(),
-							]
-						: undefined,
-					content: reminders.length
-						? undefined
-						: "Non hai impostato alcun promemoria!",
-					flags: MessageFlags.Ephemeral,
+													return `${i + 1}. ${time(seconds, TimestampStyles.LongDateTime)} (${time(seconds, TimestampStyles.RelativeTime)})\n${r.params.message.slice(0, 256).split("\n").map(quote).join("\n")}`;
+												})
+												.join("\n"),
+										)
+										.toJSON(),
+								]
+							: undefined,
+						content: reminders.length
+							? undefined
+							: "Non hai impostato alcun promemoria!",
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
-			});
+			);
 		} else if (subcommand.name === "remove") {
 			const { value: id } = options.get(
 				"id",
