@@ -17,6 +17,7 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
+		rest.setToken(this.env.DISCORD_TOKEN);
 		const [channelId] = await Promise.all([
 			step.do(
 				"Create dm channel",
@@ -25,7 +26,6 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 			step.sleep("Sleep", event.payload.seconds),
 		]);
 
-		rest.setToken(this.env.DISCORD_TOKEN);
 		await step.do<void>(
 			"Send reminder",
 			this.sendReminder.bind(this, channelId, event.payload.message),
