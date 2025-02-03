@@ -54,9 +54,9 @@ export const dev: CommandOptions<ApplicationCommandType.ChatInput> = {
 		});
 		if (subcommand.name === "register-commands") {
 			const commands = Object.values(commandsObject);
-			const { value: isDev } = options.get(
-				"dev",
-			) as APIApplicationCommandInteractionDataBooleanOption;
+			const { value: isDev } = (options.get("dev") ?? {
+				value: false,
+			}) as APIApplicationCommandInteractionDataBooleanOption;
 			const [privateAPICommands, publicAPICommands] = await Promise.all([
 				(
 					rest.put(
