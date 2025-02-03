@@ -78,9 +78,9 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 			const { value: date } = options.get(
 				"in",
 			) as APIApplicationCommandInteractionDataStringOption;
-			const seconds = ms(date.replace(/\s+/g, "") as "0") / 1_000 || 0;
+			const duration = ms(date.replace(/\s+/g, "") as "0") || 0;
 
-			if (seconds > 31_536_000) {
+			if (duration > 31_536_000_000) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
@@ -90,7 +90,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				});
 				return;
 			}
-			if (seconds < 1) {
+			if (duration < 1_000) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
@@ -107,7 +107,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 			const userId = (interaction.user ?? interaction.member?.user)!.id;
 			const result = await env.REMINDER.create({
 				id: `${userId}-${id}`,
-				params: { message, seconds, userId },
+				params: { message, duration, userId },
 			})
 				.then(() => {})
 				.catch(normalizeError);

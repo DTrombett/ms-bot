@@ -10,7 +10,7 @@ import {
 } from "discord-api-types/v10";
 import { rest, type Env } from "./util";
 
-export type Params = { message: string; seconds: number; userId: string };
+export type Params = { message: string; duration: number; userId: string };
 
 export class Reminder extends WorkflowEntrypoint<Env, Params> {
 	override async run(
@@ -23,7 +23,7 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 				"Create dm channel",
 				this.createDM.bind(this, event.payload.userId),
 			),
-			step.sleep("Sleep", event.payload.seconds),
+			step.sleep("Sleep", event.payload.duration),
 		]);
 
 		await step.do<void>(
