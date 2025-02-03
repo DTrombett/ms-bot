@@ -1,9 +1,4 @@
-import {
-	EmbedBuilder,
-	quote,
-	time,
-	TimestampStyles,
-} from "@discordjs/builders";
+import { inlineCode } from "@discordjs/formatters";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -14,7 +9,7 @@ import {
 	type APIApplicationCommandInteractionDataSubcommandOption,
 } from "discord-api-types/v10";
 import ms from "ms";
-import { Reminder, type CommandOptions } from "../util";
+import { normalizeError, type CommandOptions } from "../util";
 
 export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
@@ -49,6 +44,21 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 					description: "Elenca i tuoi promemoria",
 					type: ApplicationCommandOptionType.Subcommand,
 				},
+				{
+					name: "delete",
+					description: "Elimina un promemoria",
+					type: ApplicationCommandOptionType.Subcommand,
+					options: [
+						{
+							name: "id",
+							description: "L'id del promemoria da eliminare",
+							type: ApplicationCommandOptionType.String,
+							required: true,
+							min_length: 8,
+							max_length: 8,
+						},
+					],
+				},
 			],
 		},
 	],
@@ -62,7 +72,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 
 		for (const option of subcommand!.options!) options.set(option.name, option);
 		if (subcommand?.name === "me") {
-			const { value: reminder } = options.get(
+			const { value: message } = options.get(
 				"to",
 			) as APIApplicationCommandInteractionDataStringOption;
 			const { value: date } = options.get(
@@ -70,139 +80,125 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 			) as APIApplicationCommandInteractionDataStringOption;
 			const seconds = ms(date.replace(/\s+/g, "") as "0") / 1_000 || 0;
 
-			if (seconds > 315_360_000) {
+			if (seconds > 31_536_000) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
-						content: "Non puoi impostare una durata maggiore di 10 anni!",
+						content: "Non puoi impostare una durata maggiore di 1 anno!",
 						flags: MessageFlags.Ephemeral,
 					},
 				});
 				return;
 			}
-			if (seconds < 10) {
+			if (seconds < 1) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
-						content: "Non puoi impostare una durata minore di 10 secondi!",
+						content: "Non puoi impostare una durata minore di 1 secondo!",
 						flags: MessageFlags.Ephemeral,
 					},
 				});
 				return;
 			}
-			if (
-				((await env.DB.prepare(
-					`SELECT COUNT(*) as count
-						FROM Reminders
-						WHERE userId = ?1`,
-				)
-					.bind((interaction.member ?? interaction).user?.id)
-					.first<number>("count")) ?? 0) >= 10
-			) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Non puoi impostare più di 10 promemoria al momento :(",
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-				return;
-			}
-			if (
-				await env.DB.prepare(
-					`INSERT INTO Reminders (date, userId, remind)
-				VALUES (datetime('now', '+' || ?1 || ' seconds'), ?2, ?3)`,
-				)
-					.bind(seconds, (interaction.member ?? interaction).user?.id, reminder)
-					.run()
-					.catch(() => {})
-			)
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Promemoria impostato correttamente!",
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-			else
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Questo promemoria già esiste!",
-						flags: MessageFlags.Ephemeral,
-					},
-				});
-		} else if (subcommand?.name === "list") {
-			const { results } = await env.DB.prepare(
-				`SELECT date,
-					remind
-				FROM Reminders
-				WHERE userId = ?1
-				ORDER BY date ASC`,
-			)
-				.bind((interaction.member ?? interaction).user?.id)
-				.all<Pick<Reminder, "date" | "remind">>();
+			const id = Array.from(
+				{ length: 8 },
+				() => Math.random().toString(36)[2],
+			).join("");
+			const userId = (interaction.user ?? interaction.member?.user)!.id;
+			const result = await env.REMINDER.create({
+				id: `${userId}-${id}`,
+				params: { message, seconds, userId },
+			})
+				.then(() => {})
+				.catch(normalizeError);
 
+			if (result) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Si è verificato un errore: ${inlineCode(result.message)}`,
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
-					embeds: results.length
-						? [
-								new EmbedBuilder()
-									.setTitle("⏰ Promemoria")
-									.setColor(0x5865f2)
-									.setDescription(
-										results
-											.map((r, i) => {
-												const date = new Date(`${r.date.replace(" ", "T")}Z`);
-
-												return `${i + 1}. ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
-											})
-											.join("\n"),
-									)
-									.toJSON(),
-							]
-						: undefined,
-					content: results.length
-						? undefined
-						: "Non hai impostato alcun promemoria!",
+					content: `Promemoria \`${inlineCode(id)}\` impostato correttamente!`,
 					flags: MessageFlags.Ephemeral,
 				},
 			});
+		} else if (subcommand?.name === "list") {
+			// TODO
+			// const { results } = await env.DB.prepare(
+			// 	`SELECT date,
+			// 		remind
+			// 	FROM Reminders
+			// 	WHERE userId = ?1
+			// 	ORDER BY date ASC`,
+			// )
+			// 	.bind((interaction.member ?? interaction).user?.id)
+			// 	.all<Pick<Reminder, "date" | "remind">>();
+			// reply({
+			// 	type: InteractionResponseType.ChannelMessageWithSource,
+			// 	data: {
+			// 		embeds: results.length
+			// 			? [
+			// 					new EmbedBuilder()
+			// 						.setTitle("⏰ Promemoria")
+			// 						.setColor(0x5865f2)
+			// 						.setDescription(
+			// 							results
+			// 								.map((r, i) => {
+			// 									const date = new Date(`${r.date.replace(" ", "T")}Z`);
+			// 									return `${i + 1}. ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
+			// 								})
+			// 								.join("\n"),
+			// 						)
+			// 						.toJSON(),
+			// 				]
+			// 			: undefined,
+			// 		content: results.length
+			// 			? undefined
+			// 			: "Non hai impostato alcun promemoria!",
+			// 		flags: MessageFlags.Ephemeral,
+			// 	},
+			// });
 		} else if (subcommand?.name === "remove") {
-			const { results } = await env.DB.prepare(
-				`SELECT date,
-					remind
-				FROM Reminders
-				WHERE userId = ?1
-				ORDER BY date ASC`,
-			)
-				.bind((interaction.member ?? interaction).user?.id)
-				.all<Pick<Reminder, "date" | "remind">>();
+			const { value: id } = options.get(
+				"id",
+			) as APIApplicationCommandInteractionDataStringOption;
+			const instance = await env.REMINDER.get(
+				`${(interaction.user ?? interaction.member?.user)!.id}-${id}`,
+			).catch(() => {});
 
+			if (!instance) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: "Promemoria non trovato!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			const error = await instance.terminate().catch(normalizeError);
+
+			if (error) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: `Si è verificato un errore: ${inlineCode(error.message)}`,
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
-					embeds: results.length
-						? [
-								new EmbedBuilder()
-									.setTitle("⏰ Promemoria")
-									.setColor(0x5865f2)
-									.setDescription(
-										results
-											.map((r, i) => {
-												const date = new Date(`${r.date.replace(" ", "T")}Z`);
-
-												return `${i + 1}. ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
-											})
-											.join("\n"),
-									)
-									.toJSON(),
-							]
-						: undefined,
-					content: results.length
-						? undefined
-						: "Non hai impostato alcun promemoria!",
+					content: "Promemoria rimosso correttamente!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});

@@ -6,12 +6,9 @@ import {
 	APIModalSubmitInteraction,
 	APIPingInteraction,
 	InteractionResponseType,
-	RESTPostAPICurrentUserCreateDMChannelJSONBody,
-	RESTPostAPICurrentUserCreateDMChannelResult,
-	Routes,
 } from "discord-api-types/v10";
 import * as commandsObject from "./commands";
-import type { CommandOptions, Env, Handler, Reminder } from "./util";
+import type { CommandOptions, Env, Handler } from "./util";
 import {
 	executeInteraction,
 	JsonResponse,
@@ -97,36 +94,14 @@ const server: ExportedHandler<Env> = {
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
-	scheduled: async ({ cron }, env) => {
-		if (cron === "0 0 * * *") await env.PREDICTIONS_REMINDERS.create();
-		// TODO: Let's make this a workflow too?
-		const { results: reminders } = await env.DB.prepare(
-			`DELETE FROM Reminders
-			WHERE date <= datetime('now')
-			RETURNING
-				remind,
-				userId
-			ORDER BY date ASC
-			LIMIT 2`,
-		).all<Pick<Reminder, "remind" | "userId">>();
-
-		rest.setToken(env.DISCORD_TOKEN);
-		await Promise.all(
-			reminders.map(async ({ userId: recipient_id, remind: content }) => {
-				const { id } = (await rest.post(Routes.userChannels(), {
-					body: {
-						recipient_id,
-					} satisfies RESTPostAPICurrentUserCreateDMChannelJSONBody,
-				})) as RESTPostAPICurrentUserCreateDMChannelResult;
-
-				return rest.post(Routes.channelMessages(id), { body: { content } });
-			}),
-		);
+	scheduled: async ({}, env) => {
+		await env.PREDICTIONS_REMINDERS.create();
 	},
 };
 
 export { LiveMatch } from "./LiveMatch";
 export { LiveScore } from "./LiveScore";
 export { PredictionsReminders } from "./PredictionsReminders";
+export { Reminder } from "./Reminder";
 
 export default server;

@@ -16,6 +16,7 @@ import type {
 import type { Params as LMParams } from "../LiveMatch";
 import type { Params as LVParams } from "../LiveScore";
 import type { Params as PRParams } from "../PredictionsReminders";
+import type { Params as RParams } from "../Reminder";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -278,4 +279,5 @@ export type Env = EnvVars & {
 	PREDICTIONS_REMINDERS: Workflow<PRParams>;
 	LIVE_SCORE: Workflow<LVParams>;
 	LIVE_MATCH: Workflow<LMParams>;
+	REMINDER: Workflow<RParams>;
 };
