@@ -72,7 +72,6 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 							}[] = JSON.parse(data);
 							let changed = false;
 
-							console.log("Live update:", updates);
 							for (const update of updates) {
 								const found = matches.find(
 									(m) => m.match_id === update.match_id,

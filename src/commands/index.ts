@@ -4,7 +4,6 @@ export * from "./banner";
 export * from "./cat";
 export * from "./dice";
 export * from "./dog";
-export * from "./getMatchDay";
 export * from "./icon";
 export * from "./kick";
 export * from "./love";

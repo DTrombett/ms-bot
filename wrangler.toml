@@ -31,3 +31,8 @@ class_name = "PredictionsReminders"
 name = "live-score"
 binding = "LIVE_SCORE"
 class_name = "LiveScore"
+
+[[workflows]]
+name = "live-match"
+binding = "LIVE_MATCH"
+class_name = "LiveMatch"

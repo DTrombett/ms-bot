@@ -13,6 +13,7 @@ import type {
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import type { Params as LMParams } from "../LiveMatch";
 import type { Params as LVParams } from "../LiveScore";
 import type { Params as PRParams } from "../PredictionsReminders";
 
@@ -202,6 +203,29 @@ export type MatchDayResponse =
 			data: MatchDay[];
 	  };
 
+export type CommentaryResponse = {
+	success: boolean;
+	message: string;
+	errors: {
+		type: string;
+		message: string;
+		params: unknown[];
+	}[];
+	data: {
+		messages: {
+			comment: string;
+			id: string;
+			lastModified: string;
+			minute: string;
+			period: string;
+			second: string;
+			time: string;
+			type: string;
+			varCheck: string;
+		}[];
+	};
+};
+
 export type Leaderboard = [
 	user: ResolvedUser,
 	matchPoints: number,
@@ -246,10 +270,12 @@ export type EnvVars = {
 	PREDICTIONS_CHANNEL: string;
 	PREDICTIONS_ROLE: string;
 	SEASON_ID: string;
+	LIVE_MATCH_CHANNEL: string;
 };
 export type Env = EnvVars & {
 	DB: D1Database;
 	KV: KVNamespace;
 	PREDICTIONS_REMINDERS: Workflow<PRParams>;
 	LIVE_SCORE: Workflow<LVParams>;
+	LIVE_MATCH: Workflow<LMParams>;
 };

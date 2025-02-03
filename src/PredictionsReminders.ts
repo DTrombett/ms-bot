@@ -109,21 +109,17 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				),
 			);
 		await Promise.all(promises);
-		const messageId = await step.do(
-			"send message",
-			this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
+		await step.do<void>(
+			"start live score",
+			this.startLiveScore.bind(
+				this,
+				matchDay,
+				await step.do(
+					"send message",
+					this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
+				),
+			),
 		);
-
-		await Promise.all<void>([
-			step.do(
-				"store message id",
-				this.storeMessageId.bind(this, matchDay.id, messageId),
-			),
-			step.do(
-				"start live score",
-				this.startLiveScore.bind(this, matchDay, messageId),
-			),
-		]);
 	}
 
 	private async getMatchDay() {
@@ -313,9 +309,5 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		messageId: string,
 	) {
 		await this.env.LIVE_SCORE.create({ params: { matchDay, messageId } });
-	}
-
-	private async storeMessageId(matchDayId: number, messageId: string) {
-		await this.env.KV.put(matchDayId.toString(), messageId);
 	}
 }
