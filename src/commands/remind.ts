@@ -181,7 +181,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				FROM Reminders
 				WHERE userId = ?1
 				ORDER BY date
-				LIMIT 5`,
+				LIMIT 8`,
 			)
 				.bind((interaction.user ?? interaction.member?.user)!.id)
 				.all<Pick<Reminder, "date" | "id" | "remind">>();
