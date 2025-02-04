@@ -10,6 +10,7 @@ import {
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
+	ButtonStyle,
 	InteractionResponseType,
 	MessageFlags,
 	Routes,
@@ -78,11 +79,13 @@ const sendPage = async (
 								.setCustomId(`remind-${userId}-${page - 1}`)
 								.setLabel("Precedente")
 								.setEmoji({ name: "⬅️" })
+								.setStyle(ButtonStyle.Secondary)
 								.setDisabled(page <= 0),
 							new ButtonBuilder()
 								.setCustomId(`remind-${userId}-${page + 1}`)
 								.setLabel("Successiva")
 								.setEmoji({ name: "➡️" })
+								.setStyle(ButtonStyle.Secondary)
 								.setDisabled(count <= (page + 1) * 8),
 						)
 						.toJSON(),
