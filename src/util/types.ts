@@ -246,6 +246,12 @@ export type User = {
 	match?: number | null;
 	remindMinutes?: number | null;
 };
+export type Reminder = {
+	id: string;
+	date: string;
+	userId: string;
+	remind: string;
+};
 
 export type ResolvedUser = Pick<
 	User,

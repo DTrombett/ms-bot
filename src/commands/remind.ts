@@ -1,10 +1,24 @@
 import {
+	EmbedBuilder,
+	inlineCode,
+	quote,
+	time,
+	TimestampStyles,
+} from "@discordjs/builders";
+import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	InteractionResponseType,
 	MessageFlags,
+	Routes,
+	type APIApplicationCommandInteractionDataOption,
+	type APIApplicationCommandInteractionDataStringOption,
+	type APIApplicationCommandInteractionDataSubcommandOption,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
-import { type CommandOptions } from "../util";
+import ms from "ms";
+import { ok } from "node:assert";
+import { normalizeError, Reminder, rest, type CommandOptions } from "../util";
 
 export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
@@ -57,190 +71,202 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 			],
 		},
 	],
-	run: async (reply) => {
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: {
-				content: "Comando in manutenzione",
-				flags: MessageFlags.Ephemeral,
-			},
-		});
-		// TODO: Re-add database to correctly list and limit workflows
-		// const options = new Map<
-		// 	string,
-		// 	APIApplicationCommandInteractionDataOption
-		// >();
-		// const [subcommand] = interaction.data
-		// 	.options as APIApplicationCommandInteractionDataSubcommandOption[];
+	run: async (reply, { interaction, env }) => {
+		const options = new Map<
+			string,
+			APIApplicationCommandInteractionDataOption
+		>();
+		const [subcommand] = interaction.data
+			.options as APIApplicationCommandInteractionDataSubcommandOption[];
+		ok(subcommand);
+		for (const option of subcommand.options!) options.set(option.name, option);
+		if (subcommand.name === "me") {
+			const { value: message } = options.get(
+				"to",
+			) as APIApplicationCommandInteractionDataStringOption;
+			const { value: date } = options.get(
+				"in",
+			) as APIApplicationCommandInteractionDataStringOption;
+			const duration = ms(date.replace(/\s+/g, "") as "0") || 0;
+			if (duration > 31_536_000_000) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: "Non puoi impostare una durata maggiore di 1 anno!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			if (duration < 1_000) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: "Non puoi impostare una durata minore di 1 secondo!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			if (message.length > 1_000) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content:
+							"La lunghezza massima di un promemoria è di 1000 caratteri",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			reply({
+				type: InteractionResponseType.DeferredChannelMessageWithSource,
+				data: { flags: MessageFlags.Ephemeral },
+			});
+			if (
+				((await env.DB.prepare(
+					`SELECT COUNT(*) as count
+						FROM Reminders
+						WHERE userId = ?1`,
+				)
+					.bind((interaction.member ?? interaction).user?.id)
+					.first<number>("count")) ?? 0) >= 64
+			) {
+				await rest.patch(
+					Routes.webhookMessage(interaction.application_id, interaction.token),
+					{
+						body: {
+							content: "Non puoi impostare più di 64 promemoria!",
+						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					},
+				);
+				return;
+			}
+			const id = Array.from(
+				{ length: 8 },
+				() => Math.random().toString(36)[2],
+			).join("");
+			const userId = (interaction.user ?? interaction.member?.user)!.id;
+			const result = await env.REMINDER.create({
+				id: `${userId}-${id}`,
+				params: { message, duration, userId },
+			}).catch(normalizeError);
 
-		// ok(subcommand);
-		// for (const option of subcommand.options!) options.set(option.name, option);
-		// if (subcommand.name === "me") {
-		// 	const { value: message } = options.get(
-		// 		"to",
-		// 	) as APIApplicationCommandInteractionDataStringOption;
-		// 	const { value: date } = options.get(
-		// 		"in",
-		// 	) as APIApplicationCommandInteractionDataStringOption;
-		// 	const duration = ms(date.replace(/\s+/g, "") as "0") || 0;
+			if (result instanceof Error) {
+				await rest.patch(
+					Routes.webhookMessage(interaction.application_id, interaction.token),
+					{
+						body: {
+							content: `Si è verificato un errore: ${inlineCode(result.message)}`,
+						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					},
+				);
+				return;
+			}
+			await rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						content: `Promemoria \`${inlineCode(id)}\` impostato correttamente!`,
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+		} else if (subcommand.name === "list") {
+			reply({
+				type: InteractionResponseType.DeferredChannelMessageWithSource,
+				data: { flags: MessageFlags.Ephemeral },
+			});
+			const { results } = await env.DB.prepare(
+				`SELECT id, date, remind
+				FROM Reminders
+				WHERE userId = ?1
+				ORDER BY date
+				LIMIT 5`,
+			)
+				.bind((interaction.user ?? interaction.member?.user)!.id)
+				.all<Pick<Reminder, "date" | "id" | "remind">>();
 
-		// 	if (duration > 31_536_000_000) {
-		// 		reply({
-		// 			type: InteractionResponseType.ChannelMessageWithSource,
-		// 			data: {
-		// 				content: "Non puoi impostare una durata maggiore di 1 anno!",
-		// 				flags: MessageFlags.Ephemeral,
-		// 			},
-		// 		});
-		// 		return;
-		// 	}
-		// 	if (duration < 1_000) {
-		// 		reply({
-		// 			type: InteractionResponseType.ChannelMessageWithSource,
-		// 			data: {
-		// 				content: "Non puoi impostare una durata minore di 1 secondo!",
-		// 				flags: MessageFlags.Ephemeral,
-		// 			},
-		// 		});
-		// 		return;
-		// 	}
-		// 	if (message.length > 1_000) {
-		// 		reply({
-		// 			type: InteractionResponseType.ChannelMessageWithSource,
-		// 			data: {
-		// 				content:
-		// 					"La lunghezza massima di un promemoria è di 1000 caratteri",
-		// 				flags: MessageFlags.Ephemeral,
-		// 			},
-		// 		});
-		// 		return;
-		// 	}
-		// 	const id = Array.from(
-		// 		{ length: 8 },
-		// 		() => Math.random().toString(36)[2],
-		// 	).join("");
-		// 	const userId = (interaction.user ?? interaction.member?.user)!.id;
-		// 	const result = await env.REMINDER.create({
-		// 		id: `${userId}-${id}`,
-		// 		params: { message, duration, userId },
-		// 	})
-		// 		.then(() => {})
-		// 		.catch(normalizeError);
+			await rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						embeds: results.length
+							? [
+									new EmbedBuilder()
+										.setTitle("⏰ Promemoria")
+										.setColor(0x5865f2)
+										.setDescription(
+											results
+												.map((r, i) => {
+													const date = new Date(r.date);
 
-		// 	if (result) {
-		// 		reply({
-		// 			type: InteractionResponseType.ChannelMessageWithSource,
-		// 			data: {
-		// 				content: `Si è verificato un errore: ${inlineCode(result.message)}`,
-		// 				flags: MessageFlags.Ephemeral,
-		// 			},
-		// 		});
-		// 		return;
-		// 	}
-		// 	reply({
-		// 		type: InteractionResponseType.ChannelMessageWithSource,
-		// 		data: {
-		// 			content: `Promemoria \`${inlineCode(id)}\` impostato correttamente!`,
-		// 			flags: MessageFlags.Ephemeral,
-		// 		},
-		// 	});
-		// } else if (subcommand.name === "list") {
-		// 	reply({
-		// 		type: InteractionResponseType.DeferredChannelMessageWithSource,
-		// 		data: { flags: MessageFlags.Ephemeral },
-		// 	});
-		// 	const client = new Cloudflare({
-		// 		apiToken: env.CLOUDFLARE_API_TOKEN,
-		// 	});
-		// 	const reminderIds: Promise<Cloudflare.Workflows.Instances.InstanceGetResponse>[] =
-		// 		[];
-		// 	const userId = (interaction.user ?? interaction.member?.user)!.id;
+													return `${i + 1}. ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
+												})
+												.join("\n"),
+										)
+										.toJSON(),
+								]
+							: undefined,
+						content: results.length
+							? undefined
+							: "Non hai impostato alcun promemoria!",
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+		} else if (subcommand.name === "remove") {
+			const { value: id } = options.get(
+				"id",
+			) as APIApplicationCommandInteractionDataStringOption;
+			const userId = (interaction.user ?? interaction.member?.user)!.id;
+			const instance = await env.REMINDER.get(`${userId}-${id}`).catch(
+				() => {},
+			);
 
-		// 	for await (const instance of client.workflows.instances.list("reminder", {
-		// 		account_id: env.CLOUDFLARE_ACCOUNT_ID,
-		// 		status: "waiting",
-		// 	}))
-		// 		if (
-		// 			instance.id.startsWith(`${userId}-`) &&
-		// 			reminderIds.push(
-		// 				client.workflows.instances.get("reminder", instance.id, {
-		// 					account_id: env.CLOUDFLARE_ACCOUNT_ID,
-		// 				}),
-		// 			) === 5
-		// 		)
-		// 			break;
-		// 	const reminders = (await Promise.all(
-		// 		reminderIds,
-		// 	)) as (Cloudflare.Workflows.Instances.InstanceGetResponse & {
-		// 		params: Params;
-		// 	})[];
+			if (!instance) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: "Promemoria non trovato!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			reply({
+				type: InteractionResponseType.DeferredChannelMessageWithSource,
+				data: { flags: MessageFlags.Ephemeral },
+			});
+			const error = await Promise.all([
+				instance.terminate(),
+				env.DB.prepare(
+					`DELETE FROM Reminders
+					WHERE id = ?1 AND userId = ?2`,
+				)
+					.bind(id, userId)
+					.run(),
+			])
+				.then(() => {})
+				.catch(normalizeError);
 
-		// 	await rest.patch(
-		// 		Routes.webhookMessage(interaction.application_id, interaction.token),
-		// 		{
-		// 			body: {
-		// 				embeds: reminders.length
-		// 					? [
-		// 							new EmbedBuilder()
-		// 								.setTitle("⏰ Promemoria")
-		// 								.setColor(0x5865f2)
-		// 								.setDescription(
-		// 									reminders
-		// 										.map((r, i) => {
-		// 											const seconds = Math.round(
-		// 												(r.params.duration + Date.parse(r.start!)) / 1_000,
-		// 											);
-
-		// 											return `${i + 1}. ${time(seconds, TimestampStyles.LongDateTime)} (${time(seconds, TimestampStyles.RelativeTime)})\n${r.params.message.slice(0, 256).split("\n").map(quote).join("\n")}`;
-		// 										})
-		// 										.join("\n"),
-		// 								)
-		// 								.toJSON(),
-		// 						]
-		// 					: undefined,
-		// 				content: reminders.length
-		// 					? undefined
-		// 					: "Non hai impostato alcun promemoria!",
-		// 			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-		// 		},
-		// 	);
-		// } else if (subcommand.name === "remove") {
-		// 	const { value: id } = options.get(
-		// 		"id",
-		// 	) as APIApplicationCommandInteractionDataStringOption;
-		// 	const instance = await env.REMINDER.get(
-		// 		`${(interaction.user ?? interaction.member?.user)!.id}-${id}`,
-		// 	).catch(() => {});
-
-		// 	if (!instance) {
-		// 		reply({
-		// 			type: InteractionResponseType.ChannelMessageWithSource,
-		// 			data: {
-		// 				content: "Promemoria non trovato!",
-		// 				flags: MessageFlags.Ephemeral,
-		// 			},
-		// 		});
-		// 		return;
-		// 	}
-		// 	const error = await instance.terminate().catch(normalizeError);
-
-		// 	if (error) {
-		// 		reply({
-		// 			type: InteractionResponseType.ChannelMessageWithSource,
-		// 			data: {
-		// 				content: `Si è verificato un errore: ${inlineCode(error.message)}`,
-		// 				flags: MessageFlags.Ephemeral,
-		// 			},
-		// 		});
-		// 		return;
-		// 	}
-		// 	reply({
-		// 		type: InteractionResponseType.ChannelMessageWithSource,
-		// 		data: {
-		// 			content: "Promemoria rimosso correttamente!",
-		// 			flags: MessageFlags.Ephemeral,
-		// 		},
-		// 	});
-		// }
+			if (error) {
+				await rest.patch(
+					Routes.webhookMessage(interaction.application_id, interaction.token),
+					{
+						body: {
+							content: `Si è verificato un errore: ${inlineCode(error.message)}`,
+						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					},
+				);
+				return;
+			}
+			await rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						content: "Promemoria rimosso correttamente!",
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+		}
 	},
 };

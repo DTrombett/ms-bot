@@ -17,19 +17,40 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
-		rest.setToken(this.env.DISCORD_TOKEN);
-		const [channelId] = await Promise.all([
-			step.do(
-				"Create dm channel",
-				this.createDM.bind(this, event.payload.userId),
-			),
-			step.sleep("Sleep", event.payload.duration),
-		]);
+		const sleep = step.sleep("Sleep", event.payload.duration);
 
-		await step.do<void>(
-			"Send reminder",
-			this.sendReminder.bind(this, channelId, event.payload.message),
+		await step.do<void>("Store reminder", this.storeReminder.bind(this, event));
+		rest.setToken(this.env.DISCORD_TOKEN);
+		const channelId = await step.do(
+			"Create dm channel",
+			this.createDM.bind(this, event.payload.userId),
 		);
+
+		await sleep;
+		await Promise.all([
+			step.do<void>(
+				"Send reminder",
+				this.sendReminder.bind(this, channelId, event.payload.message),
+			),
+			step.do<void>("Delete reminder", this.deleteReminder.bind(this, event)),
+		]);
+	}
+
+	private async storeReminder({
+		instanceId,
+		payload: { duration, message, userId },
+	}: WorkflowEvent<Params>) {
+		await this.env.DB.prepare(
+			`INSERT INTO Reminders (id, date, userId, remind)
+				VALUES (?1, datetime('now', '+' || ?2 || ' seconds'), ?3, ?4)`,
+		)
+			.bind(
+				instanceId.slice(userId.length + 1),
+				Math.round(duration / 1_000),
+				userId,
+				message,
+			)
+			.run();
 	}
 
 	private async createDM(recipient_id: string) {
@@ -46,5 +67,17 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 		await rest.post(Routes.channelMessages(channelId), {
 			body: { content: `🔔 Promemoria: ${message}` },
 		});
+	}
+
+	private async deleteReminder({
+		instanceId,
+		payload: { userId },
+	}: WorkflowEvent<Params>) {
+		await this.env.DB.prepare(
+			`DELETE FROM Reminders
+			WHERE id = ?1 AND userId = ?2`,
+		)
+			.bind(instanceId.slice(userId.length + 1), userId)
+			.run();
 	}
 }
