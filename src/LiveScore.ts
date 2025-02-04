@@ -43,7 +43,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 				`run live scores ${time}`,
 				{
 					retries: { limit: Infinity, backoff: "constant", delay: "1 hour" },
-					timeout: "1 day",
+					timeout: "3 hours",
 				},
 				async () => {
 					const socket = io("wss://www.legaseriea.it", {
