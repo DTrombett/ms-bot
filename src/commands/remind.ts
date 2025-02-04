@@ -1,4 +1,6 @@
 import {
+	ActionRowBuilder,
+	ButtonBuilder,
 	EmbedBuilder,
 	inlineCode,
 	quote,
@@ -14,11 +16,84 @@ import {
 	type APIApplicationCommandInteractionDataOption,
 	type APIApplicationCommandInteractionDataStringOption,
 	type APIApplicationCommandInteractionDataSubcommandOption,
+	type APIChatInputApplicationCommandInteraction,
+	type APIMessageComponentInteraction,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
 import ms from "ms";
 import { ok } from "node:assert";
-import { normalizeError, Reminder, rest, type CommandOptions } from "../util";
+import {
+	normalizeError,
+	Reminder,
+	rest,
+	type CommandOptions,
+	type Env,
+} from "../util";
+
+const sendPage = async (
+	interaction:
+		| APIChatInputApplicationCommandInteraction
+		| APIMessageComponentInteraction,
+	env: Env,
+	userId: string | undefined,
+	page = 0,
+) => {
+	const { results } = await env.DB.prepare(
+		`SELECT id, date, remind, COUNT(*) OVER () AS count
+				FROM Reminders
+				WHERE userId = ?1
+				ORDER BY date
+				OFFSET ?2
+				LIMIT 8`,
+	)
+		.bind(userId, page * 8)
+		.all<Pick<Reminder, "date" | "id" | "remind"> & { count: number }>();
+	const count = results[0]?.count ?? 0;
+
+	await rest.patch(
+		Routes.webhookMessage(interaction.application_id, interaction.token),
+		{
+			body: {
+				embeds: results.length
+					? [
+							new EmbedBuilder()
+								.setTitle("⏰ Promemoria")
+								.setColor(0x5865f2)
+								.setDescription(
+									results
+										.map((r, i) => {
+											const date = new Date(r.date);
+
+											return `${i + 1}. ${inlineCode(r.id)} ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
+										})
+										.join("\n"),
+								)
+								.toJSON(),
+						]
+					: undefined,
+				components: [
+					new ActionRowBuilder<ButtonBuilder>()
+						.addComponents(
+							new ButtonBuilder()
+								.setCustomId(`remind-${userId}-${page - 1}`)
+								.setLabel("Precedente")
+								.setEmoji({ name: "⬅️" })
+								.setDisabled(page <= 0),
+							new ButtonBuilder()
+								.setCustomId(`remind-${userId}-${page + 1}`)
+								.setLabel("Successiva")
+								.setEmoji({ name: "➡️" })
+								.setDisabled(count <= (page + 1) * 8),
+						)
+						.toJSON(),
+				],
+				content: results.length
+					? undefined
+					: "Non è presente alcun promemoria!",
+			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		},
+	);
+};
 
 export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
@@ -78,6 +153,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 		>();
 		const [subcommand] = interaction.data
 			.options as APIApplicationCommandInteractionDataSubcommandOption[];
+
 		ok(subcommand);
 		for (const option of subcommand.options!) options.set(option.name, option);
 		if (subcommand.name === "me") {
@@ -123,13 +199,15 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.DeferredChannelMessageWithSource,
 				data: { flags: MessageFlags.Ephemeral },
 			});
+			const userId = (interaction.member ?? interaction).user!.id;
+
 			if (
 				((await env.DB.prepare(
 					`SELECT COUNT(*) as count
 						FROM Reminders
 						WHERE userId = ?1`,
 				)
-					.bind((interaction.member ?? interaction).user?.id)
+					.bind(userId)
 					.first<number>("count")) ?? 0) >= 64
 			) {
 				await rest.patch(
@@ -146,7 +224,6 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				{ length: 8 },
 				() => Math.random().toString(36)[2],
 			).join("");
-			const userId = (interaction.user ?? interaction.member?.user)!.id;
 			const result = await env.REMINDER.create({
 				id: `${userId}-${id}`,
 				params: { message, duration, userId },
@@ -172,47 +249,13 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				},
 			);
 		} else if (subcommand.name === "list") {
+			const userId = (interaction.member ?? interaction).user!.id;
+
 			reply({
 				type: InteractionResponseType.DeferredChannelMessageWithSource,
 				data: { flags: MessageFlags.Ephemeral },
 			});
-			const { results } = await env.DB.prepare(
-				`SELECT id, date, remind
-				FROM Reminders
-				WHERE userId = ?1
-				ORDER BY date
-				LIMIT 8`,
-			)
-				.bind((interaction.user ?? interaction.member?.user)!.id)
-				.all<Pick<Reminder, "date" | "id" | "remind">>();
-
-			await rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: {
-						embeds: results.length
-							? [
-									new EmbedBuilder()
-										.setTitle("⏰ Promemoria")
-										.setColor(0x5865f2)
-										.setDescription(
-											results
-												.map((r, i) => {
-													const date = new Date(r.date);
-
-													return `${i + 1}. ${inlineCode(r.id)} ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
-												})
-												.join("\n"),
-										)
-										.toJSON(),
-								]
-							: undefined,
-						content: results.length
-							? undefined
-							: "Non hai impostato alcun promemoria!",
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
+			await sendPage(interaction, env, userId);
 		} else if (subcommand.name === "remove") {
 			const { value: id } = options.get(
 				"id",
@@ -268,5 +311,11 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				},
 			);
 		}
+	},
+	component: async (reply, { interaction, env }) => {
+		const [, userId, pageS] = interaction.data.custom_id.split("-");
+
+		reply({ type: InteractionResponseType.DeferredMessageUpdate });
+		await sendPage(interaction, env, userId, Number(pageS));
 	},
 };
