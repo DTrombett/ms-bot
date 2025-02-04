@@ -43,10 +43,10 @@ const sendPage = async (
 				FROM Reminders
 				WHERE userId = ?1
 				ORDER BY date
-				OFFSET ${page * 8}
-				LIMIT 8`,
+				LIMIT 8
+				OFFSET ?2`,
 	)
-		.bind(userId)
+		.bind(userId, page * 8)
 		.all<Pick<Reminder, "date" | "id" | "remind"> & { count: number }>();
 	const count = results[0]?.count ?? 0;
 
