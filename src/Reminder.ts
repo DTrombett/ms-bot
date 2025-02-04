@@ -46,7 +46,7 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 		)
 			.bind(
 				instanceId.slice(userId.length + 1),
-				Math.round(duration / 1_000),
+				Math.ceil(duration / 1_000),
 				userId,
 				message,
 			)
