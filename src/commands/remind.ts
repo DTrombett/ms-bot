@@ -200,7 +200,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 												.map((r, i) => {
 													const date = new Date(r.date);
 
-													return `${i + 1}. ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
+													return `${i + 1}. ${inlineCode(r.id)} ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
 												})
 												.join("\n"),
 										)
