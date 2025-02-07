@@ -17,6 +17,7 @@ import {
 	MessageFlags,
 	TextInputStyle,
 } from "discord-api-types/v10";
+import { ok } from "node:assert";
 import {
 	MatchDay,
 	Prediction,
@@ -47,13 +48,13 @@ const buildModal = (
 	matches: Match[],
 	matchDay: MatchDay,
 	part: number,
+	userId: string,
 	predictions?: Pick<Prediction, "matchId" | "prediction">[],
+	timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15,
 ) =>
 	new ModalBuilder()
 		.setCustomId(
-			`predictions-${matchDay.description}-${part}-${
-				Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15
-			}`,
+			`predictions-${matchDay.description}-${part}-${timestamp}-${userId}`,
 		)
 		.setTitle(
 			`Pronostici ${matchDay.description}ª Giornata (${part}/${matches.length / 5})`,
@@ -99,6 +100,18 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 					name: "send",
 					description: "Invia i tuoi pronostici per la prossima giornata",
 					type: ApplicationCommandOptionType.Subcommand,
+					options: [
+						{
+							type: ApplicationCommandOptionType.User,
+							name: "user",
+							description: "OPZIONE PRIVATA",
+						},
+						{
+							type: ApplicationCommandOptionType.Number,
+							name: "day",
+							description: "OPZIONE PRIVATA",
+						},
+					],
 				},
 				{
 					name: "edit",
@@ -135,10 +148,25 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				o.type === ApplicationCommandOptionType.Subcommand,
 		)!;
 		const options: Record<string, boolean | number | string> = {};
+		const userId = (interaction.member ?? interaction).user!.id;
 
 		if (subCommand.options)
 			for (const option of subCommand.options)
 				options[option.name] = option.value;
+		if (options.user !== undefined || options.day !== undefined) {
+			if (!env.OWNER_ID.includes(userId)) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						flags: MessageFlags.Ephemeral,
+						content: "Quest'opzione è privata!",
+					},
+				});
+				return;
+			}
+			ok(typeof options.user === "string" || options.user === undefined);
+			ok(typeof options.day === "number" || options.day === undefined);
+		}
 		if (subCommand.name === "reminder") {
 			if (typeof options.before !== "number") return;
 			await env.DB.prepare(
@@ -160,7 +188,8 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
-			(interaction.member ?? interaction).user!.id,
+			options.user ?? userId,
+			options.day,
 		);
 
 		if (!(matchDay as MatchDay | null)) {
@@ -232,7 +261,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			});
 			return;
 		}
-		if (Date.now() >= startTime) {
+		if (Date.now() >= startTime && !options.user && !options.day) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
@@ -257,7 +286,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${startTime}`,
+										`predictions-${matchDay.description}-1-${options.user ? Infinity : startTime}-${options.user ?? userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -272,14 +301,22 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 		}
 		reply({
 			type: InteractionResponseType.Modal,
-			data: buildModal(matches, matchDay, 1, existingPredictions).toJSON(),
+			data: buildModal(
+				matches,
+				matchDay,
+				1,
+				userId,
+				existingPredictions,
+				options.user ? Infinity : undefined,
+			).toJSON(),
 		});
 	},
 	modalSubmit: async (reply, { interaction, env }) => {
-		const [, day, part, timestamp] = interaction.data.custom_id
-			.split("-")
-			.map((n) => Number(n));
+		let [, day, part, timestamp, userId]: (number | string)[] =
+			interaction.data.custom_id.split("-");
 
+		userId ??= (interaction.member ?? interaction).user!.id;
+		[day, part, timestamp] = [day, part, timestamp].map((n) => Number(n));
 		if (Date.now() >= timestamp!) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -291,7 +328,6 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			});
 			return;
 		}
-		const userId = (interaction.member ?? interaction).user!.id;
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
 			userId,
@@ -380,7 +416,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-${part}-${timestamp}`,
+										`predictions-${matchDay.description}-${part}-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -402,7 +438,9 @@ VALUES (?)`,
 						new ActionRowBuilder<SelectMenuBuilder>()
 							.addComponents(
 								new SelectMenuBuilder()
-									.setCustomId(`predictions-match--${timestamp}`)
+									.setCustomId(
+										`predictions-match-${day}-${timestamp}-${userId}`,
+									)
 									.addOptions(
 										matches.map((m) =>
 											new SelectMenuOptionBuilder()
@@ -434,7 +472,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${timestamp}`,
+										`predictions-${matchDay.description}-1-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -455,7 +493,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-${part! + 1}-${timestamp}`,
+										`predictions-${matchDay.description}-${part! + 1}-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "⏩" })
 									.setLabel("Continua")
@@ -468,7 +506,7 @@ VALUES (?)`,
 			});
 	},
 	component: async (reply, { interaction, env }) => {
-		const [, actionOrDay, part, timestamp] =
+		const [, actionOrDay, part, timestamp, userId] =
 			interaction.data.custom_id.split("-");
 		const time = parseInt(timestamp!);
 
@@ -485,7 +523,8 @@ VALUES (?)`,
 		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
-			(interaction.member ?? interaction).user!.id,
+			userId!,
+			Number(actionOrDay) || Number(part) || undefined,
 		);
 
 		if (!(matchDay as MatchDay | null)) {
@@ -516,10 +555,7 @@ VALUES (?)`,
 				SET match = ?1
 				WHERE id = ?2;`,
 			)
-				.bind(
-					interaction.data.values[0],
-					(interaction.member ?? interaction).user!.id,
-				)
+				.bind(interaction.data.values[0], userId)
 				.run();
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -531,7 +567,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${timestamp}`,
+										`predictions-${matchDay.description}-1-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -559,7 +595,9 @@ VALUES (?)`,
 				matches,
 				matchDay,
 				parseInt(part!),
+				userId!,
 				existingPredictions,
+				time,
 			).toJSON(),
 		});
 	},
