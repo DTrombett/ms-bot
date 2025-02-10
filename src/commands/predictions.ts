@@ -205,6 +205,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			const { results } = await env.DB.prepare(
 				`SELECT id, dayPoints, matchPointsHistory, match
 					FROM Users
+					WHERE dayPoints IS NOT NULL
 					ORDER BY dayPoints DESC`,
 			).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
 
@@ -219,7 +220,6 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							.setTitle("Classifica Generale")
 							.setDescription(
 								results
-									.sort((a, b) => (b.dayPoints ?? 0) - (a.dayPoints ?? 0))
 									.map(
 										(user, i) =>
 											`${i + 1}\\. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
