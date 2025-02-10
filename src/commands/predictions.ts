@@ -23,9 +23,11 @@ import {
 	Prediction,
 	getMatchDayData,
 	normalizeTeamName,
+	resolveLeaderboard,
 	rest,
 	type CommandOptions,
 	type Match,
+	type User,
 } from "../util";
 
 const predictionExamples = [
@@ -114,8 +116,8 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 					],
 				},
 				{
-					name: "edit",
-					description: "Modifica i tuoi pronostici per la prossima giornata",
+					name: "leaderboard",
+					description: "Controlla la classifica generale attuale",
 					type: ApplicationCommandOptionType.Subcommand,
 				},
 				{
@@ -197,6 +199,23 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				},
 			});
 			return;
+		}
+		if (subCommand.name === "leaderboard") {
+			const { results } = await env.DB.prepare(
+				`SELECT id, dayPoints, matchPointsHistory, match
+					FROM Users
+					ORDER BY dayPoints DESC`,
+			).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
+			const leaderboard = resolveLeaderboard(
+				results.map((r) => ({ ...r, predictions: [] })),
+				[],
+			);
+
+			console.log(leaderboard);
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: { content: "Pong?" },
+			});
 		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
