@@ -120,6 +120,26 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				),
 			),
 		);
+		const newMatchDay = await step.do(
+			"Load new match day",
+			this.loadNewMatchDay.bind(this, matchDay.id),
+		);
+
+		if (!newMatchDay) {
+			console.error("No match to be played!");
+			return;
+		}
+		const newStartTime = await step.do(
+			"Get new start time",
+			this.getStartTime.bind(this, newMatchDay),
+		);
+		const date = Math.round(newStartTime / 1_000);
+
+		if (date - Date.now() / 1_000 > 1)
+			await step.do(
+				"Send new match day message",
+				this.sendNewMatchDayMessage.bind(this, date, newStartTime, newMatchDay),
+			);
 	}
 
 	private async getMatchDay() {
@@ -309,5 +329,49 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		messageId: string,
 	) {
 		await this.env.LIVE_SCORE.create({ params: { matchDay, messageId } });
+	}
+
+	private async loadNewMatchDay(lastId: number) {
+		const matchDays = (await fetch(
+			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
+		).then((res) => res.json())) as MatchDayResponse;
+
+		if (!matchDays.success)
+			throw new Error(matchDays.message, {
+				cause: matchDays.errors,
+			});
+		const md = matchDays.data.find(
+			(d) => d.id_category > lastId && d.category_status === "TO BE PLAYED",
+		);
+
+		return md && { day: Number(md.description), id: md.id_category };
+	}
+
+	private async sendNewMatchDayMessage(
+		date: number,
+		startTime: number,
+		day: { day: number; id: number },
+	) {
+		await rest.post(Routes.channelMessages(this.env.PREDICTIONS_CHANNEL), {
+			body: {
+				content: `<@&${this.env.PREDICTIONS_ROLE}>, potete inviare da ora i pronostici per la prossima giornata!\nPer farlo inviate il comando \`/predictions send\` e seguire le istruzioni o premete il pulsante qui in basso. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)!`,
+				components: [
+					new ActionRowBuilder<ButtonBuilder>()
+						.addComponents(
+							new ButtonBuilder()
+								.setCustomId(`predictions-${day.day}-1-${startTime}`)
+								.setEmoji({ name: "⚽" })
+								.setLabel("Invia pronostici")
+								.setStyle(ButtonStyle.Primary),
+							new ButtonBuilder()
+								.setURL("https://ms-bot.trombett.org/predictions")
+								.setEmoji({ name: "🌐" })
+								.setLabel("Utilizza la dashboard")
+								.setStyle(ButtonStyle.Link),
+						)
+						.toJSON(),
+				],
+			} satisfies RESTPostAPIChannelMessageJSONBody,
+		});
 	}
 }
