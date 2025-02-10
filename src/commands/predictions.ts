@@ -1,6 +1,7 @@
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
+	EmbedBuilder,
 	ModalActionRowComponentBuilder,
 	ModalBuilder,
 	SelectMenuBuilder,
@@ -21,15 +22,14 @@ import { ok } from "node:assert";
 import {
 	MatchDay,
 	Prediction,
-	createLeaderboardDescription,
 	getMatchDayData,
 	normalizeTeamName,
-	resolveLeaderboard,
 	rest,
 	type CommandOptions,
 	type Match,
 	type User,
 } from "../util";
+import { resolveStats } from "../util/getLiveEmbed";
 
 const predictionExamples = [
 	"1",
@@ -207,15 +207,36 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 					FROM Users
 					ORDER BY dayPoints DESC`,
 			).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
-			const leaderboard = resolveLeaderboard(
-				results.map((r) => ({ ...r, predictions: [] })),
-				[],
-			);
 
-			console.log(leaderboard);
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
-				data: { content: createLeaderboardDescription(leaderboard, true) },
+				data: {
+					embeds: [
+						new EmbedBuilder()
+							.setThumbnail(
+								"https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
+							)
+							.setTitle("Classifica Generale")
+							.setDescription(
+								results
+									.sort((a, b) => (b.dayPoints ?? 0) - (a.dayPoints ?? 0))
+									.map(
+										(user, i) =>
+											`${i + 1}\\. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
+												Math.abs(user.dayPoints ?? 0) === 1 ? "o" : "i"
+											} Giornata`,
+									)
+									.join("\n"),
+							)
+							.addFields(resolveStats(results))
+							.setAuthor({
+								name: "Serie A Enilive",
+								url: "https://legaseriea.it/it/serie-a",
+							})
+							.setColor(0x3498db)
+							.toJSON(),
+					],
+				},
 			});
 		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(

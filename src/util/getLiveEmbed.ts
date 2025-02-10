@@ -78,7 +78,7 @@ const resolveMatches = (
 				}`,
 		)
 		.join("\n");
-const createFinalLeaderboard = (leaderboard: Leaderboard) => {
+export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 	const oldLeaderboard = leaderboard.toSorted(
 		(a, b) => (b[0].dayPoints ?? 0) - (a[0].dayPoints ?? 0),
 	);
@@ -102,7 +102,7 @@ const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 		})
 		.join("\n");
 };
-const resolveStats = (users: User[]) => {
+export const resolveStats = (users: User[]) => {
 	let currentStreaks: { id: string; days: number }[] = [];
 	let totalPoints = 0;
 	const highestAvg: { users: Set<string>; avg: number } = {
