@@ -15,6 +15,7 @@ import {
 	resolveLeaderboard,
 	rest,
 	type Env,
+	type Leaderboard,
 	type Match,
 	type Prediction,
 	type ResolvedUser,
@@ -129,6 +130,24 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 				},
 			);
 		} while (time);
+		const matches = await step.do(
+			"Get matches",
+			loadMatches.bind(null, event.payload.matchDay.id),
+		);
+		const users = await step.do(
+			"Load users",
+			this.loadPredictions.bind(this, matches),
+		);
+
+		await step.do<void>(
+			"Close match day",
+			this.closeMatchDay.bind(
+				this,
+				event.payload.matchDay.day,
+				resolveLeaderboard(users, matches),
+				matches,
+			),
+		);
 	}
 
 	private isFinished(matches: Match[]) {
@@ -197,5 +216,29 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 				} satisfies RESTPatchAPIChannelMessageJSONBody,
 			},
 		);
+	}
+
+	private async closeMatchDay(
+		day: number,
+		leaderboard: Leaderboard,
+		matches: Match[],
+	) {
+		const query = this.env.DB.prepare(`UPDATE Users
+			SET dayPoints = COALESCE(dayPoints, 0) + ?1,
+				matchPointsHistory = COALESCE(matchPointsHistory, "${",".repeat(
+					day - 2,
+				)}") || ?2,
+				reminded = 0
+			WHERE id = ?3`);
+
+		await this.env.DB.batch([
+			...leaderboard.map(([user, matchPoints, dayPoints]) =>
+				query.bind(dayPoints, `,${matchPoints}`, user.id),
+			),
+			this.env.DB.prepare(
+				`DELETE FROM Predictions
+				WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+			).bind(...matches.map((m) => m.match_id)),
+		]);
 	}
 }
