@@ -120,9 +120,20 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				},
 				{
 					name: "view",
-					description:
-						"Visualizza i tuoi pronostici o quelli di un altro utente",
+					description: "Visualizza i tuoi pronostici per la prossima giornata",
 					type: ApplicationCommandOptionType.Subcommand,
+					options: [
+						{
+							type: ApplicationCommandOptionType.User,
+							name: "user",
+							description: "OPZIONE PRIVATA",
+						},
+						{
+							type: ApplicationCommandOptionType.Number,
+							name: "day",
+							description: "OPZIONE PRIVATA",
+						},
+					],
 				},
 				{
 					name: "reminder",
