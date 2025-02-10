@@ -148,7 +148,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				o.type === ApplicationCommandOptionType.Subcommand,
 		)!;
 		const options: Record<string, boolean | number | string> = {};
-		const userId = (interaction.member ?? interaction).user!.id;
+		let userId = (interaction.member ?? interaction).user!.id;
 
 		if (subCommand.options)
 			for (const option of subCommand.options)
@@ -167,6 +167,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			ok(typeof options.user === "string" || options.user === undefined);
 			ok(typeof options.day === "number" || options.day === undefined);
 		}
+		if (options.user) userId = options.user;
 		if (subCommand.name === "reminder") {
 			if (typeof options.before !== "number") return;
 			await env.DB.prepare(
@@ -188,7 +189,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
-			options.user ?? userId,
+			userId,
 			options.day,
 		);
 
@@ -205,7 +206,9 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15;
 
 		if (subCommand.name === "view") {
-			const user = (interaction.member ?? interaction).user!;
+			const user =
+				interaction.data.resolved?.users?.[userId] ??
+				(interaction.member ?? interaction).user!;
 
 			if (!existingPredictions.length) {
 				reply({
@@ -286,7 +289,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${options.user ? Infinity : startTime}-${options.user ?? userId}`,
+										`predictions-${matchDay.description}-1-${options.user ? Infinity : startTime}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
