@@ -42,14 +42,14 @@ const createLeaderboardDescription = (
 
 			return `${position}\\. <@${user.id}>: **${points}** Punt${
 				points === 1 ? "o" : "i"
-			} Partita ${
+			} Partita (${
 				final
-					? `(avg. ${(
+					? `avg. ${(
 							(matchPointsHistory.reduce((a, b) => a + b, 0) + points) /
 							(matchPointsHistory.length + 1)
-						).toFixed(2)})`
-					: `(max. ${maxPoints}) (${dayPoints > 0 ? "+" : ""}${dayPoints})`
-			}${
+						).toFixed(2)}`
+					: `max. ${maxPoints}`
+			}) (${dayPoints > 0 ? "+" : ""}${dayPoints})${
 				position === 1 && points > highestMatchPoints
 					? " ✨"
 					: !matchPointsHistory.some((p) => p >= points)
