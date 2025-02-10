@@ -16,7 +16,7 @@ const finalEmojis: Record<number, string | undefined> = {
 	2: "⏫",
 };
 
-const createLeaderboardDescription = (
+export const createLeaderboardDescription = (
 	leaderboard: Leaderboard,
 	final = false,
 ) => {

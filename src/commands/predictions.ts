@@ -21,6 +21,7 @@ import { ok } from "node:assert";
 import {
 	MatchDay,
 	Prediction,
+	createLeaderboardDescription,
 	getMatchDayData,
 	normalizeTeamName,
 	resolveLeaderboard,
@@ -214,7 +215,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			console.log(leaderboard);
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
-				data: { content: "Pong?" },
+				data: { content: createLeaderboardDescription(leaderboard, true) },
 			});
 		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
