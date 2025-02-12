@@ -5,12 +5,18 @@ import {
 } from "cloudflare:workers";
 import {
 	Routes,
+	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPICurrentUserCreateDMChannelJSONBody,
 	type RESTPostAPICurrentUserCreateDMChannelResult,
 } from "discord-api-types/v10";
 import { rest, type Env } from "./util";
 
-export type Params = { message: string; duration: number; userId: string };
+export type Params = {
+	message: RESTPostAPIChannelMessageJSONBody;
+	remind: string;
+	duration: number;
+	userId: string;
+};
 
 export class Reminder extends WorkflowEntrypoint<Env, Params> {
 	override async run(
@@ -38,7 +44,7 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 
 	private async storeReminder({
 		instanceId,
-		payload: { duration, message, userId },
+		payload: { duration, remind, userId },
 	}: WorkflowEvent<Params>) {
 		await this.env.DB.prepare(
 			`INSERT INTO Reminders (id, date, userId, remind)
@@ -48,7 +54,7 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 				instanceId.slice(userId.length + 1),
 				Math.ceil(duration / 1_000),
 				userId,
-				message,
+				remind,
 			)
 			.run();
 	}
@@ -63,10 +69,11 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 		return id;
 	}
 
-	private async sendReminder(channelId: string, message: string) {
-		await rest.post(Routes.channelMessages(channelId), {
-			body: { content: `🔔 Promemoria: ${message}` },
-		});
+	private async sendReminder(
+		channelId: string,
+		body: RESTPostAPIChannelMessageJSONBody,
+	) {
+		await rest.post(Routes.channelMessages(channelId), { body });
 	}
 
 	private async deleteReminder({

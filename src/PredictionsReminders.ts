@@ -6,8 +6,6 @@ import {
 } from "cloudflare:workers";
 import {
 	ButtonStyle,
-	RESTPostAPICurrentUserCreateDMChannelJSONBody,
-	RESTPostAPICurrentUserCreateDMChannelResult,
 	Routes,
 	type APIUser,
 	type RESTPostAPIChannelMessageJSONBody,
@@ -55,32 +53,27 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			console.log(`Next match day is in ${ms(diff, { long: true })}`);
 			return;
 		}
+		rest.setToken(this.env.DISCORD_TOKEN);
 		if (diff > 1_000) {
 			const reminders = await step.do(
 				"get prediction reminders",
 				this.getReminders.bind(this, startTime),
 			);
 
-			rest.setToken(this.env.DISCORD_TOKEN);
-			for (const [recipient_id, date] of reminders) {
-				const channelId = await step.do(
-					`create ${recipient_id} dm channel`,
-					this.createDM.bind(this, recipient_id),
-				);
-
-				await step.sleepUntil(
-					`${recipient_id} reminder`,
-					Math.max(date, Date.now() + 1_000),
-				);
-				await step.do<void>(
-					`send ${recipient_id} reminder`,
-					this.sendReminder.bind(this, channelId, matchDay, startTime),
-				);
-				await step.do<void>(
-					`update ${recipient_id}`,
-					this.updateUser.bind(this, recipient_id),
-				);
-			}
+			await Promise.all(
+				reminders.map(async ([userId, date]) => {
+					if (
+						await step.do(
+							`check if ${userId} remind already set`,
+							this.notExists.bind(this, userId, matchDay.id),
+						)
+					)
+						await step.do<void>(
+							`create ${userId} reminder`,
+							this.createReminder.bind(this, userId, date, startTime, matchDay),
+						);
+				}),
+			);
 		}
 		await step.sleepUntil(
 			"match day start",
@@ -174,50 +167,53 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			>((u) => [u.id, startTime - u.remindMinutes! * 60 * 1000]);
 	}
 
-	private async createDM(recipient_id: string) {
-		const { id } = (await rest.post(Routes.userChannels(), {
-			body: {
-				recipient_id,
-			} satisfies RESTPostAPICurrentUserCreateDMChannelJSONBody,
-		})) as RESTPostAPICurrentUserCreateDMChannelResult;
-
-		return id;
+	private async notExists(userId: string, matchId: number) {
+		return (
+			(await this.env.REMINDER.get(`${userId}-predictions-${matchId}`).catch(
+				() => {},
+			)) === undefined
+		);
 	}
 
-	private async sendReminder(
-		channelId: string,
-		matchDay: { day: number; id: number },
+	private async createReminder(
+		userId: string,
+		date: number,
 		startTime: number,
+		matchDay: {
+			day: number;
+			id: number;
+		},
 	) {
-		await rest.post(Routes.channelMessages(channelId), {
-			body: {
-				content: "⚽ È l'ora di inviare i pronostici per la prossima giornata!",
-				components: [
-					new ActionRowBuilder<ButtonBuilder>()
-						.addComponents(
-							new ButtonBuilder()
-								.setCustomId(
-									`predictions-${Number(matchDay.day)}-1-${startTime}`,
-								)
-								.setEmoji({ name: "⚽" })
-								.setLabel("Invia pronostici")
-								.setStyle(ButtonStyle.Primary),
-							new ButtonBuilder()
-								.setURL("https://ms-bot.trombett.org/predictions")
-								.setEmoji({ name: "🌐" })
-								.setLabel("Utilizza la dashboard")
-								.setStyle(ButtonStyle.Link),
-						)
-						.toJSON(),
-				],
+		await this.env.REMINDER.create({
+			id: `${userId}-predictions-${matchDay.id}`,
+			params: {
+				duration: Math.max(date - Date.now(), 0),
+				message: {
+					content:
+						"⚽ È l'ora di inviare i pronostici per la prossima giornata!",
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(
+										`predictions-${Number(matchDay.day)}-1-${startTime}`,
+									)
+									.setEmoji({ name: "⚽" })
+									.setLabel("Invia pronostici")
+									.setStyle(ButtonStyle.Primary),
+								new ButtonBuilder()
+									.setURL("https://ms-bot.trombett.org/predictions")
+									.setEmoji({ name: "🌐" })
+									.setLabel("Utilizza la dashboard")
+									.setStyle(ButtonStyle.Link),
+							)
+							.toJSON(),
+					],
+				},
+				remind: "*Pronostici*",
+				userId,
 			},
 		});
-	}
-
-	private async updateUser(recipient_id: string) {
-		await this.env.DB.prepare(`UPDATE Users SET reminded = 1 WHERE id = ?`)
-			.bind(recipient_id)
-			.run();
 	}
 
 	private async loadPredictions(matches: Match[]) {
