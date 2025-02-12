@@ -16,8 +16,9 @@ CREATE TABLE Predictions (
 	PRIMARY KEY (userId, matchId)
 );
 CREATE TABLE Reminders (
+	id VARCHAR(63) NOT NULL,
 	date VARCHAR(255) NOT NULL,
 	userId VARCHAR(31) NOT NULL,
 	remind VARCHAR(1023) NOT NULL,
-	PRIMARY KEY (date, userId)
+	PRIMARY KEY (id, userId)
 );

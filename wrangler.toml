@@ -1,10 +1,7 @@
 name = "ms-bot"
 main = "./src/index.ts"
-compatibility_date = "2024-09-23"
+compatibility_date = "2025-02-01"
 compatibility_flags = ["nodejs_compat"]
-kv_namespaces = [
-    { binding = "KV", id = "0f620c8b0c9e4b0786b894509f82e5d9" }
-]
 workers_dev = false
 upload_source_maps = true
 
@@ -15,9 +12,29 @@ enabled = true
 SEASON_ID = "264681"
 
 [triggers]
-crons = ["* * * * *"]
+crons = ["0 0 * * *"]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "database"
 database_id = "8a298455-ac11-4e0c-b160-4db807cf3572"
+
+[[workflows]]
+name = "predictions-reminders"
+binding = "PREDICTIONS_REMINDERS"
+class_name = "PredictionsReminders"
+
+[[workflows]]
+name = "live-score"
+binding = "LIVE_SCORE"
+class_name = "LiveScore"
+
+[[workflows]]
+name = "live-match"
+binding = "LIVE_MATCH"
+class_name = "LiveMatch"
+
+[[workflows]]
+name = "reminder"
+binding = "REMINDER"
+class_name = "Reminder"

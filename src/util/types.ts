@@ -1,4 +1,4 @@
-import {
+import type {
 	APIApplicationCommandAutocompleteResponse,
 	APIApplicationCommandOption,
 	APIInteraction,
@@ -13,6 +13,10 @@ import {
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import type { Params as LMParams } from "../LiveMatch";
+import type { Params as LVParams } from "../LiveScore";
+import type { Params as PRParams } from "../PredictionsReminders";
+import type { Params as RParams } from "../Reminder";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -193,15 +197,38 @@ export type MatchDayResponse =
 	| {
 			success: false;
 			message: string;
-			errors: unknown[];
+			errors: Rpc.Serializable<unknown>[];
 	  }
 	| {
 			success: true;
 			data: MatchDay[];
 	  };
 
+export type CommentaryResponse = {
+	success: boolean;
+	message: string;
+	errors: {
+		type: string;
+		message: string;
+		params: unknown[];
+	}[];
+	data: {
+		messages: {
+			comment: string;
+			id: string;
+			lastModified: string;
+			minute: string;
+			period: string;
+			second: string;
+			time: string;
+			type: string;
+			varCheck: string;
+		}[];
+	};
+};
+
 export type Leaderboard = [
-	user: User & { predictions: Prediction[] },
+	user: ResolvedUser,
 	matchPoints: number,
 	dayPoints: number,
 	maxPoints: number,
@@ -217,11 +244,20 @@ export type User = {
 	dayPoints?: number | null;
 	matchPointsHistory?: string | null;
 	match?: number | null;
+	remindMinutes?: number | null;
 };
 export type Reminder = {
+	id: string;
 	date: string;
 	userId: string;
 	remind: string;
+};
+
+export type ResolvedUser = Pick<
+	User,
+	"dayPoints" | "id" | "match" | "matchPointsHistory"
+> & {
+	predictions: Pick<Prediction, "matchId" | "prediction">[];
 };
 
 export type EnvVars = {
@@ -239,8 +275,14 @@ export type EnvVars = {
 	PREDICTIONS_CHANNEL: string;
 	PREDICTIONS_ROLE: string;
 	SEASON_ID: string;
+	LIVE_MATCH_CHANNEL: string;
+	CLOUDFLARE_API_TOKEN: string;
+	CLOUDFLARE_ACCOUNT_ID: string;
 };
 export type Env = EnvVars & {
 	DB: D1Database;
-	KV: KVNamespace;
+	PREDICTIONS_REMINDERS: Workflow<PRParams>;
+	LIVE_SCORE: Workflow<LVParams>;
+	LIVE_MATCH: Workflow<LMParams>;
+	REMINDER: Workflow<RParams>;
 };

@@ -4,7 +4,7 @@ import {
 	MatchStatus,
 	normalizeTeamName,
 	type MatchesData,
-	type Prediction,
+	type ResolvedUser,
 	type User,
 } from ".";
 
@@ -16,7 +16,7 @@ const finalEmojis: Record<number, string | undefined> = {
 	2: "⏫",
 };
 
-const createLeaderboardDescription = (
+export const createLeaderboardDescription = (
 	leaderboard: Leaderboard,
 	final = false,
 ) => {
@@ -42,14 +42,14 @@ const createLeaderboardDescription = (
 
 			return `${position}\\. <@${user.id}>: **${points}** Punt${
 				points === 1 ? "o" : "i"
-			} Partita ${
+			} Partita (${
 				final
-					? `(avg. ${(
+					? `avg. ${(
 							(matchPointsHistory.reduce((a, b) => a + b, 0) + points) /
 							(matchPointsHistory.length + 1)
-						).toFixed(2)})`
-					: `(max. ${maxPoints}) (${dayPoints > 0 ? "+" : ""}${dayPoints})`
-			}${
+						).toFixed(2)}`
+					: `max. ${maxPoints}`
+			}) (${dayPoints > 0 ? "+" : ""}${dayPoints})${
 				position === 1 && points > highestMatchPoints
 					? " ✨"
 					: !matchPointsHistory.some((p) => p >= points)
@@ -78,7 +78,7 @@ const resolveMatches = (
 				}`,
 		)
 		.join("\n");
-const createFinalLeaderboard = (leaderboard: Leaderboard) => {
+export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 	const oldLeaderboard = leaderboard.toSorted(
 		(a, b) => (b[0].dayPoints ?? 0) - (a[0].dayPoints ?? 0),
 	);
@@ -102,7 +102,7 @@ const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 		})
 		.join("\n");
 };
-const resolveStats = (users: User[]) => {
+export const resolveStats = (users: User[]) => {
 	let currentStreaks: { id: string; days: number }[] = [];
 	let totalPoints = 0;
 	const highestAvg: { users: Set<string>; avg: number } = {
@@ -249,9 +249,7 @@ const resolveStats = (users: User[]) => {
 };
 
 export const getLiveEmbed = (
-	users: (User & {
-		predictions: Prediction[];
-	})[],
+	users: ResolvedUser[],
 	matches: Extract<MatchesData, { success: true }>["data"],
 	leaderboard: Leaderboard,
 	day: number,
