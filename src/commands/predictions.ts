@@ -561,9 +561,10 @@ VALUES (?)`,
 			});
 	},
 	component: async (reply, { interaction, env }) => {
-		const [, actionOrDay, part, timestamp, userId] =
+		const [, actionOrDay, part, timestamp, user] =
 			interaction.data.custom_id.split("-");
 		const time = parseInt(timestamp!);
+		const userId = user ?? (interaction.member ?? interaction).user!.id;
 
 		if (Date.now() >= time) {
 			reply({
@@ -578,7 +579,7 @@ VALUES (?)`,
 		}
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			env,
-			userId!,
+			userId,
 			Number(actionOrDay) || Number(part) || undefined,
 		);
 
@@ -650,7 +651,7 @@ VALUES (?)`,
 				matches,
 				matchDay,
 				parseInt(part!),
-				userId!,
+				userId,
 				existingPredictions,
 				time,
 			).toJSON(),
