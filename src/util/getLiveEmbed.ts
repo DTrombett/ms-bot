@@ -232,12 +232,8 @@ export const resolveStats = (users: User[]) => {
 						highestStreak.days
 					}** Giornate`
 				: "**N/A**"
-		}\n- Giornata con più punti: ${
-			bestDay
-				? `**${bestDay.day + 1}ª** Giornata • **${
-						bestDay.totalPoints
-					}** Punti Partita`
-				: "**N/A**"
+		}\n- Maggior numero di punti in una giornata: ${
+			bestDay ? `**${bestDay.totalPoints}** Punti Partita` : "**N/A**"
 		}\n- Punti totali accumulati: ${
 			days.length
 				? `**${totalPoints}** Punti Partita • Avg. **${(
