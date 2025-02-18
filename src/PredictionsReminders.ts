@@ -196,7 +196,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${Number(matchDay.day)}-1-${startTime}`,
+										`predictions-${Number(matchDay.day)}-1-${startTime}-${userId}`,
 									)
 									.setEmoji({ name: "⚽" })
 									.setLabel("Invia pronostici")
