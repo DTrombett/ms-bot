@@ -16,7 +16,7 @@ import {
 	verifyDiscordRequest,
 } from "./util";
 
-const commands: Record<string, CommandOptions<any>> = commandsObject;
+const commands = commandsObject as Record<string, CommandOptions>;
 const applicationCommands = Object.fromEntries(
 	Object.values(commands).flatMap((cmd) => cmd.data.map((d) => [d.name, cmd])),
 );
