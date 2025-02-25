@@ -38,3 +38,8 @@ class_name = "LiveMatch"
 name = "reminder"
 binding = "REMINDER"
 class_name = "Reminder"
+
+[[workflows]]
+name = "shorten"
+binding = "SHORTEN"
+class_name = "Shorten"

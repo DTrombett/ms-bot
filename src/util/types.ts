@@ -17,6 +17,7 @@ import type { Params as LMParams } from "../LiveMatch";
 import type { Params as LVParams } from "../LiveScore";
 import type { Params as PRParams } from "../PredictionsReminders";
 import type { Params as RParams } from "../Reminder";
+import type { Params as SParams } from "../Shorten";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -276,8 +277,6 @@ export type EnvVars = {
 	PREDICTIONS_ROLE: string;
 	SEASON_ID: string;
 	LIVE_MATCH_CHANNEL: string;
-	CLOUDFLARE_API_TOKEN: string;
-	CLOUDFLARE_ACCOUNT_ID: string;
 };
 export type Env = EnvVars & {
 	DB: D1Database;
@@ -285,4 +284,5 @@ export type Env = EnvVars & {
 	LIVE_SCORE: Workflow<LVParams>;
 	LIVE_MATCH: Workflow<LMParams>;
 	REMINDER: Workflow<RParams>;
+	SHORTEN: Workflow<SParams>;
 };
