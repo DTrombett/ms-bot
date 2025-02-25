@@ -35,6 +35,7 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 			"Create short url",
 			this.shorten.bind(this, client, event.payload),
 		);
+		rest.setToken(this.env.DISCORD_TOKEN);
 		await step.do<void>(
 			"Update message",
 			this.updateMessage.bind(this, event.payload),
