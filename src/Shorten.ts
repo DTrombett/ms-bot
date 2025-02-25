@@ -85,7 +85,7 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 				body: {
 					// When the message is sent the url may not be ready so avoid Discord caching the 404
 					content: `Shortened url: <https://s.trombett.org/${options.source}>\n${
-						options.duration === Infinity
+						options.duration == null
 							? "No expire time"
 							: `Valid until ${time(seconds, TimestampStyles.LongDateTime)} (${time(seconds, TimestampStyles.RelativeTime)})`
 					}`,
