@@ -7,15 +7,19 @@ import {
 	Routes,
 	type APIApplicationCommand,
 	type APIApplicationCommandInteractionDataBooleanOption,
-	type APIApplicationCommandInteractionDataOption,
-	type APIApplicationCommandInteractionDataSubcommandOption,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
-import { ok } from "node:assert";
-import { normalizeError, rest, type CommandOptions } from "../util";
+import ms, { type StringValue } from "ms";
+import nacl from "tweetnacl";
+import {
+	normalizeError,
+	resolveCommandOptions,
+	rest,
+	type CommandOptions,
+} from "../util";
 import * as commandsObject from "./index";
 
-export const dev: CommandOptions<ApplicationCommandType.ChatInput> = {
+export const dev = {
 	isPrivate: true,
 	data: [
 		{
@@ -35,26 +39,68 @@ export const dev: CommandOptions<ApplicationCommandType.ChatInput> = {
 						},
 					],
 				},
+				{
+					name: "shorten",
+					description: "Shorten a url",
+					type: ApplicationCommandOptionType.Subcommand,
+					options: [
+						{
+							type: ApplicationCommandOptionType.String,
+							name: "url",
+							description: "The destination address",
+							required: true,
+						},
+						{
+							type: ApplicationCommandOptionType.String,
+							name: "source",
+							description: "The path of the url (default: random 8 bytes)",
+						},
+						{
+							type: ApplicationCommandOptionType.String,
+							name: "duration",
+							description:
+								"When to delete the url, Infinity for never (default: 1d)",
+						},
+						{
+							type: ApplicationCommandOptionType.Integer,
+							name: "status",
+							description: "The status code to send (default: 301)",
+							choices: [
+								{ name: "301", value: 301 },
+								{ name: "302", value: 302 },
+								{ name: "307", value: 307 },
+								{ name: "308", value: 308 },
+							],
+						},
+						{
+							type: ApplicationCommandOptionType.Boolean,
+							name: "preserve-query",
+							description: "Preserve the source query (default: false)",
+						},
+						{
+							type: ApplicationCommandOptionType.Boolean,
+							name: "preserve-path",
+							description: "Preserve the path suffix (default: false)",
+						},
+					],
+				},
 			],
 		},
 	],
 	run: async (reply, { interaction, env }) => {
-		const options = new Map<
-			string,
-			APIApplicationCommandInteractionDataOption
-		>();
-		const [subcommand] = interaction.data
-			.options as APIApplicationCommandInteractionDataSubcommandOption[];
+		const { options, subcommand } = resolveCommandOptions(
+			dev.data,
+			interaction,
+		);
 
-		ok(subcommand);
-		for (const option of subcommand.options!) options.set(option.name, option);
 		reply({
 			type: InteractionResponseType.DeferredChannelMessageWithSource,
 			data: { flags: MessageFlags.Ephemeral },
 		});
-		if (subcommand.name === "register-commands") {
-			const commands = Object.values(commandsObject);
-			const { value: isDev } = (options.get("dev") ?? {
+		if (subcommand === "register-commands") {
+			const commands: CommandOptions<ApplicationCommandType.ChatInput>[] =
+				Object.values(commandsObject);
+			const { value: isDev } = (options.dev ?? {
 				value: env.NODE_ENV !== "production",
 			}) as APIApplicationCommandInteractionDataBooleanOption;
 			const [privateAPICommands, publicAPICommands] = await Promise.all([
@@ -90,6 +136,27 @@ export const dev: CommandOptions<ApplicationCommandType.ChatInput> = {
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-		}
+		} else if ((subcommand as string) === "shorten")
+			await env.SHORTEN.create({
+				params: {
+					source: (options.source ??= Buffer.from(nacl.randomBytes(8)).toString(
+						"base64url",
+					)),
+					url: options.url,
+					status: options.status,
+					preserveQuery: options["preserve-query"],
+					preservePath: options["preserve-path"],
+					duration:
+						(options.duration
+							? options.duration === "Infinity"
+								? Infinity
+								: ms(options.duration as StringValue)
+							: 0) || 24 * 60 * 60 * 1000,
+					interaction: {
+						application_id: interaction.application_id,
+						token: interaction.token,
+					},
+				},
+			});
 	},
-};
+} as const satisfies CommandOptions<ApplicationCommandType.ChatInput>;

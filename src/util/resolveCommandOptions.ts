@@ -61,33 +61,33 @@ export const resolveCommandOptions = <T extends CommandData[]>(
 			d.name === interaction.data.name,
 	)!.options!;
 	let { options } = interaction.data;
-	let subcommandName: string | undefined;
+	let subcommand: string | undefined;
 
 	if (options?.[0]?.type === ApplicationCommandOptionType.Subcommand) {
-		subcommandName = options[0].name;
+		subcommand = options[0].name;
 		[{ options }] = options;
 		templateOptions = templateOptions.find(
 			(o): o is APIApplicationCommandSubcommandOption =>
 				o.type === ApplicationCommandOptionType.Subcommand &&
-				o.name === subcommandName,
+				o.name === subcommand,
 		)!.options!;
 	} else if (
 		options?.[0]?.type === ApplicationCommandOptionType.SubcommandGroup
 	) {
-		subcommandName = options[0].name;
+		subcommand = options[0].name;
 		[{ options }] = options;
 		templateOptions = templateOptions.find(
 			(o): o is APIApplicationCommandSubcommandGroupOption =>
 				o.type === ApplicationCommandOptionType.SubcommandGroup &&
-				o.name === subcommandName,
+				o.name === subcommand,
 		)!.options!;
 		ok(options?.[0]?.type === ApplicationCommandOptionType.Subcommand);
-		subcommandName += ` ${options[0].name}`;
+		subcommand += ` ${options[0].name}`;
 		[{ options }] = options;
 		templateOptions = templateOptions.find(
 			(o): o is APIApplicationCommandSubcommandOption =>
 				o.type === ApplicationCommandOptionType.Subcommand &&
-				o.name === subcommandName,
+				o.name === subcommand,
 		)!.options!;
 	}
 	const resolvedOptions: Record<
@@ -107,6 +107,6 @@ export const resolveCommandOptions = <T extends CommandData[]>(
 	}
 	return {
 		options: resolvedOptions,
-		subcommandName,
+		subcommand,
 	} as ResolvedOptions<T[number]>;
 };
