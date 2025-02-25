@@ -13,7 +13,7 @@ import { rest, type Env } from "./util";
 
 export type Params = {
 	url: string;
-	duration: number;
+	duration: number | null;
 	source: string;
 	status?: 301 | 302 | 307 | 308;
 	preserveQuery?: boolean;
@@ -40,7 +40,7 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 			"Update message",
 			this.updateMessage.bind(this, event.payload),
 		);
-		if (event.payload.duration === Infinity) return;
+		if (event.payload.duration == null) return;
 		await step.sleep("Sleep", event.payload.duration);
 		await step.do<void>(
 			"Delete short url",
@@ -74,7 +74,7 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 	}
 
 	private async updateMessage(options: Params) {
-		const seconds = Math.round((Date.now() + options.duration) / 1000);
+		const seconds = Math.round((Date.now() + options.duration!) / 1000);
 
 		await rest.patch(
 			Routes.webhookMessage(
