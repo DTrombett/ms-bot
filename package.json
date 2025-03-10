@@ -41,7 +41,7 @@
 		"@typescript-eslint/parser": "^8.24.1",
 		"cloudflared": "^0.7.0",
 		"concurrently": "^9.1.2",
-		"eslint": "^9.20.1",
+		"eslint": "^9.22.0",
 		"prettier": "^3.5.1",
 		"typescript": "^5.7.3",
 		"wrangler": "^3.109.2"
