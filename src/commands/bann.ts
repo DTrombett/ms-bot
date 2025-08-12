@@ -341,11 +341,13 @@ export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
 				| APIApplicationCommandInteractionDataStringOption
 				| undefined
 		)?.value;
-		const deleteMessageDays = (
-			options.get("delete-messages") as
-				| APIApplicationCommandInteractionDataNumberOption
-				| undefined
-		)?.value;
+		const deleteMessageDays = Number(
+			(
+				options.get("delete-messages") as
+					| APIApplicationCommandInteractionDataNumberOption
+					| undefined
+			)?.value,
+		);
 
 		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
 		if (subcommand!.name === "add") {
