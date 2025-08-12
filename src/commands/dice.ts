@@ -73,11 +73,13 @@ export const dice: CommandOptions<ApplicationCommandType.ChatInput> = {
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: roll(
-				interaction.data.options?.find(
-					(o): o is APIApplicationCommandInteractionDataIntegerOption =>
-						o.name === "count" &&
-						o.type === ApplicationCommandOptionType.Integer,
-				)?.value,
+				Number(
+					interaction.data.options?.find(
+						(o): o is APIApplicationCommandInteractionDataIntegerOption =>
+							o.name === "count" &&
+							o.type === ApplicationCommandOptionType.Integer,
+					)?.value,
+				) || undefined,
 			),
 		});
 	},
