@@ -78,7 +78,7 @@ export const time = {
 					],
 				} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			});
-			await setTimeout(300);
+			await setTimeout(1);
 			const { id } = (await rest.get(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 			)) as APIMessage;
