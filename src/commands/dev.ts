@@ -98,8 +98,9 @@ export const dev = {
 			data: { flags: MessageFlags.Ephemeral },
 		});
 		if (subcommand === "register-commands") {
-			const commands: CommandOptions<ApplicationCommandType.ChatInput>[] =
-				Object.values(commandsObject);
+			const commands = Object.values(
+				commandsObject,
+			) as CommandOptions<ApplicationCommandType>[];
 			const { value: isDev } = (options.dev ?? {
 				value: env.NODE_ENV !== "production",
 			}) as APIApplicationCommandInteractionDataBooleanOption;

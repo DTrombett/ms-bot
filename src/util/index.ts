@@ -1,6 +1,7 @@
 export * from "./capitalize";
 export * from "./Constants";
 export * from "./executeInteraction";
+export * from "./formatTime";
 export * from "./getLiveEmbed";
 export * from "./getMatchDayData";
 export * from "./JsonResponse";
