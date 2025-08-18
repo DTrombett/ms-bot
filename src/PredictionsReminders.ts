@@ -225,8 +225,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
 				).bind(...matches.map((m) => m.match_id)),
 				this.env.DB.prepare(`SELECT id, dayPoints, matchPointsHistory, match
-					FROM Users
-					ORDER BY dayPoints DESC`),
+					FROM Users`),
 			])) as [
 				D1Result<Prediction>,
 				D1Result<
