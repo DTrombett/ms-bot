@@ -2,6 +2,8 @@ import { EmbedBuilder } from "@discordjs/builders";
 import {
 	Leaderboard,
 	MatchStatus,
+	calculateAveragePoints,
+	calculateWins,
 	normalizeTeamName,
 	type MatchesData,
 	type ResolvedUser,
@@ -83,10 +85,29 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 		(a, b) => (b[0].dayPoints ?? 0) - (a[0].dayPoints ?? 0),
 	);
 
+	// For consistent sorting, we need to apply the same tie-breaking logic
+	const users = leaderboard.map(([user]) => user);
+	const wins = calculateWins(users);
+	const averages = calculateAveragePoints(users);
+
 	return leaderboard
-		.toSorted(
-			(a, b) => (b[0].dayPoints ?? 0) + b[2] - ((a[0].dayPoints ?? 0) + a[2]),
-		)
+		.toSorted((a, b) => {
+			const aTotalPoints = (a[0].dayPoints ?? 0) + a[2];
+			const bTotalPoints = (b[0].dayPoints ?? 0) + b[2];
+
+			// Primary: sort by total points (including current match day)
+			if (aTotalPoints !== bTotalPoints) return bTotalPoints - aTotalPoints;
+
+			// Secondary: sort by wins (historical)
+			const aWins = wins[a[0].id] ?? 0;
+			const bWins = wins[b[0].id] ?? 0;
+			if (aWins !== bWins) return bWins - aWins;
+
+			// Tertiary: sort by average points (historical)
+			const aAvg = averages[a[0].id] ?? 0;
+			const bAvg = averages[b[0].id] ?? 0;
+			return bAvg - aAvg;
+		})
 		.map(([user, , points], _i, array) => {
 			const newPoints = (user.dayPoints ?? 0) + points;
 			const newPosition = array.findIndex(

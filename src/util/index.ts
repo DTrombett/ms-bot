@@ -1,3 +1,4 @@
+export * from "./calculateAveragePoints";
 export * from "./calculateWins";
 export * from "./capitalize";
 export * from "./Constants";
@@ -13,5 +14,6 @@ export * from "./randomNumber";
 export * from "./resolveCommandOptions";
 export * from "./resolveLeaderboard";
 export * from "./rest";
+export * from "./sortLeaderboard";
 export * from "./types";
 export * from "./verifyDiscordRequest";
