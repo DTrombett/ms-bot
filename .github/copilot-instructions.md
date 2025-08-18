@@ -17,7 +17,7 @@ MS Bot is a Discord bot built with TypeScript and deployed on Cloudflare Workers
 - Start the development server:
   - `npx wrangler dev --test-scheduled` -- starts in ~10 seconds, serves on http://localhost:8787
   - Access http://localhost:8787 to verify the server responds with "Ready!"
-  - To test changes to scheduled tasks (if any), execute a GET request to http://localhost:8787/\_\_scheduled?cron=_+_+_+_+\*, replacing the cron expression with your own
+  - To test changes to scheduled tasks (if any), execute a GET request to `http://localhost:8787/__scheduled?cron=0+0+*+*+*`, replacing the cron expression with your own
   - Use Ctrl+C to stop the development server
 
 ## Validation
