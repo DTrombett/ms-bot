@@ -22,6 +22,7 @@ import { ok } from "node:assert";
 import {
 	MatchDay,
 	Prediction,
+	calculateWins,
 	getMatchDayData,
 	normalizeTeamName,
 	rest,
@@ -208,6 +209,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 					WHERE dayPoints IS NOT NULL
 					ORDER BY dayPoints DESC`,
 			).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
+			const wins = calculateWins(results);
 
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -224,7 +226,9 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 										(user, i) =>
 											`${i + 1}\\. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
 												Math.abs(user.dayPoints ?? 0) === 1 ? "o" : "i"
-											} Giornata`,
+											} Giornata (**${wins[user.id] ?? 0}** vittori${
+												(wins[user.id] ?? 0) === 1 ? "a" : "e"
+											})`,
 									)
 									.join("\n"),
 							)
