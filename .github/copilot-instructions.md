@@ -7,7 +7,7 @@ MS Bot is a Discord bot built with TypeScript and deployed on Cloudflare Workers
 ### Initial Setup and Validation
 
 - Bootstrap the repository:
-  - `npm ci` -- takes 30-40 seconds. NEVER CANCEL. Set timeout to 60 seconds.
+  - `npm ci` -- takes ~30 seconds. Set timeout to 60 seconds.
 - Validate the codebase:
   - `npm run lint` -- takes ~10 seconds. Runs ESLint with fixes and Prettier formatting.
   - `npm test` -- takes ~10 seconds. Runs TypeScript and ESLint tests.
