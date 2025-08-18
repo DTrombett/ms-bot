@@ -125,4 +125,4 @@ The bot uses three main tables:
 - NEVER run the deploy command as it should be used only by the Worker's build process
 - Local development focuses on code validation rather than full Discord bot testing
 - Commit messages and PRs titles should be descriptive and follow the format `type: description`, where `type` is one of `feat`, `fix`, `refactor`, `test`, or `chore`
-- Commit messages' first line should never exceed 40 characters. Use additional lines for detailed descriptions if necessary
+- Commit messages' first line should never exceed 50 characters. Use additional lines for detailed descriptions if necessary
