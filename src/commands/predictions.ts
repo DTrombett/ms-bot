@@ -53,7 +53,7 @@ const buildModal = (
 	part: number,
 	userId: string,
 	predictions?: Pick<Prediction, "matchId" | "prediction">[],
-	timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15,
+	timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5,
 ) =>
 	new ModalBuilder()
 		.setCustomId(
@@ -255,7 +255,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			});
 			return;
 		}
-		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15;
+		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5;
 
 		if (subCommand.name === "view") {
 			const user =
@@ -321,7 +321,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+						"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});
@@ -377,7 +377,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+						"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});
@@ -571,7 +571,7 @@ VALUES (?)`,
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Puoi modificare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+						"Puoi modificare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});
