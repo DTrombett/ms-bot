@@ -13,13 +13,10 @@ export const calculateWins = (
 		day: number;
 	}[] = [];
 
-	// Initialize wins count for all users
-	for (const user of users) wins[user.id] = 0;
-
-	// Process each user's match points history
 	for (const user of users) {
 		const matchPointsHistory = user.matchPointsHistory?.split(",");
 
+		wins[user.id] = 0;
 		for (let i = 0; i < (matchPointsHistory?.length ?? 0); i++)
 			if (matchPointsHistory?.[i]) {
 				const points = Number(matchPointsHistory[i]);
@@ -42,11 +39,6 @@ export const calculateWins = (
 					};
 			}
 	}
-
-	// Count wins for each user
-	for (const day of days)
-		for (const winnerId of day.winners)
-			if (wins[winnerId] !== undefined) wins[winnerId]++;
-
+	for (const day of days) for (const winnerId of day.winners) wins[winnerId]!++;
 	return wins;
 };

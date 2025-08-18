@@ -209,7 +209,6 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 					WHERE dayPoints IS NOT NULL
 					ORDER BY dayPoints DESC`,
 			).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
-
 			const wins = calculateWins(results);
 
 			reply({
