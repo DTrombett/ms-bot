@@ -149,7 +149,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	private async getStartTime(day: { day: number; id: number }) {
 		const matches = await loadMatches(day.id, 1);
 
-		return Date.parse(matches[0]!.date_time) - 15 * 60 * 1000;
+		return Date.parse(matches[0]!.date_time) - 5 * 60 * 1000;
 	}
 
 	private async getReminders(startTime: number) {
