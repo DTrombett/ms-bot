@@ -9,7 +9,7 @@ upload_source_maps = true
 enabled = true
 
 [vars]
-SEASON_ID = "264681"
+SEASON_ID = "266660"
 
 [triggers]
 crons = ["0 0 * * *"]
