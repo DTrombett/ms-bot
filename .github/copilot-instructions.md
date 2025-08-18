@@ -20,6 +20,15 @@ MS Bot is a Discord bot built with TypeScript and deployed on Cloudflare Workers
   - To test changes to scheduled tasks (if any), execute a GET request to `http://localhost:8787/__scheduled?cron=0+0+*+*+*`, replacing the cron expression with your own
   - Use Ctrl+C to stop the development server
 
+### Styling
+
+- Avoid using brackets when possible (for example, an if condition with a single statement)
+- Avoid specifying the return type of a function in its definition if it's already clear
+- Use arrow functions instead of traditional function expressions when possible
+- Always prioritize performance over readability
+- Usage of new JavaScript features is encouraged
+- Comments should be added only when the logic of a code block is not immediately clear
+
 ## Validation
 
 ### Essential Validation Steps
