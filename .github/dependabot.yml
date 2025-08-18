@@ -13,6 +13,4 @@ updates:
       - "DTrombett"
     labels:
       - "dependencies"
-    allow:
-      - dependency-type: "all"
-        update-types: ["security"]
+    open-pull-requests-limit: 0
