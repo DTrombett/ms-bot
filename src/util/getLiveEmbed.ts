@@ -221,7 +221,7 @@ export const resolveStats = (users: User[]) => {
 		}
 	}
 	return {
-		name: "Statistiche Serie A 2024/2025",
+		name: "Statistiche Serie A 2025/2026",
 		value: `- Punteggio più alto: ${
 			highestPoints.users.size
 				? `${[...highestPoints.users].map((id) => `<@${id}>`).join(", ")} • **${

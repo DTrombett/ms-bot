@@ -191,7 +191,7 @@ export type MatchesData =
 	| { success: false; message: string; errors: unknown[] };
 export type MatchDay = {
 	category_status: "LIVE" | "PLAYED" | "TO BE PLAYED";
-	description: `${number}`;
+	title: `Matchday ${number}`;
 	id_category: number;
 };
 export type MatchDayResponse =

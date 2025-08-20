@@ -14,6 +14,7 @@ import {
 import ms from "ms";
 import {
 	getLiveEmbed,
+	getMatchDayNumber,
 	loadMatches,
 	normalizeTeamName,
 	resolveLeaderboard,
@@ -143,7 +144,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		if (!matchDays.success) throw new Error(matchDays.message);
 		const md = matchDays.data.find((d) => d.category_status === "TO BE PLAYED");
 
-		return md && { day: Number(md.description), id: md.id_category };
+		return md && { day: getMatchDayNumber(md), id: md.id_category };
 	}
 
 	private async getStartTime(day: { day: number; id: number }) {
@@ -339,7 +340,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			(d) => d.id_category > lastId && d.category_status === "TO BE PLAYED",
 		);
 
-		return md && { day: Number(md.description), id: md.id_category };
+		return md && { day: getMatchDayNumber(md), id: md.id_category };
 	}
 
 	private async sendNewMatchDayMessage(
