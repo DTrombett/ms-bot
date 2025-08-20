@@ -87,22 +87,16 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 	const users = leaderboard.map(([user]) => user);
 	const wins = calculateWins(users);
 	const averages = calculateAveragePoints(users);
-
 	// Find current day winners (users with highest matchPoints)
 	const maxMatchPoints = Math.max(
 		...leaderboard.map(([, matchPoints]) => matchPoints),
 	);
-	const currentDayWinners = new Set(
-		leaderboard
-			.filter(([, matchPoints]) => matchPoints === maxMatchPoints)
-			.map(([user]) => user.id),
-	);
+	const currentDayWinners = leaderboard
+		.filter(([, matchPoints]) => matchPoints === maxMatchPoints)
+		.map(([user]) => user.id);
 
-	// Add current day wins to historical wins
-	const totalWins = { ...wins };
 	for (const winnerId of currentDayWinners)
-		totalWins[winnerId] = (totalWins[winnerId] ?? 0) + 1;
-
+		wins[winnerId] = (wins[winnerId] ?? 0) + 1;
 	return leaderboard
 		.toSorted((a, b) => {
 			const aTotalPoints = (a[0].dayPoints ?? 0) + a[2];
@@ -112,8 +106,8 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 			if (aTotalPoints !== bTotalPoints) return bTotalPoints - aTotalPoints;
 
 			// Secondary: sort by wins (including current day)
-			const aWins = totalWins[a[0].id] ?? 0;
-			const bWins = totalWins[b[0].id] ?? 0;
+			const aWins = wins[a[0].id] ?? 0;
+			const bWins = wins[b[0].id] ?? 0;
 			if (aWins !== bWins) return bWins - aWins;
 
 			// Tertiary: sort by average points (historical)
