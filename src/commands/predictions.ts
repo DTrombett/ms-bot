@@ -213,7 +213,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Apri la [dashboard](https://ms-bot.trombett.org/) per inviare i pronostici",
+						"Apri la [dashboard](https://ms-bot.trombett.org/) per inviare i pronostici!",
 					components: [
 						new ActionRowBuilder<ButtonBuilder>()
 							.addComponents(
@@ -224,7 +224,6 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							)
 							.toJSON(),
 					],
-					flags: MessageFlags.Ephemeral,
 				},
 			});
 			return;
