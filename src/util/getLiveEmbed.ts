@@ -125,7 +125,11 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 		})
 		.join("\n");
 };
-export const resolveStats = (users: User[]) => {
+export const resolveStats = (
+	users: User[],
+	leaderboard?: Leaderboard,
+	finished = false,
+) => {
 	let currentStreaks: { id: string; days: number }[] = [];
 	let totalPoints = 0;
 	const highestAvg: { users: Set<string>; avg: number } = {
@@ -181,6 +185,41 @@ export const resolveStats = (users: User[]) => {
 						secondPoints: -Infinity,
 					};
 			}
+
+		// If this is the final day and we have leaderboard data, include current day points
+		if (finished && leaderboard) {
+			const currentDayEntry = leaderboard.find(([u]) => u.id === user.id);
+			if (currentDayEntry) {
+				const [, matchPoints] = currentDayEntry;
+				const currentDayIndex = matchPointsHistory?.length ?? 0;
+
+				total[1]++;
+				total[0] += matchPoints;
+
+				if (days[currentDayIndex]) {
+					days[currentDayIndex].totalPoints += matchPoints;
+					if (matchPoints > days[currentDayIndex].winnerPoints) {
+						days[currentDayIndex].secondPoints =
+							days[currentDayIndex].winnerPoints;
+						days[currentDayIndex].winners = new Set([user.id]);
+						days[currentDayIndex].winnerPoints = matchPoints;
+					} else if (matchPoints === days[currentDayIndex].winnerPoints) {
+						days[currentDayIndex].secondPoints =
+							days[currentDayIndex].winnerPoints;
+						days[currentDayIndex].winners.add(user.id);
+					} else if (matchPoints > days[currentDayIndex].secondPoints)
+						days[currentDayIndex].secondPoints = matchPoints;
+				} else
+					days[currentDayIndex] = {
+						day: currentDayIndex,
+						totalPoints: matchPoints,
+						winners: new Set([user.id]),
+						winnerPoints: matchPoints,
+						secondPoints: -Infinity,
+					};
+			}
+		}
+
 		const avg = total[0] / total[1];
 
 		if (avg >= highestAvg.avg) {
@@ -308,7 +347,7 @@ export const getLiveEmbed = (
 					: "Classifica Generale Provvisoria",
 				value: createFinalLeaderboard(leaderboard),
 			},
-			resolveStats(users),
+			resolveStats(users, leaderboard, finished),
 		)
 		.setAuthor({
 			name: "Serie A Enilive",
