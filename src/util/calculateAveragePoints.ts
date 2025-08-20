@@ -11,7 +11,6 @@ export const calculateAveragePoints = (
 	for (const user of users) {
 		const matchPointsHistory = user.matchPointsHistory?.split(",");
 
-		averages[user.id] = 0;
 		if (!matchPointsHistory?.length) continue;
 		const validPoints = matchPointsHistory
 			.filter((point) => point.trim())
