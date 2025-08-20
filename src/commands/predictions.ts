@@ -24,6 +24,7 @@ import {
 	Prediction,
 	calculateWins,
 	getMatchDayData,
+	getMatchDayNumber,
 	normalizeTeamName,
 	rest,
 	type CommandOptions,
@@ -58,10 +59,10 @@ const buildModal = (
 ) =>
 	new ModalBuilder()
 		.setCustomId(
-			`predictions-${matchDay.description}-${part}-${timestamp}-${userId}`,
+			`predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
 		)
 		.setTitle(
-			`Pronostici ${matchDay.description}ª Giornata (${part}/${matches.length / 5})`,
+			`Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${matches.length / 5})`,
 		)
 		.addComponents(
 			matches.slice((part - 1) * 5, part * 5).map((m) => {
@@ -311,7 +312,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							thumbnail: {
 								url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 							},
-							title: `${matchDay.description}ª Giornata Serie A Enilive`,
+							title: `${getMatchDayNumber(matchDay)}ª Giornata Serie A Enilive`,
 							url: "https://legaseriea.it/it/serie-a",
 						},
 					],
@@ -345,7 +346,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${options.user ? Infinity : startTime}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-1-${options.user ? Infinity : startTime}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -475,7 +476,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-${part}-${timestamp}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -531,7 +532,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${timestamp}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -552,7 +553,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-${part! + 1}-${timestamp}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-${part! + 1}-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "⏩" })
 									.setLabel("Continua")
@@ -627,7 +628,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${timestamp}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -639,7 +640,7 @@ VALUES (?)`,
 			});
 			return;
 		}
-		if (parseInt(actionOrDay!) !== parseInt(matchDay.description)) {
+		if (parseInt(actionOrDay!) !== getMatchDayNumber(matchDay)) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {

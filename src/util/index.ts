@@ -5,6 +5,7 @@ export * from "./executeInteraction";
 export * from "./formatTime";
 export * from "./getLiveEmbed";
 export * from "./getMatchDayData";
+export * from "./getMatchDayNumber";
 export * from "./JsonResponse";
 export * from "./loadMatches";
 export * from "./normalizeError";
