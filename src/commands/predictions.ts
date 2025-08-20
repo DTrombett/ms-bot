@@ -155,6 +155,11 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 						},
 					],
 				},
+				{
+					name: "dashboard",
+					description: "Apri la dashboard web per inviare i pronostici",
+					type: ApplicationCommandOptionType.Subcommand,
+				},
 			],
 		},
 	],
@@ -198,6 +203,27 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content: "Promemoria impostato correttamente!",
+					flags: MessageFlags.Ephemeral,
+				},
+			});
+			return;
+		}
+		if (subCommand.name === "dashboard") {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						"Apri la [dashboard](https://ms-bot.trombett.org/) per inviare i pronostici",
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setURL("https://ms-bot.trombett.org/")
+									.setLabel("Apri")
+									.setStyle(ButtonStyle.Link),
+							)
+							.toJSON(),
+					],
 					flags: MessageFlags.Ephemeral,
 				},
 			});
