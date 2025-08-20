@@ -11,22 +11,14 @@ export const calculateAveragePoints = (
 	for (const user of users) {
 		const matchPointsHistory = user.matchPointsHistory?.split(",");
 
-		if (!matchPointsHistory?.length) {
-			averages[user.id] = 0;
-			continue;
-		}
-
-		// Filter out empty strings and calculate average of actual match points
+		averages[user.id] = 0;
+		if (!matchPointsHistory?.length) continue;
 		const validPoints = matchPointsHistory
-			.filter((point) => point.trim() !== "")
+			.filter((point) => point.trim())
 			.map(Number);
-
-		if (validPoints.length === 0) averages[user.id] = 0;
-		else {
-			const total = validPoints.reduce((sum, points) => sum + points, 0);
-			averages[user.id] = total / validPoints.length;
-		}
+		if (!validPoints.length) continue;
+		averages[user.id] =
+			validPoints.reduce((sum, points) => sum + points, 0) / validPoints.length;
 	}
-
 	return averages;
 };

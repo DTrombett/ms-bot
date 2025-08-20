@@ -84,8 +84,6 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 	const oldLeaderboard = leaderboard.toSorted(
 		(a, b) => (b[0].dayPoints ?? 0) - (a[0].dayPoints ?? 0),
 	);
-
-	// For consistent sorting, we need to apply the same tie-breaking logic
 	const users = leaderboard.map(([user]) => user);
 	const wins = calculateWins(users);
 	const averages = calculateAveragePoints(users);
@@ -108,16 +106,11 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 			const bAvg = averages[b[0].id] ?? 0;
 			return bAvg - aAvg;
 		})
-		.map(([user, , points], _i, array) => {
+		.map(([user, , points], i) => {
 			const newPoints = (user.dayPoints ?? 0) + points;
-			const newPosition = array.findIndex(
-				([u, , p]) => (u.dayPoints ?? 0) + p === newPoints,
-			);
-			const diff =
-				oldLeaderboard.findIndex(([u]) => u.dayPoints === user.dayPoints) -
-				newPosition;
+			const diff = oldLeaderboard.findIndex(([u]) => u.id === user.id) - i;
 
-			return `${newPosition + 1}\\. <@${user.id}>: **${newPoints}** Punt${
+			return `${i + 1}. <@${user.id}>: **${newPoints}** Punt${
 				Math.abs(newPoints) === 1 ? "o" : "i"
 			} Giornata ${finalEmojis[diff] ?? finalEmojis[diff > 0 ? 2 : -2]}`;
 		})

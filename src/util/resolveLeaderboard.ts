@@ -1,20 +1,9 @@
-import {
-	Leaderboard,
-	MatchesData,
-	MatchStatus,
-	calculateAveragePoints,
-	calculateWins,
-	type ResolvedUser,
-} from ".";
+import { Leaderboard, MatchesData, MatchStatus, type ResolvedUser } from ".";
 
 export const resolveLeaderboard = (
 	users: ResolvedUser[],
 	matches: Extract<MatchesData, { success: true }>["data"],
 ) => {
-	// Pre-calculate wins and averages once for efficiency
-	const wins = calculateWins(users);
-	const averages = calculateAveragePoints(users);
-
 	const leaderboard = users
 		.map<Leaderboard[number]>((user) => {
 			let maxPoints = 0;
@@ -81,20 +70,7 @@ export const resolveLeaderboard = (
 				maxPoints,
 			] as const;
 		})
-		.sort((a, b) => {
-			// Primary: sort by match points for this day
-			if (a[1] !== b[1]) return b[1] - a[1];
-
-			// Secondary: sort by historical wins
-			const aWins = wins[a[0].id] ?? 0;
-			const bWins = wins[b[0].id] ?? 0;
-			if (aWins !== bWins) return bWins - aWins;
-
-			// Tertiary: sort by historical average points
-			const aAvg = averages[a[0].id] ?? 0;
-			const bAvg = averages[b[0].id] ?? 0;
-			return bAvg - aAvg;
-		});
+		.sort((a, b) => b[1] - a[1]);
 	const first = Math.ceil(leaderboard.length / 2);
 
 	for (const entry of leaderboard)
