@@ -27,6 +27,7 @@ import {
 	getMatchDayNumber,
 	normalizeTeamName,
 	rest,
+	sortLeaderboard,
 	type CommandOptions,
 	type Match,
 	type User,
@@ -232,10 +233,10 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			const { results } = await env.DB.prepare(
 				`SELECT id, dayPoints, matchPointsHistory, match
 					FROM Users
-					WHERE dayPoints IS NOT NULL
-					ORDER BY dayPoints DESC`,
+					WHERE dayPoints IS NOT NULL`,
 			).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
 			const wins = calculateWins(results);
+			const sortedResults = sortLeaderboard(results);
 
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -247,7 +248,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							)
 							.setTitle("Classifica Generale")
 							.setDescription(
-								results
+								sortedResults
 									.map(
 										(user, i) =>
 											`${i + 1}\\. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
@@ -258,7 +259,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 									)
 									.join("\n"),
 							)
-							.addFields(resolveStats(results))
+							.addFields(resolveStats(sortedResults))
 							.setAuthor({
 								name: "Serie A Enilive",
 								url: "https://legaseriea.it/it/serie-a",
