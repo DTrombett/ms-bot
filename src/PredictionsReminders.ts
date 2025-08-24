@@ -113,19 +113,21 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			"send message",
 			this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
 		);
-		await step.do<void>(
-			"pin message",
-			this.pinMessage.bind(this, messageId),
-		);
-		await step.do<void>(
-			"start live score",
-			this.startLiveScore.bind(this, matchDay, messageId),
-		);
 		started.push(matchDay.id);
-		await step.do<void>(
-			"update started matchday",
-			this.updateStartedMatchday.bind(this, started),
-		);
+		await Promise.all([
+			step.do<void>(
+				"pin message",
+				this.pinMessage.bind(this, messageId),
+			),
+			step.do<void>(
+				"start live score",
+				this.startLiveScore.bind(this, matchDay, messageId),
+			),
+			step.do<void>(
+				"update started matchday",
+				this.updateStartedMatchday.bind(this, started),
+			),
+		]);
 		const newMatchDay = await step.do(
 			"Load new match day",
 			this.loadNewMatchDay.bind(this, matchDay.id, started),
