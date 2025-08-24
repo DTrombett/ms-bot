@@ -109,16 +109,17 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				),
 			);
 		await Promise.all(promises);
+		const messageId = await step.do(
+			"send message",
+			this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
+		);
+		await step.do<void>(
+			"pin message",
+			this.pinMessage.bind(this, messageId),
+		);
 		await step.do<void>(
 			"start live score",
-			this.startLiveScore.bind(
-				this,
-				matchDay,
-				await step.do(
-					"send message",
-					this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
-				),
-			),
+			this.startLiveScore.bind(this, matchDay, messageId),
 		);
 		started.push(matchDay.id);
 		await step.do<void>(
@@ -332,6 +333,10 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		)) as RESTPostAPIChannelMessageResult;
 
 		return id;
+	}
+
+	private async pinMessage(messageId: string) {
+		await rest.put(Routes.channelPin(this.env.PREDICTIONS_CHANNEL, messageId));
 	}
 
 	private async startLiveScore(

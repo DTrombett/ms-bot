@@ -148,6 +148,10 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 				matches,
 			),
 		);
+		await step.do<void>(
+			"Unpin message",
+			this.unpinMessage.bind(this, event.payload.messageId),
+		);
 	}
 
 	private isFinished(matches: Match[]) {
@@ -214,6 +218,12 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 					),
 				} satisfies RESTPatchAPIChannelMessageJSONBody,
 			},
+		);
+	}
+
+	private async unpinMessage(messageId: string) {
+		await rest.delete(
+			Routes.channelPin(this.env.PREDICTIONS_CHANNEL, messageId),
 		);
 	}
 
