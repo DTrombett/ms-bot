@@ -223,7 +223,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 
 	private async unpinMessage(messageId: string) {
 		await rest.delete(
-			Routes.channelPin(this.env.PREDICTIONS_CHANNEL, messageId),
+			Routes.channelMessagesPin(this.env.PREDICTIONS_CHANNEL, messageId),
 		);
 	}
 
