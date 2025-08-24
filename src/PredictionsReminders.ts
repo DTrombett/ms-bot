@@ -27,6 +27,8 @@ import {
 	type User,
 } from "./util";
 
+const KV_KEY = "started-matchdays";
+
 export type Params = {
 	matchDay?: { day: number; id: number };
 };
@@ -36,9 +38,13 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
+		const started = await step.do(
+			"load started matchdays",
+			this.loadStartedMatchdays.bind(this),
+		);
 		const matchDay =
 			event.payload.matchDay ??
-			(await step.do("get match day", this.getMatchDay.bind(this)));
+			(await step.do("get match day", this.getMatchDay.bind(this, started)));
 
 		if (!matchDay) {
 			console.log("No match day available");
@@ -114,9 +120,14 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				),
 			),
 		);
+		started.push(matchDay.id);
+		await step.do<void>(
+			"update started matchday",
+			this.updateStartedMatchday.bind(this, started),
+		);
 		const newMatchDay = await step.do(
 			"Load new match day",
-			this.loadNewMatchDay.bind(this, matchDay.id),
+			this.loadNewMatchDay.bind(this, matchDay.id, started),
 		);
 
 		if (!newMatchDay) {
@@ -136,14 +147,17 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			);
 	}
 
-	private async getMatchDay() {
+	private async getMatchDay(started: number[] = []) {
 		const matchDays = await fetch(
 			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
 		).then<MatchDayResponse>((res) => res.json());
 
 		if (!matchDays.success) throw new Error(matchDays.message);
-		const md = matchDays.data.find((d) => d.category_status === "TO BE PLAYED");
-
+		const md = matchDays.data.find(
+			(d) =>
+				d.category_status === "TO BE PLAYED" &&
+				!started.includes(d.id_category),
+		);
 		return md && { day: getMatchDayNumber(md), id: md.id_category };
 	}
 
@@ -327,7 +341,11 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		await this.env.LIVE_SCORE.create({ params: { matchDay, messageId } });
 	}
 
-	private async loadNewMatchDay(lastId: number) {
+	private async updateStartedMatchday(started: number[]) {
+		await this.env.KV.put(KV_KEY, started.join(","));
+	}
+
+	private async loadNewMatchDay(lastId: number, started: number[] = []) {
 		const matchDays = (await fetch(
 			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
 		).then((res) => res.json())) as MatchDayResponse;
@@ -337,10 +355,19 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				cause: matchDays.errors,
 			});
 		const md = matchDays.data.find(
-			(d) => d.id_category > lastId && d.category_status === "TO BE PLAYED",
+			(d) =>
+				d.id_category !== lastId &&
+				d.category_status === "TO BE PLAYED" &&
+				!started.includes(d.id_category),
 		);
-
 		return md && { day: getMatchDayNumber(md), id: md.id_category };
+	}
+
+	private async loadStartedMatchdays() {
+		return ((await this.env.KV.get(KV_KEY).catch(() => undefined)) ?? "")
+			.split(",")
+			.filter(Boolean)
+			.map(Number);
 	}
 
 	private async sendNewMatchDayMessage(

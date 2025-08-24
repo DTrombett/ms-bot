@@ -285,4 +285,5 @@ export type Env = EnvVars & {
 	LIVE_MATCH: Workflow<LMParams>;
 	REMINDER: Workflow<RParams>;
 	SHORTEN: Workflow<SParams>;
+	KV: KVNamespace;
 };
