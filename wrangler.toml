@@ -19,6 +19,10 @@ binding = "DB"
 database_name = "database"
 database_id = "8a298455-ac11-4e0c-b160-4db807cf3572"
 
+[[kv_namespaces]]
+binding = "KV"
+id = "aa87b0da6cf14778b6ae760075fa327f"
+
 [[workflows]]
 name = "predictions-reminders"
 binding = "PREDICTIONS_REMINDERS"

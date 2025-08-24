@@ -4,6 +4,8 @@ MS Bot is a Discord bot built with TypeScript and deployed on Cloudflare Workers
 
 ## Working Effectively
 
+Fetch [Workers docs](https://developers.cloudflare.com/workers/llms-full.txt) to know how to work with Cloudflare Workers and the generic [Cloudflare docs](https://developers.cloudflare.com/llms.txt) to understand how other services (like D1, Workflows, KV, etc...) work.
+
 ### Initial Setup and Validation
 
 - Bootstrap the repository:
