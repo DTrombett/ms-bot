@@ -2,6 +2,7 @@ export * from "./avatar";
 export * from "./bann";
 export * from "./banner";
 export * from "./cat";
+export * from "./color";
 export * from "./dev";
 export * from "./dice";
 export * from "./dog";

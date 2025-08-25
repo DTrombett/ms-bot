@@ -2,6 +2,7 @@ export * from "./calculateAveragePoints";
 export * from "./calculateWins";
 export * from "./capitalize";
 export * from "./Constants";
+export * from "./createSolidPng";
 export * from "./executeInteraction";
 export * from "./formatTime";
 export * from "./getLiveEmbed";
