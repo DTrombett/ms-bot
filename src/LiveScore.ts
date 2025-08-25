@@ -138,14 +138,29 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 			"Load users",
 			this.loadPredictions.bind(this, matches),
 		);
-
+		const leaderboard = resolveLeaderboard(users, matches);
+		const oldLeaderboard: typeof leaderboard = leaderboard.map(
+			([user, ...entry]) => [{ ...user }, ...entry],
+		);
 		await step.do<void>(
 			"Close match day",
 			this.closeMatchDay.bind(
 				this,
 				event.payload.matchDay.day,
-				resolveLeaderboard(users, matches),
+				leaderboard,
 				matches,
+			),
+		);
+		await step.do<void>(
+			"Update statistics",
+			this.updateMatchDayMessage.bind(
+				this,
+				users,
+				matches,
+				event.payload.matchDay.day,
+				true,
+				event.payload.messageId,
+				oldLeaderboard,
 			),
 		);
 		await step.do<void>(
@@ -204,18 +219,13 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 		day: number,
 		finished: boolean,
 		messageId: string,
+		leaderboard = resolveLeaderboard(users, matches),
 	) {
 		await rest.patch(
 			Routes.channelMessage(this.env.PREDICTIONS_CHANNEL, messageId),
 			{
 				body: {
-					embeds: getLiveEmbed(
-						users,
-						matches,
-						resolveLeaderboard(users, matches),
-						day,
-						finished,
-					),
+					embeds: getLiveEmbed(users, matches, leaderboard, day, finished),
 				} satisfies RESTPatchAPIChannelMessageJSONBody,
 			},
 		);
@@ -237,13 +247,19 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 				matchPointsHistory = COALESCE(matchPointsHistory, "${",".repeat(
 					day - 2,
 				)}") || ?2,
-				reminded = 0
+				reminded = 0,
+				match = NULL
 			WHERE id = ?3`);
 
 		await this.env.DB.batch([
-			...leaderboard.map(([user, matchPoints, dayPoints]) =>
-				query.bind(dayPoints, `,${matchPoints}`, user.id),
-			),
+			...leaderboard.map(([user, matchPoints, dayPoints]) => {
+				user.dayPoints = (user.dayPoints ?? 0) + dayPoints;
+				user.matchPointsHistory = `${
+					user.matchPointsHistory ?? ",".repeat(day - 2)
+				},${matchPoints}`;
+				user.match = null;
+				return query.bind(dayPoints, `,${matchPoints}`, user.id);
+			}),
 			this.env.DB.prepare(
 				`DELETE FROM Predictions
 				WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
