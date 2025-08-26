@@ -68,19 +68,15 @@ export const createSolidPng = (
 	ihdr[12] = 0; // interlace
 	// Raw pixel data (each row starts with a filter byte = 0)
 	const rowSize = width * 3 + 1; // 3 bytes per pixel + filter byte
-	const raw = new Uint8Array(rowSize * height);
-	for (let y = 0; y < height; y++) {
-		const offset = y * rowSize;
-
-		raw[offset] = 0; // filter type 0
-		for (let x = 0; x < width; x++) {
-			const px = offset + 1 + x * 3;
-
-			raw[px] = r;
-			raw[px + 1] = g;
-			raw[px + 2] = b;
-		}
+	const row = new Uint8Array(rowSize);
+	row[0] = 0; // filter type 0
+	for (let o = 1, x = 0; x < width; x++) {
+		row[o++] = r;
+		row[o++] = g;
+		row[o++] = b;
 	}
+	const raw = new Uint8Array(rowSize * height);
+	for (let y = 0; y < height; y++) raw.set(row, y * rowSize);
 	const ihdrChunk = pngChunk("IHDR", ihdr);
 	const idatChunk = pngChunk("IDAT", deflateSync(raw));
 	const iendChunk = pngChunk("IEND", new Uint8Array(0));
