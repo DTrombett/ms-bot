@@ -1,6 +1,13 @@
-export type RGB = [r: number, g: number, b: number];
+import capitalize from "./capitalize";
+
+export type RGB = [red: number, green: number, blue: number];
+export type HSL = [hue: number, sat: number, light: number];
+export type HWB = [hue: number, white: number, black: number];
+export type Color = { rgb: RGB; hex: string; hsl: HSL; hwb: HWB; name: string };
 
 const epsilon = 1 / 100_000;
+
+export const cssRound = (x: number) => Math.floor(x + 0.5);
 
 /**
  * @param hue - Hue as degrees 0..360
@@ -14,13 +21,12 @@ export const hslToRgb = (hue: number, sat: number, light: number): RGB => {
 	const f = (n: number) => {
 		const k = (n + hue / 30) % 12;
 
-		return Math.floor(
+		return cssRound(
 			(light -
 				sat *
 					Math.min(light, 1 - light) *
 					Math.max(-1, Math.min(k - 3, 9 - k, 1))) *
-				255 +
-				0.5,
+				255,
 		);
 	};
 	return [f(0), f(8), f(4)];
@@ -32,18 +38,14 @@ export const hslToRgb = (hue: number, sat: number, light: number): RGB => {
  * @param blue - Blue component 0..255
  * @return Array of HSL values: Hue as degrees 0..360, Saturation and Lightness in reference range [0,100]
  */
-export const rgbToHsl = (
-	red: number,
-	green: number,
-	blue: number,
-): [hue: number, sat: number, light: number] => {
+export const rgbToHsl = (red: number, green: number, blue: number): HSL => {
 	red /= 255;
 	green /= 255;
 	blue /= 255;
 	const max = Math.max(red, green, blue);
 	const min = Math.min(red, green, blue);
 	// eslint-disable-next-line prefer-const
-	let [hue, sat, light] = [NaN, 0, (min + max) / 2];
+	let [hue, sat, light] = [0, 0, (min + max) / 2];
 	const d = max - min;
 
 	if (d !== 0) {
@@ -73,7 +75,7 @@ export const rgbToHsl = (
 		sat = Math.abs(sat);
 	}
 	if (hue >= 360) hue -= 360;
-	if (sat <= epsilon) hue = NaN;
+	if (sat <= epsilon) hue = 0;
 	return [hue, sat * 100, light * 100];
 };
 
@@ -87,7 +89,7 @@ export const hwbToRgb = (hue: number, white: number, black: number): RGB => {
 	white /= 100;
 	black /= 100;
 	if (white + black >= 1) {
-		const gray = white / (white + black);
+		const gray = cssRound((white / (white + black)) * 255);
 
 		return [gray, gray, gray];
 	}
@@ -96,7 +98,7 @@ export const hwbToRgb = (hue: number, white: number, black: number): RGB => {
 		rgb[i]! /= 255;
 		rgb[i]! *= 1 - white - black;
 		rgb[i]! += white;
-		rgb[i] = Math.floor(rgb[i]! * 255 + 0.5);
+		rgb[i] = cssRound(rgb[i]! * 255);
 	}
 	return rgb;
 };
@@ -114,7 +116,7 @@ export const rgbToHue = (red: number, green: number, blue: number): number => {
 	green /= 255;
 	blue /= 255;
 	const max = Math.max(red, green, blue);
-	let hue = NaN;
+	let hue = 0;
 	const d = max - Math.min(red, green, blue);
 
 	if (d !== 0) {
@@ -142,11 +144,7 @@ export const rgbToHue = (red: number, green: number, blue: number): number => {
  * @param {number} blue - Blue component 0..255
  * @return {number[]} Array of HWB values: Hue as degrees 0..360, Whiteness and Blackness in reference range [0,100]
  */
-export const rgbToHwb = (
-	red: number,
-	green: number,
-	blue: number,
-): [hue: number, white: number, black: number] => {
+export const rgbToHwb = (red: number, green: number, blue: number): HWB => {
 	red /= 255;
 	green /= 255;
 	blue /= 255;
@@ -154,9 +152,15 @@ export const rgbToHwb = (
 	const black = 1 - Math.max(red, green, blue);
 	let hue = rgbToHue(red, green, blue);
 
-	if (white + black >= 1 - epsilon) hue = NaN;
+	if (white + black >= 1 - epsilon) hue = 0;
 	return [hue, white * 100, black * 100];
 };
+
+export const rgbToHex = (...rgb: RGB): string =>
+	`#${rgb
+		.map((c) => c.toString(16).padStart(2, "0"))
+		.join("")
+		.toUpperCase()}`;
 
 //#region Named colors
 const namedColors: Record<string, RGB> = {
@@ -309,129 +313,173 @@ const namedColors: Record<string, RGB> = {
 	yellow: [255, 255, 0],
 	yellowgreen: [154, 205, 50],
 };
-
 // Add aliases with spaces
-namedColors["alice blue"] = namedColors.aliceblue!;
-namedColors["antique white"] = namedColors.antiquewhite!;
-namedColors["aqua marine"] = namedColors.aquamarine!;
-namedColors["blanched almond"] = namedColors.blanchedalmond!;
-namedColors["blue violet"] = namedColors.blueviolet!;
-namedColors["burly wood"] = namedColors.burlywood!;
-namedColors["cadet blue"] = namedColors.cadetblue!;
-namedColors["cornflower blue"] = namedColors.cornflowerblue!;
-namedColors["corn silk"] = namedColors.cornsilk!;
-namedColors["dark blue"] = namedColors.darkblue!;
-namedColors["dark cyan"] = namedColors.darkcyan!;
-namedColors["dark goldenrod"] = namedColors.darkgoldenrod!;
-namedColors["dark gray"] = namedColors.darkgray!;
-namedColors["dark green"] = namedColors.darkgreen!;
-namedColors["dark grey"] = namedColors.darkgrey!;
-namedColors["dark khaki"] = namedColors.darkkhaki!;
-namedColors["dark magenta"] = namedColors.darkmagenta!;
-namedColors["dark olive green"] = namedColors.darkolivegreen!;
-namedColors["dark orange"] = namedColors.darkorange!;
-namedColors["dark orchid"] = namedColors.darkorchid!;
-namedColors["dark red"] = namedColors.darkred!;
-namedColors["dark salmon"] = namedColors.darksalmon!;
-namedColors["dark sea green"] = namedColors.darkseagreen!;
-namedColors["dark slate blue"] = namedColors.darkslateblue!;
-namedColors["dark slate gray"] = namedColors.darkslategray!;
-namedColors["dark slate grey"] = namedColors.darkslategrey!;
-namedColors["dark turquoise"] = namedColors.darkturquoise!;
-namedColors["dark violet"] = namedColors.darkviolet!;
-namedColors["deep pink"] = namedColors.deeppink!;
-namedColors["deep sky blue"] = namedColors.deepskyblue!;
-namedColors["dim gray"] = namedColors.dimgray!;
-namedColors["dim grey"] = namedColors.dimgrey!;
-namedColors["dodger blue"] = namedColors.dodgerblue!;
-namedColors["fire brick"] = namedColors.firebrick!;
-namedColors["floral white"] = namedColors.floralwhite!;
-namedColors["forest green"] = namedColors.forestgreen!;
-namedColors["ghost white"] = namedColors.ghostwhite!;
-namedColors["golden rod"] = namedColors.goldenrod!;
-namedColors["green yellow"] = namedColors.greenyellow!;
-namedColors["honey dew"] = namedColors.honeydew!;
-namedColors["hot pink"] = namedColors.hotpink!;
-namedColors["indian red"] = namedColors.indianred!;
-namedColors["lavender blush"] = namedColors.lavenderblush!;
-namedColors["lawn green"] = namedColors.lawngreen!;
-namedColors["lemon chiffon"] = namedColors.lemonchiffon!;
-namedColors["light blue"] = namedColors.lightblue!;
-namedColors["light coral"] = namedColors.lightcoral!;
-namedColors["light cyan"] = namedColors.lightcyan!;
-namedColors["light goldenrod yellow"] = namedColors.lightgoldenrodyellow!;
-namedColors["light gray"] = namedColors.lightgray!;
-namedColors["light green"] = namedColors.lightgreen!;
-namedColors["light grey"] = namedColors.lightgrey!;
-namedColors["light pink"] = namedColors.lightpink!;
-namedColors["light salmon"] = namedColors.lightsalmon!;
-namedColors["light sea green"] = namedColors.lightseagreen!;
-namedColors["light sky blue"] = namedColors.lightskyblue!;
-namedColors["light slate gray"] = namedColors.lightslategray!;
-namedColors["light slate grey"] = namedColors.lightslategrey!;
-namedColors["light steel blue"] = namedColors.lightsteelblue!;
-namedColors["light yellow"] = namedColors.lightyellow!;
-namedColors["lime green"] = namedColors.limegreen!;
-namedColors["medium aqua marine"] = namedColors.mediumaquamarine!;
-namedColors["medium aquamarine"] = namedColors.mediumaquamarine!;
-namedColors["medium blue"] = namedColors.mediumblue!;
-namedColors["medium orchid"] = namedColors.mediumorchid!;
-namedColors["medium purple"] = namedColors.mediumpurple!;
-namedColors["medium sea green"] = namedColors.mediumseagreen!;
-namedColors["medium slate blue"] = namedColors.mediumslateblue!;
-namedColors["medium spring green"] = namedColors.mediumspringgreen!;
-namedColors["medium turquoise"] = namedColors.mediumturquoise!;
-namedColors["medium violet red"] = namedColors.mediumvioletred!;
-namedColors["midnight blue"] = namedColors.midnightblue!;
-namedColors["mint cream"] = namedColors.mintcream!;
-namedColors["misty rose"] = namedColors.mistyrose!;
-namedColors["navajo white"] = namedColors.navajowhite!;
-namedColors["old lace"] = namedColors.oldlace!;
-namedColors["olive drab"] = namedColors.olivedrab!;
-namedColors["orange red"] = namedColors.orangered!;
-namedColors["pale goldenrod"] = namedColors.palegoldenrod!;
-namedColors["pale green"] = namedColors.palegreen!;
-namedColors["pale turquoise"] = namedColors.paleturquoise!;
-namedColors["pale violet red"] = namedColors.palevioletred!;
-namedColors["papaya whip"] = namedColors.papayawhip!;
-namedColors["peach puff"] = namedColors.peachpuff!;
-namedColors["powder blue"] = namedColors.powderblue!;
-namedColors["rebecca purple"] = namedColors.rebeccapurple!;
-namedColors["rosy brown"] = namedColors.rosybrown!;
-namedColors["royal blue"] = namedColors.royalblue!;
-namedColors["saddle brown"] = namedColors.saddlebrown!;
-namedColors["sandy brown"] = namedColors.sandybrown!;
-namedColors["sea green"] = namedColors.seagreen!;
-namedColors["sea shell"] = namedColors.seashell!;
-namedColors["sky blue"] = namedColors.skyblue!;
-namedColors["slate blue"] = namedColors.slateblue!;
-namedColors["slate gray"] = namedColors.slategray!;
-namedColors["slate grey"] = namedColors.slategrey!;
-namedColors["spring green"] = namedColors.springgreen!;
-namedColors["steel blue"] = namedColors.steelblue!;
-namedColors["white smoke"] = namedColors.whitesmoke!;
-namedColors["yellow green"] = namedColors.yellowgreen!;
+const aliases: Record<string, string> = {
+	"alice blue": "aliceblue",
+	"antique white": "antiquewhite",
+	"aqua marine": "aquamarine",
+	"blanched almond": "blanchedalmond",
+	"blue violet": "blueviolet",
+	"burly wood": "burlywood",
+	"cadet blue": "cadetblue",
+	"cornflower blue": "cornflowerblue",
+	"corn silk": "cornsilk",
+	"dark blue": "darkblue",
+	"dark cyan": "darkcyan",
+	"dark goldenrod": "darkgoldenrod",
+	"dark gray": "darkgray",
+	"dark green": "darkgreen",
+	"dark grey": "darkgrey",
+	"dark khaki": "darkkhaki",
+	"dark magenta": "darkmagenta",
+	"dark olive green": "darkolivegreen",
+	"dark orange": "darkorange",
+	"dark orchid": "darkorchid",
+	"dark red": "darkred",
+	"dark salmon": "darksalmon",
+	"dark sea green": "darkseagreen",
+	"dark slate blue": "darkslateblue",
+	"dark slate gray": "darkslategray",
+	"dark slate grey": "darkslategrey",
+	"dark turquoise": "darkturquoise",
+	"dark violet": "darkviolet",
+	"deep pink": "deeppink",
+	"deep sky blue": "deepskyblue",
+	"dim gray": "dimgray",
+	"dim grey": "dimgrey",
+	"dodger blue": "dodgerblue",
+	"fire brick": "firebrick",
+	"floral white": "floralwhite",
+	"forest green": "forestgreen",
+	"ghost white": "ghostwhite",
+	"golden rod": "goldenrod",
+	"green yellow": "greenyellow",
+	"honey dew": "honeydew",
+	"hot pink": "hotpink",
+	"indian red": "indianred",
+	"lavender blush": "lavenderblush",
+	"lawn green": "lawngreen",
+	"lemon chiffon": "lemonchiffon",
+	"light blue": "lightblue",
+	"light coral": "lightcoral",
+	"light cyan": "lightcyan",
+	"light goldenrod yellow": "lightgoldenrodyellow",
+	"light gray": "lightgray",
+	"light green": "lightgreen",
+	"light grey": "lightgrey",
+	"light pink": "lightpink",
+	"light salmon": "lightsalmon",
+	"light sea green": "lightseagreen",
+	"light sky blue": "lightskyblue",
+	"light slate gray": "lightslategray",
+	"light slate grey": "lightslategrey",
+	"light steel blue": "lightsteelblue",
+	"light yellow": "lightyellow",
+	"lime green": "limegreen",
+	"medium aqua marine": "mediumaquamarine",
+	"medium aquamarine": "mediumaquamarine",
+	"medium blue": "mediumblue",
+	"medium orchid": "mediumorchid",
+	"medium purple": "mediumpurple",
+	"medium sea green": "mediumseagreen",
+	"medium slate blue": "mediumslateblue",
+	"medium spring green": "mediumspringgreen",
+	"medium turquoise": "mediumturquoise",
+	"medium violet red": "mediumvioletred",
+	"midnight blue": "midnightblue",
+	"mint cream": "mintcream",
+	"misty rose": "mistyrose",
+	"navajo white": "navajowhite",
+	"old lace": "oldlace",
+	"olive drab": "olivedrab",
+	"orange red": "orangered",
+	"pale goldenrod": "palegoldenrod",
+	"pale green": "palegreen",
+	"pale turquoise": "paleturquoise",
+	"pale violet red": "palevioletred",
+	"papaya whip": "papayawhip",
+	"peach puff": "peachpuff",
+	"powder blue": "powderblue",
+	"rebecca purple": "rebeccapurple",
+	"rosy brown": "rosybrown",
+	"royal blue": "royalblue",
+	"saddle brown": "saddlebrown",
+	"sandy brown": "sandybrown",
+	"sea green": "seagreen",
+	"sea shell": "seashell",
+	"sky blue": "skyblue",
+	"slate blue": "slateblue",
+	"slate gray": "slategray",
+	"slate grey": "slategrey",
+	"spring green": "springgreen",
+	"steel blue": "steelblue",
+	"white smoke": "whitesmoke",
+	"yellow green": "yellowgreen",
+};
 //#endregion
 
-export const resolveColor = (color: string): RGB => {
+export const findColorName = (rgb: RGB): string => {
+	let minDist = Infinity;
+	let name!: string;
+
+	// eslint-disable-next-line guard-for-in
+	for (const key in namedColors) {
+		const dist = namedColors[key]!.reduce(
+			(sum, value, index) => sum + (rgb[index]! - value) ** 2,
+			0,
+		);
+
+		if (dist < minDist) {
+			minDist = dist;
+			name = key;
+		}
+	}
+	return (Object.keys(aliases).find((key) => aliases[key] === name) ?? name)
+		.split(" ")
+		.map(capitalize)
+		.join(" ");
+};
+
+export const resolveColor = (color: string): Color => {
 	color = color.toLowerCase().trim();
-	if (color in namedColors) return namedColors[color]!;
+	if (color in aliases) color = aliases[color]!;
+	if (color in namedColors)
+		return {
+			name: (
+				Object.keys(aliases).find((key) => aliases[key] === color) ?? color
+			)
+				.split(" ")
+				.map(capitalize)
+				.join(" "),
+			rgb: namedColors[color]!,
+			hex: rgbToHex(...namedColors[color]!),
+			hsl: rgbToHsl(...namedColors[color]!),
+			hwb: rgbToHwb(...namedColors[color]!),
+		};
 	// eslint-disable-next-line @typescript-eslint/prefer-string-starts-ends-with
 	if (color[0] === "#") {
 		color = color.slice(1);
+		let rgb: RGB;
 		if (color.length === 3)
-			return [
+			rgb = [
 				parseInt(color[0]! + color[0]!, 16),
 				parseInt(color[1]! + color[1]!, 16),
 				parseInt(color[2]! + color[2]!, 16),
 			];
-		if (color.length === 6)
-			return [
+		else if (color.length === 6)
+			rgb = [
 				parseInt(color[0]! + color[1]!, 16),
 				parseInt(color[2]! + color[3]!, 16),
 				parseInt(color[4]! + color[5]!, 16),
 			];
-		throw new Error("Invalid hex color");
+		else throw new Error("Invalid hex color");
+		return {
+			rgb,
+			hex: `#${color.toUpperCase()}`,
+			hsl: rgbToHsl(...rgb),
+			hwb: rgbToHwb(...rgb),
+			name: findColorName(rgb),
+		};
 	}
 	if (color.startsWith("rgb(")) {
 		color = color.slice(4, -1).trim();
@@ -442,16 +490,22 @@ export const resolveColor = (color: string): RGB => {
 			return Math.max(
 				Math.min(
 					c.endsWith("%")
-						? Math.floor((parseFloat(c) / 100) * 255 + 0.5)
+						? cssRound((parseFloat(c) / 100) * 255)
 						: parseInt(c, 10),
 					255,
 				),
 				0,
 			);
-		});
-		if (rgb.length !== 3 || rgb.some(isNaN))
+		}) as RGB;
+		if ((rgb.length as number) !== 3 || rgb.some(isNaN))
 			throw new Error("Invalid RGB color");
-		return rgb as RGB;
+		return {
+			rgb,
+			hex: rgbToHex(...rgb),
+			hsl: rgbToHsl(...rgb),
+			hwb: rgbToHwb(...rgb),
+			name: findColorName(rgb),
+		};
 	}
 	if (color.startsWith("hsl(")) {
 		color = color.slice(4, -1).trim();
@@ -463,7 +517,14 @@ export const resolveColor = (color: string): RGB => {
 		const s = Math.max(Math.min(parseFloat(hsl[1]!), 100), 0);
 		const l = Math.max(Math.min(parseFloat(hsl[2]!), 100), 0);
 		if (isNaN(h) || isNaN(s) || isNaN(l)) throw new Error("Invalid HSL color");
-		return hslToRgb(h, s, l);
+		const rgb = hslToRgb(h, s, l);
+		return {
+			rgb,
+			hsl: [h, s, l],
+			hex: rgbToHex(...rgb),
+			hwb: rgbToHwb(...rgb),
+			name: findColorName(rgb),
+		};
 	}
 	if (color.startsWith("hwb(")) {
 		color = color.slice(4, -1).trim();
@@ -475,7 +536,14 @@ export const resolveColor = (color: string): RGB => {
 		const w = Math.max(Math.min(parseFloat(hwb[1]!), 100), 0);
 		const b = Math.max(Math.min(parseFloat(hwb[2]!), 100), 0);
 		if (isNaN(h) || isNaN(w) || isNaN(b)) throw new Error("Invalid HWB color");
-		return hwbToRgb(h, w, b);
+		const rgb = hwbToRgb(h, w, b);
+		return {
+			rgb,
+			hwb: [h, w, b],
+			hsl: rgbToHsl(...rgb),
+			hex: rgbToHex(...rgb),
+			name: findColorName(rgb),
+		};
 	}
 	throw new Error("Invalid color");
 };

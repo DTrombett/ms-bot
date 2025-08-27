@@ -6,10 +6,11 @@ import {
 	type RESTPostAPIWebhookWithTokenJSONBody,
 } from "discord-api-types/v10";
 import {
+	cssRound,
 	resolveColor,
 	resolveCommandOptions,
+	type Color,
 	type CommandOptions,
-	type RGB,
 } from "../util";
 
 export const color = {
@@ -31,10 +32,10 @@ export const color = {
 	],
 	run: async (reply, { interaction }) => {
 		const { options } = resolveCommandOptions(color.data, interaction);
-		let rgb: RGB;
+		let resolvedColor: Color;
 
 		try {
-			rgb = resolveColor(options.name);
+			resolvedColor = resolveColor(options.name);
 		} catch (err) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -47,7 +48,12 @@ export const color = {
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: {
-				content: `Ecco il colore che hai richiesto: rgb(${rgb.join(", ")})`,
+				content: `Ecco il colore che hai richiesto:
+- ${resolvedColor.name}
+- ${resolvedColor.hex}
+- rgb(${resolvedColor.rgb.map(cssRound).join(" ")})
+- hsl(${cssRound(resolvedColor.hsl[0])}° ${cssRound(resolvedColor.hsl[1])}% ${cssRound(resolvedColor.hsl[2])}%)
+- hwb(${cssRound(resolvedColor.hwb[0])}° ${cssRound(resolvedColor.hwb[1])}% ${cssRound(resolvedColor.hwb[2])}%)`,
 			} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 		});
 	},
