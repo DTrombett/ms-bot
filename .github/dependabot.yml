@@ -11,4 +11,6 @@ updates:
       include: "scope"
     assignees:
       - "DTrombett"
-    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 0

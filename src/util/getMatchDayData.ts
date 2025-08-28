@@ -1,6 +1,7 @@
 import {
 	Env,
 	Prediction,
+	getMatchDayNumber,
 	loadMatches,
 	type MatchDayResponse,
 	type User,
@@ -21,7 +22,7 @@ export const getMatchDayData = async (
 		});
 	const matchDayData = matchDays.data.find(
 		day
-			? (d) => Number(d.description) === day
+			? (d) => getMatchDayNumber(d) === day
 			: (d) => d.category_status === "TO BE PLAYED",
 	);
 

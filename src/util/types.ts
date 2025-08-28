@@ -17,6 +17,7 @@ import type { Params as LMParams } from "../LiveMatch";
 import type { Params as LVParams } from "../LiveScore";
 import type { Params as PRParams } from "../PredictionsReminders";
 import type { Params as RParams } from "../Reminder";
+import type { Params as SParams } from "../Shorten";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -190,7 +191,7 @@ export type MatchesData =
 	| { success: false; message: string; errors: unknown[] };
 export type MatchDay = {
 	category_status: "LIVE" | "PLAYED" | "TO BE PLAYED";
-	description: `${number}`;
+	title: `Matchday ${number}`;
 	id_category: number;
 };
 export type MatchDayResponse =
@@ -262,6 +263,9 @@ export type ResolvedUser = Pick<
 
 export type EnvVars = {
 	NODE_ENV?: string;
+	CLOUDFLARE_API_TOKEN: string;
+	CLOUDFLARE_ACCOUNT_ID: string;
+	BULK_LIST_ID: string;
 	DISCORD_APPLICATION_ID: string;
 	DISCORD_PUBLIC_KEY: string;
 	DISCORD_TOKEN: string;
@@ -273,8 +277,6 @@ export type EnvVars = {
 	PREDICTIONS_ROLE: string;
 	SEASON_ID: string;
 	LIVE_MATCH_CHANNEL: string;
-	CLOUDFLARE_API_TOKEN: string;
-	CLOUDFLARE_ACCOUNT_ID: string;
 };
 export type Env = EnvVars & {
 	DB: D1Database;
@@ -282,4 +284,6 @@ export type Env = EnvVars & {
 	LIVE_SCORE: Workflow<LVParams>;
 	LIVE_MATCH: Workflow<LMParams>;
 	REMINDER: Workflow<RParams>;
+	SHORTEN: Workflow<SParams>;
+	KV: KVNamespace;
 };

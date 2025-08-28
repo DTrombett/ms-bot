@@ -1,6 +1,5 @@
 import { escapeMarkdown } from "@discordjs/formatters";
 import {
-	APIApplicationCommandInteractionDataUserOption,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
@@ -8,9 +7,9 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { rest, type CommandOptions } from "../util";
+import { resolveCommandOptions, rest, type CommandOptions } from "../util";
 
-export const avatar: CommandOptions<ApplicationCommandType.ChatInput> = {
+export const avatar = {
 	data: [
 		{
 			name: "avatar",
@@ -26,10 +25,10 @@ export const avatar: CommandOptions<ApplicationCommandType.ChatInput> = {
 		},
 	],
 	run: (reply, { interaction }) => {
-		const userId = interaction.data.options?.find(
-			(o): o is APIApplicationCommandInteractionDataUserOption =>
-				o.name === "user" && o.type === ApplicationCommandOptionType.User,
-		)?.value;
+		const { user: userId } = resolveCommandOptions(
+			avatar.data,
+			interaction,
+		).options;
 		const user =
 			userId == null
 				? (interaction.user ?? interaction.member?.user)
@@ -91,4 +90,4 @@ export const avatar: CommandOptions<ApplicationCommandType.ChatInput> = {
 			},
 		});
 	},
-};
+} as const satisfies CommandOptions<ApplicationCommandType.ChatInput>;

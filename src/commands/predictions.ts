@@ -22,9 +22,12 @@ import { ok } from "node:assert";
 import {
 	MatchDay,
 	Prediction,
+	calculateWins,
 	getMatchDayData,
+	getMatchDayNumber,
 	normalizeTeamName,
 	rest,
+	sortLeaderboard,
 	type CommandOptions,
 	type Match,
 	type User,
@@ -53,14 +56,14 @@ const buildModal = (
 	part: number,
 	userId: string,
 	predictions?: Pick<Prediction, "matchId" | "prediction">[],
-	timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15,
+	timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5,
 ) =>
 	new ModalBuilder()
 		.setCustomId(
-			`predictions-${matchDay.description}-${part}-${timestamp}-${userId}`,
+			`predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
 		)
 		.setTitle(
-			`Pronostici ${matchDay.description}ª Giornata (${part}/${matches.length / 5})`,
+			`Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${matches.length / 5})`,
 		)
 		.addComponents(
 			matches.slice((part - 1) * 5, part * 5).map((m) => {
@@ -153,6 +156,11 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 						},
 					],
 				},
+				{
+					name: "dashboard",
+					description: "Apri la dashboard web per inviare i pronostici",
+					type: ApplicationCommandOptionType.Subcommand,
+				},
 			],
 		},
 	],
@@ -201,13 +209,34 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			});
 			return;
 		}
+		if (subCommand.name === "dashboard") {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					content:
+						"Apri la [dashboard](https://ms-bot.trombett.org/) per inviare i pronostici!",
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setURL("https://ms-bot.trombett.org/")
+									.setLabel("Apri")
+									.setStyle(ButtonStyle.Link),
+							)
+							.toJSON(),
+					],
+				},
+			});
+			return;
+		}
 		if (subCommand.name === "leaderboard") {
 			const { results } = await env.DB.prepare(
 				`SELECT id, dayPoints, matchPointsHistory, match
 					FROM Users
-					WHERE dayPoints IS NOT NULL
-					ORDER BY dayPoints DESC`,
+					WHERE dayPoints IS NOT NULL`,
 			).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
+			const wins = calculateWins(results);
+			const sortedResults = sortLeaderboard(results);
 
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
@@ -219,16 +248,18 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							)
 							.setTitle("Classifica Generale")
 							.setDescription(
-								results
+								sortedResults
 									.map(
 										(user, i) =>
 											`${i + 1}\\. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
 												Math.abs(user.dayPoints ?? 0) === 1 ? "o" : "i"
-											} Giornata`,
+											} Giornata (**${wins[user.id] ?? 0}** vittori${
+												(wins[user.id] ?? 0) === 1 ? "a" : "e"
+											})`,
 									)
 									.join("\n"),
 							)
-							.addFields(resolveStats(results))
+							.addFields(resolveStats(sortedResults))
 							.setAuthor({
 								name: "Serie A Enilive",
 								url: "https://legaseriea.it/it/serie-a",
@@ -255,7 +286,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 			});
 			return;
 		}
-		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 15;
+		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5;
 
 		if (subCommand.name === "view") {
 			const user =
@@ -307,7 +338,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							thumbnail: {
 								url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 							},
-							title: `${matchDay.description}ª Giornata Serie A Enilive`,
+							title: `${getMatchDayNumber(matchDay)}ª Giornata Serie A Enilive`,
 							url: "https://legaseriea.it/it/serie-a",
 						},
 					],
@@ -321,7 +352,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+						"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});
@@ -341,7 +372,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${options.user ? Infinity : startTime}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-1-${options.user ? Infinity : startTime}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -377,7 +408,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Puoi inviare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+						"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});
@@ -471,7 +502,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-${part}-${timestamp}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -527,7 +558,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${timestamp}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -548,7 +579,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-${part! + 1}-${timestamp}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-${part! + 1}-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "⏩" })
 									.setLabel("Continua")
@@ -571,7 +602,7 @@ VALUES (?)`,
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content:
-						"Puoi modificare i pronostici solo fino a 15 minuti dall'inizio del primo match della giornata!",
+						"Puoi modificare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 					flags: MessageFlags.Ephemeral,
 				},
 			});
@@ -623,7 +654,7 @@ VALUES (?)`,
 							.addComponents(
 								new ButtonBuilder()
 									.setCustomId(
-										`predictions-${matchDay.description}-1-${timestamp}-${userId}`,
+										`predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
 									)
 									.setEmoji({ name: "✏️" })
 									.setLabel("Modifica")
@@ -635,7 +666,7 @@ VALUES (?)`,
 			});
 			return;
 		}
-		if (parseInt(actionOrDay!) !== parseInt(matchDay.description)) {
+		if (parseInt(actionOrDay!) !== getMatchDayNumber(matchDay)) {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {

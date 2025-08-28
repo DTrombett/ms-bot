@@ -2,13 +2,13 @@ import { blockQuote, escapeBulletedList } from "@discordjs/formatters";
 import {
 	APIApplicationCommandInteractionDataStringOption,
 	APIInteractionResponseCallbackData,
-	APIMessageActionRowComponent,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
 	InteractionResponseType,
 	MessageFlags,
+	type APIButtonComponent,
 } from "discord-api-types/v10";
 import type { CommandOptions } from "../util";
 
@@ -182,7 +182,7 @@ const askQuelo = ({
 			content: "Frase non trovata!",
 			flags: MessageFlags.Ephemeral,
 		};
-	const components: APIMessageActionRowComponent[] = [
+	const components: APIButtonComponent[] = [
 		{
 			type: ComponentType.Button,
 			label: "Un'altra",

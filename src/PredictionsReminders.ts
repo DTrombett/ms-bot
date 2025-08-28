@@ -14,6 +14,7 @@ import {
 import ms from "ms";
 import {
 	getLiveEmbed,
+	getMatchDayNumber,
 	loadMatches,
 	normalizeTeamName,
 	resolveLeaderboard,
@@ -26,6 +27,8 @@ import {
 	type User,
 } from "./util";
 
+const KV_KEY = "started-matchdays";
+
 export type Params = {
 	matchDay?: { day: number; id: number };
 };
@@ -35,9 +38,13 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
+		const started = await step.do(
+			"load started matchdays",
+			this.loadStartedMatchdays.bind(this),
+		);
 		const matchDay =
 			event.payload.matchDay ??
-			(await step.do("get match day", this.getMatchDay.bind(this)));
+			(await step.do("get match day", this.getMatchDay.bind(this, started)));
 
 		if (!matchDay) {
 			console.log("No match day available");
@@ -102,20 +109,25 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				),
 			);
 		await Promise.all(promises);
-		await step.do<void>(
-			"start live score",
-			this.startLiveScore.bind(
-				this,
-				matchDay,
-				await step.do(
-					"send message",
-					this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
-				),
-			),
+		const messageId = await step.do(
+			"send message",
+			this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
 		);
+		started.push(matchDay.id);
+		await Promise.all([
+			step.do<void>("pin message", this.pinMessage.bind(this, messageId)),
+			step.do<void>(
+				"start live score",
+				this.startLiveScore.bind(this, matchDay, messageId),
+			),
+			step.do<void>(
+				"update started matchday",
+				this.updateStartedMatchday.bind(this, started),
+			),
+		]);
 		const newMatchDay = await step.do(
 			"Load new match day",
-			this.loadNewMatchDay.bind(this, matchDay.id),
+			this.loadNewMatchDay.bind(this, matchDay.id, started),
 		);
 
 		if (!newMatchDay) {
@@ -135,21 +147,24 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			);
 	}
 
-	private async getMatchDay() {
+	private async getMatchDay(started: number[] = []) {
 		const matchDays = await fetch(
 			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
 		).then<MatchDayResponse>((res) => res.json());
 
 		if (!matchDays.success) throw new Error(matchDays.message);
-		const md = matchDays.data.find((d) => d.category_status === "TO BE PLAYED");
-
-		return md && { day: Number(md.description), id: md.id_category };
+		const md = matchDays.data.find(
+			(d) =>
+				d.category_status === "TO BE PLAYED" &&
+				!started.includes(d.id_category),
+		);
+		return md && { day: getMatchDayNumber(md), id: md.id_category };
 	}
 
 	private async getStartTime(day: { day: number; id: number }) {
 		const matches = await loadMatches(day.id, 1);
 
-		return Date.parse(matches[0]!.date_time) - 15 * 60 * 1000;
+		return Date.parse(matches[0]!.date_time) - 5 * 60 * 1000;
 	}
 
 	private async getReminders(startTime: number) {
@@ -225,8 +240,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
 				).bind(...matches.map((m) => m.match_id)),
 				this.env.DB.prepare(`SELECT id, dayPoints, matchPointsHistory, match
-					FROM Users
-					ORDER BY dayPoints DESC`),
+					FROM Users`),
 			])) as [
 				D1Result<Prediction>,
 				D1Result<
@@ -320,6 +334,12 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		return id;
 	}
 
+	private async pinMessage(messageId: string) {
+		await rest.put(
+			Routes.channelMessagesPin(this.env.PREDICTIONS_CHANNEL, messageId),
+		);
+	}
+
 	private async startLiveScore(
 		matchDay: { day: number; id: number },
 		messageId: string,
@@ -327,7 +347,11 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		await this.env.LIVE_SCORE.create({ params: { matchDay, messageId } });
 	}
 
-	private async loadNewMatchDay(lastId: number) {
+	private async updateStartedMatchday(started: number[]) {
+		await this.env.KV.put(KV_KEY, started.join(","));
+	}
+
+	private async loadNewMatchDay(lastId: number, started: number[] = []) {
 		const matchDays = (await fetch(
 			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
 		).then((res) => res.json())) as MatchDayResponse;
@@ -337,10 +361,19 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				cause: matchDays.errors,
 			});
 		const md = matchDays.data.find(
-			(d) => d.id_category > lastId && d.category_status === "TO BE PLAYED",
+			(d) =>
+				d.id_category !== lastId &&
+				d.category_status === "TO BE PLAYED" &&
+				!started.includes(d.id_category),
 		);
+		return md && { day: getMatchDayNumber(md), id: md.id_category };
+	}
 
-		return md && { day: Number(md.description), id: md.id_category };
+	private async loadStartedMatchdays() {
+		return ((await this.env.KV.get(KV_KEY).catch(() => undefined)) ?? "")
+			.split(",")
+			.filter(Boolean)
+			.map(Number);
 	}
 
 	private async sendNewMatchDayMessage(

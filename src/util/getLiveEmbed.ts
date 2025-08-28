@@ -2,6 +2,8 @@ import { EmbedBuilder } from "@discordjs/builders";
 import {
 	Leaderboard,
 	MatchStatus,
+	calculateAveragePoints,
+	calculateWins,
 	normalizeTeamName,
 	type MatchesData,
 	type ResolvedUser,
@@ -82,21 +84,42 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 	const oldLeaderboard = leaderboard.toSorted(
 		(a, b) => (b[0].dayPoints ?? 0) - (a[0].dayPoints ?? 0),
 	);
+	const users = leaderboard.map(([user]) => user);
+	const wins = calculateWins(users);
+	const averages = calculateAveragePoints(users);
+	// Find current day winners (users with highest matchPoints)
+	const maxMatchPoints = Math.max(
+		...leaderboard.map(([, matchPoints]) => matchPoints),
+	);
+	const currentDayWinners = leaderboard
+		.filter(([, matchPoints]) => matchPoints === maxMatchPoints)
+		.map(([user]) => user.id);
 
+	for (const winnerId of currentDayWinners)
+		wins[winnerId] = (wins[winnerId] ?? 0) + 1;
 	return leaderboard
-		.toSorted(
-			(a, b) => (b[0].dayPoints ?? 0) + b[2] - ((a[0].dayPoints ?? 0) + a[2]),
-		)
-		.map(([user, , points], _i, array) => {
-			const newPoints = (user.dayPoints ?? 0) + points;
-			const newPosition = array.findIndex(
-				([u, , p]) => (u.dayPoints ?? 0) + p === newPoints,
-			);
-			const diff =
-				oldLeaderboard.findIndex(([u]) => u.dayPoints === user.dayPoints) -
-				newPosition;
+		.toSorted((a, b) => {
+			const aTotalPoints = (a[0].dayPoints ?? 0) + a[2];
+			const bTotalPoints = (b[0].dayPoints ?? 0) + b[2];
 
-			return `${newPosition + 1}\\. <@${user.id}>: **${newPoints}** Punt${
+			// Primary: sort by total points (including current match day)
+			if (aTotalPoints !== bTotalPoints) return bTotalPoints - aTotalPoints;
+
+			// Secondary: sort by wins (including current day)
+			const aWins = wins[a[0].id] ?? 0;
+			const bWins = wins[b[0].id] ?? 0;
+			if (aWins !== bWins) return bWins - aWins;
+
+			// Tertiary: sort by average points (historical)
+			const aAvg = averages[a[0].id] ?? 0;
+			const bAvg = averages[b[0].id] ?? 0;
+			return bAvg - aAvg;
+		})
+		.map(([user, , points], i) => {
+			const newPoints = (user.dayPoints ?? 0) + points;
+			const diff = oldLeaderboard.findIndex(([u]) => u.id === user.id) - i;
+
+			return `${i + 1}. <@${user.id}>: **${newPoints}** Punt${
 				Math.abs(newPoints) === 1 ? "o" : "i"
 			} Giornata ${finalEmojis[diff] ?? finalEmojis[diff > 0 ? 2 : -2]}`;
 		})
@@ -207,7 +230,7 @@ export const resolveStats = (users: User[]) => {
 		}
 	}
 	return {
-		name: "Statistiche Serie A 2024/2025",
+		name: "Statistiche Serie A 2025/2026",
 		value: `- Punteggio più alto: ${
 			highestPoints.users.size
 				? `${[...highestPoints.users].map((id) => `<@${id}>`).join(", ")} • **${
