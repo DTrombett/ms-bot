@@ -18,6 +18,7 @@ import type { Params as LVParams } from "../LiveScore";
 import type { Params as PRParams } from "../PredictionsReminders";
 import type { Params as RParams } from "../Reminder";
 import type { Params as SParams } from "../Shorten";
+import type { Params as BSParams } from "../BrawlStarsMonitor";
 
 export type Awaitable<T> = Promise<T> | T;
 
@@ -261,6 +262,64 @@ export type ResolvedUser = Pick<
 	predictions: Pick<Prediction, "matchId" | "prediction">[];
 };
 
+export type BrawlStarsUser = {
+	userId: string;
+	playerTag: string;
+	lastTrophies: number;
+	lastHighestTrophies: number;
+	lastRankedTrophies: number;
+	lastBrawlerCount: number;
+	lastChecked: number;
+};
+
+export type BrawlStarsNotification = {
+	userId: string;
+	notificationType: string;
+	enabled: number;
+};
+
+export type BrawlStarsPlayerData = {
+	tag: string;
+	name: string;
+	trophies: number;
+	highestTrophies: number;
+	powerPlayPoints?: number;
+	highestPowerPlayPoints?: number;
+	expLevel: number;
+	expPoints: number;
+	isQualifiedFromChampionshipChallenge: boolean;
+	"3vs3Victories": number;
+	soloVictories: number;
+	duoVictories: number;
+	bestRoboRumbleTime: number;
+	bestTimeAsBigBrawler: number;
+	club?: {
+		tag: string;
+		name: string;
+	};
+	brawlers: {
+		id: number;
+		name: string;
+		power: number;
+		rank: number;
+		trophies: number;
+		highestTrophies: number;
+		gears: {
+			id: number;
+			name: string;
+			level: number;
+		}[];
+		starPowers: {
+			id: number;
+			name: string;
+		}[];
+		gadgets: {
+			id: number;
+			name: string;
+		}[];
+	}[];
+};
+
 export type EnvVars = {
 	NODE_ENV?: string;
 	CLOUDFLARE_API_TOKEN: string;
@@ -277,6 +336,7 @@ export type EnvVars = {
 	PREDICTIONS_ROLE: string;
 	SEASON_ID: string;
 	LIVE_MATCH_CHANNEL: string;
+	BRAWL_STARS_API_KEY: string;
 };
 export type Env = EnvVars & {
 	DB: D1Database;
@@ -285,5 +345,6 @@ export type Env = EnvVars & {
 	LIVE_MATCH: Workflow<LMParams>;
 	REMINDER: Workflow<RParams>;
 	SHORTEN: Workflow<SParams>;
+	BRAWL_STARS_MONITOR: Workflow<BSParams>;
 	KV: KVNamespace;
 };

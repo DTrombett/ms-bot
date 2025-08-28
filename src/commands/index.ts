@@ -1,6 +1,7 @@
 export * from "./avatar";
 export * from "./bann";
 export * from "./banner";
+export * from "./brawl";
 export * from "./cat";
 export * from "./dev";
 export * from "./dice";
