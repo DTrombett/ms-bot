@@ -66,7 +66,9 @@ export const color = {
 							},
 							{
 								name: "CMYK",
-								value: `${cssRound(resolvedColor.cmyk[0])}%, ${cssRound(resolvedColor.cmyk[1])}%, ${cssRound(resolvedColor.cmyk[2])}%, ${cssRound(resolvedColor.cmyk[3])}%`,
+								value: resolvedColor.cmyk
+									.map((v) => `${cssRound(v)}%`)
+									.join(", "),
 								inline: true,
 							},
 							{

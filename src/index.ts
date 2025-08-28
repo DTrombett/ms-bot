@@ -99,7 +99,11 @@ const server: ExportedHandler<Env> = {
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
 		}
 		if (url.pathname === "/color") {
-			if (request.method !== "GET") return new Response(null, { status: 405 });
+			if (request.method !== "GET")
+				return new JsonResponse(
+					{ error: "Method Not Allowed" },
+					{ status: 405 },
+				);
 			const rgb = [
 				url.searchParams.get("red"),
 				url.searchParams.get("green"),
