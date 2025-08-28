@@ -3,7 +3,17 @@ import capitalize from "./capitalize";
 export type RGB = [red: number, green: number, blue: number];
 export type HSL = [hue: number, sat: number, light: number];
 export type HWB = [hue: number, white: number, black: number];
-export type Color = { rgb: RGB; hex: string; hsl: HSL; hwb: HWB; name: string };
+export type HSV = [hue: number, sat: number, value: number];
+export type CMYK = [cyan: number, magenta: number, yellow: number, key: number];
+export type Color = {
+	rgb: RGB;
+	hex: string;
+	hsl: HSL;
+	hwb: HWB;
+	hsv: HSV;
+	cmyk: CMYK;
+	name: string;
+};
 
 const epsilon = 1 / 100_000;
 
@@ -161,6 +171,37 @@ export const rgbToHex = (...rgb: RGB): string =>
 		.map((c) => c.toString(16).padStart(2, "0"))
 		.join("")
 		.toUpperCase()}`;
+
+export const rgbToCmyk = (r: number, g: number, b: number): CMYK => {
+	r /= 255;
+	g /= 255;
+	b /= 255;
+	const k = 1 - Math.max(r, g, b);
+	if (k === 1) return [0, 0, 0, 1];
+	return [
+		((1 - k - r) / (1 - k)) * 100,
+		((1 - k - g) / (1 - k)) * 100,
+		((1 - k - b) / (1 - k)) * 100,
+		k * 100,
+	];
+};
+
+export const rgbToHsv = (r: number, g: number, b: number): HSV => {
+	r /= 255;
+	g /= 255;
+	b /= 255;
+	const max = Math.max(r, g, b);
+	const delta = max - Math.min(r, g, b);
+	let h = 0;
+	if (delta !== 0) {
+		if (max === r) h = ((g - b) / delta) % 6;
+		else if (max === g) h = (b - r) / delta + 2;
+		else h = (r - g) / delta + 4;
+		h *= 60;
+		if (h < 0) h += 360;
+	}
+	return [h, (max && delta / max) * 100, max * 100];
+};
 
 //#region Named colors
 const namedColors: Record<string, RGB> = {
@@ -455,6 +496,8 @@ export const resolveColor = (color: string): Color => {
 			hex: rgbToHex(...namedColors[color]!),
 			hsl: rgbToHsl(...namedColors[color]!),
 			hwb: rgbToHwb(...namedColors[color]!),
+			hsv: rgbToHsv(...namedColors[color]!),
+			cmyk: rgbToCmyk(...namedColors[color]!),
 		};
 	// eslint-disable-next-line @typescript-eslint/prefer-string-starts-ends-with
 	if (color[0] === "#") {
@@ -478,6 +521,8 @@ export const resolveColor = (color: string): Color => {
 			hex: `#${color.toUpperCase()}`,
 			hsl: rgbToHsl(...rgb),
 			hwb: rgbToHwb(...rgb),
+			cmyk: rgbToCmyk(...rgb),
+			hsv: rgbToHsv(...rgb),
 			name: findColorName(rgb),
 		};
 	}
@@ -504,6 +549,8 @@ export const resolveColor = (color: string): Color => {
 			hex: rgbToHex(...rgb),
 			hsl: rgbToHsl(...rgb),
 			hwb: rgbToHwb(...rgb),
+			cmyk: rgbToCmyk(...rgb),
+			hsv: rgbToHsv(...rgb),
 			name: findColorName(rgb),
 		};
 	}
@@ -523,6 +570,8 @@ export const resolveColor = (color: string): Color => {
 			hsl: [h, s, l],
 			hex: rgbToHex(...rgb),
 			hwb: rgbToHwb(...rgb),
+			cmyk: rgbToCmyk(...rgb),
+			hsv: rgbToHsv(...rgb),
 			name: findColorName(rgb),
 		};
 	}
@@ -542,6 +591,8 @@ export const resolveColor = (color: string): Color => {
 			hwb: [h, w, b],
 			hsl: rgbToHsl(...rgb),
 			hex: rgbToHex(...rgb),
+			cmyk: rgbToCmyk(...rgb),
+			hsv: rgbToHsv(...rgb),
 			name: findColorName(rgb),
 		};
 	}

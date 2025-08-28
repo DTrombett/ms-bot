@@ -48,12 +48,51 @@ export const color = {
 		reply({
 			type: InteractionResponseType.ChannelMessageWithSource,
 			data: {
-				content: `Ecco il colore che hai richiesto:
-- ${resolvedColor.name}
-- ${resolvedColor.hex}
-- rgb(${resolvedColor.rgb.map(cssRound).join(" ")})
-- hsl(${cssRound(resolvedColor.hsl[0])}° ${cssRound(resolvedColor.hsl[1])}% ${cssRound(resolvedColor.hsl[2])}%)
-- hwb(${cssRound(resolvedColor.hwb[0])}° ${cssRound(resolvedColor.hwb[1])}% ${cssRound(resolvedColor.hwb[2])}%)`,
+				embeds: [
+					{
+						title: resolvedColor.name,
+						fields: [
+							{
+								name: "HEX",
+								value: resolvedColor.hex,
+								inline: true,
+							},
+							{
+								name: "RGB",
+								value: `${resolvedColor.rgb.join(", ")}`,
+								inline: true,
+							},
+							{
+								name: "CMYK",
+								value: `${cssRound(resolvedColor.cmyk[0])}%, ${cssRound(resolvedColor.cmyk[1])}%, ${cssRound(resolvedColor.cmyk[2])}%, ${cssRound(resolvedColor.cmyk[3])}%`,
+								inline: true,
+							},
+							{
+								name: "HWB",
+								value: `${cssRound(resolvedColor.hwb[0])}°, ${cssRound(resolvedColor.hwb[1])}%, ${cssRound(resolvedColor.hwb[2])}%`,
+								inline: true,
+							},
+							{
+								name: "HSV",
+								value: `${cssRound(resolvedColor.hsv[0])}°, ${cssRound(resolvedColor.hsv[1])}%, ${cssRound(resolvedColor.hsv[2])}%`,
+								inline: true,
+							},
+							{
+								name: "HSL",
+								value: `${cssRound(resolvedColor.hsl[0])}°, ${cssRound(resolvedColor.hsl[1])}%, ${cssRound(resolvedColor.hsl[2])}%`,
+								inline: true,
+							},
+						],
+						color:
+							(resolvedColor.rgb[0] << 16) +
+							(resolvedColor.rgb[1] << 8) +
+							resolvedColor.rgb[2],
+						thumbnail: {
+							// Example preview image for the selected color
+							url: `https://singlecolorimage.com/get/${resolvedColor.hex.slice(1)}/256x256`,
+						},
+					},
+				],
 			} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 		});
 	},
