@@ -51,6 +51,7 @@ export type Handler<T extends APIInteraction> = (options: {
 	interaction: T;
 	env: Env;
 	context: ExecutionContext;
+	host: string;
 }) => Awaitable<APIInteractionResponse | undefined>;
 
 export type ReplyFunction<
@@ -61,6 +62,7 @@ export type ExecutorContext<T extends APIInteraction = APIInteraction> = {
 	env: Env;
 	context: ExecutionContext;
 	interaction: T;
+	host: string;
 };
 
 /**
