@@ -3,6 +3,7 @@ import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	InteractionResponseType,
+	MessageFlags,
 	type RESTPostAPIWebhookWithTokenJSONBody,
 } from "discord-api-types/v10";
 import {
@@ -41,6 +42,7 @@ export const color = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content: `Colore non valido: ${inlineCode((err as Error).message)}`,
+					flags: MessageFlags.Ephemeral,
 				} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			});
 			return;
