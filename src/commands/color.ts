@@ -30,7 +30,7 @@ export const color = {
 			],
 		},
 	],
-	run: async (reply, { interaction }) => {
+	run: async (reply, { interaction, host }) => {
 		const { options } = resolveCommandOptions(color.data, interaction);
 		let resolvedColor: Color;
 
@@ -88,7 +88,7 @@ export const color = {
 							(resolvedColor.rgb[1] << 8) +
 							resolvedColor.rgb[2],
 						thumbnail: {
-							url: `https://kids-tin-nuke-communicate.trycloudflare.com/color?red=${resolvedColor.rgb[0]}&green=${resolvedColor.rgb[1]}&blue=${resolvedColor.rgb[2]}`,
+							url: `https://${host}/color?red=${resolvedColor.rgb[0]}&green=${resolvedColor.rgb[1]}&blue=${resolvedColor.rgb[2]}`,
 							height: 256,
 							width: 256,
 						},

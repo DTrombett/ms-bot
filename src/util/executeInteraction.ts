@@ -9,6 +9,7 @@ export const executeInteraction = async <I extends APIInteraction>(
 	interaction: I,
 	env: Env,
 	context: ExecutionContext,
+	host: string,
 	type: NonNullable<
 		{
 			[K in keyof CommandOptions]?: CommandOptions[K] extends
@@ -36,7 +37,7 @@ export const executeInteraction = async <I extends APIInteraction>(
 				resolve(value);
 				done = true;
 			},
-			{ env, context, interaction: interaction as never },
+			{ env, context, interaction: interaction as never, host },
 		)?.catch((err: Error) => {
 			if (done) console.error(err);
 			else reject(err);
