@@ -204,7 +204,7 @@ export const rgbToHsv = (r: number, g: number, b: number): HSV => {
 };
 
 //#region Named colors
-const namedColors: Record<string, RGB> = {
+export const namedColors: Record<string, RGB> = {
 	aliceblue: [240, 248, 255],
 	antiquewhite: [250, 235, 215],
 	aqua: [0, 255, 255],
@@ -355,7 +355,7 @@ const namedColors: Record<string, RGB> = {
 	yellowgreen: [154, 205, 50],
 };
 // Add aliases with spaces
-const aliases: Record<string, string> = {
+export const aliases: Record<string, string> = {
 	"alice blue": "aliceblue",
 	"antique white": "antiquewhite",
 	"aqua marine": "aquamarine",
@@ -518,7 +518,7 @@ export const resolveColor = (color: string): Color => {
 		else throw new Error("Invalid hex color");
 		return {
 			rgb,
-			hex: `#${color.toUpperCase()}`,
+			hex: rgbToHex(...rgb),
 			hsl: rgbToHsl(...rgb),
 			hwb: rgbToHwb(...rgb),
 			cmyk: rgbToCmyk(...rgb),

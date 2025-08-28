@@ -8,8 +8,9 @@ import {
 	InteractionResponseType,
 } from "discord-api-types/v10";
 import * as commandsObject from "./commands";
-import type { CommandOptions, Env, Handler } from "./util";
+import type { CommandOptions, Env, Handler, RGB } from "./util";
 import {
+	createSolidPng,
 	executeInteraction,
 	JsonResponse,
 	rest,
@@ -91,6 +92,22 @@ const server: ExportedHandler<Env> = {
 			}
 			if (request.method === "GET") return new Response("Ready!");
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+		}
+		if (url.pathname === "/color") {
+			if (request.method !== "GET") return new Response(null, { status: 405 });
+			const rgb = [
+				url.searchParams.get("red"),
+				url.searchParams.get("green"),
+				url.searchParams.get("blue"),
+			].map(Number) as RGB;
+			if (rgb.some(isNaN))
+				return new JsonResponse(
+					{ error: "Missing 'red', 'green' or 'blue' query parameter" },
+					{ status: 400 },
+				);
+			return new Response(createSolidPng(256, 256, ...rgb), {
+				headers: { "Content-Type": "image/png" },
+			});
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},

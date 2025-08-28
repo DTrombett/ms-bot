@@ -88,8 +88,9 @@ export const color = {
 							(resolvedColor.rgb[1] << 8) +
 							resolvedColor.rgb[2],
 						thumbnail: {
-							// Example preview image for the selected color
-							url: `https://singlecolorimage.com/get/${resolvedColor.hex.slice(1)}/256x256`,
+							url: `https://kids-tin-nuke-communicate.trycloudflare.com/color?red=${resolvedColor.rgb[0]}&green=${resolvedColor.rgb[1]}&blue=${resolvedColor.rgb[2]}`,
+							height: 256,
+							width: 256,
 						},
 					},
 				],
