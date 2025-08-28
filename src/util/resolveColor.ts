@@ -12,7 +12,7 @@ export type Color = {
 	hwb: HWB;
 	hsv: HSV;
 	cmyk: CMYK;
-	name: string;
+	name: string | null;
 };
 
 const epsilon = 1 / 100_000;
@@ -459,7 +459,7 @@ export const aliases: Record<string, string> = {
 };
 //#endregion
 
-export const findColorName = (rgb: RGB): string => {
+export const findColorName = (rgb: RGB): string | null => {
 	let minDist = Infinity;
 	let name!: string;
 
@@ -475,6 +475,7 @@ export const findColorName = (rgb: RGB): string => {
 			name = key;
 		}
 	}
+	if (minDist > 4096) return null;
 	return (Object.keys(aliases).find((key) => aliases[key] === name) ?? name)
 		.split(" ")
 		.map(capitalize)

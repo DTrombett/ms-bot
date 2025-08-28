@@ -50,7 +50,7 @@ export const color = {
 			data: {
 				embeds: [
 					{
-						title: resolvedColor.name,
+						title: resolvedColor.name ?? resolvedColor.hex,
 						fields: [
 							{
 								name: "HEX",
