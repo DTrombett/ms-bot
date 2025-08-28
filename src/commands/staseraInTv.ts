@@ -57,14 +57,14 @@ export const staseraInTv = {
 
 						return new EmbedBuilder()
 							.setAuthor({
-								name: `${canale?.textContent?.trim()}`,
+								name: `${canale?.textContent.trim()}`,
 								url:
 									canale instanceof HTMLAnchorElement ? canale.href : undefined,
 							})
 							.setTitle(
 								el
 									.querySelector("table table table:nth-child(2)")
-									?.textContent?.trim() ?? null,
+									?.textContent.trim() ?? null,
 							)
 							.setDescription(
 								el
@@ -73,7 +73,7 @@ export const staseraInTv = {
 							)
 							.setThumbnail(el.querySelector("img")?.src ?? null)
 							.setFooter({
-								text: `Inizio programma: ${el.querySelector("big")?.textContent?.trim()} - Canale ${el.querySelector(".numerocanale")?.textContent?.trim()}`,
+								text: `Inizio programma: ${el.querySelector("big")?.textContent.trim()} - Canale ${el.querySelector(".numerocanale")?.textContent.trim()}`,
 							})
 							.toJSON();
 					}),

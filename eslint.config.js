@@ -2,6 +2,7 @@ import { FlatCompat } from "@eslint/eslintrc";
 import js from "@eslint/js";
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import { resolve } from "node:path";
 
 const compat = new FlatCompat({
 	baseDirectory: import.meta.dirname,
@@ -28,7 +29,7 @@ export default [
 			sourceType: "module",
 			parserOptions: {
 				project: "tsconfig.json",
-				tsconfigRootDir: ".",
+				tsconfigRootDir: resolve(),
 			},
 		},
 		rules: {
