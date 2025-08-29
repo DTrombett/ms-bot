@@ -245,7 +245,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 		const query = this.env.DB.prepare(`UPDATE Users
 			SET dayPoints = COALESCE(dayPoints, 0) + ?1,
 				matchPointsHistory = COALESCE(matchPointsHistory, "${",".repeat(
-					day - 2,
+					Math.max(day - 2, 0),
 				)}") || ?2,
 				reminded = 0,
 				match = NULL
