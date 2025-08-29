@@ -139,10 +139,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 			this.loadPredictions.bind(this, matches),
 		);
 		const leaderboard = resolveLeaderboard(users, matches);
-		const oldLeaderboard: typeof leaderboard = leaderboard.map(
-			([user, ...entry]) => [{ ...user }, ...entry],
-		);
-		await step.do<void>(
+		const newUsers = await step.do(
 			"Close match day",
 			this.closeMatchDay.bind(
 				this,
@@ -155,12 +152,12 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 			"Update statistics",
 			this.updateMatchDayMessage.bind(
 				this,
-				users,
+				newUsers,
 				matches,
 				event.payload.matchDay.day,
 				true,
 				event.payload.messageId,
-				oldLeaderboard,
+				leaderboard,
 			),
 		);
 		await step.do<void>(
@@ -250,14 +247,18 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 				reminded = 0,
 				match = NULL
 			WHERE id = ?3`);
+		const newUsers: ResolvedUser[] = [];
 
 		await this.env.DB.batch([
 			...leaderboard.map(([user, matchPoints, dayPoints]) => {
-				user.dayPoints = (user.dayPoints ?? 0) + dayPoints;
-				user.matchPointsHistory = `${
-					user.matchPointsHistory ?? ",".repeat(Math.max(day - 2, 0))
-				},${matchPoints}`;
-				user.match = null;
+				newUsers.push({
+					...user,
+					dayPoints: (user.dayPoints ?? 0) + dayPoints,
+					matchPointsHistory: `${
+						user.matchPointsHistory ?? ",".repeat(Math.max(day - 2, 0))
+					},${matchPoints}`,
+					match: null,
+				});
 				return query.bind(dayPoints, `,${matchPoints}`, user.id);
 			}),
 			this.env.DB.prepare(
@@ -265,5 +266,6 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 				WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
 			).bind(...matches.map((m) => m.match_id)),
 		]);
+		return newUsers;
 	}
 }
