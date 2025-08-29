@@ -192,10 +192,11 @@ export const resolveStats = (users: User[]) => {
 		}
 		totalPoints += total[0];
 	}
-	let [bestDay] = days;
+	let bestDay: (typeof days)[number] | undefined;
 
 	for (const day of days) {
-		if (day.totalPoints > bestDay!.totalPoints) bestDay = day;
+		if (!day as any) continue;
+		if (!bestDay || day.totalPoints > bestDay.totalPoints) bestDay = day;
 		if (day.winnerPoints >= highestPoints.points) {
 			highestPoints.users = new Set([
 				...day.winners,
