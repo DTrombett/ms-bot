@@ -255,7 +255,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 			...leaderboard.map(([user, matchPoints, dayPoints]) => {
 				user.dayPoints = (user.dayPoints ?? 0) + dayPoints;
 				user.matchPointsHistory = `${
-					user.matchPointsHistory ?? ",".repeat(day - 2)
+					user.matchPointsHistory ?? ",".repeat(Math.max(day - 2, 0))
 				},${matchPoints}`;
 				user.match = null;
 				return query.bind(dayPoints, `,${matchPoints}`, user.id);
