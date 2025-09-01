@@ -126,7 +126,7 @@ export const brawl = {
 			let tag = options.tag.toUpperCase().replace(/O/g, "0");
 
 			if (!tag.startsWith("#")) tag = `#${tag}`;
-			if (!/^#[0289PYLQGRJCUV]{2,15}$/.test(tag)) {
+			if (!/^#[0289PYLQGRJCUV]{2,14}$/.test(tag)) {
 				reply({
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
@@ -216,16 +216,57 @@ export const brawl = {
 							new ActionRowBuilder<ButtonBuilder>()
 								.addComponents(
 									new ButtonBuilder()
-										.setCustomId(`brawl-link-${player.tag}`)
+										.setCustomId(
+											`brawl-link-${player.tag}-${(interaction.member ?? interaction).user!.id}`,
+										)
 										.setLabel("Collega")
 										.setEmoji({ name: "🔗" })
-										.setStyle(ButtonStyle.Success),
+										.setStyle(ButtonStyle.Primary),
 								)
 								.toJSON(),
 						],
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
+		}
+	},
+	component: async (reply, { interaction, env }) => {
+		const [, action, tag, userId] = interaction.data.custom_id.split("-");
+
+		if (action === "link") {
+			if ((interaction.member ?? interaction).user!.id !== userId) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						flags: MessageFlags.Ephemeral,
+						content: "Questa azione non è per te!",
+					},
+				});
+				return;
+			}
+			await env.DB.prepare(
+				"INSERT INTO Users (id, brawlTag) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET brawlTag = excluded.brawlTag",
+			)
+				.bind(userId, tag)
+				.run();
+			reply({
+				type: InteractionResponseType.UpdateMessage,
+				data: {
+					content: "Profilo collegato con successo!",
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setLabel("Collegato")
+									.setCustomId(interaction.data.custom_id)
+									.setEmoji({ name: "🔗" })
+									.setDisabled(true)
+									.setStyle(ButtonStyle.Success),
+							)
+							.toJSON(),
+					],
+				},
+			});
 		}
 	},
 } as const satisfies CommandOptions<ApplicationCommandType.ChatInput>;
