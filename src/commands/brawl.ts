@@ -222,6 +222,13 @@ export const brawl = {
 										.setLabel("Collega")
 										.setEmoji({ name: "🔗" })
 										.setStyle(ButtonStyle.Primary),
+									new ButtonBuilder()
+										.setCustomId(
+											`brawl-undo-${player.tag}-${(interaction.member ?? interaction).user!.id}`,
+										)
+										.setLabel("Annulla")
+										.setEmoji({ name: "✖️" })
+										.setStyle(ButtonStyle.Danger),
 								)
 								.toJSON(),
 						],
@@ -262,6 +269,43 @@ export const brawl = {
 									.setEmoji({ name: "🔗" })
 									.setDisabled(true)
 									.setStyle(ButtonStyle.Success),
+							)
+							.toJSON(),
+					],
+				},
+			});
+			return;
+		}
+		if (action === "undo") {
+			if ((interaction.member ?? interaction).user!.id !== userId) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						flags: MessageFlags.Ephemeral,
+						content: "Questa azione non è per te!",
+					},
+				});
+				return;
+			}
+			reply({
+				type: InteractionResponseType.UpdateMessage,
+				data: {
+					content: "Azione annullata.",
+					components: [
+						new ActionRowBuilder<ButtonBuilder>()
+							.addComponents(
+								new ButtonBuilder()
+									.setCustomId(`brawl-link`)
+									.setLabel("Collega")
+									.setDisabled(true)
+									.setEmoji({ name: "🔗" })
+									.setStyle(ButtonStyle.Primary),
+								new ButtonBuilder()
+									.setCustomId(interaction.data.custom_id)
+									.setLabel("Annullato")
+									.setDisabled(true)
+									.setEmoji({ name: "✖️" })
+									.setStyle(ButtonStyle.Danger),
 							)
 							.toJSON(),
 					],
