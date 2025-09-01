@@ -1,5 +1,5 @@
 export type Player = {
-	club?: PlayerClub;
+	club: PlayerClub;
 	isQualifiedFromChampionshipChallenge: boolean;
 	"3vs3Victories": number;
 	icon: PlayerIcon;

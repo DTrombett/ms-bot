@@ -187,10 +187,10 @@ export const brawl = {
 										: 0xffffff,
 								)
 								.setDescription(
-									`Brawlers: **${player.brawlers.length}**\nClub: **${
-										player.club
-											? `${player.club.name}** (${player.club.tag})`
-											: "In nessun club**"
+									`Brawlers: **${player.brawlers.length}**\nClub: ${
+										player.club.tag
+											? `**${player.club.name}** (${player.club.tag})`
+											: "*In nessun club*"
 									}`,
 								)
 								.addFields(
