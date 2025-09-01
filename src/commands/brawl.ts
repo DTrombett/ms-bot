@@ -16,6 +16,13 @@ import {
 import { resolveCommandOptions, rest, type CommandOptions } from "../util";
 import type { Player } from "../util/brawlTypes";
 
+enum NotificationType {
+	"Brawler Tier Max" = 1 << 0,
+	"Ranked Tier Up" = 1 << 1,
+	"New Brawler" = 1 << 2,
+	"Trophy Road Advancement" = 1 << 3,
+	"All" = 1 << 4,
+}
 const NOTIFICATION_TYPES = [
 	"Brawler Tier Max",
 	"Ranked Tier Up",
@@ -235,6 +242,76 @@ export const brawl = {
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
+			return;
+		}
+		if (subcommand === "notify enable") {
+			const result = await env.DB.prepare(
+				`INSERT INTO Users (id, brawlNotifications)
+				VALUES (?1, ?2)
+				ON CONFLICT(id) DO UPDATE
+				SET brawlNotifications = Users.brawlNotifications | ?2
+				RETURNING brawlNotifications, brawlTag`,
+			)
+				.bind(
+					(interaction.member ?? interaction).user!.id,
+					NotificationType[options.type],
+				)
+				.first<{ brawlNotifications: number; brawlTag: string | null }>();
+
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					flags: MessageFlags.Ephemeral,
+					content: `Notifiche abilitate per il tipo **${options.type}**!\nAttualmente hai attivato le notifiche per ${
+						result!.brawlNotifications & NotificationType.All
+							? "**tutti i tipi**"
+							: Object.values(NotificationType)
+									.filter(
+										(v): v is number =>
+											typeof v === "number" &&
+											(result!.brawlNotifications & v) !== 0,
+									)
+									.map((v) => `**${NotificationType[v]}**`)
+									.join(", ")
+					}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+				},
+			});
+			return;
+		}
+		if (subcommand === "notify disable") {
+			const result = await env.DB.prepare(
+				`UPDATE Users
+				SET brawlNotifications = Users.brawlNotifications & ~?1
+				WHERE id = ?2
+				RETURNING brawlNotifications, brawlTag`,
+			)
+				.bind(
+					NotificationType[options.type],
+					(interaction.member ?? interaction).user!.id,
+				)
+				.first<{ brawlNotifications: number; brawlTag: string | null }>();
+
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					flags: MessageFlags.Ephemeral,
+					content: `Notifiche disabilitate per il tipo **${options.type}**!\nAttualmente hai attivato le notifiche per ${
+						result && result.brawlNotifications & NotificationType.All
+							? "**tutti i tipi**"
+							: (result?.brawlNotifications &&
+									Object.values(NotificationType)
+										.filter(
+											(v): v is number =>
+												typeof v === "number" &&
+												(result.brawlNotifications & v) !== 0,
+										)
+										.map((v) => `**${NotificationType[v]}**`)
+										// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+										.join(", ")) ||
+								"**nessun tipo**"
+					}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+				},
+			});
 		}
 	},
 	component: async (reply, { interaction, env }) => {
