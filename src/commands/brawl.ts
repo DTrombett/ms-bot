@@ -1,9 +1,4 @@
-import {
-	ActionRowBuilder,
-	bold,
-	ButtonBuilder,
-	EmbedBuilder,
-} from "@discordjs/builders";
+import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -13,16 +8,16 @@ import {
 	Routes,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
-import { resolveCommandOptions, rest, type CommandOptions } from "../util";
-import type { Player } from "../util/brawlTypes";
+import {
+	calculateFlags,
+	createPlayerEmbed,
+	getProfile,
+	NotificationType,
+	resolveCommandOptions,
+	rest,
+	type CommandOptions,
+} from "../util";
 
-enum NotificationType {
-	"Brawler Tier Max" = 1 << 0,
-	"Ranked Tier Up" = 1 << 1,
-	"New Brawler" = 1 << 2,
-	"Trophy Road Advancement" = 1 << 3,
-	"All" = 1 << 4,
-}
 const NOTIFICATION_TYPES = [
 	"Brawler Tier Max",
 	"Ranked Tier Up",
@@ -30,29 +25,6 @@ const NOTIFICATION_TYPES = [
 	"Trophy Road Advancement",
 	"All",
 ] as const;
-const roboRumbleLevels = [
-	"*None*",
-	"Normale",
-	"Difficile",
-	"Esperto",
-	"Master",
-	"Smodata",
-	"Smodata II",
-	"Smodata III",
-	"Smodata IV",
-	"Smodata V",
-	"Smodata VI",
-	"Smodata VII",
-	"Smodata VIII",
-	"Smodata IX",
-	"Smodata X",
-	"Smodata XI",
-	"Smodata XII",
-	"Smodata XIII",
-	"Smodata XIV",
-	"Smodata XV",
-	"Smodata XVI",
-];
 
 export const brawl = {
 	data: [
@@ -120,6 +92,39 @@ export const brawl = {
 						},
 					],
 				},
+				{
+					name: "profile",
+					description: "Visualizza un profilo Brawl Stars",
+					type: ApplicationCommandOptionType.SubcommandGroup,
+					options: [
+						{
+							name: "view",
+							description: "Vedi i dettagli di un giocatore!",
+							type: ApplicationCommandOptionType.Subcommand,
+							options: [
+								{
+									name: "tag",
+									description:
+										"Il tag giocatore (es. #8QJR0YC). Di default viene usato quello salvato",
+									type: ApplicationCommandOptionType.String,
+								},
+							],
+						},
+						{
+							name: "brawlers",
+							description: "Vedi i brawler posseduti da un giocatore",
+							type: ApplicationCommandOptionType.Subcommand,
+							options: [
+								{
+									name: "tag",
+									description:
+										"Il tag giocatore (es. #8QJR0YC). Di default viene usato quello salvato",
+									type: ApplicationCommandOptionType.String,
+								},
+							],
+						},
+					],
+				},
 			],
 		},
 	],
@@ -130,95 +135,34 @@ export const brawl = {
 		);
 
 		if (subcommand === "link") {
-			let tag = options.tag.toUpperCase().replace(/O/g, "0");
-
-			if (!tag.startsWith("#")) tag = `#${tag}`;
-			if (!/^#[0289PYLQGRJCUV]{2,14}$/.test(tag)) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						flags: MessageFlags.Ephemeral,
-						content: "Tag giocatore non valido.",
-					},
-				});
-				return;
-			}
-			reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-			const res = await fetch(
-				`https://api.brawlstars.com/v1/players/${encodeURIComponent(tag)}`,
-				{
-					headers: {
-						Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}`,
-					},
-				},
+			reply({
+				type: InteractionResponseType.DeferredChannelMessageWithSource,
+				data: { flags: MessageFlags.Ephemeral },
+			});
+			const player = await getProfile(options.tag, env).catch((err) =>
+				err instanceof Error
+					? err
+					: new Error(
+							"Si è verificato un errore imprevisto! Riprova più tardi.",
+						),
 			);
-			if (res.status === 404) {
+			if (player instanceof Error) {
 				await rest.patch(
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
 						body: {
-							content: "Tag giocatore non trovato.",
+							content: player.message,
 						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				);
 				return;
 			}
-			if (res.status !== 200) {
-				console.log(res.status, res.statusText, await res.text());
-				await rest.patch(
-					Routes.webhookMessage(interaction.application_id, interaction.token),
-					{
-						body: {
-							content:
-								"Si è verificato un errore imprevisto! Riprova più tardi.",
-						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					},
-				);
-				return;
-			}
-			const player = await res.json<Player>();
 			await rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
 						content: "Vuoi collegare questo profilo?",
-						embeds: [
-							new EmbedBuilder()
-								.setTitle(`${player.name} (${player.tag})`)
-								.setThumbnail(
-									`https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png`,
-								)
-								.setColor(
-									player.nameColor
-										? parseInt(player.nameColor.slice(4), 16)
-										: 0xffffff,
-								)
-								.setDescription(
-									`Brawlers: **${player.brawlers.length}**\nClub: ${
-										player.club.tag
-											? `**${player.club.name}** (${player.club.tag})`
-											: "*In nessun club*"
-									}`,
-								)
-								.addFields(
-									{
-										name: "🏆 Trofei",
-										value: `${bold("Attuali")}: ${player.trophies}\n${bold("Record")}: ${player.highestTrophies}`,
-										inline: true,
-									},
-									{
-										name: "🏅 Vittorie",
-										value: `${bold("3v3")}: ${player["3vs3Victories"]}\n${bold("Solo")}: ${player.soloVictories}\n${bold("Duo")}: ${player.duoVictories}`,
-										inline: true,
-									},
-									{
-										name: "📊 Altre statistiche",
-										value: `${bold("Robo Rumble")}: ${roboRumbleLevels[player.bestRoboRumbleTime]}\n${bold("Big Game")}: ${roboRumbleLevels[player.bestTimeAsBigBrawler]}`,
-										inline: true,
-									},
-								)
-								.toJSON(),
-						],
+						embeds: [createPlayerEmbed(player)],
 						components: [
 							new ActionRowBuilder<ButtonBuilder>()
 								.addComponents(
@@ -262,18 +206,7 @@ export const brawl = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					flags: MessageFlags.Ephemeral,
-					content: `Notifiche abilitate per il tipo **${options.type}**!\nAttualmente hai attivato le notifiche per ${
-						result!.brawlNotifications & NotificationType.All
-							? "**tutti i tipi**"
-							: Object.values(NotificationType)
-									.filter(
-										(v): v is number =>
-											typeof v === "number" &&
-											(result!.brawlNotifications & v) !== 0,
-									)
-									.map((v) => `**${NotificationType[v]}**`)
-									.join(", ")
-					}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+					content: `Notifiche abilitate per il tipo **${options.type}**!\nAttualmente hai attivato le notifiche per ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
 				},
 			});
 			return;
@@ -295,24 +228,68 @@ export const brawl = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					flags: MessageFlags.Ephemeral,
-					content: `Notifiche disabilitate per il tipo **${options.type}**!\nAttualmente hai attivato le notifiche per ${
-						result && result.brawlNotifications & NotificationType.All
-							? "**tutti i tipi**"
-							: (result?.brawlNotifications &&
-									Object.values(NotificationType)
-										.filter(
-											(v): v is number =>
-												typeof v === "number" &&
-												(result.brawlNotifications & v) !== 0,
-										)
-										.map((v) => `**${NotificationType[v]}**`)
-										// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-										.join(", ")) ||
-								"**nessun tipo**"
-					}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+					content: `Notifiche disabilitate per il tipo **${options.type}**!\nAttualmente hai attivato le notifiche per ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
 				},
 			});
+			return;
 		}
+		if (subcommand === "notify view") {
+			const result = await env.DB.prepare(
+				"SELECT brawlNotifications, brawlTag FROM Users WHERE id = ?",
+			)
+				.bind((interaction.member ?? interaction).user!.id)
+				.first<{ brawlNotifications: number; brawlTag: string | null }>();
+
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					flags: MessageFlags.Ephemeral,
+					content: `Notifiche attive per i seguenti tipi: ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+				},
+			});
+			return;
+		}
+		options.tag ??= (await env.DB.prepare(
+			"SELECT brawlTag FROM Users WHERE id = ?",
+		)
+			.bind((interaction.member ?? interaction).user!.id)
+			.first("brawlTag"))!;
+		if (!options.tag) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					flags: MessageFlags.Ephemeral,
+					content:
+						"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag giocatore come parametro.",
+				},
+			});
+			return;
+		}
+		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
+		const player = await getProfile(options.tag, env).catch((err) =>
+			err instanceof Error
+				? err
+				: new Error("Si è verificato un errore imprevisto! Riprova più tardi."),
+		);
+		if (player instanceof Error) {
+			await rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						content: player.message,
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+			return;
+		}
+		await rest.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{
+				body: {
+					embeds: [createPlayerEmbed(player)],
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			},
+		);
 	},
 	component: async (reply, { interaction, env }) => {
 		const [, action, tag, userId] = interaction.data.custom_id.split("-");
