@@ -20,7 +20,6 @@ import {
 
 const NOTIFICATION_TYPES = [
 	"Brawler Tier Max",
-	"Ranked Tier Up",
 	"New Brawler",
 	"Trophy Road Advancement",
 	"All",

@@ -89,7 +89,6 @@ export const createPlayerEmbed = (player: Player) =>
 
 export enum NotificationType {
 	"Brawler Tier Max" = 1 << 0,
-	"Ranked Tier Up" = 1 << 1,
 	"New Brawler" = 1 << 2,
 	"Trophy Road Advancement" = 1 << 3,
 	"All" = 1 << 4,
