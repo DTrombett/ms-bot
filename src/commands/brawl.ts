@@ -7,9 +7,11 @@ import {
 	MessageFlags,
 	Routes,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	type RESTPostAPIWebhookWithTokenJSONBody,
 } from "discord-api-types/v10";
 import {
 	calculateFlags,
+	createBrawlersComponents,
 	createPlayerEmbed,
 	getProfile,
 	NotificationType,
@@ -127,7 +129,7 @@ export const brawl = {
 			],
 		},
 	],
-	run: async (reply, { interaction, env }) => {
+	run: async (reply, { interaction, env, host }) => {
 		const { options, subcommand } = resolveCommandOptions(
 			brawl.data,
 			interaction,
@@ -284,9 +286,12 @@ export const brawl = {
 		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
-				body: {
-					embeds: [createPlayerEmbed(player)],
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				body: (subcommand === "profile view"
+					? { embeds: [createPlayerEmbed(player)] }
+					: {
+							components: createBrawlersComponents(player, host),
+							flags: MessageFlags.IsComponentsV2,
+						}) satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			},
 		);
 	},

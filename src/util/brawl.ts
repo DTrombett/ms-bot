@@ -1,4 +1,14 @@
-import { EmbedBuilder } from "@discordjs/builders";
+import {
+	ActionRowBuilder,
+	ButtonBuilder,
+	ContainerBuilder,
+	EmbedBuilder,
+	SectionBuilder,
+} from "@discordjs/builders";
+import {
+	APIMessageTopLevelComponent,
+	ButtonStyle,
+} from "discord-api-types/v10";
 import type { Player } from "./brawlTypes";
 import type { Env } from "./types";
 
@@ -86,6 +96,59 @@ export const createPlayerEmbed = (player: Player) =>
 			},
 		)
 		.toJSON();
+
+export const createBrawlersComponents = (
+	player: Player,
+	host: string,
+	page = 0,
+): APIMessageTopLevelComponent[] => {
+	const pages = Math.ceil(player.brawlers.length / 10);
+
+	return [
+		new ContainerBuilder()
+			.addMediaGalleryComponents((g) =>
+				g.addItems((i) => i.setURL(`https://${host}/brawlers.png`)),
+			)
+			.addSectionComponents(
+				player.brawlers
+					.slice(0, 10)
+					.flatMap((brawler) =>
+						new SectionBuilder()
+							.addTextDisplayComponents((t) =>
+								t.setContent(
+									`**${brawler.name}**\t${["<:gadget:1412823343953874964>".repeat(brawler.gadgets.length), "<:gear:1412824093572731003>".repeat(brawler.gears.length), "<:starpower:1412824566392426689>".repeat(brawler.starPowers.length)].filter(Boolean).join(" ")}\nLivello ${brawler.power} - Rank ${brawler.rank} - ${brawler.trophies} trofei (record ${brawler.highestTrophies})`,
+								),
+							)
+							.setButtonAccessory((b) =>
+								b
+									.setStyle(ButtonStyle.Secondary)
+									.setCustomId(`brawl-brawler-${brawler.id}`)
+									.setLabel("Dettagli"),
+							),
+					),
+			)
+			.addActionRowComponents(
+				new ActionRowBuilder<ButtonBuilder>().addComponents(
+					new ButtonBuilder()
+						.setLabel("Precedente")
+						.setCustomId(`brawl-brawlers-${Math.max(0, page - 1)}`)
+						.setDisabled(!page)
+						.setStyle(ButtonStyle.Primary),
+					new ButtonBuilder()
+						.setLabel(`Pagina ${page + 1} di ${pages}`)
+						.setCustomId("-")
+						.setDisabled(true)
+						.setStyle(ButtonStyle.Secondary),
+					new ButtonBuilder()
+						.setLabel("Successivo")
+						.setCustomId(`brawl-brawlers-${Math.min(page + 1, pages - 1)}`)
+						.setDisabled(page >= pages - 1)
+						.setStyle(ButtonStyle.Primary),
+				),
+			)
+			.toJSON(),
+	];
+};
 
 export enum NotificationType {
 	"Brawler Tier Max" = 1 << 0,
