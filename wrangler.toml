@@ -1,6 +1,6 @@
 name = "ms-bot"
-main = "./src/index.ts"
-compatibility_date = "2025-08-01"
+main = "./src/index.tsx"
+compatibility_date = "2025-09-03"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 upload_source_maps = true
