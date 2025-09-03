@@ -9,3 +9,4 @@ node_modules/
 tmp/
 .wrangler/
 _query.sql
+icons/

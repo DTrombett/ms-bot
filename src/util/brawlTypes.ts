@@ -37,3 +37,10 @@ export type StarPowerList = StarPower[];
 export type StarPower = { id: number; name: JsonLocalizedName };
 export type GearStatList = GearStat[];
 export type GearStat = { id: number; name: JsonLocalizedName; level: number };
+export type BrawlerList = Brawler[];
+export type Brawler = {
+	gadgets: AccessoryList;
+	name: JsonLocalizedName;
+	id: number;
+	starPowers: StarPowerList;
+};
