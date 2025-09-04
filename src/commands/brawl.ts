@@ -292,7 +292,20 @@ export const brawl = {
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
 				body: (subcommand === "profile view"
-					? { embeds: [createPlayerEmbed(player)] }
+					? {
+							embeds: [createPlayerEmbed(player)],
+							components: [
+								new ActionRowBuilder<ButtonBuilder>()
+									.addComponents(
+										new ButtonBuilder()
+											.setCustomId(`brawl-brawlers-${player.tag}-${id}---1`)
+											.setLabel("Brawlers")
+											.setEmoji({ name: "🔫" })
+											.setStyle(ButtonStyle.Primary),
+									)
+									.toJSON(),
+							],
+						}
 					: {
 							components: createBrawlersComponents(
 								player,
@@ -373,7 +386,11 @@ export const brawl = {
 			return;
 		}
 		if (action === "brawlers") {
-			reply({ type: InteractionResponseType.DeferredMessageUpdate });
+			reply({
+				type: arg3
+					? InteractionResponseType.DeferredChannelMessageWithSource
+					: InteractionResponseType.DeferredMessageUpdate,
+			});
 			const player = await getProfile(tag!, env);
 
 			await rest.patch(
@@ -391,7 +408,8 @@ export const brawl = {
 							) || undefined,
 							Number(arg2) || undefined,
 						),
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+						flags: MessageFlags.IsComponentsV2,
+					} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 				},
 			);
 			return;
