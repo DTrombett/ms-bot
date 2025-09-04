@@ -3,6 +3,8 @@ DROP TABLE IF EXISTS Users;
 DROP TABLE IF EXISTS Reminders;
 CREATE TABLE Users (
 	id VARCHAR(31) PRIMARY KEY,
+	brawlTag VARCHAR(15),
+	brawlNotifications INTEGER DEFAULT 0,
 	dayPoints INTEGER,
 	match INTEGER,
 	remindMinutes INTEGER,

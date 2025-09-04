@@ -83,11 +83,12 @@ export const resolveCommandOptions = <T extends CommandData[]>(
 		)!.options!;
 		ok(options?.[0]?.type === ApplicationCommandOptionType.Subcommand);
 		subcommand += ` ${options[0].name}`;
-		[{ options }] = options;
+		let name: string;
+		// eslint-disable-next-line prefer-const
+		[{ options, name }] = options;
 		templateOptions = templateOptions.find(
 			(o): o is APIApplicationCommandSubcommandOption =>
-				o.type === ApplicationCommandOptionType.Subcommand &&
-				o.name === subcommand,
+				o.type === ApplicationCommandOptionType.Subcommand && o.name === name,
 		)!.options!;
 	}
 	const resolvedOptions: Record<

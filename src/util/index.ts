@@ -1,3 +1,5 @@
+export * from "./brawl";
+export * from "./brawlTypes";
 export * from "./calculateAveragePoints";
 export * from "./calculateWins";
 export * from "./capitalize";
