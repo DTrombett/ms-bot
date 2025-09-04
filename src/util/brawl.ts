@@ -819,7 +819,6 @@ export const createBrawlerComponents = (
 					.setCustomId(
 						`brawl-brawlers-${player.tag}-${userId}-${order}-${page}`,
 					)
-					// .setDisabled()
 					.setStyle(ButtonStyle.Secondary),
 			),
 		)
