@@ -9,8 +9,10 @@ import {
 import {
 	APIMessageTopLevelComponent,
 	ButtonStyle,
+	SeparatorSpacingSize,
 } from "discord-api-types/v10";
-import type { Player } from "./brawlTypes";
+import type { BrawlerStat, Player } from "./brawlTypes";
+import capitalize from "./capitalize";
 import type { Env } from "./types";
 
 export const getProfile = async (tag: string, env: Env) => {
@@ -717,7 +719,7 @@ export const createBrawlersComponents = (
 							b
 								.setStyle(ButtonStyle.Secondary)
 								.setCustomId(
-									`brawl-brawler-${player.tag}-${userId}-${brawler.id}`,
+									`brawl-brawler-${player.tag}-${userId}-${brawler.id}-${order}-${page}`,
 								)
 								.setLabel("Dettagli"),
 						),
@@ -778,6 +780,51 @@ export const createBrawlersComponents = (
 			.toJSON(),
 	];
 };
+
+export const createBrawlerComponents = (
+	player: Player,
+	userId: string,
+	brawler: BrawlerStat,
+	order = BrawlerOrder.Name,
+	page = 0,
+): APIMessageTopLevelComponent[] => [
+	new ContainerBuilder()
+		.addSectionComponents((s) =>
+			s
+				.addTextDisplayComponents((t) =>
+					t.setContent(
+						`## ${brawler.name}\n<:level:1412854877180133427> Lvl. ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}\n- <:gadget:1412823343953874964> **${brawler.gadgets.length}**${brawler.gadgets.length ? ": " : ""}${brawler.gadgets.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:gear:1412824093572731003> **${brawler.gears.length}**${brawler.gears.length ? ": " : ""}${brawler.gears.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:starpower:1412824566392426689> **${brawler.starPowers.length}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}`,
+					),
+				)
+				.setThumbnailAccessory((t) =>
+					t.setURL(
+						`https://cdn.brawlify.com/brawlers/borders/${brawler.id}.png`,
+					),
+				),
+		)
+		.addSeparatorComponents((s) => s.setSpacing(SeparatorSpacingSize.Large))
+		.addMediaGalleryComponents((m) =>
+			m.addItems(
+				(i) =>
+					i.setURL(`https://cdn.brawlify.com/brawlers/model/${brawler.id}.png`),
+				(i) =>
+					i.setURL(`https://cdn.brawlify.com/brawlers/emoji/${brawler.id}.png`),
+			),
+		)
+		.addActionRowComponents(
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder()
+					.setEmoji({ name: "⬅️" })
+					.setLabel("Torna alla lista")
+					.setCustomId(
+						`brawl-brawlers-${player.tag}-${userId}-${order}-${page}`,
+					)
+					// .setDisabled()
+					.setStyle(ButtonStyle.Secondary),
+			),
+		)
+		.toJSON(),
+];
 
 export enum NotificationType {
 	"Brawler Tier Max" = 1 << 0,

@@ -13,6 +13,7 @@ import {
 import {
 	BrawlerOrder,
 	calculateFlags,
+	createBrawlerComponents,
 	createBrawlersComponents,
 	createPlayerEmbed,
 	getProfile,
@@ -305,7 +306,7 @@ export const brawl = {
 		);
 	},
 	component: async (reply, { interaction, env, host }) => {
-		const [, action, tag, userId, arg1, arg2] =
+		const [, action, tag, userId, arg1, arg2, arg3] =
 			interaction.data.custom_id.split("-");
 
 		if ((interaction.member ?? interaction).user!.id !== userId) {
@@ -389,6 +390,27 @@ export const brawl = {
 									: arg1,
 							) || undefined,
 							Number(arg2) || undefined,
+						),
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+			return;
+		}
+		if (action === "brawler") {
+			reply({ type: InteractionResponseType.DeferredMessageUpdate });
+			const player = await getProfile(tag!, env);
+			const brawlerId = Number(arg1);
+
+			await rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						components: createBrawlerComponents(
+							player,
+							userId,
+							player.brawlers.find((b) => b.id === brawlerId)!,
+							Number(arg2) || undefined,
+							Number(arg3) || undefined,
 						),
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
