@@ -3,6 +3,7 @@ import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
+	ComponentType,
 	InteractionResponseType,
 	MessageFlags,
 	Routes,
@@ -10,6 +11,7 @@ import {
 	type RESTPostAPIWebhookWithTokenJSONBody,
 } from "discord-api-types/v10";
 import {
+	BrawlerOrder,
 	calculateFlags,
 	createBrawlersComponents,
 	createPlayerEmbed,
@@ -121,6 +123,17 @@ export const brawl = {
 									description:
 										"Il tag giocatore (es. #8QJR0YC). Di default viene usato quello salvato",
 									type: ApplicationCommandOptionType.String,
+								},
+								{
+									name: "order",
+									description: "Come ordinare i brawler (default. Nome)",
+									type: ApplicationCommandOptionType.Number,
+									choices: [
+										{ name: "Nome", value: BrawlerOrder.Name },
+										{ name: "Più Trofei", value: BrawlerOrder.MostTrophies },
+										{ name: "Meno Trofei", value: BrawlerOrder.LeastTrophies },
+										{ name: "Livello", value: BrawlerOrder.PowerLevel },
+									],
 								},
 							],
 						},
@@ -280,14 +293,20 @@ export const brawl = {
 				body: (subcommand === "profile view"
 					? { embeds: [createPlayerEmbed(player)] }
 					: {
-							components: createBrawlersComponents(player, host, id),
+							components: createBrawlersComponents(
+								player,
+								host,
+								id,
+								options.order,
+							),
 							flags: MessageFlags.IsComponentsV2,
 						}) satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			},
 		);
 	},
 	component: async (reply, { interaction, env, host }) => {
-		const [, action, tag, userId, arg] = interaction.data.custom_id.split("-");
+		const [, action, tag, userId, arg1, arg2] =
+			interaction.data.custom_id.split("-");
 
 		if ((interaction.member ?? interaction).user!.id !== userId) {
 			reply({
@@ -364,12 +383,16 @@ export const brawl = {
 							player,
 							host,
 							userId,
-							Number(arg) || 0,
+							Number(
+								interaction.data.component_type === ComponentType.StringSelect
+									? interaction.data.values[0]
+									: arg1,
+							) || undefined,
+							Number(arg2) || undefined,
 						),
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-			return;
 		}
 	},
 } as const satisfies CommandOptions<ApplicationCommandType.ChatInput>;

@@ -4,6 +4,7 @@ import {
 	ContainerBuilder,
 	EmbedBuilder,
 	SectionBuilder,
+	StringSelectMenuBuilder,
 } from "@discordjs/builders";
 import {
 	APIMessageTopLevelComponent,
@@ -669,15 +670,33 @@ export const brawlerEmojis: Record<string, [string, string, string, string]> = {
 		"1412849138726604930",
 	],
 };
+export enum BrawlerOrder {
+	Name,
+	MostTrophies,
+	LeastTrophies,
+	PowerLevel,
+}
 
 export const createBrawlersComponents = (
 	player: Player,
 	host: string,
 	userId: string,
+	order = BrawlerOrder.Name,
 	page = 0,
 ): APIMessageTopLevelComponent[] => {
 	const pages = Math.ceil(player.brawlers.length / 10);
 
+	player.brawlers.sort(
+		order === BrawlerOrder.Name
+			? (a, b) => a.name.localeCompare(b.name)
+			: order === BrawlerOrder.MostTrophies
+				? (a, b) =>
+						b.trophies - a.trophies || b.highestTrophies - a.highestTrophies
+				: order === BrawlerOrder.LeastTrophies
+					? (a, b) =>
+							a.trophies - b.trophies || a.highestTrophies - b.highestTrophies
+					: (a, b) => b.power - a.power,
+	);
 	return [
 		new ContainerBuilder()
 			.addMediaGalleryComponents((g) =>
@@ -709,22 +728,51 @@ export const createBrawlersComponents = (
 					new ButtonBuilder()
 						.setEmoji({ name: "⬅️" })
 						.setCustomId(
-							`brawl-brawlers-${player.tag}-${userId}-${Math.max(0, page - 1)}`,
+							`brawl-brawlers-${player.tag}-${userId}-${order}-${Math.max(0, page - 1)}`,
 						)
 						.setDisabled(!page)
 						.setStyle(ButtonStyle.Primary),
 					new ButtonBuilder()
 						.setLabel(`Pagina ${page + 1} di ${pages}`)
-						.setCustomId("-")
+						.setCustomId("brawl")
 						.setDisabled(true)
 						.setStyle(ButtonStyle.Secondary),
 					new ButtonBuilder()
 						.setEmoji({ name: "➡️" })
 						.setCustomId(
-							`brawl-brawlers-${player.tag}-${userId}-${Math.min(page + 1, pages - 1)}`,
+							`brawl-brawlers-${player.tag}-${userId}-${order}-${Math.min(page + 1, pages - 1)}`,
 						)
 						.setDisabled(page >= pages - 1)
 						.setStyle(ButtonStyle.Primary),
+				),
+			)
+			.addActionRowComponents(
+				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+					new StringSelectMenuBuilder()
+						.addOptions(
+							{
+								label: "Nome",
+								value: String(BrawlerOrder.Name),
+								default: order === BrawlerOrder.Name,
+							},
+							{
+								label: "Più trofei",
+								value: String(BrawlerOrder.MostTrophies),
+								default: order === BrawlerOrder.MostTrophies,
+							},
+							{
+								label: "Meno trofei",
+								value: String(BrawlerOrder.LeastTrophies),
+								default: order === BrawlerOrder.LeastTrophies,
+							},
+							{
+								label: "Livello",
+								value: String(BrawlerOrder.PowerLevel),
+								default: order === BrawlerOrder.PowerLevel,
+							},
+						)
+						.setCustomId(`brawl-brawlers-${player.tag}-${userId}--${page}`)
+						.setPlaceholder("Ordina per..."),
 				),
 			)
 			.toJSON(),
