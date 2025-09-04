@@ -728,7 +728,7 @@ export const createBrawlersComponents = (
 					new ButtonBuilder()
 						.setEmoji({ name: "⬅️" })
 						.setCustomId(
-							`brawl-brawlers-${player.tag}-${userId}-${order}-${Math.max(0, page - 1)}`,
+							`brawl-brawlers-${player.tag}-${userId}-${order}-${page - 1}`,
 						)
 						.setDisabled(!page)
 						.setStyle(ButtonStyle.Primary),
@@ -740,7 +740,7 @@ export const createBrawlersComponents = (
 					new ButtonBuilder()
 						.setEmoji({ name: "➡️" })
 						.setCustomId(
-							`brawl-brawlers-${player.tag}-${userId}-${order}-${Math.min(page + 1, pages - 1)}`,
+							`brawl-brawlers-${player.tag}-${userId}-${order}-${page + 1}`,
 						)
 						.setDisabled(page >= pages - 1)
 						.setStyle(ButtonStyle.Primary),
