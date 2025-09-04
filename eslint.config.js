@@ -26,10 +26,7 @@ export default [
 			parser: tsParser,
 			ecmaVersion: "latest",
 			sourceType: "module",
-			parserOptions: {
-				project: "tsconfig.json",
-				tsconfigRootDir: ".",
-			},
+			parserOptions: { project: "tsconfig.json" },
 		},
 		rules: {
 			"no-extend-native": "warn",

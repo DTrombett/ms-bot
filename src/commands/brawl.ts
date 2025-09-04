@@ -134,6 +134,7 @@ export const brawl = {
 			brawl.data,
 			interaction,
 		);
+		const { id } = (interaction.member ?? interaction).user!;
 
 		if (subcommand === "link") {
 			reply({
@@ -168,16 +169,12 @@ export const brawl = {
 							new ActionRowBuilder<ButtonBuilder>()
 								.addComponents(
 									new ButtonBuilder()
-										.setCustomId(
-											`brawl-link-${player.tag}-${(interaction.member ?? interaction).user!.id}`,
-										)
+										.setCustomId(`brawl-link-${player.tag}-${id}`)
 										.setLabel("Collega")
 										.setEmoji({ name: "🔗" })
 										.setStyle(ButtonStyle.Primary),
 									new ButtonBuilder()
-										.setCustomId(
-											`brawl-undo-${player.tag}-${(interaction.member ?? interaction).user!.id}`,
-										)
+										.setCustomId(`brawl-undo-${player.tag}-${id}`)
 										.setLabel("Annulla")
 										.setEmoji({ name: "✖️" })
 										.setStyle(ButtonStyle.Danger),
@@ -197,10 +194,7 @@ export const brawl = {
 				SET brawlNotifications = Users.brawlNotifications | ?2
 				RETURNING brawlNotifications, brawlTag`,
 			)
-				.bind(
-					(interaction.member ?? interaction).user!.id,
-					NotificationType[options.type],
-				)
+				.bind(id, NotificationType[options.type])
 				.first<{ brawlNotifications: number; brawlTag: string | null }>();
 
 			reply({
@@ -219,10 +213,7 @@ export const brawl = {
 				WHERE id = ?2
 				RETURNING brawlNotifications, brawlTag`,
 			)
-				.bind(
-					NotificationType[options.type],
-					(interaction.member ?? interaction).user!.id,
-				)
+				.bind(NotificationType[options.type], id)
 				.first<{ brawlNotifications: number; brawlTag: string | null }>();
 
 			reply({
@@ -238,7 +229,7 @@ export const brawl = {
 			const result = await env.DB.prepare(
 				"SELECT brawlNotifications, brawlTag FROM Users WHERE id = ?",
 			)
-				.bind((interaction.member ?? interaction).user!.id)
+				.bind(id)
 				.first<{ brawlNotifications: number; brawlTag: string | null }>();
 
 			reply({
@@ -253,7 +244,7 @@ export const brawl = {
 		options.tag ??= (await env.DB.prepare(
 			"SELECT brawlTag FROM Users WHERE id = ?",
 		)
-			.bind((interaction.member ?? interaction).user!.id)
+			.bind(id)
 			.first("brawlTag"))!;
 		if (!options.tag) {
 			reply({
@@ -289,26 +280,26 @@ export const brawl = {
 				body: (subcommand === "profile view"
 					? { embeds: [createPlayerEmbed(player)] }
 					: {
-							components: createBrawlersComponents(player, host),
+							components: createBrawlersComponents(player, host, id),
 							flags: MessageFlags.IsComponentsV2,
 						}) satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			},
 		);
 	},
-	component: async (reply, { interaction, env }) => {
-		const [, action, tag, userId] = interaction.data.custom_id.split("-");
+	component: async (reply, { interaction, env, host }) => {
+		const [, action, tag, userId, arg] = interaction.data.custom_id.split("-");
 
+		if ((interaction.member ?? interaction).user!.id !== userId) {
+			reply({
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					flags: MessageFlags.Ephemeral,
+					content: "Questa azione non è per te!",
+				},
+			});
+			return;
+		}
 		if (action === "link") {
-			if ((interaction.member ?? interaction).user!.id !== userId) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						flags: MessageFlags.Ephemeral,
-						content: "Questa azione non è per te!",
-					},
-				});
-				return;
-			}
 			await env.DB.prepare(
 				"INSERT INTO Users (id, brawlTag) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET brawlTag = excluded.brawlTag",
 			)
@@ -335,16 +326,6 @@ export const brawl = {
 			return;
 		}
 		if (action === "undo") {
-			if ((interaction.member ?? interaction).user!.id !== userId) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						flags: MessageFlags.Ephemeral,
-						content: "Questa azione non è per te!",
-					},
-				});
-				return;
-			}
 			reply({
 				type: InteractionResponseType.UpdateMessage,
 				data: {
@@ -369,6 +350,26 @@ export const brawl = {
 					],
 				},
 			});
+			return;
+		}
+		if (action === "brawlers") {
+			reply({ type: InteractionResponseType.DeferredMessageUpdate });
+			const player = await getProfile(tag!, env);
+
+			await rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						components: createBrawlersComponents(
+							player,
+							host,
+							userId,
+							Number(arg) || 0,
+						),
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+			return;
 		}
 	},
 } as const satisfies CommandOptions<ApplicationCommandType.ChatInput>;

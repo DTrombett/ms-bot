@@ -23,7 +23,7 @@ export const getProfile = async (tag: string, env: Env) => {
 			cf: {
 				cacheEverything: true,
 				cacheTtl: 40,
-				cacheTtlByStatus: { "500-599": 10, "404": 86400 },
+				cacheTtlByStatus: { "200-299": 40, "500-599": 10, "404": 86400 },
 			},
 			headers: {
 				Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}`,
@@ -673,6 +673,7 @@ export const brawlerEmojis: Record<string, [string, string, string, string]> = {
 export const createBrawlersComponents = (
 	player: Player,
 	host: string,
+	userId: string,
 	page = 0,
 ): APIMessageTopLevelComponent[] => {
 	const pages = Math.ceil(player.brawlers.length / 10);
@@ -683,20 +684,22 @@ export const createBrawlersComponents = (
 				g.addItems((i) => i.setURL(`https://${host}/brawlers.png`)),
 			)
 			.addSectionComponents(
-				player.brawlers.slice(0, 10).flatMap((brawler) =>
+				player.brawlers.slice(page * 10, (page + 1) * 10).flatMap((brawler) =>
 					new SectionBuilder()
 						.addTextDisplayComponents((t) => {
 							const [l1, l2, l3, l4] =
 								brawlerEmojis[String(brawler.id)] ?? brawlerEmojis["0"]!;
 
 							return t.setContent(
-								`<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${brawler.gadgets.length ? "<:gadget:1412823343953874964>" : " \t "}${brawler.gears.length ? "<:gear:1412824093572731003>" : " \t "}${brawler.starPowers.length ? "<:starpower:1412824566392426689>" : " \t "}${brawler.gears.length >= 2 ? "<:gear:1412824093572731003>" : ""}\n<:l3:${l3}><:l4:${l4}>\t<:level:1412854877180133427> ${brawler.power}\t🏆 ${brawler.trophies} 🔝 ${brawler.highestTrophies}\tRank ${brawler.rank}`,
+								`<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${brawler.gadgets.length ? "<:gadget:1412823343953874964>" : " \t "}${brawler.gears.length ? "<:gear:1412824093572731003>" : " \t "}${brawler.starPowers.length ? "<:starpower:1412824566392426689>" : " \t "}${brawler.gears.length >= 2 ? "<:gear:1412824093572731003>" : ""}\n<:l3:${l3}><:l4:${l4}>\t<:level:1412854877180133427> ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}`,
 							);
 						})
 						.setButtonAccessory((b) =>
 							b
 								.setStyle(ButtonStyle.Secondary)
-								.setCustomId(`brawl-brawler-${brawler.id}`)
+								.setCustomId(
+									`brawl-brawler-${player.tag}-${userId}-${brawler.id}`,
+								)
 								.setLabel("Dettagli"),
 						),
 				),
@@ -705,17 +708,21 @@ export const createBrawlersComponents = (
 				new ActionRowBuilder<ButtonBuilder>().addComponents(
 					new ButtonBuilder()
 						.setEmoji({ name: "⬅️" })
-						.setCustomId(`brawl-brawlers-${Math.max(0, page - 1)}`)
+						.setCustomId(
+							`brawl-brawlers-${player.tag}-${userId}-${Math.max(0, page - 1)}`,
+						)
 						.setDisabled(!page)
 						.setStyle(ButtonStyle.Primary),
 					new ButtonBuilder()
-						.setLabel(`Pagina ${page + 1}/${pages}`)
+						.setLabel(`Pagina ${page + 1} di ${pages}`)
 						.setCustomId("-")
 						.setDisabled(true)
 						.setStyle(ButtonStyle.Secondary),
 					new ButtonBuilder()
 						.setEmoji({ name: "➡️" })
-						.setCustomId(`brawl-brawlers-${Math.min(page + 1, pages - 1)}`)
+						.setCustomId(
+							`brawl-brawlers-${player.tag}-${userId}-${Math.min(page + 1, pages - 1)}`,
+						)
 						.setDisabled(page >= pages - 1)
 						.setStyle(ButtonStyle.Primary),
 				),
