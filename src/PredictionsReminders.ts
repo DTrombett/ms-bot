@@ -40,11 +40,16 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	) {
 		const started = await step.do(
 			"load started matchdays",
+			{ timeout: 10_000 },
 			this.loadStartedMatchdays.bind(this),
 		);
 		const matchDay =
 			event.payload.matchDay ??
-			(await step.do("get match day", this.getMatchDay.bind(this, started)));
+			(await step.do(
+				"get match day",
+				{ timeout: 10_000 },
+				this.getMatchDay.bind(this, started),
+			));
 
 		if (!matchDay) {
 			console.log("No match day available");
@@ -52,6 +57,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		}
 		const startTime = await step.do(
 			"get start time",
+			{ timeout: 20_000 },
 			this.getStartTime.bind(this, matchDay),
 		);
 		const diff = startTime - event.timestamp.getTime();
@@ -64,6 +70,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		if (diff > 1_000) {
 			const reminders = await step.do(
 				"get prediction reminders",
+				{ timeout: 10_000 },
 				this.getReminders.bind(this, startTime),
 			);
 
@@ -72,11 +79,13 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					if (
 						await step.do(
 							`check if ${userId} remind already set`,
+							{ timeout: 10_000 },
 							this.notExists.bind(this, userId, matchDay.id),
 						)
 					)
 						await step.do<void>(
 							`create ${userId} reminder`,
+							{ timeout: 10_000 },
 							this.createReminder.bind(this, userId, date, startTime, matchDay),
 						);
 				}),
@@ -88,10 +97,12 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		);
 		const matches = await step.do(
 			"load matches",
+			{ timeout: 10_000 },
 			loadMatches.bind(null, matchDay.id),
 		);
 		const users = await step.do(
 			"load predictions",
+			{ timeout: 10_000 },
 			this.loadPredictions.bind(this, matches),
 		);
 		const promises: Promise<void>[] = [];
@@ -100,6 +111,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			promises.push(
 				step.do<void>(
 					`send chunk ${i / 5}`,
+					{ timeout: 40_000 },
 					this.sendEmbeds.bind(
 						this,
 						matchDay.day,
@@ -111,17 +123,24 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		await Promise.all(promises);
 		const messageId = await step.do(
 			"send message",
+			{ timeout: 20_000 },
 			this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
 		);
 		started.push(matchDay.id);
 		await Promise.all([
-			step.do<void>("pin message", this.pinMessage.bind(this, messageId)),
+			step.do<void>(
+				"pin message",
+				{ timeout: 20_000 },
+				this.pinMessage.bind(this, messageId),
+			),
 			step.do<void>(
 				"start live score",
+				{ timeout: 10_000 },
 				this.startLiveScore.bind(this, matchDay, messageId),
 			),
 			step.do<void>(
 				"update started matchday",
+				{ timeout: 10_000 },
 				this.updateStartedMatchday.bind(this, started),
 			),
 		]);
@@ -136,6 +155,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		}
 		const newStartTime = await step.do(
 			"Get new start time",
+			{ timeout: 10_000 },
 			this.getStartTime.bind(this, newMatchDay),
 		);
 		const date = Math.round(newStartTime / 1_000);
@@ -143,6 +163,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		if (date - Date.now() / 1_000 > 1)
 			await step.do(
 				"Send new match day message",
+				{ timeout: 20_000 },
 				this.sendNewMatchDayMessage.bind(this, date, newStartTime, newMatchDay),
 			);
 	}

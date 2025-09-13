@@ -28,7 +28,6 @@ export default [
 			sourceType: "module",
 			parserOptions: {
 				project: "tsconfig.json",
-				tsconfigRootDir: ".",
 			},
 		},
 		rules: {
