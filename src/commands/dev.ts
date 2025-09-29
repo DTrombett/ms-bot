@@ -10,7 +10,6 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
 import ms, { type StringValue } from "ms";
-import nacl from "tweetnacl";
 import {
 	normalizeError,
 	resolveCommandOptions,
@@ -140,9 +139,12 @@ export const dev = {
 		} else if ((subcommand as string) === "shorten")
 			await env.SHORTEN.create({
 				params: {
-					source: (options.source ??= Buffer.from(nacl.randomBytes(8)).toString(
-						"base64url",
-					)),
+					source: (options.source ??= btoa(
+						String.fromCharCode(...crypto.getRandomValues(new Uint8Array(8))),
+					)
+						.replace(/\+/g, "-")
+						.replace(/\//g, "_")
+						.replace(/=+$/, "")),
 					url: options.url,
 					status: options.status,
 					preserveQuery: options["preserve-query"],

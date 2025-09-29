@@ -36,7 +36,6 @@
 		"@tsconfig/recommended": "^1.0.10",
 		"@tsconfig/strictest": "^2.0.6",
 		"@types/ms": "^2.1.0",
-		"@types/node": "^24.5.2",
 		"@typescript-eslint/eslint-plugin": "^8.44.1",
 		"@typescript-eslint/parser": "^8.44.1",
 		"cloudflared": "^0.7.1",

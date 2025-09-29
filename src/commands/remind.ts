@@ -22,9 +22,9 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
 import ms from "ms";
-import { ok } from "node:assert";
 import {
 	normalizeError,
+	ok,
 	Reminder,
 	rest,
 	type CommandOptions,

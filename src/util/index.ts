@@ -10,6 +10,7 @@ export * from "./getMatchDayData";
 export * from "./getMatchDayNumber";
 export * from "./JsonResponse";
 export * from "./loadMatches";
+export * from "./node";
 export * from "./normalizeError";
 export * from "./normalizeTeamName";
 export * from "./randomNumber";

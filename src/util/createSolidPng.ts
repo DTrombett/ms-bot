@@ -1,5 +1,3 @@
-import { deflateSync } from "node:zlib";
-
 // PNG signature
 const signature = new Uint8Array([
 	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -26,16 +24,20 @@ const crc32 = (bufs: Uint8Array[]) => {
 const pngChunk = (type: string, data: Uint8Array) => {
 	const typeBuf = new TextEncoder().encode(type);
 	const lenBuf = new Uint8Array(4);
-
-	new DataView(lenBuf.buffer).setUint32(0, data.length, false);
 	const crcBuf = new Uint8Array(4);
-	new DataView(crcBuf.buffer).setUint32(0, crc32([typeBuf, data]) >>> 0, false);
-	let offset = lenBuf.length + typeBuf.length + data.length + crcBuf.length;
+	let offset =
+		lenBuf.byteLength +
+		typeBuf.byteLength +
+		data.byteLength +
+		crcBuf.byteLength;
 	const out = new Uint8Array(offset);
-	out.set(crcBuf, (offset -= crcBuf.length));
-	out.set(data, (offset -= data.length));
-	out.set(typeBuf, (offset -= typeBuf.length));
-	out.set(lenBuf, (offset -= lenBuf.length));
+
+	new DataView(lenBuf.buffer).setUint32(0, data.byteLength, false);
+	new DataView(crcBuf.buffer).setUint32(0, crc32([typeBuf, data]) >>> 0, false);
+	out.set(crcBuf, (offset -= crcBuf.byteLength));
+	out.set(data, (offset -= data.byteLength));
+	out.set(typeBuf, (offset -= typeBuf.byteLength));
+	out.set(lenBuf, (offset -= lenBuf.byteLength));
 	return out;
 };
 
@@ -48,16 +50,22 @@ const pngChunk = (type: string, data: Uint8Array) => {
  * @param b Blue  (0-255)
  * @returns PNG data
  */
-export const createSolidPng = (
+export const createSolidPng = async (
 	width: number,
 	height: number,
 	r: number,
 	g: number,
 	b: number,
-): Uint8Array => {
+): Promise<Uint8Array> => {
 	// IHDR chunk
 	const ihdr = new Uint8Array(13);
 	const view = new DataView(ihdr.buffer);
+	// Raw pixel data (each row starts with a filter byte = 0)
+	const rowSize = width * 3 + 1; // 3 bytes per pixel + filter byte
+	const row = new Uint8Array(rowSize);
+	// Compression stream
+	const cs = new CompressionStream("deflate");
+	const writer = cs.writable.getWriter();
 
 	view.setUint32(0, width, false); // width (big-endian)
 	view.setUint32(4, height, false); // height (big-endian)
@@ -66,19 +74,19 @@ export const createSolidPng = (
 	ihdr[10] = 0; // compression
 	ihdr[11] = 0; // filter
 	ihdr[12] = 0; // interlace
-	// Raw pixel data (each row starts with a filter byte = 0)
-	const rowSize = width * 3 + 1; // 3 bytes per pixel + filter byte
-	const row = new Uint8Array(rowSize);
 	row[0] = 0; // filter type 0
 	for (let o = 1, x = 0; x < width; x++) {
 		row[o++] = r;
 		row[o++] = g;
 		row[o++] = b;
 	}
-	const raw = new Uint8Array(rowSize * height);
-	for (let y = 0; y < height; y++) raw.set(row, y * rowSize);
+	for (let y = 0; y < height; y++) void writer.write(row);
+	void writer.close();
 	const ihdrChunk = pngChunk("IHDR", ihdr);
-	const idatChunk = pngChunk("IDAT", deflateSync(raw));
+	const idatChunk = pngChunk(
+		"IDAT",
+		new Uint8Array(await new Response(cs.readable).arrayBuffer()),
+	);
 	const iendChunk = pngChunk("IEND", new Uint8Array(0));
 	let offset =
 		signature.length + ihdrChunk.length + idatChunk.length + iendChunk.length;

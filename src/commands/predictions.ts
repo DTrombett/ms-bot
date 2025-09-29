@@ -19,7 +19,6 @@ import {
 	TextInputStyle,
 	type ModalSubmitActionRowComponent,
 } from "discord-api-types/v10";
-import { ok } from "node:assert";
 import {
 	MatchDay,
 	Prediction,
@@ -27,6 +26,7 @@ import {
 	getMatchDayData,
 	getMatchDayNumber,
 	normalizeTeamName,
+	ok,
 	rest,
 	sortLeaderboard,
 	type CommandOptions,

@@ -7,7 +7,7 @@ import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 } from "discord-api-types/v10";
-import { ok } from "node:assert";
+import { ok } from "./node";
 import type { CommandData } from "./types";
 
 type ExtractOptionType<T extends APIApplicationCommandOption> = T extends {

@@ -6,14 +6,12 @@
 	],
 	"compilerOptions": {
 		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true,
 		"isolatedModules": true,
 		"lib": ["esnext"],
 		"module": "esnext",
 		"exactOptionalPropertyTypes": false,
 		"noPropertyAccessFromIndexSignature": false,
 		"moduleResolution": "bundler",
-		"outDir": "dist",
 		"pretty": true,
 		"target": "esnext",
 		"types": ["@cloudflare/workers-types/experimental"]

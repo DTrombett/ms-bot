@@ -12,11 +12,11 @@ import {
 	Routes,
 	type RESTPostAPIWebhookWithTokenJSONBody,
 } from "discord-api-types/v10";
-import { setTimeout } from "node:timers/promises";
 import {
 	formatTime,
 	resolveCommandOptions,
 	rest,
+	timeout,
 	type CommandOptions,
 } from "../util";
 
@@ -78,7 +78,7 @@ export const time = {
 					],
 				} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			});
-			await setTimeout(1);
+			await timeout();
 			const { id } = (await rest.get(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 			)) as APIMessage;

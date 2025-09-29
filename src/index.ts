@@ -114,7 +114,7 @@ const server: ExportedHandler<Env> = {
 					{ error: "Missing 'red', 'green' or 'blue' query parameter" },
 					{ status: 400 },
 				);
-			return new Response(createSolidPng(256, 256, ...rgb), {
+			return new Response(await createSolidPng(256, 256, ...rgb), {
 				headers: { "Content-Type": "image/png" },
 			});
 		}
