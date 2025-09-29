@@ -2,10 +2,6 @@ import {
 	ActionRowBuilder,
 	ButtonBuilder,
 	EmbedBuilder,
-	inlineCode,
-	quote,
-	time,
-	TimestampStyles,
 } from "@discordjs/builders";
 import {
 	ApplicationCommandOptionType,
@@ -63,9 +59,13 @@ const sendPage = async (
 								.setDescription(
 									results
 										.map((r, i) => {
-											const date = new Date(r.date);
+											const date = Math.round(Date.parse(r.date) / 1000);
 
-											return `${i + 1 + page * 8}. ${inlineCode(r.id)} ${time(date, TimestampStyles.LongDateTime)} (${time(date, TimestampStyles.RelativeTime)})\n${r.remind.slice(0, 256).split("\n").map(quote).join("\n")}`;
+											return `${i + 1 + page * 8}. \`${r.id}\` <t:${date}:F> (<t:${date}:R>)\n${r.remind
+												.slice(0, 256)
+												.split("\n")
+												.map((s) => `> ${s}`)
+												.join("\n")}`;
 										})
 										.join("\n"),
 								)
@@ -244,7 +244,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
 						body: {
-							content: `Si è verificato un errore: ${inlineCode(result.message)}`,
+							content: `Si è verificato un errore: \`${result.message}\``,
 						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				);
@@ -254,7 +254,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
-						content: `Promemoria \`${inlineCode(id)}\` impostato correttamente!`,
+						content: `Promemoria \`${id}\` impostato correttamente!`,
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
@@ -306,7 +306,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
 						body: {
-							content: `Si è verificato un errore: ${inlineCode(error.message)}`,
+							content: `Si è verificato un errore: \`${error.message}\``,
 						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				);
