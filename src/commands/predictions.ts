@@ -17,6 +17,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 	TextInputStyle,
+	type ModalSubmitActionRowComponent,
 } from "discord-api-types/v10";
 import { ok } from "node:assert";
 import {
@@ -437,7 +438,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 
 		for (const {
 			components: [field],
-		} of interaction.data.components) {
+		} of interaction.data.components as ModalSubmitActionRowComponent[]) {
 			const value = field!.value.trim();
 			const match = value.toLowerCase().match(predictionRegex);
 			const matchId = parseInt(field!.custom_id);

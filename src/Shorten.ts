@@ -104,8 +104,9 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 		);
 
 		return result.find(
-			(r) => r.redirect?.source_url === `s.trombett.org/${source}`,
-		)!.id!;
+			(r) =>
+				"redirect" in r && r.redirect.source_url === `s.trombett.org/${source}`,
+		)!.id;
 	}
 
 	private async deleteUrl(client: Cloudflare, id: string) {

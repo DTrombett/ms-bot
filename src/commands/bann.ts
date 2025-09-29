@@ -23,6 +23,7 @@ import {
 	Routes,
 	Snowflake,
 	TextInputStyle,
+	type ModalSubmitActionRowComponent,
 } from "discord-api-types/v10";
 import { Emojis, normalizeError, rest, type CommandOptions } from "../util";
 
@@ -381,9 +382,9 @@ export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
 			throw new TypeError("Invalid interaction", { cause: interaction });
 		const deleteMessageDays =
 			Number(
-				interaction.data.components[0]?.components.find(
-					(v) => v.custom_id === "deleteMessageDays",
-				)?.value,
+				(
+					interaction.data.components[0] as ModalSubmitActionRowComponent
+				).components.find((v) => v.custom_id === "deleteMessageDays")?.value,
 			) || 0;
 		if (deleteMessageDays < 0 || deleteMessageDays > 7) {
 			reply({
@@ -447,9 +448,9 @@ export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
 					interaction.guild_id,
 					target,
 					deleteMessageDays * 60 * 60 * 24,
-					interaction.data.components[0]?.components.find(
-						(v) => v.custom_id === "reason",
-					)?.value,
+					(
+						interaction.data.components[0] as ModalSubmitActionRowComponent
+					).components.find((v) => v.custom_id === "reason")?.value,
 				)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			},
 		);
