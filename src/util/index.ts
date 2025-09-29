@@ -4,7 +4,7 @@ export * from "./capitalize";
 export * from "./Constants";
 export * from "./createSolidPng";
 export * from "./executeInteraction";
-export * from "./formatTime";
+export * from "./time";
 export * from "./getLiveEmbed";
 export * from "./getMatchDayData";
 export * from "./getMatchDayNumber";

@@ -1,6 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { time as fTime, TimestampStyles } from "@discordjs/formatters";
-import { DiscordSnowflake } from "@sapphire/snowflake";
 import {
 	APIMessage,
 	ApplicationCommandOptionType,
@@ -14,6 +13,7 @@ import {
 } from "discord-api-types/v10";
 import {
 	formatTime,
+	idDiff,
 	resolveCommandOptions,
 	rest,
 	timeout,
@@ -79,7 +79,7 @@ export const time = {
 				} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			});
 			await timeout();
-			const { id } = (await rest.get(
+			const { timestamp } = (await rest.get(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 			)) as APIMessage;
 
@@ -87,7 +87,7 @@ export const time = {
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
-						content: `Cronometro avviato ${fTime(Math.round(DiscordSnowflake.timestampFrom(id) / 1000), TimestampStyles.RelativeTime)}`,
+						content: `Cronometro avviato ${fTime(Math.round(Date.parse(timestamp) / 1000), TimestampStyles.RelativeTime)}`,
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
@@ -95,10 +95,7 @@ export const time = {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
-					content: `Differenza di tempo tra i due ID: **${formatTime(
-						DiscordSnowflake.timestampFrom(options.id2) -
-							DiscordSnowflake.timestampFrom(options.id1),
-					)}**`,
+					content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(options.id2, options.id1))}**`,
 				} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			});
 	},
@@ -111,10 +108,7 @@ export const time = {
 				reply({
 					type: InteractionResponseType.UpdateMessage,
 					data: {
-						content: `Cronometro fermato dopo **${formatTime(
-							DiscordSnowflake.timestampFrom(interaction.id) -
-								DiscordSnowflake.timestampFrom(interaction.message.id),
-						)}**`,
+						content: `Cronometro fermato dopo **${formatTime(idDiff(interaction.id, interaction.message.id))}**`,
 						components: [],
 					},
 				});

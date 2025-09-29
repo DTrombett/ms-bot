@@ -9,3 +9,9 @@ export const formatTime = (ms: number): string => {
 
 	return `${sign}${hours > 0 ? `${hours.toString().padStart(2, "0")}:` : ""}${last}`;
 };
+
+export const idDiff = (id1: string, id2: string): number =>
+	Number((BigInt(id1) >> 22n) - (BigInt(id2) >> 22n));
+
+export const idToTimestamp = (id: string): number =>
+	Number((BigInt(id) >> 22n) + 1420070400000n);

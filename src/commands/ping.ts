@@ -1,4 +1,3 @@
-import { DiscordSnowflake } from "@sapphire/snowflake";
 import {
 	APIMessage,
 	ApplicationCommandType,
@@ -6,7 +5,13 @@ import {
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
 } from "discord-api-types/v10";
-import { rest, timeout, type CommandOptions } from "../util";
+import {
+	idDiff,
+	idToTimestamp,
+	rest,
+	timeout,
+	type CommandOptions,
+} from "../util";
 
 export const ping: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
@@ -24,17 +29,13 @@ export const ping: CommandOptions<ApplicationCommandType.ChatInput> = {
 		const { id } = (await rest.get(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 		)) as APIMessage;
-		const timestamp = DiscordSnowflake.timestampFrom(interaction.id);
-
 		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
 				body: {
 					content: `🏓 **Pong!**\nRitardo relativo: **${
-						now - timestamp
-					}ms**\nRitardo totale: **${
-						DiscordSnowflake.timestampFrom(id) - timestamp
-					}ms**`,
+						now - idToTimestamp(interaction.id)
+					}ms**\nRitardo totale: **${idDiff(id, interaction.id)}ms**`,
 				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			},
 		);
