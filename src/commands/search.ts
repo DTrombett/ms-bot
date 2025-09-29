@@ -1,4 +1,3 @@
-import { escapeMarkdown } from "@discordjs/formatters";
 import {
 	APIApplicationCommandInteractionDataBasicOption,
 	APIApplicationCommandInteractionDataSubcommandOption,
@@ -8,7 +7,7 @@ import {
 	ComponentType,
 	InteractionResponseType,
 } from "discord-api-types/v10";
-import type { CommandOptions } from "../util";
+import { escapeMarkdown, type CommandOptions } from "../util";
 
 export const search: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [

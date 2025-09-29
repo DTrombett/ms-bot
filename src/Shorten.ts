@@ -1,4 +1,3 @@
-import { time, TimestampStyles } from "@discordjs/formatters";
 import Cloudflare from "cloudflare";
 import {
 	WorkflowEntrypoint,
@@ -87,7 +86,7 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 					content: `Shortened url: <https://s.trombett.org/${options.source}>\n${
 						options.duration == null
 							? "No expire time"
-							: `Valid until ${time(seconds, TimestampStyles.LongDateTime)} (${time(seconds, TimestampStyles.RelativeTime)})`
+							: `Valid until <t:${seconds}:F> (<t:${seconds}:R>)`
 					}`,
 				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			},

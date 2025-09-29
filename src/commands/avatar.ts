@@ -1,4 +1,3 @@
-import { escapeMarkdown } from "@discordjs/formatters";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -7,7 +6,12 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import { resolveCommandOptions, rest, type CommandOptions } from "../util";
+import {
+	escapeMarkdown,
+	resolveCommandOptions,
+	rest,
+	type CommandOptions,
+} from "../util";
 
 export const avatar = {
 	data: [

@@ -1,4 +1,3 @@
-import { escapeMarkdown } from "@discordjs/formatters";
 import {
 	APIApplicationCommandInteractionDataNumberOption,
 	APIApplicationCommandInteractionDataOption,
@@ -25,7 +24,13 @@ import {
 	TextInputStyle,
 	type ModalSubmitActionRowComponent,
 } from "discord-api-types/v10";
-import { Emojis, normalizeError, rest, type CommandOptions } from "../util";
+import {
+	Emojis,
+	escapeMarkdown,
+	normalizeError,
+	rest,
+	type CommandOptions,
+} from "../util";
 
 const checkPerms = (
 	executor: APIInteractionGuildMember,

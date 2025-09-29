@@ -1,4 +1,3 @@
-import { inlineCode } from "@discordjs/formatters";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -132,7 +131,7 @@ export const dev = {
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
-						content: `Private commands: ${inlineCode(privateAPICommands instanceof Error ? privateAPICommands.message : privateAPICommands.map((c) => c.name).join(", "))}\nPublic commands: ${inlineCode(publicAPICommands instanceof Error ? publicAPICommands.message : publicAPICommands.map((c) => c.name).join(", "))}`,
+						content: `Private commands: \`${privateAPICommands instanceof Error ? privateAPICommands.message : privateAPICommands.map((c) => c.name).join(", ")}\`\nPublic commands: \`${publicAPICommands instanceof Error ? publicAPICommands.message : publicAPICommands.map((c) => c.name).join(", ")}\``,
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);

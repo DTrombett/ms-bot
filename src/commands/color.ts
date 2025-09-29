@@ -1,4 +1,3 @@
-import { inlineCode } from "@discordjs/formatters";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -41,7 +40,7 @@ export const color = {
 			reply({
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
-					content: `Colore non valido: ${inlineCode((err as Error).message)}`,
+					content: `Colore non valido: \`${(err as Error).message}\``,
 					flags: MessageFlags.Ephemeral,
 				} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 			});

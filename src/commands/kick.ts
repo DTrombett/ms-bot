@@ -1,4 +1,3 @@
-import { escapeMarkdown } from "@discordjs/formatters";
 import {
 	APIApplicationCommandInteractionDataOption,
 	APIApplicationCommandInteractionDataStringOption,
@@ -16,7 +15,13 @@ import {
 	Routes,
 	Snowflake,
 } from "discord-api-types/v10";
-import { Emojis, normalizeError, rest, type CommandOptions } from "../util";
+import {
+	Emojis,
+	escapeMarkdown,
+	normalizeError,
+	rest,
+	type CommandOptions,
+} from "../util";
 
 const checkPerms = (
 	executor: APIInteractionGuildMember,

@@ -1,5 +1,4 @@
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { time as fTime, TimestampStyles } from "@discordjs/formatters";
 import {
 	APIMessage,
 	ApplicationCommandOptionType,
@@ -87,7 +86,7 @@ export const time = {
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
-						content: `Cronometro avviato ${fTime(Math.round(Date.parse(timestamp) / 1000), TimestampStyles.RelativeTime)}`,
+						content: `Cronometro avviato <t:${Math.round(Date.parse(timestamp) / 1000)}:R>`,
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);

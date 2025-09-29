@@ -1,4 +1,3 @@
-import { escapeMarkdown } from "@discordjs/formatters";
 import {
 	APIApplicationCommandInteractionDataUserOption,
 	APIUser,
@@ -10,7 +9,7 @@ import {
 	MessageFlags,
 	Routes,
 } from "discord-api-types/v10";
-import { rest, type CommandOptions } from "../util";
+import { escapeMarkdown, rest, type CommandOptions } from "../util";
 
 export const banner: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [

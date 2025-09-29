@@ -1,4 +1,3 @@
-import { blockQuote, escapeBulletedList } from "@discordjs/formatters";
 import {
 	APIApplicationCommandInteractionDataStringOption,
 	APIInteractionResponseCallbackData,
@@ -200,7 +199,7 @@ const askQuelo = ({
 			url: answer[1],
 		});
 	return {
-		content: blockQuote(escapeBulletedList(answer[0])),
+		content: `>>> ${answer[0].replace(/^(\s*)([-*+])(?=\s)/gm, "$1\\$2")}`,
 		components: [
 			{
 				type: ComponentType.ActionRow,
