@@ -1,17 +1,21 @@
 import { APIInteraction } from "discord-api-types/v10";
-import nacl from "tweetnacl";
 import type { Env } from ".";
 
-const hexToUint8Array = (hex: string) => {
-	const length = hex.length / 2;
-	const array = new Uint8Array(length);
-
-	for (let i = 0; i < length; i++)
-		array[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-	return array;
-};
+const hexToUint8Array = (hex: string) =>
+	new Uint8Array(hex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)));
+const verifySignature = async (
+	keyData: ArrayBuffer | ArrayBufferView | JsonWebKey,
+	signature: ArrayBuffer | ArrayBufferView,
+	data: ArrayBuffer | ArrayBufferView,
+) =>
+	crypto.subtle.verify(
+		"Ed25519",
+		await crypto.subtle.importKey("raw", keyData, "Ed25519", false, ["verify"]),
+		signature,
+		data,
+	);
 const encoder = new TextEncoder();
-let publicKey: Uint8Array | undefined;
+let keyData: Uint8Array | undefined;
 
 export const verifyDiscordRequest = async (request: Request, env: Env) => {
 	const bodyPromise = request.text();
@@ -20,13 +24,11 @@ export const verifyDiscordRequest = async (request: Request, env: Env) => {
 
 	if (!signature || !timestamp)
 		return new Response("Invalid request signature", { status: 401 });
-	publicKey ??= hexToUint8Array(env.DISCORD_PUBLIC_KEY);
+	keyData ??= hexToUint8Array(env.DISCORD_PUBLIC_KEY);
 	const sig = hexToUint8Array(signature);
 	const body = await bodyPromise;
 
-	if (
-		!nacl.sign.detached.verify(encoder.encode(timestamp + body), sig, publicKey)
-	)
+	if (!(await verifySignature(keyData, sig, encoder.encode(timestamp + body))))
 		return new Response("Invalid request signature", { status: 401 });
 	return JSON.parse(body) as APIInteraction;
 };
