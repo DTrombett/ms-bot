@@ -4,6 +4,7 @@ compatibility_date = "2025-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 upload_source_maps = true
+send_metrics = false
 
 [observability]
 enabled = true
