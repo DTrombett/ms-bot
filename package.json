@@ -1,18 +1,13 @@
 {
 	"name": "ms-bot",
-	"version": "1.0.0",
 	"description": "A private Discord Bot for MS Gaming",
-	"type": "module",
-	"homepage": "https://github.com/DTrombett/ms-bot#readme",
-	"private": true,
-	"scripts": {
-		"dev": "concurrently \"wrangler dev --test-scheduled\" \"cloudflared tunnel --url localhost:8787\"",
-		"lint": "eslint src --fix && prettier --write src/**/*.ts",
-		"publish": "wrangler deploy",
-		"test": "tsc --noEmit && eslint src"
-	},
 	"author": "DTrombett <d@trombett.org>",
+	"homepage": "https://github.com/DTrombett/ms-bot#readme",
 	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"version": "1.0.0",
+	"keywords": [],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/DTrombett/ms-bot.git"
@@ -20,7 +15,12 @@
 	"bugs": {
 		"url": "https://github.com/DTrombett/ms-bot/issues"
 	},
-	"keywords": [],
+	"scripts": {
+		"dev": "concurrently \"wrangler dev --test-scheduled\" \"cloudflared tunnel --url localhost:8787\"",
+		"lint": "eslint src --fix && prettier --write src/**/*.ts",
+		"publish": "wrangler deploy",
+		"test": "tsc --noEmit && eslint src"
+	},
 	"dependencies": {
 		"@discordjs/builders": "^1.11.3",
 		"@discordjs/formatters": "^0.6.1",
