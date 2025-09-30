@@ -157,7 +157,7 @@ export const search: CommandOptions<ApplicationCommandType.ChatInput> = {
 			],
 		},
 	],
-	run: async (reply, { interaction }) => {
+	run: (reply, { interaction }) => {
 		const options: Record<
 			string,
 			APIApplicationCommandInteractionDataBasicOption
@@ -278,7 +278,7 @@ export const search: CommandOptions<ApplicationCommandType.ChatInput> = {
 					},
 				});
 				break;
-			case "github":
+			case "github": {
 				const type = options.type?.value as string | undefined;
 
 				query = options.query!.value as string;
@@ -307,6 +307,7 @@ export const search: CommandOptions<ApplicationCommandType.ChatInput> = {
 					},
 				});
 				break;
+			}
 			case "google-translate":
 				query = options.text!.value as string;
 				reply({

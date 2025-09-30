@@ -463,7 +463,6 @@ export const findColorName = (rgb: RGB): string | null => {
 	let minDist = Infinity;
 	let name!: string;
 
-	// eslint-disable-next-line guard-for-in
 	for (const key in namedColors) {
 		const dist = namedColors[key]!.reduce(
 			(sum, value, index) => sum + (rgb[index]! - value) ** 2,
@@ -500,7 +499,6 @@ export const resolveColor = (color: string): Color => {
 			hsv: rgbToHsv(...namedColors[color]!),
 			cmyk: rgbToCmyk(...namedColors[color]!),
 		};
-	// eslint-disable-next-line @typescript-eslint/prefer-string-starts-ends-with
 	if (color[0] === "#") {
 		color = color.slice(1);
 		let rgb: RGB;

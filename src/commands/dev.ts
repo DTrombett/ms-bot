@@ -98,7 +98,7 @@ export const dev = {
 		if (subcommand === "register-commands") {
 			const commands = Object.values(
 				commandsObject,
-			) as CommandOptions<ApplicationCommandType>[];
+			) as CommandOptions[];
 			const { value: isDev } = (options.dev ?? {
 				value: env.NODE_ENV !== "production",
 			}) as APIApplicationCommandInteractionDataBooleanOption;

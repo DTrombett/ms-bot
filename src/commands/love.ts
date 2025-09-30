@@ -41,7 +41,7 @@ export const love: CommandOptions<ApplicationCommandType.ChatInput> = {
 			],
 		},
 	],
-	run: async (reply, { interaction }) => {
+	run: (reply, { interaction }) => {
 		let user1!: APIUser,
 			user2 = interaction.user ?? interaction.member!.user;
 

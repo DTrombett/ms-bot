@@ -1,9 +1,7 @@
 {
-	"include": ["src/**/*"],
-	"extends": [
-		"@tsconfig/recommended/tsconfig.json",
-		"@tsconfig/strictest/tsconfig.json"
-	],
+	"include": ["src/**/*", "**/*.ts"],
+	"exclude": ["node_modules", "tmp"],
+	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
 		"allowSyntheticDefaultImports": true,
 		"isolatedModules": true,

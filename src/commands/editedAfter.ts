@@ -12,7 +12,7 @@ export const editedAfter = {
 			type: ApplicationCommandType.Message,
 		},
 	],
-	run: async (reply, { interaction }) => {
+	run: (reply, { interaction }) => {
 		const [message] = Object.values(interaction.data.resolved.messages);
 
 		if (!message?.edited_timestamp) {

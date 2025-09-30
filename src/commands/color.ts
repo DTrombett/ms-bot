@@ -30,7 +30,7 @@ export const color = {
 			],
 		},
 	],
-	run: async (reply, { interaction, host }) => {
+	run: (reply, { interaction, host }) => {
 		const { options } = resolveCommandOptions(color.data, interaction);
 		let resolvedColor: Color;
 
@@ -60,7 +60,7 @@ export const color = {
 							},
 							{
 								name: "RGB",
-								value: `${resolvedColor.rgb.join(", ")}`,
+								value: resolvedColor.rgb.join(", "),
 								inline: true,
 							},
 							{

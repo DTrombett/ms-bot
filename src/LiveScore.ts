@@ -62,7 +62,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 							reject(new Error("Socket connection failed"));
 							return;
 						}
-						socket.on("callApi", (data) => {
+						socket.on("callApi", (data: string) => {
 							const updates: {
 								ora: string;
 								match_id: number;
