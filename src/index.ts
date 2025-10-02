@@ -125,7 +125,7 @@ const server: ExportedHandler<Env> = {
 	},
 };
 
-export { LiveMatch } from "./LiveMatch";
+// export { LiveMatch } from "./LiveMatch";
 export { LiveScore } from "./LiveScore";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";

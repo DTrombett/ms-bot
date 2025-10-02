@@ -1,7 +1,7 @@
 name = "ms-bot"
 main = "./src/index.ts"
-compatibility_date = "2025-09-01"
-compatibility_flags = ["nodejs_compat"]
+compatibility_date = "2025-10-01"
+compatibility_flags = []
 workers_dev = false
 upload_source_maps = true
 send_metrics = false
@@ -34,10 +34,10 @@ name = "live-score"
 binding = "LIVE_SCORE"
 class_name = "LiveScore"
 
-[[workflows]]
-name = "live-match"
-binding = "LIVE_MATCH"
-class_name = "LiveMatch"
+# [[workflows]]
+# name = "live-match"
+# binding = "LIVE_MATCH"
+# class_name = "LiveMatch"
 
 [[workflows]]
 name = "reminder"
