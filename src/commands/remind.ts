@@ -17,10 +17,10 @@ import {
 	type APIMessageComponentInteraction,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
-import ms from "ms";
 import {
 	normalizeError,
 	ok,
+	parseTime,
 	Reminder,
 	rest,
 	type CommandOptions,
@@ -59,7 +59,7 @@ const sendPage = async (
 								.setDescription(
 									results
 										.map((r, i) => {
-											const date = Math.round(Date.parse(r.date) / 1000);
+											const date = Math.round(Date.parse(`${r.date}Z`) / 1000);
 
 											return `${i + 1 + page * 8}. \`${r.id}\` <t:${date}:F> (<t:${date}:R>)\n${r.remind
 												.slice(0, 256)
@@ -167,7 +167,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 			const { value: date } = options.get(
 				"in",
 			) as APIApplicationCommandInteractionDataStringOption;
-			const duration = ms(date.replace(/\s+/g, "") as "0") || 0;
+			const duration = parseTime(date);
 
 			if (duration > 31_536_000_000) {
 				reply({

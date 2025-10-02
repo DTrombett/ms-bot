@@ -8,9 +8,9 @@ import {
 	type APIApplicationCommandInteractionDataBooleanOption,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
-import ms, { type StringValue } from "ms";
 import {
 	normalizeError,
+	parseTime,
 	resolveCommandOptions,
 	rest,
 	type CommandOptions,
@@ -96,9 +96,7 @@ export const dev = {
 			data: { flags: MessageFlags.Ephemeral },
 		});
 		if (subcommand === "register-commands") {
-			const commands = Object.values(
-				commandsObject,
-			) as CommandOptions[];
+			const commands = Object.values(commandsObject) as CommandOptions[];
 			const { value: isDev } = (options.dev ?? {
 				value: env.NODE_ENV !== "production",
 			}) as APIApplicationCommandInteractionDataBooleanOption;
@@ -152,7 +150,7 @@ export const dev = {
 						(options.duration
 							? options.duration === "Infinity"
 								? Infinity
-								: ms(options.duration as StringValue)
+								: parseTime(options.duration)
 							: 0) || 24 * 60 * 60 * 1000,
 					interaction: {
 						application_id: interaction.application_id,
