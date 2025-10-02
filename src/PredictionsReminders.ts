@@ -413,7 +413,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 						type: ComponentType.ActionRow,
 						components: [
 							{
-								custom_id: `predictions-${Number(day.day)}-1-${startTime}`,
+								custom_id: `predictions-${day.day}-1-${startTime}`,
 								emoji: { name: "⚽" },
 								label: "Invia pronostici",
 								style: ButtonStyle.Primary,
