@@ -19,6 +19,7 @@ export * from "./resolveCommandOptions";
 export * from "./resolveLeaderboard";
 export * from "./rest";
 export * from "./sortLeaderboard";
+export * from "./strings";
 export * from "./time";
 export * from "./types";
 export * from "./verifyDiscordRequest";

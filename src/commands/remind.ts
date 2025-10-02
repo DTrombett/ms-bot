@@ -1,12 +1,8 @@
 import {
-	ActionRowBuilder,
-	ButtonBuilder,
-	EmbedBuilder,
-} from "@discordjs/builders";
-import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
+	ComponentType,
 	InteractionResponseType,
 	MessageFlags,
 	Routes,
@@ -14,10 +10,12 @@ import {
 	type APIApplicationCommandInteractionDataStringOption,
 	type APIApplicationCommandInteractionDataSubcommandOption,
 	type APIChatInputApplicationCommandInteraction,
+	type APIComponentInContainer,
 	type APIMessageComponentInteraction,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
 import {
+	maxLength,
 	normalizeError,
 	ok,
 	parseTime,
@@ -51,49 +49,74 @@ const sendPage = async (
 		Routes.webhookMessage(interaction.application_id, interaction.token),
 		{
 			body: {
-				embeds: results.length
-					? [
-							new EmbedBuilder()
-								.setTitle("⏰ Promemoria")
-								.setColor(0x5865f2)
-								.setDescription(
-									results
-										.map((r, i) => {
-											const date = Math.round(Date.parse(`${r.date}Z`) / 1000);
-
-											return `${i + 1 + page * 8}. \`${r.id}\` <t:${date}:F> (<t:${date}:R>)\n${r.remind
-												.slice(0, 256)
-												.split("\n")
-												.map((s) => `> ${s}`)
-												.join("\n")}`;
-										})
-										.join("\n"),
-								)
-								.setFooter({ text: `Page ${page + 1}/${Math.ceil(count / 8)}` })
-								.toJSON(),
-						]
-					: undefined,
+				flags: MessageFlags.IsComponentsV2,
 				components: [
-					new ActionRowBuilder<ButtonBuilder>()
-						.addComponents(
-							new ButtonBuilder()
-								.setCustomId(`remind-${userId}-${page - 1}`)
-								.setLabel("Precedente")
-								.setEmoji({ name: "⬅️" })
-								.setStyle(ButtonStyle.Secondary)
-								.setDisabled(page <= 0),
-							new ButtonBuilder()
-								.setCustomId(`remind-${userId}-${page + 1}`)
-								.setLabel("Successiva")
-								.setEmoji({ name: "➡️" })
-								.setStyle(ButtonStyle.Secondary)
-								.setDisabled(count <= (page + 1) * 8),
-						)
-						.toJSON(),
+					{
+						type: ComponentType.Container,
+						components: results.length
+							? [
+									{
+										type: ComponentType.TextDisplay,
+										content: "## ⏰ Promemoria",
+									},
+									{ type: ComponentType.Separator },
+									...results.map((r, i) => {
+										const date = Math.round(Date.parse(`${r.date}Z`) / 1000);
+
+										return {
+											type: ComponentType.Section,
+											components: [
+												{
+													type: ComponentType.TextDisplay,
+													content: `${i + 1 + page * 8}. \`${r.id}\` <t:${date}:F> (<t:${date}:R>)\n>>> ${maxLength(
+														r.remind,
+														148,
+													)}`,
+												},
+											],
+											accessory: {
+												type: ComponentType.Button,
+												label: "Elimina",
+												style: ButtonStyle.Danger,
+												custom_id: `remind-remove-${userId}-${r.id}`,
+											},
+										} satisfies APIComponentInContainer;
+									}),
+									{
+										type: ComponentType.ActionRow,
+										components: [
+											{
+												custom_id: `remind-list-${userId}-${page - 1}`,
+												disabled: page <= 0,
+												emoji: { name: "⬅️" },
+												style: ButtonStyle.Primary,
+												type: ComponentType.Button,
+											},
+											{
+												custom_id: `remind-list-${userId}-${page}`,
+												disabled: true,
+												label: `Pagina ${page + 1} di ${Math.ceil(count / 8)}`,
+												style: ButtonStyle.Secondary,
+												type: ComponentType.Button,
+											},
+											{
+												custom_id: `remind-list-${userId}-${page + 1}`,
+												disabled: count <= (page + 1) * 8,
+												emoji: { name: "➡️" },
+												style: ButtonStyle.Primary,
+												type: ComponentType.Button,
+											},
+										],
+									},
+								]
+							: [
+									{
+										type: ComponentType.TextDisplay,
+										content: "Non è presente alcun promemoria!",
+									},
+								],
+					},
 				],
-				content: results.length
-					? undefined
-					: "Non è presente alcun promemoria!",
 			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 		},
 	);
@@ -323,9 +346,63 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 		}
 	},
 	component: async (reply, { interaction, env }) => {
-		const [, userId, pageS] = interaction.data.custom_id.split("-");
+		const [, action, ...args] = interaction.data.custom_id.split("-");
 
-		reply({ type: InteractionResponseType.DeferredMessageUpdate });
-		await sendPage(interaction, env, userId, Number(pageS));
+		if (action === "list") {
+			reply({ type: InteractionResponseType.DeferredMessageUpdate });
+			await sendPage(interaction, env, args[0], Number(args[1]));
+			return;
+		}
+		if (action === "remove") {
+			const instance = await env.REMINDER.get(`${args[0]}-${args[1]}`).catch(
+				() => {},
+			);
+
+			if (!instance) {
+				reply({
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						content: "Promemoria non trovato!",
+						flags: MessageFlags.Ephemeral,
+					},
+				});
+				return;
+			}
+			reply({
+				type: InteractionResponseType.DeferredChannelMessageWithSource,
+				data: { flags: MessageFlags.Ephemeral },
+			});
+			const error = await Promise.all([
+				instance.terminate(),
+				env.DB.prepare(
+					`DELETE FROM Reminders
+					WHERE id = ?1 AND userId = ?2`,
+				)
+					.bind(args[1], args[0])
+					.run(),
+			])
+				.then(() => {})
+				.catch(normalizeError);
+
+			if (error) {
+				await rest.patch(
+					Routes.webhookMessage(interaction.application_id, interaction.token),
+					{
+						body: {
+							content: `Si è verificato un errore: \`${error.message}\``,
+						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					},
+				);
+				return;
+			}
+			await rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						content: "Promemoria rimosso correttamente!",
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+		}
 	},
 };

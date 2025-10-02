@@ -1,14 +1,13 @@
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
 	APIMessage,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
+	ComponentType,
 	InteractionResponseType,
 	MessageFlags,
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
-	type RESTPostAPIWebhookWithTokenJSONBody,
 } from "discord-api-types/v10";
 import {
 	formatTime,
@@ -65,17 +64,20 @@ export const time = {
 				data: {
 					content: "Cronometro avviato",
 					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId("time-stop")
-									.setLabel("Ferma")
-									.setEmoji({ name: "⏹️" })
-									.setStyle(ButtonStyle.Primary),
-							)
-							.toJSON(),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: "time-stop",
+									label: "Ferma",
+									emoji: { name: "⏹️" },
+									style: ButtonStyle.Primary,
+								},
+							],
+						},
 					],
-				} satisfies RESTPostAPIWebhookWithTokenJSONBody,
+				},
 			});
 			await timeout();
 			const { timestamp } = (await rest.get(
@@ -95,7 +97,7 @@ export const time = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(options.id2, options.id1))}**`,
-				} satisfies RESTPostAPIWebhookWithTokenJSONBody,
+				},
 			});
 	},
 	component: (reply, { interaction }) => {
