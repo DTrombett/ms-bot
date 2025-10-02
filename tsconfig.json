@@ -1,15 +1,16 @@
 {
-	"include": ["src/**/*", "**/*.ts"],
+	"include": ["src/**/*", "**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": ["node_modules", "tmp"],
 	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
 		"allowSyntheticDefaultImports": true,
+		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,
 		"lib": ["esnext"],
 		"module": "esnext",
-		"exactOptionalPropertyTypes": false,
-		"noPropertyAccessFromIndexSignature": false,
 		"moduleResolution": "bundler",
+		"noEmit": true,
+		"noPropertyAccessFromIndexSignature": false,
 		"pretty": true,
 		"target": "esnext",
 		"types": ["@cloudflare/workers-types/experimental"]
