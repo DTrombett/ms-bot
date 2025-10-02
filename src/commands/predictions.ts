@@ -1,4 +1,3 @@
-import { EmbedBuilder } from "@discordjs/builders";
 import {
 	APIApplicationCommandInteractionDataSubcommandOption,
 	ApplicationCommandOptionType,
@@ -224,31 +223,28 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					embeds: [
-						// TODO
-						new EmbedBuilder()
-							.setThumbnail(
-								"https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
-							)
-							.setTitle("Classifica Generale")
-							.setDescription(
-								sortedResults
-									.map(
-										(user, i) =>
-											`${i + 1}\\. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
-												Math.abs(user.dayPoints ?? 0) === 1 ? "o" : "i"
-											} Giornata (**${wins[user.id] ?? 0}** vittori${
-												(wins[user.id] ?? 0) === 1 ? "a" : "e"
-											})`,
-									)
-									.join("\n"),
-							)
-							.addFields(resolveStats(sortedResults))
-							.setAuthor({
+						{
+							thumbnail: {
+								url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
+							},
+							title: "Classifica Generale",
+							description: sortedResults
+								.map(
+									(user, i) =>
+										`${i + 1}. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
+											Math.abs(user.dayPoints ?? 0) === 1 ? "o" : "i"
+										} Giornata (**${wins[user.id] ?? 0}** vittori${
+											(wins[user.id] ?? 0) === 1 ? "a" : "e"
+										})`,
+								)
+								.join("\n"),
+							fields: [resolveStats(sortedResults)],
+							author: {
 								name: "Serie A Enilive",
 								url: "https://legaseriea.it/it/serie-a",
-							})
-							.setColor(0x3498db)
-							.toJSON(),
+							},
+							color: 0x3498db,
+						},
 					],
 				},
 			});

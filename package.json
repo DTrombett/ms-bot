@@ -22,7 +22,6 @@
 		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src"
 	},
 	"dependencies": {
-		"@discordjs/builders": "^1.11.3",
 		"@discordjs/rest": "^2.6.0",
 		"cloudflare": "^5.1.0",
 		"discord-api-types": "^0.38.26",
