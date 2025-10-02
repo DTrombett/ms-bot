@@ -1,4 +1,4 @@
-import { EmbedBuilder } from "@discordjs/builders";
+import type { APIEmbed } from "discord-api-types/v10";
 import {
 	Leaderboard,
 	MatchStatus,
@@ -274,35 +274,34 @@ export const getLiveEmbed = (
 	leaderboard: Leaderboard,
 	day: number,
 	finished = false,
-) => [
-	new EmbedBuilder()
-		.setThumbnail(
-			"https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
-		)
-		.setTitle(
-			finished
-				? `Risultati Finali ${day}ª Giornata`
-				: `🔴 Risultati Live ${day}ª Giornata`,
-		)
-		.setDescription(resolveMatches(matches))
-		.setAuthor({
+): APIEmbed[] => [
+	{
+		author: {
 			name: "Serie A Enilive",
 			url: "https://legaseriea.it/it/serie-a",
-		})
-		.setColor(0xed4245)
-		.toJSON(),
-	new EmbedBuilder()
-		.setThumbnail(
-			"https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
-		)
-		.setTitle(
-			finished
-				? `⚽ Classifica Definitiva Pronostici ${day}ª Giornata`
-				: `🔴 Classifica Live Pronostici ${day}ª Giornata`,
-		)
-		.setDescription(createLeaderboardDescription(leaderboard, finished))
-		.setFooter({ text: "Ultimo aggiornamento" })
-		.addFields(
+		},
+		title: finished
+			? `Risultati Finali ${day}ª Giornata`
+			: `🔴 Risultati Live ${day}ª Giornata`,
+		thumbnail: {
+			url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
+		},
+		description: resolveMatches(matches),
+		color: 0xed4245,
+	},
+	{
+		author: {
+			name: "Serie A Enilive",
+			url: "https://legaseriea.it/it/serie-a",
+		},
+		title: finished
+			? `⚽ Classifica Definitiva Pronostici ${day}ª Giornata`
+			: `🔴 Classifica Live Pronostici ${day}ª Giornata`,
+		thumbnail: {
+			url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
+		},
+		description: createLeaderboardDescription(leaderboard, finished),
+		fields: [
 			{
 				name: finished
 					? "Classifica Generale"
@@ -310,12 +309,9 @@ export const getLiveEmbed = (
 				value: createFinalLeaderboard(leaderboard),
 			},
 			resolveStats(users),
-		)
-		.setAuthor({
-			name: "Serie A Enilive",
-			url: "https://legaseriea.it/it/serie-a",
-		})
-		.setColor(0x3498db)
-		.setTimestamp()
-		.toJSON(),
+		],
+		color: 0x3498db,
+		footer: { text: "Ultimo aggiornamento" },
+		timestamp: new Date().toISOString(),
+	},
 ];

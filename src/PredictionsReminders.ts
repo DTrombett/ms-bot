@@ -1,4 +1,3 @@
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
 	WorkflowEntrypoint,
 	type WorkflowEvent,
@@ -6,6 +5,7 @@ import {
 } from "cloudflare:workers";
 import {
 	ButtonStyle,
+	ComponentType,
 	Routes,
 	type APIUser,
 	type RESTPostAPIChannelMessageJSONBody,
@@ -228,22 +228,25 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					content:
 						"⚽ È l'ora di inviare i pronostici per la prossima giornata!",
 					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-${Number(matchDay.day)}-1-${startTime}-${userId}`,
-									)
-									.setEmoji({ name: "⚽" })
-									.setLabel("Invia pronostici")
-									.setStyle(ButtonStyle.Primary),
-								new ButtonBuilder()
-									.setURL("https://ms-bot.trombett.org/predictions")
-									.setEmoji({ name: "🌐" })
-									.setLabel("Utilizza la dashboard")
-									.setStyle(ButtonStyle.Link),
-							)
-							.toJSON(),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									custom_id: `predictions-${Number(matchDay.day)}-1-${startTime}-${userId}`,
+									emoji: { name: "⚽" },
+									label: "Invia pronostici",
+									style: ButtonStyle.Primary,
+									type: ComponentType.Button,
+								},
+								{
+									emoji: { name: "🌐" },
+									label: "Utilizza la dashboard",
+									style: ButtonStyle.Link,
+									type: ComponentType.Button,
+									url: "https://ms-bot.trombett.org/predictions",
+								},
+							],
+						},
 					],
 				},
 				remind: "*Pronostici*",
@@ -406,20 +409,25 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			body: {
 				content: `<@&${this.env.PREDICTIONS_ROLE}>, potete inviare da ora i pronostici per la prossima giornata!\nPer farlo inviate il comando \`/predictions send\` e seguire le istruzioni o premete il pulsante qui in basso. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)!`,
 				components: [
-					new ActionRowBuilder<ButtonBuilder>()
-						.addComponents(
-							new ButtonBuilder()
-								.setCustomId(`predictions-${day.day}-1-${startTime}`)
-								.setEmoji({ name: "⚽" })
-								.setLabel("Invia pronostici")
-								.setStyle(ButtonStyle.Primary),
-							new ButtonBuilder()
-								.setURL("https://ms-bot.trombett.org/predictions")
-								.setEmoji({ name: "🌐" })
-								.setLabel("Utilizza la dashboard")
-								.setStyle(ButtonStyle.Link),
-						)
-						.toJSON(),
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								custom_id: `predictions-${day.day}-1-${startTime}`,
+								emoji: { name: "⚽" },
+								label: "Invia pronostici",
+								style: ButtonStyle.Primary,
+								type: ComponentType.Button,
+							},
+							{
+								emoji: { name: "🌐" },
+								label: "Utilizza la dashboard",
+								style: ButtonStyle.Link,
+								type: ComponentType.Button,
+								url: "https://ms-bot.trombett.org/predictions",
+							},
+						],
+					},
 				],
 			} satisfies RESTPostAPIChannelMessageJSONBody,
 		});
