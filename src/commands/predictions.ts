@@ -1,13 +1,4 @@
-import {
-	ActionRowBuilder,
-	ButtonBuilder,
-	EmbedBuilder,
-	ModalActionRowComponentBuilder,
-	ModalBuilder,
-	SelectMenuBuilder,
-	SelectMenuOptionBuilder,
-	TextInputBuilder,
-} from "@discordjs/builders";
+import { EmbedBuilder } from "@discordjs/builders";
 import {
 	APIApplicationCommandInteractionDataSubcommandOption,
 	ApplicationCommandOptionType,
@@ -17,6 +8,7 @@ import {
 	InteractionResponseType,
 	MessageFlags,
 	TextInputStyle,
+	type APIModalInteractionResponseCallbackData,
 	type ModalSubmitActionRowComponent,
 } from "discord-api-types/v10";
 import {
@@ -58,42 +50,28 @@ const buildModal = (
 	userId: string,
 	predictions?: Pick<Prediction, "matchId" | "prediction">[],
 	timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5,
-) =>
-	new ModalBuilder()
-		.setCustomId(
-			`predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
-		)
-		.setTitle(
-			`Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${matches.length / 5})`,
-		)
-		.addComponents(
-			matches.slice((part - 1) * 5, part * 5).map((m) => {
-				const textInput = new TextInputBuilder()
-					.setCustomId(m.match_id.toString())
-					.setLabel(
-						[m.home_team_name, m.away_team_name]
-							.map(normalizeTeamName)
-							.join(" - "),
-					)
-					.setStyle(TextInputStyle.Short)
-					.setRequired(true)
-					.setPlaceholder(
-						`es. ${
-							predictionExamples[
-								Math.floor(Math.random() * predictionExamples.length)
-							]
-						}`,
-					);
-				const found = predictions?.find(
+): APIModalInteractionResponseCallbackData => ({
+	title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${matches.length / 5})`,
+	custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
+	components: matches.slice((part - 1) * 5, part * 5).map((m) => ({
+		type: ComponentType.ActionRow,
+		components: [
+			{
+				type: ComponentType.TextInput,
+				custom_id: m.match_id.toString(),
+				label: [m.home_team_name, m.away_team_name]
+					.map(normalizeTeamName)
+					.join(" - "),
+				style: TextInputStyle.Short,
+				required: true,
+				placeholder: `es. ${predictionExamples[Math.floor(Math.random() * predictionExamples.length)]}`,
+				value: predictions?.find(
 					(prediction) => prediction.matchId === m.match_id,
-				);
-
-				if (found) textInput.setValue(found.prediction);
-				return new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-					textInput,
-				);
-			}),
-		);
+				)?.prediction,
+			},
+		],
+	})),
+});
 
 export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 	data: [
@@ -217,14 +195,17 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 					content:
 						"Apri la [dashboard](https://ms-bot.trombett.org/) per inviare i pronostici!",
 					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setURL("https://ms-bot.trombett.org/")
-									.setLabel("Apri")
-									.setStyle(ButtonStyle.Link),
-							)
-							.toJSON(),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									style: ButtonStyle.Link,
+									label: "Apri",
+									url: "https://ms-bot.trombett.org/predictions",
+								},
+							],
+						},
 					],
 				},
 			});
@@ -243,6 +224,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.ChannelMessageWithSource,
 				data: {
 					embeds: [
+						// TODO
 						new EmbedBuilder()
 							.setThumbnail(
 								"https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
@@ -369,17 +351,20 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 					content:
 						"Hai già inviato i pronostici per questa giornata! Clicca il pulsante se vuoi modificarli.",
 					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-${getMatchDayNumber(matchDay)}-1-${options.user ? Infinity : startTime}-${userId}`,
-									)
-									.setEmoji({ name: "✏️" })
-									.setLabel("Modifica")
-									.setStyle(ButtonStyle.Success),
-							)
-							.toJSON(),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${
+										options.user ? Infinity : startTime
+									}-${userId}`,
+									emoji: { name: "✏️" },
+									label: "Modifica",
+									style: ButtonStyle.Success,
+								},
+							],
+						},
 					],
 					flags: MessageFlags.Ephemeral,
 				},
@@ -395,7 +380,7 @@ export const predictions: CommandOptions<ApplicationCommandType.ChatInput> = {
 				userId,
 				existingPredictions,
 				options.user ? Infinity : undefined,
-			).toJSON(),
+			),
 		});
 	},
 	modalSubmit: async (reply, { interaction, env }) => {
@@ -499,17 +484,18 @@ VALUES (?)`,
 						.map((text) => `**${text}**`)
 						.join(", ")}`,
 					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
-									)
-									.setEmoji({ name: "✏️" })
-									.setLabel("Modifica")
-									.setStyle(ButtonStyle.Danger),
-							)
-							.toJSON(),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
+									emoji: { name: "✏️" },
+									label: "Modifica",
+									style: ButtonStyle.Danger,
+								},
+							],
+						},
 					],
 					flags: MessageFlags.Ephemeral,
 				},
@@ -522,50 +508,44 @@ VALUES (?)`,
 				data: {
 					content: `Parte **${part} di ${total}** inviata correttamente!\nSeleziona il **Match of the Match** dal menù qui sotto`,
 					components: [
-						new ActionRowBuilder<SelectMenuBuilder>()
-							.addComponents(
-								new SelectMenuBuilder()
-									.setCustomId(
-										`predictions-match-${day}-${timestamp}-${userId}`,
-									)
-									.addOptions(
-										matches.map((m) =>
-											new SelectMenuOptionBuilder()
-												.setLabel(
-													[m.home_team_name, m.away_team_name]
-														.map(normalizeTeamName)
-														.join(" - "),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.StringSelect,
+									custom_id: `predictions-match-${day}-${timestamp}-${userId}`,
+									placeholder: "Seleziona il Match of the Match",
+									options: matches.map((m) => ({
+										label: [m.home_team_name, m.away_team_name]
+											.map(normalizeTeamName)
+											.join(" - "),
+										description:
+											(
+												newPredictions.find(
+													({ matchId }) => matchId === m.match_id,
+												) ??
+												existingPredictions.find(
+													({ matchId }) => matchId === m.match_id,
 												)
-												.setDescription(
-													(
-														newPredictions.find(
-															({ matchId }) => matchId === m.match_id,
-														) ??
-														existingPredictions.find(
-															({ matchId }) => matchId === m.match_id,
-														)
-													)?.prediction ?? "",
-												)
-												.setValue(m.match_id.toString())
-												.setDefault(
-													m.match_id === existingPredictions[0]?.match,
-												),
-										),
-									)
-									.setPlaceholder("Seleziona il Match of the Match"),
-							)
-							.toJSON(),
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
-									)
-									.setEmoji({ name: "✏️" })
-									.setLabel("Modifica")
-									.setStyle(ButtonStyle.Success),
-							)
-							.toJSON(),
+											)?.prediction ?? "",
+										value: m.match_id.toString(),
+										default: m.match_id === existingPredictions[0]?.match,
+									})),
+								},
+							],
+						},
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
+									emoji: { name: "✏️" },
+									label: "Modifica",
+									style: ButtonStyle.Success,
+								},
+							],
+						},
 					],
 					flags: MessageFlags.Ephemeral,
 				},
@@ -576,17 +556,18 @@ VALUES (?)`,
 				data: {
 					content: `Parte **${part} di ${total}** inviata correttamente! Clicca il pulsante per continuare...`,
 					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-${getMatchDayNumber(matchDay)}-${part! + 1}-${timestamp}-${userId}`,
-									)
-									.setEmoji({ name: "⏩" })
-									.setLabel("Continua")
-									.setStyle(ButtonStyle.Primary),
-							)
-							.toJSON(),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part! + 1}-${timestamp}-${userId}`,
+									emoji: { name: "⏩" },
+									label: "Continua",
+									style: ButtonStyle.Primary,
+								},
+							],
+						},
 					],
 					flags: MessageFlags.Ephemeral,
 				},
@@ -651,17 +632,18 @@ VALUES (?)`,
 					content: "Pronostici inviati correttamente!",
 					flags: MessageFlags.Ephemeral,
 					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
-									)
-									.setEmoji({ name: "✏️" })
-									.setLabel("Modifica")
-									.setStyle(ButtonStyle.Success),
-							)
-							.toJSON(),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
+									emoji: { name: "✏️" },
+									label: "Modifica",
+									style: ButtonStyle.Success,
+								},
+							],
+						},
 					],
 				},
 			});
@@ -686,7 +668,7 @@ VALUES (?)`,
 				userId,
 				existingPredictions,
 				time,
-			).toJSON(),
+			),
 		});
 	},
 };
