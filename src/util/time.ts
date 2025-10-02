@@ -1,14 +1,61 @@
+export enum TimeUnit {
+	Millisecond = 1,
+	Second = Millisecond * 1000,
+	Minute = Second * 60,
+	Hour = Minute * 60,
+	Day = Hour * 24,
+	Week = Day * 7,
+	Year = Day * 365.25,
+	Month = Year / 12,
+}
 export const formatTime = (ms: number): string => {
 	const sign = ms >= 0 ? "" : "-";
-	const hours = Math.floor((ms = Math.abs(ms)) / 3_600_000);
-	const last = `${Math.floor((ms % 3_600_000) / 60_000)
+	const hours = Math.floor((ms = Math.abs(ms)) / TimeUnit.Hour);
+	const last = `${Math.floor((ms % TimeUnit.Hour) / TimeUnit.Minute)
 		.toString()
-		.padStart(2, "0")}:${Math.floor((ms % 60_000) / 1_000)
+		.padStart(2, "0")}:${Math.floor((ms % TimeUnit.Minute) / TimeUnit.Second)
 		.toString()
-		.padStart(2, "0")}.${(ms % 1000).toString().padStart(3, "0")}`;
+		.padStart(2, "0")}.${(ms % TimeUnit.Second).toString().padStart(3, "0")}`;
 
 	return `${sign}${hours > 0 ? `${hours.toString().padStart(2, "0")}:` : ""}${last}`;
 };
+
+const formatTimeString = (
+	n: number,
+	singular: string,
+	plural = singular,
+): string => (n > 0 ? `${n} ${n === 1 ? singular : plural}` : "");
+export const formatLongTime = (ms: number): string =>
+	[
+		formatTimeString(Math.floor(ms / TimeUnit.Year), "anno", "anni"),
+		formatTimeString(
+			Math.floor((ms % TimeUnit.Year) / TimeUnit.Month),
+			"mese",
+			"mesi",
+		),
+		formatTimeString(
+			Math.floor((ms % TimeUnit.Month) / TimeUnit.Day),
+			"giorno",
+			"giorni",
+		),
+		formatTimeString(
+			Math.floor((ms % TimeUnit.Day) / TimeUnit.Hour),
+			"ora",
+			"ore",
+		),
+		formatTimeString(
+			Math.floor((ms % TimeUnit.Hour) / TimeUnit.Minute),
+			"minuto",
+			"minuti",
+		),
+		formatTimeString(
+			Math.floor((ms % TimeUnit.Minute) / TimeUnit.Second),
+			"secondo",
+			"secondi",
+		),
+	]
+		.filter(Boolean)
+		.join(", ") || "0 secondi";
 
 export const idDiff = (id1: string, id2: string): number =>
 	Number((BigInt(id1) >> 22n) - (BigInt(id2) >> 22n));

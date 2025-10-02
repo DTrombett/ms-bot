@@ -11,8 +11,8 @@ import {
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
-import ms from "ms";
 import {
+	formatLongTime,
 	getLiveEmbed,
 	getMatchDayNumber,
 	loadMatches,
@@ -63,7 +63,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		const diff = startTime - event.timestamp.getTime();
 
 		if (diff > 24 * 60 * 60 * 1_000) {
-			console.log(`Next match day is in ${ms(diff, { long: true })}`);
+			console.log(`Next match day is in ${formatLongTime(diff)}`);
 			return;
 		}
 		rest.setToken(this.env.DISCORD_TOKEN);
