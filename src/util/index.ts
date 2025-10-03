@@ -1,6 +1,7 @@
 export * from "./calculateAveragePoints";
 export * from "./calculateWins";
 export * from "./capitalize";
+export * from "./commandHandler";
 export * from "./Constants";
 export * from "./createSolidPng";
 export * from "./executeInteraction";
@@ -15,7 +16,6 @@ export * from "./normalizeError";
 export * from "./normalizeTeamName";
 export * from "./randomNumber";
 export * from "./resolveColor";
-export * from "./resolveCommandOptions";
 export * from "./resolveLeaderboard";
 export * from "./rest";
 export * from "./sortLeaderboard";

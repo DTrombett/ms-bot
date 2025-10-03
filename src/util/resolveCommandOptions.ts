@@ -6,6 +6,7 @@ import {
 	APIChatInputApplicationCommandInteraction,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
+	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import { ok } from "./node";
 import type { CommandData } from "./types";
@@ -33,11 +34,11 @@ type CreateObject<
 					: ExtractOptionType<P> | undefined;
 			};
 		};
-type ResolvedOptions<
+export type ResolvedOptions<
 	T extends
 		| APIApplicationCommandSubcommandGroupOption
 		| APIApplicationCommandSubcommandOption
-		| CommandData,
+		| RESTPostAPIApplicationCommandsJSONBody,
 	S extends string | undefined = undefined,
 > =
 	T extends CommandData<ApplicationCommandType.ChatInput>
