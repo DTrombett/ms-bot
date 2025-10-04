@@ -1,75 +1,8 @@
-/* eslint-disable no-sparse-arrays */
-import {
-	APIApplicationCommandAutocompleteInteraction,
-	APIApplicationCommandInteraction,
-	APIMessageComponentInteraction,
-	APIModalSubmitInteraction,
-	APIPingInteraction,
-	InteractionResponseType,
-} from "discord-api-types/v10";
-import * as commandsObject from "./commands";
-import type { CommandOptions, Env, Handler, RGB } from "./util";
-import {
-	createSolidPng,
-	executeInteraction,
-	JsonResponse,
-	rest,
-	verifyDiscordRequest,
-} from "./util";
+import * as commands from "./commands";
+import type { Env, RGB } from "./util";
+import { CommandHandler, createSolidPng, JsonResponse, rest } from "./util";
 
-const commands = commandsObject as Record<string, CommandOptions>;
-const applicationCommands = Object.fromEntries(
-	Object.values(commands).flatMap((cmd) => cmd.data.map((d) => [d.name, cmd])),
-);
-const handlers: [
-	undefined,
-	Handler<APIPingInteraction>,
-	Handler<APIApplicationCommandInteraction>,
-	Handler<APIMessageComponentInteraction>,
-	Handler<APIApplicationCommandAutocompleteInteraction>,
-	Handler<APIModalSubmitInteraction>,
-] = [
-	,
-	() => ({
-		type: InteractionResponseType.Pong,
-	}),
-	({ interaction, env, context, host }) =>
-		executeInteraction(
-			interaction,
-			env,
-			context,
-			host,
-			"run",
-			applicationCommands[interaction.data.name],
-		),
-	({ interaction, env, context, host }) =>
-		executeInteraction(
-			interaction,
-			env,
-			context,
-			host,
-			"component",
-			commands[interaction.data.custom_id.split("-")[0]!],
-		),
-	({ interaction, env, context, host }) =>
-		executeInteraction(
-			interaction,
-			env,
-			context,
-			host,
-			"autocomplete",
-			commands[interaction.data.name],
-		),
-	({ interaction, env, context, host }) =>
-		executeInteraction(
-			interaction,
-			env,
-			context,
-			host,
-			"modalSubmit",
-			commands[interaction.data.custom_id.split("-")[0]!],
-		),
-];
+const handler = new CommandHandler(Object.values(commands));
 
 const server: ExportedHandler<Env> = {
 	fetch: async (request, env, context) => {
@@ -78,22 +11,10 @@ const server: ExportedHandler<Env> = {
 		if (url.pathname === "/") {
 			if (request.method === "POST") {
 				rest.setToken(env.DISCORD_TOKEN);
-				const interaction = await verifyDiscordRequest(request, env);
-
-				if (interaction instanceof Response) return interaction;
-				const result = await handlers[interaction.type]({
-					interaction: interaction as never,
-					host: url.host,
-					context,
-					env,
+				return handler.handleInteraction(request, env, context).catch((e) => {
+					console.error(e);
+					return new Response(null, { status: 500 });
 				});
-
-				return result
-					? new JsonResponse(result)
-					: new JsonResponse(
-							{ error: "Internal Server Error" },
-							{ status: 500 },
-						);
 			}
 			if (request.method === "GET") return new Response("Ready!");
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
