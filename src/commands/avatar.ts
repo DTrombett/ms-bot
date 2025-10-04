@@ -1,11 +1,11 @@
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	type APIMediaGalleryItem,
 } from "discord-api-types/v10";
-import { createCommand, escapeMarkdown, rest } from "../util";
+import { createCommand, rest } from "../util";
 
 export const avatar = createCommand({
 	chatInputData: {
@@ -20,33 +20,17 @@ export const avatar = createCommand({
 			},
 		],
 	} as const,
-	chatInput: ({ reply }, { interaction, options: { user: userId } }) => {
-		const user =
-			userId == null
-				? (interaction.user ?? interaction.member?.user)
-				: interaction.data.resolved?.users?.[userId];
+	chatInput: ({ reply }, { interaction, options: { user: userId }, user }) => {
+		const member = userId
+			? interaction.data.resolved?.members?.[userId]
+			: interaction.member;
+		const items: APIMediaGalleryItem[] = [];
 
-		if (!user) {
-			reply({ flags: MessageFlags.Ephemeral, content: "Utente non trovato!" });
-			return;
-		}
-		const member =
-			userId == null
-				? interaction.member
-				: interaction.data.resolved?.members?.[userId];
-		const url =
-			member?.avatar == null
-				? user.avatar == null
-					? rest.cdn.defaultAvatar(
-							user.discriminator === "0"
-								? Number(BigInt(user.id) >> 22n) % 6
-								: Number(user.discriminator) % 5,
-						)
-					: rest.cdn.avatar(user.id, user.avatar, {
-							size: 4096,
-							extension: "png",
-						})
-				: rest.cdn.guildMemberAvatar(
+		if (userId) user = interaction.data.resolved?.users?.[userId] ?? user;
+		if (member?.avatar)
+			items.push({
+				media: {
+					url: rest.cdn.guildMemberAvatar(
 						interaction.guild_id!,
 						user.id,
 						member.avatar,
@@ -54,26 +38,41 @@ export const avatar = createCommand({
 							size: 4096,
 							extension: "png",
 						},
-					);
-
+					),
+				},
+			});
+		if (user.avatar)
+			items.push({
+				media: {
+					url: rest.cdn.avatar(user.id, user.avatar, {
+						size: 4096,
+						extension: "png",
+					}),
+				},
+			});
+		else
+			items.push({
+				media: {
+					url: rest.cdn.defaultAvatar(
+						user.discriminator === "0"
+							? Number(BigInt(user.id) >> 22n) % 6
+							: Number(user.discriminator) % 5,
+					),
+				},
+			});
 		reply({
-			content: `Avatar di **[${escapeMarkdown(
-				member?.nick ?? user.global_name ?? user.username,
-			)}](${url} )**:`,
-			allowed_mentions: { parse: [] },
+			flags: MessageFlags.IsComponentsV2,
 			components: [
 				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							url,
-							style: ButtonStyle.Link,
-							label: "Apri l'originale",
-						},
-					],
+					type: ComponentType.TextDisplay,
+					content: `Avatar di <@${user.id}>`,
+				},
+				{
+					type: ComponentType.MediaGallery,
+					items,
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	},
 });

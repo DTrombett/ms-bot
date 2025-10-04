@@ -14,6 +14,8 @@ import {
 	InteractionType,
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
 	RESTPostAPIContextMenuApplicationCommandsJSONBody,
+	type APIInteraction,
+	type APIUser,
 } from "discord-api-types/v10";
 import type { Awaitable, Env } from "../types";
 
@@ -84,6 +86,12 @@ export type Replies = {
 	[P in keyof typeof ReplyTypes]: Reply<(typeof ReplyTypes)[P]>;
 };
 
+export type BaseArgs<T extends APIInteraction = APIInteraction> = {
+	interaction: T;
+	request: Request;
+	user: APIUser;
+};
+
 export interface Command<
 	A extends RESTPostAPIChatInputApplicationCommandsJSONBody,
 	B extends RESTPostAPIContextMenuApplicationCommandsJSONBody[],
@@ -95,18 +103,13 @@ export interface Command<
 	chatInput?(
 		this: ThisArg & this,
 		replies: Pick<Replies, "reply" | "defer" | "modal">,
-		args: {
-			interaction: APIChatInputApplicationCommandInteraction;
-			request: Request;
-		} & ParseOptions<A>,
+		args: BaseArgs<APIChatInputApplicationCommandInteraction> & ParseOptions<A>,
 	): Awaitable<void>;
 	autocomplete?(
 		this: ThisArg & this,
 		replies: Pick<Replies, "autocomplete">,
-		args: {
-			interaction: APIApplicationCommandAutocompleteInteraction;
-			request: Request;
-		} & ParseOptions<A>,
+		args: BaseArgs<APIApplicationCommandAutocompleteInteraction> &
+			ParseOptions<A>,
 	): Awaitable<void>;
 	component?(
 		this: ThisArg & this,
@@ -114,35 +117,22 @@ export interface Command<
 			Replies,
 			"reply" | "defer" | "modal" | "update" | "deferUpdate"
 		>,
-		args: {
-			args: string[];
-			interaction: APIMessageComponentInteraction;
-			request: Request;
-		},
+		args: BaseArgs<APIMessageComponentInteraction> & { args: string[] },
 	): Awaitable<void>;
 	modal?(
 		this: ThisArg & this,
 		replies: Pick<Replies, "reply" | "defer">,
-		args: {
-			interaction: APIModalSubmitInteraction;
-			request: Request;
-		},
+		args: BaseArgs<APIModalSubmitInteraction> & { args: string[] },
 	): Awaitable<void>;
 	user?(
 		this: ThisArg & this,
 		replies: Pick<Replies, "reply" | "defer" | "modal">,
-		args: {
-			interaction: APIUserApplicationCommandInteraction;
-			request: Request;
-		},
+		args: BaseArgs<APIUserApplicationCommandInteraction>,
 	): Awaitable<void>;
 	message?(
 		this: ThisArg & this,
 		replies: Pick<Replies, "reply" | "defer" | "modal">,
-		args: {
-			interaction: APIMessageApplicationCommandInteraction;
-			request: Request;
-		},
+		args: BaseArgs<APIMessageApplicationCommandInteraction>,
 	): Awaitable<void>;
 }
 export type CommandRunners = NonNullable<

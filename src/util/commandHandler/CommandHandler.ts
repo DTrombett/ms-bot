@@ -3,6 +3,7 @@ import {
 	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
+	type APIApplicationCommandOption,
 	type APIInteraction,
 	type APIInteractionResponse,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
@@ -12,8 +13,10 @@ import { hexToUint8Array } from "../strings";
 import { Awaitable, Env } from "../types";
 import {
 	ReplyTypes,
+	type BaseArgs,
 	type Command,
 	type CommandRunners,
+	type CreateObject,
 	type Replies,
 	type Reply,
 	type ThisArg,
@@ -132,6 +135,7 @@ export class CommandHandler {
 		const args = {
 			interaction,
 			request,
+			user,
 			subcommand: undefined as string | undefined,
 			options: {} as Record<string, string | number | boolean>,
 			args: [] as string[],
@@ -166,13 +170,10 @@ export class CommandHandler {
 				] as (
 					this: ThisArg & typeof command,
 					replies: Replies,
-					args: {
-						interaction: APIInteraction;
-						request: Request;
-						subcommand?: string;
-						options: Record<string, string | number | boolean>;
-						args: string[];
-					},
+					args: BaseArgs &
+						CreateObject<APIApplicationCommandOption[], string | undefined> & {
+							args: string[];
+						},
 				) => Awaitable<void>
 			)?.call(
 				Object.assign(command, { ctx: context, env }),
