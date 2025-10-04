@@ -22,4 +22,3 @@ export * from "./sortLeaderboard";
 export * from "./strings";
 export * from "./time";
 export * from "./types";
-export * from "./verifyDiscordRequest";

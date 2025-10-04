@@ -1,4 +1,5 @@
 import {
+	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
@@ -9,7 +10,14 @@ import {
 } from "discord-api-types/v10";
 import { hexToUint8Array } from "../strings";
 import { Awaitable, Env } from "../types";
-import { ReplyTypes, type Command, type Replies, type Reply } from "./types";
+import {
+	ReplyTypes,
+	type Command,
+	type CommandRunners,
+	type Replies,
+	type Reply,
+	type ThisArg,
+} from "./types";
 
 export class CommandHandler {
 	#key?: CryptoKey;
@@ -24,6 +32,7 @@ export class CommandHandler {
 						RESTPostAPIContextMenuApplicationCommandsJSONBody[]
 				  >
 				| undefined;
+			getRunner: (interaction: APIInteraction & { type: K }) => CommandRunners;
 		};
 	} = {
 		[InteractionType.ApplicationCommand]: {
@@ -36,6 +45,12 @@ export class CommandHandler {
 									(d) => d.name === interaction.data.name,
 								),
 				),
+			getRunner: (interaction) =>
+				interaction.data.type === ApplicationCommandType.ChatInput
+					? "chatInput"
+					: interaction.data.type === ApplicationCommandType.User
+						? "user"
+						: "message",
 		},
 		[InteractionType.MessageComponent]: {
 			findCommand: (interaction) => {
@@ -43,12 +58,14 @@ export class CommandHandler {
 
 				return this.commands.find((c) => c.customId === customId);
 			},
+			getRunner: () => "component",
 		},
 		[InteractionType.ApplicationCommandAutocomplete]: {
 			findCommand: (interaction) =>
 				this.commands.find(
 					(c) => c.chatInputData?.name === interaction.data.name,
 				),
+			getRunner: () => "autocomplete",
 		},
 		[InteractionType.ModalSubmit]: {
 			findCommand: (interaction) => {
@@ -56,6 +73,7 @@ export class CommandHandler {
 
 				return this.commands.find((c) => c.customId === customId);
 			},
+			getRunner: () => "modal",
 		},
 	};
 
@@ -111,9 +129,52 @@ export class CommandHandler {
 		);
 		const { promise, resolve } =
 			Promise.withResolvers<APIInteractionResponse>();
-		const args = { interaction, request };
+		const args = {
+			interaction,
+			request,
+			subcommand: undefined as string | undefined,
+			options: {} as Record<string, string | number | boolean>,
+			args: [] as string[],
+		};
+		if (
+			(interaction.type === InteractionType.ApplicationCommand ||
+				interaction.type === InteractionType.ApplicationCommandAutocomplete) &&
+			interaction.data.type === ApplicationCommandType.ChatInput
+		) {
+			let { options } = interaction.data;
+			const subcommand: string[] = [];
+
+			while (
+				options?.[0]?.type === ApplicationCommandOptionType.SubcommandGroup ||
+				options?.[0]?.type === ApplicationCommandOptionType.Subcommand
+			) {
+				subcommand.push(options[0].name);
+				[{ options }] = options;
+			}
+			if (subcommand.length) args.subcommand = subcommand.join(" ");
+			for (const element of options ?? [])
+				if ("value" in element) args.options[element.name] = element.value;
+		}
+		if ("custom_id" in interaction.data)
+			args.args = interaction.data.custom_id.split("-").slice(1);
 		context.waitUntil(
-			command.chatInput?.call(
+			(
+				command[
+					this.interactionTypes[interaction.type].getRunner(
+						interaction as never,
+					)
+				] as (
+					this: ThisArg & typeof command,
+					replies: Replies,
+					args: {
+						interaction: APIInteraction;
+						request: Request;
+						subcommand?: string;
+						options: Record<string, string | number | boolean>;
+						args: string[];
+					},
+				) => Awaitable<void>
+			)?.call(
 				Object.assign(command, { ctx: context, env }),
 				Object.fromEntries<Reply<InteractionResponseType>>(
 					Object.entries(ReplyTypes).map(([key, type]) => [

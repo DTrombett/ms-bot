@@ -3,46 +3,31 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
 	MessageFlags,
 } from "discord-api-types/v10";
-import {
-	escapeMarkdown,
-	resolveCommandOptions,
-	rest,
-	type CommandOptions,
-} from "../util";
+import { createCommand, escapeMarkdown, rest } from "../util";
 
-export const avatar = {
-	data: [
-		{
-			name: "avatar",
-			description: "Mostra l'avatar di un utente",
-			type: ApplicationCommandType.ChatInput,
-			options: [
-				{
-					name: "user",
-					description: "L'utente di cui mostrare l'avatar",
-					type: ApplicationCommandOptionType.User,
-				},
-			],
-		},
-	],
-	run: (reply, { interaction }) => {
-		const { user: userId } = resolveCommandOptions(
-			avatar.data,
-			interaction,
-		).options;
+export const avatar = createCommand({
+	chatInputData: {
+		name: "avatar",
+		description: "Mostra l'avatar di un utente",
+		type: ApplicationCommandType.ChatInput,
+		options: [
+			{
+				name: "user",
+				description: "L'utente di cui mostrare l'avatar",
+				type: ApplicationCommandOptionType.User,
+			},
+		],
+	} as const,
+	chatInput: ({ reply }, { interaction, options: { user: userId } }) => {
 		const user =
 			userId == null
 				? (interaction.user ?? interaction.member?.user)
 				: interaction.data.resolved?.users?.[userId];
 
 		if (!user) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: { flags: MessageFlags.Ephemeral, content: "Utente non trovato!" },
-			});
+			reply({ flags: MessageFlags.Ephemeral, content: "Utente non trovato!" });
 			return;
 		}
 		const member =
@@ -72,26 +57,23 @@ export const avatar = {
 					);
 
 		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: {
-				content: `Avatar di **[${escapeMarkdown(
-					member?.nick ?? user.global_name ?? user.username,
-				)}](${url} )**:`,
-				allowed_mentions: { parse: [] },
-				components: [
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								url,
-								style: ButtonStyle.Link,
-								label: "Apri l'originale",
-							},
-						],
-					},
-				],
-			},
+			content: `Avatar di **[${escapeMarkdown(
+				member?.nick ?? user.global_name ?? user.username,
+			)}](${url} )**:`,
+			allowed_mentions: { parse: [] },
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							url,
+							style: ButtonStyle.Link,
+							label: "Apri l'originale",
+						},
+					],
+				},
+			],
 		});
 	},
-} as const satisfies CommandOptions<ApplicationCommandType.ChatInput>;
+});
