@@ -1,9 +1,4 @@
 import {
-	APIApplicationCommandInteractionDataNumberOption,
-	APIApplicationCommandInteractionDataOption,
-	APIApplicationCommandInteractionDataStringOption,
-	APIApplicationCommandInteractionDataSubcommandOption,
-	APIApplicationCommandInteractionDataUserOption,
 	APIBan,
 	APIGuild,
 	APIGuildMember,
@@ -14,396 +9,313 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
 	MessageFlags,
+	ModalSubmitActionRowComponent,
 	PermissionFlagsBits,
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	RESTPostAPIChatInputApplicationCommandsJSONBody,
 	RESTPutAPIGuildBanJSONBody,
 	Routes,
 	Snowflake,
 	TextInputStyle,
-	type ModalSubmitActionRowComponent,
 } from "discord-api-types/v10";
 import {
+	ChatInputArgs,
+	ChatInputReplies,
+	Command,
+	ComponentArgs,
+	ComponentReplies,
 	Emojis,
 	escapeMarkdown,
+	maxLength,
+	ModalArgs,
+	ModalReplies,
 	normalizeError,
+	ok,
 	rest,
-	type CommandOptions,
 } from "../util";
 
-const checkPerms = (
-	executor: APIInteractionGuildMember,
-	guild: APIGuild,
-	target: Snowflake,
-	targetMember?: Omit<APIInteractionDataResolvedGuildMember, "permissions">,
-): string | undefined => {
-	if (executor.user.id === guild.owner_id) return undefined;
-	if (target === guild.owner_id)
-		return "Non puoi eseguire questa azione sul proprietario del server!";
-	if (!targetMember) return undefined;
-	const roles = new Map(guild.roles.map((role) => [role.id, role]));
-	const highest = executor.roles.reduce((prev, role, i) => {
-		if (i === 0) return prev;
-		const resolved = roles.get(role);
-
-		if (!prev) return resolved;
-		if (!resolved) return prev;
-		if (resolved.position > prev.position) return resolved;
-		if (resolved.position < prev.position) return prev;
-		if (BigInt(role) < BigInt(prev.id)) return resolved;
-		return prev;
-	}, roles.get(executor.roles[0]!));
-
-	if (!highest) return undefined;
-	const highestId = BigInt(highest.id);
-
-	if (
-		targetMember.roles.some((role) => {
-			const resolved = roles.get(role);
-
-			return (
-				resolved &&
-				(resolved.position > highest.position ||
-					(resolved.position === highest.position && highestId > BigInt(role)))
-			);
-		})
-	)
-		return "Non puoi bannare un membro con una posizione superiore o uguale alla tua!";
-	return undefined;
-};
-const executeBan = async (
-	guildId: Snowflake,
-	user: APIUser,
-	deleteMessageSeconds?: number,
-	reason?: string,
-): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
-	reason = reason?.trim();
-	const result = await rest
-		.put(Routes.guildBan(guildId, user.id), {
-			reason,
-			body: {
-				delete_message_seconds: deleteMessageSeconds,
-			} satisfies RESTPutAPIGuildBanJSONBody,
-		})
-		.then(() => {})
-		.catch(normalizeError);
-
-	if (result)
-		return {
-			content: `Si è verificato un errore: \`${result.message.slice(
-				0,
-				1_000,
-			)}\``,
-			allowed_mentions: { parse: [] },
-		};
-	return {
-		content: `<:bann:${Emojis.bann}> <@${user.id}> (${escapeMarkdown(
-			user.username,
-		)} - ${user.id}) è stato bannato!\n\nMotivo: ${
-			reason !== undefined && reason.length > 0
-				? reason.slice(0, 1_000)
-				: "*Nessun motivo*"
-		}`,
-		allowed_mentions: { parse: [] },
-		components: [
+export class Bann extends Command {
+	static override chatInputData = {
+		type: ApplicationCommandType.ChatInput,
+		name: "bann",
+		description: "Banna utente o revoca un bann",
+		default_member_permissions: String(PermissionFlagsBits.BanMembers),
+		options: [
 			{
-				type: ComponentType.ActionRow,
-				components: [
+				name: "add",
+				description: "Banna utente",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
 					{
-						type: ComponentType.Button,
-						custom_id: `bann-${user.id}-r`,
-						style: ButtonStyle.Danger,
-						label: "Revoca bann",
+						name: "user",
+						description: "L'utente da bannare",
+						type: ApplicationCommandOptionType.User,
+						required: true,
+					},
+					{
+						name: "delete-messages",
+						description:
+							"Quanto eliminare della sua cronologia dei messaggi recenti",
+						type: ApplicationCommandOptionType.Number,
+						min_value: 0,
+						max_value: 7,
+					},
+					{
+						name: "reason",
+						description: "Il motivo del bann, se presente",
+						type: ApplicationCommandOptionType.String,
+						max_length: 512,
+					},
+				],
+			},
+			{
+				name: "remove",
+				description: "Revoca bann",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "user",
+						description: "L'utente da cui revocare il bann",
+						type: ApplicationCommandOptionType.User,
+						required: true,
+					},
+					{
+						name: "reason",
+						description: "Il motivo della revoca del bann, se presente",
+						type: ApplicationCommandOptionType.String,
+						max_length: 512,
+					},
+				],
+			},
+			{
+				name: "check",
+				description: "Controlla se un utente è bannato",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "user",
+						description: "L'utente da controllare",
+						type: ApplicationCommandOptionType.User,
+						required: true,
 					},
 				],
 			},
 		],
-	};
-};
-const unban = async (
-	guildId: Snowflake,
-	user: APIUser,
-	reason?: string,
-): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
-	reason = reason?.trim();
-	const result = await rest
-		.delete(Routes.guildBan(guildId, user.id), { reason })
-		.then(() => {})
-		.catch(normalizeError);
-
-	if (result)
-		return {
-			content: `Si è verificato un errore: \`${result.message.slice(
-				0,
-				1_000,
-			)}\``,
-			allowed_mentions: { parse: [] },
-		};
-	return {
-		content: `Ho revocato il bann da <@${user.id}> (${escapeMarkdown(
-			user.username,
-		)} - ${user.id})!\n\nMotivo: ${
-			reason?.slice(0, 1_000) ?? "*Nessun motivo*"
-		}`,
-		allowed_mentions: { parse: [] },
-		components: [
-			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.Button,
-						custom_id: `bann-${user.id}-a`,
-						label: "Bann",
-						style: ButtonStyle.Success,
-						emoji: {
-							animated: false,
-							id: Emojis.bann,
-							name: "bann",
-						},
-					},
-				],
-			},
-		],
-	};
-};
-
-export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
+	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	static override customId = "bann";
+	override async chatInput(
+		{ reply, defer }: ChatInputReplies,
 		{
-			type: ApplicationCommandType.ChatInput,
-			name: "bann",
-			description: "Banna utente o revoca un bann",
-			default_member_permissions: String(PermissionFlagsBits.BanMembers),
-			options: [
-				{
-					name: "add",
-					description: "Banna utente",
-					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							name: "user",
-							description: "L'utente da bannare",
-							type: ApplicationCommandOptionType.User,
-							required: true,
-						},
-						{
-							name: "delete-messages",
-							description:
-								"Quanto eliminare della sua cronologia dei messaggi recenti",
-							type: ApplicationCommandOptionType.Number,
-							min_value: 0,
-							max_value: 7,
-						},
-						{
-							name: "reason",
-							description: "Il motivo del bann, se presente",
-							type: ApplicationCommandOptionType.String,
-							max_length: 512,
-						},
-					],
-				},
-				{
-					name: "remove",
-					description: "Revoca bann",
-					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							name: "user",
-							description: "L'utente da cui revocare il bann",
-							type: ApplicationCommandOptionType.User,
-							required: true,
-						},
-						{
-							name: "reason",
-							description: "Il motivo della revoca del bann, se presente",
-							type: ApplicationCommandOptionType.String,
-							max_length: 512,
-						},
-					],
-				},
-				{
-					name: "check",
-					description: "Controlla se un utente è bannato",
-					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							name: "user",
-							description: "L'utente da controllare",
-							type: ApplicationCommandOptionType.User,
-							required: true,
-						},
-					],
-				},
-			],
-		},
-	],
-	run: async (reply, { interaction }) => {
-		if (
-			!(BigInt(interaction.app_permissions) & PermissionFlagsBits.BanMembers)
-		) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content:
-						'Ho bisogno del permesso "Bannare i membri" per eseguire questo comando!',
-					flags: MessageFlags.Ephemeral,
-				},
+			interaction,
+			subcommand,
+			options,
+		}: ChatInputArgs<typeof Bann.chatInputData>,
+	) {
+		if (!(BigInt(interaction.app_permissions) & PermissionFlagsBits.BanMembers))
+			return reply({
+				content:
+					'Ho bisogno del permesso "Bannare i membri" per poter eseguire questo comando!',
+				flags: MessageFlags.Ephemeral,
 			});
-			return;
-		}
-		if (
-			!(interaction.data.options && interaction.member && interaction.guild_id)
-		)
-			throw new TypeError("Invalid interaction", { cause: interaction });
-		const options = new Map<
-			string,
-			APIApplicationCommandInteractionDataOption
-		>();
-		const [subcommand] = interaction.data
-			.options as APIApplicationCommandInteractionDataSubcommandOption[];
-
-		for (const option of subcommand!.options!) options.set(option.name, option);
-		const { value: userId } = options.get(
-			"user",
-		) as APIApplicationCommandInteractionDataUserOption;
-		const user = interaction.data.resolved!.users![userId]!;
-
-		if (subcommand!.name === "check") {
+		const user = interaction.data.resolved?.users?.[options.user];
+		ok(interaction.guild_id && interaction.member);
+		if (subcommand === "check") {
 			const bannData = (await rest
-				.get(Routes.guildBan(interaction.guild_id, userId))
-				.catch(() => undefined)) as APIBan | undefined;
+				.get(Routes.guildBan(interaction.guild_id, options.user))
+				.catch(() => {})) as APIBan | undefined;
 
-			if (!bannData) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "L'utente non è bannato!",
-						components: [
-							{
-								type: ComponentType.ActionRow,
-								components: [
-									{
-										type: ComponentType.Button,
-										custom_id: `bann-${user.id}-a`,
-										label: "Bann",
-										style: ButtonStyle.Success,
-										emoji: {
-											animated: false,
-											id: Emojis.bann,
-											name: "bann",
-										},
-									},
-								],
-							},
-						],
-					},
-				});
-				return;
-			}
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: `<@${user.id}> (${escapeMarkdown(user.username)} - ${
-						user.id
-					}) è bannato dal server!\n\nMotivo: ${
-						bannData.reason != null
-							? bannData.reason.slice(0, 1_000)
-							: "*Nessun motivo*"
-					}`,
-					allowed_mentions: { parse: [] },
-					components: [
-						{
-							type: ComponentType.ActionRow,
+			return reply(
+				bannData
+					? {
+							content: `<@${options.user}> (${escapeMarkdown(user?.username ?? "Unknown user")} - ${
+								options.user
+							}) è bannato dal server!\n\nMotivo: ${
+								bannData.reason
+									? maxLength(bannData.reason, 500)
+									: "*Nessun motivo*"
+							}`,
+							allowed_mentions: { parse: [] },
 							components: [
 								{
-									type: ComponentType.Button,
-									custom_id: `bann-${user.id}-r`,
-									style: ButtonStyle.Danger,
-									label: "Revoca bann",
+									type: ComponentType.ActionRow,
+									components: [
+										{
+											type: ComponentType.Button,
+											custom_id: `bann-${options.user}-r`,
+											style: ButtonStyle.Danger,
+											label: "Revoca bann",
+										},
+									],
+								},
+							],
+						}
+					: {
+							content: "L'utente non è bannato!",
+							components: [
+								{
+									type: ComponentType.ActionRow,
+									components: [
+										{
+											type: ComponentType.Button,
+											custom_id: `bann-${options.user}-a`,
+											label: "Bann",
+											style: ButtonStyle.Success,
+											emoji: {
+												animated: false,
+												id: Emojis.bann,
+												name: "bann",
+											},
+										},
+									],
 								},
 							],
 						},
-					],
-				},
-			});
-			return;
+			);
 		}
-		const member = interaction.data.resolved!.members?.[userId];
+		const member = interaction.data.resolved?.members?.[options.user];
 		const guild = (await rest.get(
 			Routes.guild(interaction.guild_id),
 		)) as APIGuild;
-		const content = checkPerms(interaction.member, guild, user.id, member);
-
-		if (content) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: { content, flags: MessageFlags.Ephemeral },
-			});
-			return;
-		}
-		const reason = (
-			options.get("reason") as
-				| APIApplicationCommandInteractionDataStringOption
-				| undefined
-		)?.value;
-		const deleteMessageDays = Number(
-			(
-				options.get("delete-messages") as
-					| APIApplicationCommandInteractionDataNumberOption
-					| undefined
-			)?.value,
+		const content = this.checkPerms(
+			interaction.member,
+			guild,
+			options.user,
+			member,
 		);
 
-		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		if (subcommand!.name === "add") {
-			await rest.patch(
+		if (content) return reply({ content, flags: MessageFlags.Ephemeral });
+		defer();
+		if (subcommand === "add")
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
-					body: (await executeBan(
+					body: (await this.executeBan(
 						interaction.guild_id,
-						user,
-						deleteMessageDays && deleteMessageDays * 60 * 60 * 24,
-						reason ?? undefined,
+						user!,
+						options["delete-messages"] &&
+							Number(options["delete-messages"]) * 60 * 60 * 24,
+						options.reason,
 					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-			return;
-		}
-		if (subcommand!.name === "remove")
-			await rest.patch(
+		if (subcommand === "remove")
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
-					body: (await unban(
+					body: (await this.unban(
 						interaction.guild_id,
-						user,
-						reason ?? undefined,
+						user!,
+						options.reason,
 					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-	},
-	modalSubmit: async (reply, { interaction }) => {
-		if (!interaction.guild_id || !interaction.member)
-			throw new TypeError("Invalid interaction", { cause: interaction });
+		return;
+	}
+	override async component(
+		{ reply, modal, defer }: ComponentReplies,
+		{ interaction, args: [id, action] }: ComponentArgs,
+	) {
+		ok(interaction.guild_id && interaction.member);
+		const target = (await rest.get(Routes.user(id))) as APIUser | undefined;
+
+		if (!target)
+			return reply({
+				content: "Utente non trovato!",
+				flags: MessageFlags.Ephemeral,
+			});
+		if (action === "a")
+			return modal({
+				title: `Vuoi bannare ${target.username}?`,
+				custom_id: `bann-${target.id}`,
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.TextInput,
+								custom_id: "deleteMessageDays",
+								label: "Giorni di messaggi da eliminare",
+								placeholder: "Esempi: 1, 3.5, 7",
+								style: TextInputStyle.Short,
+								value: "1",
+								min_length: 1,
+								max_length: 10,
+								required: false,
+							},
+						],
+					},
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.TextInput,
+								custom_id: "reason",
+								label: "Motivo del bann",
+								placeholder: "Il motivo del bann",
+								max_length: 512,
+								style: TextInputStyle.Paragraph,
+								required: false,
+							},
+						],
+					},
+				],
+			});
+		defer();
+		const [guild, targetMember] = (await Promise.allSettled([
+			rest.get(Routes.guild(interaction.guild_id)),
+			rest.get(Routes.guildMember(interaction.guild_id, id)),
+		]).then((results) =>
+			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
+		)) as [APIGuild | undefined, APIGuildMember | undefined];
+
+		ok(guild);
+		const content = this.checkPerms(
+			interaction.member,
+			guild,
+			target.id,
+			targetMember,
+		);
+
+		if (content)
+			return rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: {
+						content,
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+		if (action === "r")
+			return rest.patch(
+				Routes.webhookMessage(interaction.application_id, interaction.token),
+				{
+					body: (await this.unban(
+						interaction.guild_id,
+						target,
+					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				},
+			);
+		return;
+	}
+	override async modal(
+		{ reply, defer }: ModalReplies,
+		{ interaction, args: [id] }: ModalArgs,
+	) {
+		ok(interaction.guild_id && interaction.member);
 		const deleteMessageDays =
 			Number(
 				(
 					interaction.data.components[0] as ModalSubmitActionRowComponent
 				).components.find((v) => v.custom_id === "deleteMessageDays")?.value,
 			) || 0;
-		if (deleteMessageDays < 0 || deleteMessageDays > 7) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "Il numero di giorni deve essere compreso tra 0 e 7!",
-					flags: MessageFlags.Ephemeral,
-				},
+		if (deleteMessageDays < 0 || deleteMessageDays > 7)
+			return reply({
+				content: "Il numero di giorni deve essere compreso tra 0 e 7!",
+				flags: MessageFlags.Ephemeral,
 			});
-			return;
-		}
-		const [, id] = interaction.data.custom_id.split("-");
 
-		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
+		defer();
 		const [guild, target, targetMember] = (await Promise.allSettled([
 			rest.get(Routes.guild(interaction.guild_id)),
 			rest.get(Routes.user(id)),
@@ -416,9 +328,9 @@ export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
 			APIGuildMember | undefined,
 		];
 
-		if (!guild) throw new TypeError("Guild not found", { cause: interaction });
-		if (!target) {
-			await rest.patch(
+		ok(guild);
+		if (!target)
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -426,17 +338,15 @@ export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-			return;
-		}
-		const content = checkPerms(
+		const content = this.checkPerms(
 			interaction.member,
 			guild,
 			target.id,
 			targetMember,
 		);
 
-		if (content) {
-			await rest.patch(
+		if (content)
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -444,12 +354,10 @@ export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-			return;
-		}
-		await rest.patch(
+		return rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
-				body: (await executeBan(
+				body: (await this.executeBan(
 					interaction.guild_id,
 					target,
 					deleteMessageDays * 60 * 60 * 24,
@@ -459,98 +367,141 @@ export const bann: CommandOptions<ApplicationCommandType.ChatInput> = {
 				)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			},
 		);
-	},
-	component: async (reply, { interaction }) => {
-		if (!interaction.guild_id || !interaction.member)
-			throw new TypeError("Invalid interaction", { cause: interaction });
-		const [, id, action] = interaction.data.custom_id.split("-");
-		const target = (await rest.get(Routes.user(id))) as APIUser | undefined;
+	}
+	checkPerms(
+		executor: APIInteractionGuildMember,
+		guild: APIGuild,
+		target: Snowflake,
+		targetMember?: Omit<APIInteractionDataResolvedGuildMember, "permissions">,
+	): string | undefined {
+		if (executor.user.id === guild.owner_id) return undefined;
+		if (target === guild.owner_id)
+			return "Non puoi eseguire questa azione sul proprietario del server!";
+		if (!targetMember) return undefined;
+		const roles = new Map(guild.roles.map((role) => [role.id, role]));
+		const highest = executor.roles.reduce((prev, role, i) => {
+			if (i === 0) return prev;
+			const resolved = roles.get(role);
 
-		if (!target) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: { content: "Utente non trovato!", flags: MessageFlags.Ephemeral },
-			});
-			return;
-		}
-		if (action === "a") {
-			reply({
-				type: InteractionResponseType.Modal,
-				data: {
-					title: `Vuoi bannare ${target.username}?`,
-					custom_id: `bann-${target.id}`,
+			if (!prev) return resolved;
+			if (!resolved) return prev;
+			if (resolved.position > prev.position) return resolved;
+			if (resolved.position < prev.position) return prev;
+			if (BigInt(role) < BigInt(prev.id)) return resolved;
+			return prev;
+		}, roles.get(executor.roles[0]!));
+
+		if (!highest) return undefined;
+		const highestId = BigInt(highest.id);
+
+		if (
+			targetMember.roles.some((role) => {
+				const resolved = roles.get(role);
+
+				return (
+					resolved &&
+					(resolved.position > highest.position ||
+						(resolved.position === highest.position &&
+							highestId > BigInt(role)))
+				);
+			})
+		)
+			return "Non puoi bannare un membro con una posizione superiore o uguale alla tua!";
+		return undefined;
+	}
+	async unban(
+		guildId: Snowflake,
+		user: APIUser,
+		reason?: string,
+	): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> {
+		reason = reason?.trim();
+		const result = await rest
+			.delete(Routes.guildBan(guildId, user.id), { reason })
+			.then(() => {})
+			.catch(normalizeError);
+
+		if (result)
+			return {
+				content: `Si è verificato un errore: \`${result.message.slice(
+					0,
+					1_000,
+				)}\``,
+				allowed_mentions: { parse: [] },
+			};
+		return {
+			content: `Ho revocato il bann da <@${user.id}> (${escapeMarkdown(
+				user.username,
+			)} - ${user.id})!\n\nMotivo: ${
+				reason?.slice(0, 1_000) ?? "*Nessun motivo*"
+			}`,
+			allowed_mentions: { parse: [] },
+			components: [
+				{
+					type: ComponentType.ActionRow,
 					components: [
 						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.TextInput,
-									custom_id: "deleteMessageDays",
-									label: "Giorni di messaggi da eliminare",
-									placeholder: "Esempi: 1, 3.5, 7",
-									style: TextInputStyle.Short,
-									value: "1",
-									min_length: 1,
-									max_length: 10,
-									required: false,
-								},
-							],
-						},
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.TextInput,
-									custom_id: "reason",
-									label: "Motivo del bann",
-									placeholder: "Il motivo del bann",
-									max_length: 512,
-									style: TextInputStyle.Paragraph,
-									required: false,
-								},
-							],
+							type: ComponentType.Button,
+							custom_id: `bann-${user.id}-a`,
+							label: "Bann",
+							style: ButtonStyle.Success,
+							emoji: {
+								animated: false,
+								id: Emojis.bann,
+								name: "bann",
+							},
 						},
 					],
 				},
-			});
-			return;
-		}
-		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		const [guild, targetMember] = (await Promise.allSettled([
-			rest.get(Routes.guild(interaction.guild_id)),
-			rest.get(Routes.guildMember(interaction.guild_id, id)),
-		]).then((results) =>
-			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
-		)) as [APIGuild | undefined, APIGuildMember | undefined];
+			],
+		};
+	}
+	async executeBan(
+		guildId: Snowflake,
+		user: APIUser,
+		deleteMessageSeconds?: number,
+		reason?: string,
+	): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> {
+		reason = reason?.trim();
+		const result = await rest
+			.put(Routes.guildBan(guildId, user.id), {
+				reason,
+				body: {
+					delete_message_seconds: deleteMessageSeconds,
+				} satisfies RESTPutAPIGuildBanJSONBody,
+			})
+			.then(() => {})
+			.catch(normalizeError);
 
-		if (!guild) throw new TypeError("Guild not found", { cause: interaction });
-		const content = checkPerms(
-			interaction.member,
-			guild,
-			target.id,
-			targetMember,
-		);
-
-		if (content) {
-			await rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
+		if (result)
+			return {
+				content: `Si è verificato un errore: \`${result.message.slice(
+					0,
+					1_000,
+				)}\``,
+				allowed_mentions: { parse: [] },
+			};
+		return {
+			content: `<:bann:${Emojis.bann}> <@${user.id}> (${escapeMarkdown(
+				user.username,
+			)} - ${user.id}) è stato bannato!\n\nMotivo: ${
+				reason !== undefined && reason.length > 0
+					? reason.slice(0, 1_000)
+					: "*Nessun motivo*"
+			}`,
+			allowed_mentions: { parse: [] },
+			components: [
 				{
-					body: {
-						content,
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: `bann-${user.id}-r`,
+							style: ButtonStyle.Danger,
+							label: "Revoca bann",
+						},
+					],
 				},
-			);
-			return;
-		}
-		if (action === "r")
-			await rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: (await unban(
-						interaction.guild_id,
-						target,
-					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
-	},
-};
+			],
+		};
+	}
+}

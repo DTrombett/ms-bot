@@ -13,24 +13,26 @@ import {
 	InteractionResponseType,
 	InteractionType,
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
-	RESTPostAPIContextMenuApplicationCommandsJSONBody,
 	type APIInteraction,
 	type APIUser,
 } from "discord-api-types/v10";
-import type { Awaitable, Env } from "../types";
+import type { Env, Readonly } from "../types";
+import type { Command } from "./Command";
 
-export type ExtractOptionType<T extends APIApplicationCommandOption> =
-	T extends {
-		choices: { value: infer V }[];
-	}
-		? V
-		: (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
-				type: T["type"];
-			})["value"];
+export type ExtractOptionType<
+	T extends Readonly<APIApplicationCommandOption> = APIApplicationCommandOption,
+> = T extends {
+	choices: { value: infer V }[];
+}
+	? V
+	: (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
+			type: T["type"];
+		})["value"];
 export type ResolvedOptions<
-	T extends
+	T extends Readonly<
 		| APIApplicationCommandSubcommandGroupOption
-		| APIApplicationCommandSubcommandOption,
+		| APIApplicationCommandSubcommandOption
+	>,
 	S extends string | undefined = undefined,
 > = T extends any
 	? CreateObject<
@@ -39,28 +41,38 @@ export type ResolvedOptions<
 		>
 	: never;
 export type CreateObject<
-	T extends APIApplicationCommandOption[],
+	T extends Readonly<APIApplicationCommandOption[]>,
 	S extends string | undefined = undefined,
 	R extends boolean = true,
-> = T extends (
-	| APIApplicationCommandSubcommandGroupOption
-	| APIApplicationCommandSubcommandOption
-)[]
-	? ResolvedOptions<T[number], S>
-	: {
-			subcommand: S;
-			options: {
-				[P in T[number] as P["name"]]: R extends true
-					? P["required"] extends true
-						? ExtractOptionType<P>
-						: ExtractOptionType<P> | undefined
-					: ExtractOptionType<P> | undefined;
+> =
+	T extends Readonly<
+		(
+			| APIApplicationCommandSubcommandGroupOption
+			| APIApplicationCommandSubcommandOption
+		)[]
+	>
+		? ResolvedOptions<T[number], S>
+		: {
+				subcommand: S;
+				options: {
+					[P in T[number] as P["name"]]: R extends true
+						? P["required"] extends true
+							? ExtractOptionType<P>
+							: ExtractOptionType<P> | undefined
+						: ExtractOptionType<P> | undefined;
+				};
 			};
-		};
 export type ParseOptions<
-	T extends RESTPostAPIChatInputApplicationCommandsJSONBody | undefined,
+	T extends
+		| Readonly<RESTPostAPIChatInputApplicationCommandsJSONBody>
+		| undefined,
 	R extends boolean = true,
-> = CreateObject<NonNullable<NonNullable<T>["options"]>, undefined, R>;
+> = RESTPostAPIChatInputApplicationCommandsJSONBody extends T
+	? {
+			subcommand?: string;
+			options: Record<string, ExtractOptionType | undefined>;
+		}
+	: CreateObject<NonNullable<NonNullable<T>["options"]>, undefined, R>;
 
 export type ThisArg = {
 	ctx: ExecutionContext;
@@ -68,7 +80,7 @@ export type ThisArg = {
 };
 
 export type Reply<T extends InteractionResponseType> = (
-	data: Extract<APIInteractionResponse, { type: T }> extends { data?: infer D }
+	data?: Extract<APIInteractionResponse, { type: T }> extends { data?: infer D }
 		? D
 		: never,
 ) => void;
@@ -92,62 +104,49 @@ export type BaseArgs<T extends APIInteraction = APIInteraction> = {
 	user: APIUser;
 };
 
-export interface Command<
-	A extends RESTPostAPIChatInputApplicationCommandsJSONBody,
-	B extends RESTPostAPIContextMenuApplicationCommandsJSONBody[],
-> {
-	chatInputData?: A;
-	contextMenuData?: B;
-	customId?: string;
-	private?: boolean;
-	chatInput?(
-		this: ThisArg & this,
-		replies: Pick<Replies, "reply" | "defer" | "modal">,
-		args: BaseArgs<APIChatInputApplicationCommandInteraction> & ParseOptions<A>,
-	): Awaitable<void>;
-	autocomplete?(
-		this: ThisArg & this,
-		replies: Pick<Replies, "autocomplete">,
-		args: BaseArgs<APIApplicationCommandAutocompleteInteraction> &
-			ParseOptions<A>,
-	): Awaitable<void>;
-	component?(
-		this: ThisArg & this,
-		replies: Pick<
-			Replies,
-			"reply" | "defer" | "modal" | "update" | "deferUpdate"
-		>,
-		args: BaseArgs<APIMessageComponentInteraction> & { args: string[] },
-	): Awaitable<void>;
-	modal?(
-		this: ThisArg & this,
-		replies: Pick<Replies, "reply" | "defer">,
-		args: BaseArgs<APIModalSubmitInteraction> & { args: string[] },
-	): Awaitable<void>;
-	user?(
-		this: ThisArg & this,
-		replies: Pick<Replies, "reply" | "defer" | "modal">,
-		args: BaseArgs<APIUserApplicationCommandInteraction>,
-	): Awaitable<void>;
-	message?(
-		this: ThisArg & this,
-		replies: Pick<Replies, "reply" | "defer" | "modal">,
-		args: BaseArgs<APIMessageApplicationCommandInteraction>,
-	): Awaitable<void>;
-}
+export type ChatInputReplies = Pick<Replies, "reply" | "defer" | "modal">;
+
+export type ChatInputArgs<
+	A extends
+		Readonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
+> = BaseArgs<APIChatInputApplicationCommandInteraction> & ParseOptions<A>;
+
+export type AutoCompleteReplies = Pick<Replies, "autocomplete">;
+
+export type AutoCompleteArgs<
+	A extends
+		Readonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
+> = BaseArgs<APIApplicationCommandAutocompleteInteraction> & ParseOptions<A>;
+
+export type ComponentReplies = Pick<
+	Replies,
+	"reply" | "defer" | "modal" | "update" | "deferUpdate"
+>;
+
+export type ComponentArgs = BaseArgs<APIMessageComponentInteraction> & {
+	args: string[];
+};
+
+export type ModalReplies = Pick<Replies, "reply" | "defer">;
+
+export type ModalArgs = BaseArgs<APIModalSubmitInteraction> & {
+	args: string[];
+};
+
+export type UserReplies = Pick<Replies, "reply" | "defer" | "modal">;
+
+export type UserArgs = BaseArgs<APIUserApplicationCommandInteraction>;
+
+export type MessageReplies = Pick<Replies, "reply" | "defer" | "modal">;
+
+export type MessageArgs = BaseArgs<APIMessageApplicationCommandInteraction>;
+
 export type CommandRunners = NonNullable<
 	{
-		[K in keyof Command<
-			RESTPostAPIChatInputApplicationCommandsJSONBody,
-			RESTPostAPIContextMenuApplicationCommandsJSONBody[]
-		>]: Command<
-			RESTPostAPIChatInputApplicationCommandsJSONBody,
-			RESTPostAPIContextMenuApplicationCommandsJSONBody[]
-		>[K] extends ((...args: any[]) => Awaitable<void>) | undefined
+		[K in keyof Command]: Command[K] extends
+			| ((...args: any[]) => any)
+			| undefined
 			? K
 			: never;
-	}[keyof Command<
-		RESTPostAPIChatInputApplicationCommandsJSONBody,
-		RESTPostAPIContextMenuApplicationCommandsJSONBody[]
-	>]
+	}[keyof Command]
 >;

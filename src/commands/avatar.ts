@@ -5,10 +5,15 @@ import {
 	MessageFlags,
 	type APIMediaGalleryItem,
 } from "discord-api-types/v10";
-import { createCommand, rest } from "../util";
+import {
+	Command,
+	rest,
+	type ChatInputArgs,
+	type ChatInputReplies,
+} from "../util";
 
-export const avatar = createCommand({
-	chatInputData: {
+export class Avatar extends Command {
+	static override chatInputData = {
 		name: "avatar",
 		description: "Mostra l'avatar di un utente",
 		type: ApplicationCommandType.ChatInput,
@@ -19,8 +24,16 @@ export const avatar = createCommand({
 				type: ApplicationCommandOptionType.User,
 			},
 		],
-	} as const,
-	chatInput: ({ reply }, { interaction, options: { user: userId }, user }) => {
+	} as const;
+
+	override chatInput(
+		{ reply }: ChatInputReplies,
+		{
+			interaction,
+			options: { user: userId },
+			user,
+		}: ChatInputArgs<typeof Avatar.chatInputData>,
+	) {
 		const member = userId
 			? interaction.data.resolved?.members?.[userId]
 			: interaction.member;
@@ -74,5 +87,5 @@ export const avatar = createCommand({
 			],
 			allowed_mentions: { parse: [] },
 		});
-	},
-});
+	}
+}

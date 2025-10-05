@@ -21,6 +21,10 @@ import type { Params as SParams } from "../Shorten";
 
 export type Awaitable<T> = Promise<T> | T;
 
+export type Readonly<T> = {
+	readonly [P in keyof T]: Readonly<T[P]>;
+};
+
 export type InteractionByType<
 	T extends InteractionType,
 	I extends APIInteraction = APIInteraction,

@@ -6,20 +6,17 @@ import {
 	type APIApplicationCommandOption,
 	type APIInteraction,
 	type APIInteractionResponse,
-	type RESTPostAPIChatInputApplicationCommandsJSONBody,
-	type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import { hexToUint8Array } from "../strings";
 import { Awaitable, Env } from "../types";
+import type { Command } from "./Command";
 import {
 	ReplyTypes,
 	type BaseArgs,
-	type Command,
 	type CommandRunners,
 	type CreateObject,
 	type Replies,
 	type Reply,
-	type ThisArg,
 } from "./types";
 
 export class CommandHandler {
@@ -29,12 +26,7 @@ export class CommandHandler {
 		[K in Exclude<InteractionType, InteractionType.Ping>]: {
 			findCommand: (
 				interaction: APIInteraction & { type: K },
-			) =>
-				| Command<
-						RESTPostAPIChatInputApplicationCommandsJSONBody,
-						RESTPostAPIContextMenuApplicationCommandsJSONBody[]
-				  >
-				| undefined;
+			) => typeof Command | undefined;
 			getRunner: (interaction: APIInteraction & { type: K }) => CommandRunners;
 		};
 	} = {
@@ -80,12 +72,9 @@ export class CommandHandler {
 		},
 	};
 
-	constructor(
-		public commands: Command<
-			RESTPostAPIChatInputApplicationCommandsJSONBody,
-			RESTPostAPIContextMenuApplicationCommandsJSONBody[]
-		>[],
-	) {}
+	private built: Record<string, Command> = {};
+
+	constructor(public commands: (typeof Command)[]) {}
 
 	async handleInteraction(
 		request: Request,
@@ -120,11 +109,12 @@ export class CommandHandler {
 			return new Response(JSON.stringify({ type: InteractionType.Ping }), {
 				headers: { "Content-Type": "application/json" },
 			});
-		const command = this.interactionTypes[interaction.type].findCommand(
+		const Command = this.interactionTypes[interaction.type].findCommand(
 			interaction as never,
 		);
-		if (!command) return new Response(null, { status: 400 });
+		if (!Command) return new Response(null, { status: 400 });
 		const user = (interaction.member ?? interaction).user!;
+		const command = (this.built[Command.name] ??= new Command(context, env));
 		if (command.private && !env.OWNER_ID.includes(user.id))
 			return new Response(null, { status: 403 });
 		console.log(
@@ -168,23 +158,21 @@ export class CommandHandler {
 						interaction as never,
 					)
 				] as (
-					this: ThisArg & typeof command,
 					replies: Replies,
 					args: BaseArgs &
 						CreateObject<APIApplicationCommandOption[], string | undefined> & {
 							args: string[];
 						},
-				) => Awaitable<void>
-			)?.call(
-				Object.assign(command, { ctx: context, env }),
+				) => Promise<any>
+			)(
 				Object.fromEntries<Reply<InteractionResponseType>>(
 					Object.entries(ReplyTypes).map(([key, type]) => [
 						key,
-						(data) => resolve({ type, data }),
+						(data) => resolve({ type, data } as never),
 					]),
 				) as Replies,
 				args,
-			) ?? Promise.resolve(),
+			),
 		);
 		return new Response(JSON.stringify(await promise), {
 			headers: { "Content-Type": "application/json" },
