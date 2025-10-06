@@ -14,7 +14,6 @@ import {
 	MatchStatus,
 	resolveLeaderboard,
 	rest,
-	type Env,
 	type Leaderboard,
 	type Match,
 	type Prediction,

@@ -2,7 +2,7 @@ import {
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
 	RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type { Env, Readonly } from "../types";
+import type { Readonly } from "../types";
 import type {
 	AutoCompleteArgs as AutocompleteArgs,
 	AutoCompleteReplies as AutocompleteReplies,
@@ -25,10 +25,6 @@ export class Command {
 	>;
 	static readonly customId?: string;
 	private?: boolean;
-	constructor(
-		protected ctx: ExecutionContext,
-		protected env: Env,
-	) {}
 	chatInput?(replies: ChatInputReplies, args: ChatInputArgs): any;
 	autocomplete?(replies: AutocompleteReplies, args: AutocompleteArgs): any;
 	component?(replies: ComponentReplies, args: ComponentArgs): any;

@@ -1,13 +1,13 @@
+import { env } from "cloudflare:workers";
 import {
 	APIInteractionResponse,
 	InteractionType,
 	type APIInteraction,
 } from "discord-api-types/v10";
-import type { CommandOptions, Env, ExecutorContext } from "./types";
+import type { CommandOptions, ExecutorContext } from "./types";
 
 export const executeInteraction = async <I extends APIInteraction>(
 	interaction: I,
-	env: Env,
 	context: ExecutionContext,
 	host: string,
 	type: NonNullable<
@@ -37,7 +37,7 @@ export const executeInteraction = async <I extends APIInteraction>(
 				resolve(value);
 				done = true;
 			},
-			{ env, context, interaction: interaction as never, host },
+			{ context, interaction: interaction as never, host },
 		)?.catch((err: Error) => {
 			if (done) console.error(err);
 			else reject(err);

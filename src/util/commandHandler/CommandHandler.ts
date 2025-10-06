@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -8,7 +9,7 @@ import {
 	type APIInteractionResponse,
 } from "discord-api-types/v10";
 import { hexToUint8Array } from "../strings";
-import { Awaitable, Env } from "../types";
+import { Awaitable } from "../types";
 import type { Command } from "./Command";
 import {
 	ReplyTypes,
@@ -78,7 +79,6 @@ export class CommandHandler {
 
 	async handleInteraction(
 		request: Request,
-		env: Env,
 		context: ExecutionContext,
 	): Promise<Response> {
 		let body: Awaitable<string> = request.text();
@@ -114,7 +114,7 @@ export class CommandHandler {
 		);
 		if (!Command) return new Response(null, { status: 400 });
 		const user = (interaction.member ?? interaction).user!;
-		const command = (this.built[Command.name] ??= new Command(context, env));
+		const command = (this.built[Command.name] ??= new Command());
 		if (command.private && !env.OWNER_ID.includes(user.id))
 			return new Response(null, { status: 403 });
 		console.log(

@@ -16,7 +16,7 @@ import {
 	type APIInteraction,
 	type APIUser,
 } from "discord-api-types/v10";
-import type { Env, Readonly } from "../types";
+import type { Readonly } from "../types";
 import type { Command } from "./Command";
 
 export type ExtractOptionType<
@@ -73,11 +73,6 @@ export type ParseOptions<
 			options: Record<string, ExtractOptionType | undefined>;
 		}
 	: CreateObject<NonNullable<NonNullable<T>["options"]>, undefined, R>;
-
-export type ThisArg = {
-	ctx: ExecutionContext;
-	env: Env;
-};
 
 export type Reply<T extends InteractionResponseType> = (
 	data?: Extract<APIInteractionResponse, { type: T }> extends { data?: infer D }

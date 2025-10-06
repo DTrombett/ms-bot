@@ -1,5 +1,5 @@
 import * as commands from "./commands";
-import type { Env, RGB } from "./util";
+import type { RGB } from "./util";
 import { CommandHandler, createSolidPng, JsonResponse, rest } from "./util";
 
 const handler = new CommandHandler(Object.values(commands));
@@ -11,7 +11,7 @@ const server: ExportedHandler<Env> = {
 		if (url.pathname === "/") {
 			if (request.method === "POST") {
 				rest.setToken(env.DISCORD_TOKEN);
-				return handler.handleInteraction(request, env, context).catch((e) => {
+				return handler.handleInteraction(request, context).catch((e) => {
 					console.error(e);
 					return new Response(null, { status: 500 });
 				});

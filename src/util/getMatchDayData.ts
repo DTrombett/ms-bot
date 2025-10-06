@@ -1,5 +1,5 @@
+import { env } from "cloudflare:workers";
 import {
-	Env,
 	Prediction,
 	getMatchDayNumber,
 	loadMatches,
@@ -7,11 +7,7 @@ import {
 	type User,
 } from ".";
 
-export const getMatchDayData = async (
-	env: Env,
-	userId: string,
-	day?: number,
-) => {
+export const getMatchDayData = async (userId: string, day?: number) => {
 	const matchDays = (await fetch(
 		`https://legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
 	).then((res) => res.json())) as MatchDayResponse;

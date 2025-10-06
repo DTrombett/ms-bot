@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -22,14 +23,12 @@ import {
 	Reminder,
 	rest,
 	type CommandOptions,
-	type Env,
 } from "../util";
 
 const sendPage = async (
 	interaction:
 		| APIChatInputApplicationCommandInteraction
 		| APIMessageComponentInteraction,
-	env: Env,
 	userId: string | undefined,
 	page = 0,
 ) => {
@@ -288,7 +287,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				type: InteractionResponseType.DeferredChannelMessageWithSource,
 				data: { flags: MessageFlags.Ephemeral },
 			});
-			await sendPage(interaction, env, userId);
+			await sendPage(interaction, userId);
 		} else if (subcommand.name === "remove") {
 			const { value: id } = options.get(
 				"id",
@@ -350,7 +349,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 
 		if (action === "list") {
 			reply({ type: InteractionResponseType.DeferredMessageUpdate });
-			await sendPage(interaction, env, args[0], Number(args[1]));
+			await sendPage(interaction, args[0], Number(args[1]));
 			return;
 		}
 		if (action === "remove") {
