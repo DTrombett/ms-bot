@@ -9,8 +9,8 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionContextType,
 	MessageFlags,
-	ModalSubmitActionRowComponent,
 	PermissionFlagsBits,
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
@@ -18,6 +18,8 @@ import {
 	Routes,
 	Snowflake,
 	TextInputStyle,
+	type APIModalSubmitTextInputComponent,
+	type ModalSubmitLabelComponent,
 } from "discord-api-types/v10";
 import {
 	ChatInputArgs,
@@ -39,8 +41,9 @@ export class Bann extends Command {
 	static override chatInputData = {
 		type: ApplicationCommandType.ChatInput,
 		name: "bann",
-		description: "Banna utente o revoca un bann",
+		description: "Gestisci i bann",
 		default_member_permissions: String(PermissionFlagsBits.BanMembers),
+		contexts: [InteractionContextType.Guild],
 		options: [
 			{
 				name: "add",
@@ -118,8 +121,9 @@ export class Bann extends Command {
 					'Ho bisogno del permesso "Bannare i membri" per poter eseguire questo comando!',
 				flags: MessageFlags.Ephemeral,
 			});
-		const user = interaction.data.resolved?.users?.[options.user];
 		ok(interaction.guild_id && interaction.member);
+		const user = interaction.data.resolved?.users?.[options.user];
+
 		if (subcommand === "check") {
 			const bannData = (await rest
 				.get(Routes.guildBan(interaction.guild_id, options.user))
@@ -177,13 +181,12 @@ export class Bann extends Command {
 		const guild = (await rest.get(
 			Routes.guild(interaction.guild_id),
 		)) as APIGuild;
-		const content = this.checkPerms(
+		const content = Bann.checkPerms(
 			interaction.member,
 			guild,
 			options.user,
 			member,
 		);
-
 		if (content) return reply({ content, flags: MessageFlags.Ephemeral });
 		defer();
 		if (subcommand === "add")
@@ -226,38 +229,36 @@ export class Bann extends Command {
 			});
 		if (action === "a")
 			return modal({
-				title: `Vuoi bannare ${target.username}?`,
+				title: `Bannare ${target.username}?`,
 				custom_id: `bann-${target.id}`,
 				components: [
 					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.TextInput,
-								custom_id: "deleteMessageDays",
-								label: "Giorni di messaggi da eliminare",
-								placeholder: "Esempi: 1, 3.5, 7",
-								style: TextInputStyle.Short,
-								value: "1",
-								min_length: 1,
-								max_length: 10,
-								required: false,
-							},
-						],
+						type: ComponentType.Label,
+						label: "Giorni da eliminare",
+						description: "Il numero di giorni di messaggi da eliminare",
+						component: {
+							type: ComponentType.TextInput,
+							custom_id: "deleteMessageDays",
+							placeholder: "Esempi: 1, 3.5, 7",
+							style: TextInputStyle.Short,
+							value: "1",
+							min_length: 1,
+							max_length: 10,
+							required: false,
+						},
 					},
 					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.TextInput,
-								custom_id: "reason",
-								label: "Motivo del bann",
-								placeholder: "Il motivo del bann",
-								max_length: 512,
-								style: TextInputStyle.Paragraph,
-								required: false,
-							},
-						],
+						type: ComponentType.Label,
+						label: "Motivo del bann",
+						description: "Il motivo del bann da salvare nei log",
+						component: {
+							type: ComponentType.TextInput,
+							custom_id: "reason",
+							placeholder: "Scrivi il motivo del bann qui...",
+							max_length: 512,
+							style: TextInputStyle.Paragraph,
+							required: false,
+						},
 					},
 				],
 			});
@@ -268,15 +269,13 @@ export class Bann extends Command {
 		]).then((results) =>
 			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
 		)) as [APIGuild | undefined, APIGuildMember | undefined];
-
 		ok(guild);
-		const content = this.checkPerms(
+		const content = Bann.checkPerms(
 			interaction.member,
 			guild,
 			target.id,
 			targetMember,
 		);
-
 		if (content)
 			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
@@ -299,23 +298,33 @@ export class Bann extends Command {
 		return;
 	}
 	override async modal(
-		{ reply, defer }: ModalReplies,
+		{ reply }: ModalReplies,
 		{ interaction, args: [id] }: ModalArgs,
 	) {
 		ok(interaction.guild_id && interaction.member);
 		const deleteMessageDays =
 			Number(
-				(
-					interaction.data.components[0] as ModalSubmitActionRowComponent
-				).components.find((v) => v.custom_id === "deleteMessageDays")?.value,
+				interaction.data.components.find(
+					(
+						v,
+					): v is ModalSubmitLabelComponent & {
+						component: APIModalSubmitTextInputComponent;
+					} =>
+						v.type === ComponentType.Label &&
+						v.component.type === ComponentType.TextInput &&
+						v.component.custom_id === "deleteMessageDays",
+				)?.component.value,
 			) || 0;
+
 		if (deleteMessageDays < 0 || deleteMessageDays > 7)
 			return reply({
 				content: "Il numero di giorni deve essere compreso tra 0 e 7!",
 				flags: MessageFlags.Ephemeral,
 			});
-
-		defer();
+		reply({
+			content: `-# Sto bannando <@${id}>...`,
+			allowed_mentions: { parse: [] },
+		});
 		const [guild, target, targetMember] = (await Promise.allSettled([
 			rest.get(Routes.guild(interaction.guild_id)),
 			rest.get(Routes.user(id)),
@@ -327,7 +336,6 @@ export class Bann extends Command {
 			APIUser | undefined,
 			APIGuildMember | undefined,
 		];
-
 		ok(guild);
 		if (!target)
 			return rest.patch(
@@ -338,13 +346,12 @@ export class Bann extends Command {
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-		const content = this.checkPerms(
+		const content = Bann.checkPerms(
 			interaction.member,
 			guild,
 			target.id,
 			targetMember,
 		);
-
 		if (content)
 			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
@@ -361,14 +368,21 @@ export class Bann extends Command {
 					interaction.guild_id,
 					target,
 					deleteMessageDays * 60 * 60 * 24,
-					(
-						interaction.data.components[0] as ModalSubmitActionRowComponent
-					).components.find((v) => v.custom_id === "reason")?.value,
+					interaction.data.components.find(
+						(
+							v,
+						): v is ModalSubmitLabelComponent & {
+							component: APIModalSubmitTextInputComponent;
+						} =>
+							v.type === ComponentType.Label &&
+							v.component.type === ComponentType.TextInput &&
+							v.component.custom_id === "reason",
+					)?.component.value,
 				)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			},
 		);
 	}
-	checkPerms(
+	static checkPerms(
 		executor: APIInteractionGuildMember,
 		guild: APIGuild,
 		target: Snowflake,
@@ -393,7 +407,6 @@ export class Bann extends Command {
 
 		if (!highest) return undefined;
 		const highestId = BigInt(highest.id);
-
 		if (
 			targetMember.roles.some((role) => {
 				const resolved = roles.get(role);
@@ -406,7 +419,7 @@ export class Bann extends Command {
 				);
 			})
 		)
-			return "Non puoi bannare un membro con una posizione superiore o uguale alla tua!";
+			return "Non puoi eseguire questa azione su un membro con una posizione superiore o uguale alla tua!";
 		return undefined;
 	}
 	async unban(
@@ -422,10 +435,7 @@ export class Bann extends Command {
 
 		if (result)
 			return {
-				content: `Si è verificato un errore: \`${result.message.slice(
-					0,
-					1_000,
-				)}\``,
+				content: `Si è verificato un errore: \`${maxLength(result.message, 1000)}\``,
 				allowed_mentions: { parse: [] },
 			};
 		return {
