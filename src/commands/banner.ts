@@ -1,86 +1,101 @@
 import {
-	APIApplicationCommandInteractionDataUserOption,
-	APIUser,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
 	MessageFlags,
 	Routes,
+	type APIGuildMember,
+	type APIMediaGalleryItem,
+	type APIUser,
+	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { escapeMarkdown, rest, type CommandOptions } from "../util";
+import {
+	Command,
+	rest,
+	type ChatInputArgs,
+	type ChatInputReplies,
+} from "../util";
 
-export const banner: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
+export class Banner extends Command {
+	static override chatInputData = {
+		name: "banner",
+		description: "Mostra il banner di un utente",
+		type: ApplicationCommandType.ChatInput,
+		options: [
+			{
+				name: "user",
+				description: "L'utente di cui mostrare il banner",
+				type: ApplicationCommandOptionType.User,
+			},
+		],
+	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	override async chatInput(
+		{ reply }: ChatInputReplies,
 		{
-			name: "banner",
-			description: "Mostra il banner di un utente",
-			type: ApplicationCommandType.ChatInput,
-			options: [
+			options: { user: userId },
+			user,
+			interaction,
+		}: ChatInputArgs<typeof Banner.chatInputData>,
+	) {
+		const member = userId
+			? interaction.data.resolved?.members?.[userId]
+			: interaction.member;
+		const items: APIMediaGalleryItem[] = [];
+		const promises: Promise<any>[] = [];
+
+		if (userId) user = interaction.data.resolved?.users?.[userId] ?? user;
+		if (user.banner === undefined)
+			promises.push(
+				rest.get(Routes.user(user.id)).then((u) => (user = u as APIUser)),
+			);
+		if (member && member.banner === undefined)
+			promises.push(
+				rest
+					.get(Routes.guildMember(interaction.guild_id!, user.id))
+					.then((m) => (member.banner = (m as APIGuildMember).banner)),
+			);
+		await Promise.allSettled(promises);
+		if (member?.banner)
+			items.push({
+				media: {
+					url: rest.cdn.guildMemberBanner(
+						interaction.guild_id!,
+						user.id,
+						member.banner,
+						{
+							size: 4096,
+							extension: "png",
+						},
+					),
+				},
+			});
+		if (user.banner)
+			items.push({
+				media: {
+					url: rest.cdn.banner(user.id, user.banner, {
+						size: 4096,
+						extension: "png",
+					}),
+				},
+			});
+		if (!items.length)
+			return reply({
+				content: "L'utente non ha un banner!",
+				flags: MessageFlags.Ephemeral,
+			});
+		reply({
+			flags: MessageFlags.IsComponentsV2,
+			components: [
 				{
-					name: "user",
-					description: "L'utente di cui mostrare il banner",
-					type: ApplicationCommandOptionType.User,
+					type: ComponentType.TextDisplay,
+					content: `Banner di <@${user.id}>`,
+				},
+				{
+					type: ComponentType.MediaGallery,
+					items,
 				},
 			],
-		},
-	],
-	run: async (reply, { interaction }) => {
-		const userId = interaction.data.options?.find(
-			(o): o is APIApplicationCommandInteractionDataUserOption =>
-				o.name === "user" && o.type === ApplicationCommandOptionType.User,
-		)?.value;
-		const user =
-			userId == null
-				? (interaction.user ?? interaction.member?.user)
-				: interaction.data.resolved?.users?.[userId];
-
-		if (!user) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: { flags: MessageFlags.Ephemeral, content: "Utente non trovato!" },
-			});
-			return;
-		}
-		const bannerHash =
-			user.banner === undefined
-				? ((await rest.get(Routes.user(user.id))) as APIUser).banner
-				: user.banner;
-
-		if (bannerHash == null) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "L'utente non ha un banner!",
-					flags: MessageFlags.Ephemeral,
-				},
-			});
-			return;
-		}
-		const url = rest.cdn.banner(user.id, bannerHash, {
-			size: 4096,
-			extension: "png",
+			allowed_mentions: { parse: [] },
 		});
-
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: {
-				content: `Banner di **[${escapeMarkdown(user.username)}](${url} )**:`,
-				components: [
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								url,
-								style: ButtonStyle.Link,
-								label: "Apri l'originale",
-							},
-						],
-					},
-				],
-			},
-		});
-	},
-};
+	}
+}
