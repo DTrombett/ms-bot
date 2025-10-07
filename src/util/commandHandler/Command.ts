@@ -3,6 +3,7 @@ import {
 	RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import type { Readonly } from "../types";
+import type { CommandHandler } from "./CommandHandler";
 import type {
 	AutoCompleteArgs as AutocompleteArgs,
 	AutoCompleteReplies as AutocompleteReplies,
@@ -24,7 +25,8 @@ export class Command {
 		RESTPostAPIContextMenuApplicationCommandsJSONBody[]
 	>;
 	static readonly customId?: string;
-	private?: boolean;
+	static readonly private?: boolean;
+	constructor(protected handler: CommandHandler) {}
 	chatInput?(replies: ChatInputReplies, args: ChatInputArgs): any;
 	autocomplete?(replies: AutocompleteReplies, args: AutocompleteArgs): any;
 	component?(replies: ComponentReplies, args: ComponentArgs): any;

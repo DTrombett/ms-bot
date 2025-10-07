@@ -114,9 +114,9 @@ export class CommandHandler {
 		);
 		if (!Command) return new Response(null, { status: 400 });
 		const user = (interaction.member ?? interaction).user!;
-		const command = (this.built[Command.name] ??= new Command());
-		if (command.private && !env.OWNER_ID.includes(user.id))
+		if (Command.private && !env.OWNER_ID.includes(user.id))
 			return new Response(null, { status: 403 });
+		const command = (this.built[Command.name] ??= new Command(this));
 		console.log(
 			`Interaction type: ${InteractionType[interaction.type]}, command: ${"name" in interaction.data ? interaction.data.name : interaction.data.custom_id}, user: ${user.username} (${user.id}), channel: ${interaction.channel?.name} (${interaction.channel?.id})`,
 		);

@@ -1,105 +1,99 @@
+import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	InteractionResponseType,
 	MessageFlags,
 	Routes,
 	type APIApplicationCommand,
-	type APIApplicationCommandInteractionDataBooleanOption,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
+	Command,
 	normalizeError,
 	parseTime,
-	resolveCommandOptions,
 	rest,
-	type CommandOptions,
+	type ChatInputArgs,
+	type ChatInputReplies,
 } from "../util";
-import * as commandsObject from "./index";
 
-export const dev = {
-	isPrivate: true,
-	data: [
+export class Dev extends Command {
+	static override private = true;
+	static override chatInputData = {
+		name: "dev",
+		description: "Developer commands",
+		type: ApplicationCommandType.ChatInput,
+		options: [
+			{
+				name: "register-commands",
+				description: "Register commands",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "dev",
+						description: "Don't deploy globally",
+						type: ApplicationCommandOptionType.Boolean,
+					},
+				],
+			},
+			{
+				name: "shorten",
+				description: "Shorten a url",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "url",
+						description: "The destination address",
+						required: true,
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "source",
+						description: "The path of the url (default: random 8 bytes)",
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "duration",
+						description:
+							"When to delete the url, Infinity for never (default: 1d)",
+					},
+					{
+						type: ApplicationCommandOptionType.Integer,
+						name: "status",
+						description: "The status code to send (default: 301)",
+						choices: [
+							{ name: "301", value: 301 },
+							{ name: "302", value: 302 },
+							{ name: "307", value: 307 },
+							{ name: "308", value: 308 },
+						],
+					},
+					{
+						type: ApplicationCommandOptionType.Boolean,
+						name: "preserve-query",
+						description: "Preserve the source query (default: false)",
+					},
+					{
+						type: ApplicationCommandOptionType.Boolean,
+						name: "preserve-path",
+						description: "Preserve the path suffix (default: false)",
+					},
+				],
+			},
+		],
+	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	override async chatInput(
+		{ defer }: ChatInputReplies,
 		{
-			name: "dev",
-			description: "Developer commands",
-			type: ApplicationCommandType.ChatInput,
-			options: [
-				{
-					name: "register-commands",
-					description: "Register commands",
-					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							name: "dev",
-							description: "Don't deploy globally",
-							type: ApplicationCommandOptionType.Boolean,
-						},
-					],
-				},
-				{
-					name: "shorten",
-					description: "Shorten a url",
-					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							type: ApplicationCommandOptionType.String,
-							name: "url",
-							description: "The destination address",
-							required: true,
-						},
-						{
-							type: ApplicationCommandOptionType.String,
-							name: "source",
-							description: "The path of the url (default: random 8 bytes)",
-						},
-						{
-							type: ApplicationCommandOptionType.String,
-							name: "duration",
-							description:
-								"When to delete the url, Infinity for never (default: 1d)",
-						},
-						{
-							type: ApplicationCommandOptionType.Integer,
-							name: "status",
-							description: "The status code to send (default: 301)",
-							choices: [
-								{ name: "301", value: 301 },
-								{ name: "302", value: 302 },
-								{ name: "307", value: 307 },
-								{ name: "308", value: 308 },
-							],
-						},
-						{
-							type: ApplicationCommandOptionType.Boolean,
-							name: "preserve-query",
-							description: "Preserve the source query (default: false)",
-						},
-						{
-							type: ApplicationCommandOptionType.Boolean,
-							name: "preserve-path",
-							description: "Preserve the path suffix (default: false)",
-						},
-					],
-				},
-			],
-		},
-	],
-	run: async (reply, { interaction, env }) => {
-		const { options, subcommand } = resolveCommandOptions(
-			dev.data,
 			interaction,
-		);
-
-		reply({
-			type: InteractionResponseType.DeferredChannelMessageWithSource,
-			data: { flags: MessageFlags.Ephemeral },
-		});
+			options,
+			subcommand,
+		}: ChatInputArgs<typeof Dev.chatInputData>,
+	) {
+		defer({ flags: MessageFlags.Ephemeral });
 		if (subcommand === "register-commands") {
-			const commands = Object.values(commandsObject) as CommandOptions[];
-			const { value: isDev } = (options.dev ?? {
-				value: env.NODE_ENV !== "production",
-			}) as APIApplicationCommandInteractionDataBooleanOption;
+			const isDev = options.dev ?? env.NODE_ENV !== "production";
 			const [privateAPICommands, publicAPICommands] = await Promise.all([
 				(
 					rest.put(
@@ -108,9 +102,9 @@ export const dev = {
 							env.TEST_GUILD,
 						),
 						{
-							body: commands
-								.filter((c) => isDev || c.isPrivate)
-								.flatMap((file) => file.data),
+							body: this.handler.commands
+								.filter((c) => isDev || c.private)
+								.flatMap((file) => file.chatInputData),
 						},
 					) as Promise<APIApplicationCommand[]>
 				).catch(normalizeError),
@@ -118,14 +112,14 @@ export const dev = {
 					? []
 					: (
 							rest.put(Routes.applicationCommands(env.DISCORD_APPLICATION_ID), {
-								body: commands
-									.filter((c) => !c.isPrivate)
-									.flatMap((file) => file.data),
+								body: this.handler.commands
+									.filter((c) => !c.private)
+									.flatMap((file) => file.chatInputData),
 							}) as Promise<APIApplicationCommand[]>
 						).catch(normalizeError),
 			]);
 
-			await rest.patch(
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -133,8 +127,9 @@ export const dev = {
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-		} else if ((subcommand as string) === "shorten")
-			await env.SHORTEN.create({
+		}
+		if (subcommand === "shorten")
+			return env.SHORTEN.create({
 				params: {
 					source: (options.source ??= btoa(
 						String.fromCharCode(...crypto.getRandomValues(new Uint8Array(8))),
@@ -158,5 +153,6 @@ export const dev = {
 					},
 				},
 			});
-	},
-} as const satisfies CommandOptions<ApplicationCommandType.ChatInput>;
+		return;
+	}
+}
