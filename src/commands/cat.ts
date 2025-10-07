@@ -1,5 +1,5 @@
-import { env } from "cloudflare:workers";
 import {
+	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
@@ -22,37 +22,48 @@ export class Cat extends Command {
 		name: "cat",
 		description: "Mostra la foto di un adorabile gattino",
 		type: ApplicationCommandType.ChatInput,
-	} satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+		options: [
+			{
+				name: "limit",
+				description: "Numero di immagini da mostrare",
+				type: ApplicationCommandOptionType.Integer,
+				min_value: 1,
+				max_value: 9,
+			},
+		],
+	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static override customId = "cat";
 	override async chatInput(
 		{ defer }: ChatInputReplies,
-		{ interaction }: ChatInputArgs,
+		{
+			interaction,
+			options: { limit },
+		}: ChatInputArgs<typeof Cat.chatInputData>,
 	) {
 		defer();
 		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{ body: await this.getCat(env.CAT_API_KEY) },
+			{ body: await this.getCatBody(limit) },
 		);
 	}
 	override async component(
 		{ defer }: ComponentReplies,
-		{ interaction }: ComponentArgs,
+		{ interaction, args: [limit] }: ComponentArgs,
 	) {
 		defer({ flags: MessageFlags.Ephemeral });
 		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{ body: await this.getCat(env.CAT_API_KEY) },
+			{ body: await this.getCatBody(Number(limit) || undefined) },
 		);
 	}
-	async getCat(
-		key: string,
+	async getCatBody(
+		limit = 1,
 	): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> {
 		const data = await fetch(
-			"https://api.thecatapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
-			{ headers: { "x-api-key": key } },
-		).then<CatResponse | null>((res) => res.json());
+			`https://api.thecatapi.com/v1/images/search?limit=${limit}`,
+		).then((res) => res.json<CatResponse | null>());
 
-		if (!data?.[0])
+		if (!data?.length)
 			return {
 				content: "Si è verificato un errore nel caricamento dell'immagine!",
 			};
@@ -61,11 +72,11 @@ export class Cat extends Command {
 			components: [
 				{
 					type: ComponentType.TextDisplay,
-					content: "Meow! 🐱",
+					content: "# Meow! 🐱",
 				},
 				{
 					type: ComponentType.MediaGallery,
-					items: [{ media: data[0] }],
+					items: data.slice(0, limit).map((media) => ({ media })),
 				},
 				{
 					type: ComponentType.ActionRow,
@@ -80,7 +91,6 @@ export class Cat extends Command {
 					],
 				},
 			],
-			allowed_mentions: { parse: [] },
 		};
 	}
 }
