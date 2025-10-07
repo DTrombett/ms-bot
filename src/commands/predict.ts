@@ -4,81 +4,78 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
 	MessageFlags,
+	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type { CommandOptions } from "../util";
+import { Command, type ChatInputReplies, type ComponentReplies } from "../util";
 
-const replies = [
-	"Sì",
-	"Certamente",
-	"Palese",
-	"Fattuale",
-	"Ma che me lo chiedi a fare",
+export class Predict extends Command {
+	static override chatInputData = {
+		name: "predict",
+		description: "Hai un dubbio? Chiedilo a me!",
+		type: ApplicationCommandType.ChatInput,
+		options: [
+			{
+				name: "question",
+				description: "La domanda da porre",
+				type: ApplicationCommandOptionType.String,
+				required: true,
+			},
+		],
+	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
+	static override customId = "predict";
+	static replies = [
+		"Sì",
+		"Palese",
+		"Fattuale",
+		"Ovviamente",
+		"Certamente",
+		"Assolutamente",
+		"Ma che me lo chiedi a fare",
 
-	"No",
-	"Impossibile",
-	"Non ci credi nemmeno tu",
-	"L'importante è crederci",
-	"Mi viene da ridere solo a pensarci",
+		"No",
+		"Negativo",
+		"Impossibile",
+		"Assolutamente ||no||",
+		"Non ci credi nemmeno tu",
+		"L'importante è crederci",
+		"Mi viene da ridere solo a pensarci",
 
-	"Idk",
-	"Forse",
-	"Opinionabile",
-	"Chiedilo a qualcun altro",
-	"Non ne ho la più pallida idea",
-];
-
-const makePrediction = (
-	ephemeral = false,
-): APIInteractionResponseCallbackData => ({
-	content:
-		Math.random() < 0.95
-			? replies[Math.floor(Math.random() * replies.length)]
-			: "MA IO CHE CABBO NE SO?!?!?!",
-	components: [
-		{
-			type: ComponentType.ActionRow,
+		"Idk",
+		"Forse",
+		"Opinionabile",
+		"Chiedilo a qualcun altro",
+		"La risposta è dentro di te",
+		"Non ne ho la più pallida idea",
+		"Quando ti troverai una ragazza... forse",
+	];
+	override chatInput({ reply }: ChatInputReplies) {
+		reply(this.makePrediction());
+	}
+	override component({ reply }: ComponentReplies) {
+		reply(this.makePrediction(MessageFlags.Ephemeral));
+	}
+	makePrediction(flags?: MessageFlags): APIInteractionResponseCallbackData {
+		return {
+			content:
+				Math.random() < 0.95
+					? Predict.replies[Math.floor(Math.random() * Predict.replies.length)]
+					: "MA IO CHE CABBO NE SO?!?!?!",
 			components: [
 				{
-					type: ComponentType.Button,
-					label: "Chiedi nuovamente",
-					style: ButtonStyle.Primary,
-					emoji: { name: "💬" },
-					custom_id: "predict",
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							label: "Chiedi nuovamente",
+							style: ButtonStyle.Primary,
+							emoji: { name: "💬" },
+							custom_id: "predict",
+						},
+					],
 				},
 			],
-		},
-	],
-	flags: ephemeral ? MessageFlags.Ephemeral : undefined,
-});
-
-export const predict: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
-		{
-			name: "predict",
-			description: "Hai un dubbio? Chiedilo a me!",
-			type: ApplicationCommandType.ChatInput,
-			options: [
-				{
-					name: "question",
-					description: "La domanda da porre",
-					type: ApplicationCommandOptionType.String,
-					required: true,
-				},
-			],
-		},
-	],
-	run: (reply) => {
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: makePrediction(),
-		});
-	},
-	component: (reply) => {
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: makePrediction(true),
-		});
-	},
-};
+			flags,
+		};
+	}
+}
