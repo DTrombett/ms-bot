@@ -7,6 +7,8 @@ import {
 	type APIApplicationCommand,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
+	type RESTPutAPIApplicationCommandsJSONBody,
+	type RESTPutAPIApplicationGuildCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
 	Command,
@@ -15,6 +17,7 @@ import {
 	rest,
 	type ChatInputArgs,
 	type ChatInputReplies,
+	type Readonly,
 } from "../util";
 
 export class Dev extends Command {
@@ -104,7 +107,10 @@ export class Dev extends Command {
 						{
 							body: this.handler.commands
 								.filter((c) => isDev || c.private)
-								.flatMap((file) => file.chatInputData),
+								.flatMap((file) => [
+									...(file.chatInputData ? [file.chatInputData] : []),
+									...(file.contextMenuData ?? []),
+								]) satisfies Readonly<RESTPutAPIApplicationGuildCommandsJSONBody>,
 						},
 					) as Promise<APIApplicationCommand[]>
 				).catch(normalizeError),
@@ -114,7 +120,10 @@ export class Dev extends Command {
 							rest.put(Routes.applicationCommands(env.DISCORD_APPLICATION_ID), {
 								body: this.handler.commands
 									.filter((c) => !c.private)
-									.flatMap((file) => file.chatInputData),
+									.flatMap((file) => [
+										...(file.chatInputData ? [file.chatInputData] : []),
+										...(file.contextMenuData ?? []),
+									]) satisfies Readonly<RESTPutAPIApplicationCommandsJSONBody>,
 							}) as Promise<APIApplicationCommand[]>
 						).catch(normalizeError),
 			]);

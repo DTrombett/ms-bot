@@ -1,35 +1,34 @@
 import {
 	ApplicationCommandType,
-	InteractionResponseType,
 	MessageFlags,
+	type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { formatTime, type CommandOptions } from "../util";
+import {
+	Command,
+	formatTime,
+	type MessageArgs,
+	type MessageReplies,
+} from "../util";
 
-export const editedAfter = {
-	data: [
+export class EditedAfter extends Command {
+	static override contextMenuData = [
 		{
 			name: "Edited After",
 			type: ApplicationCommandType.Message,
 		},
-	],
-	run: (reply, { interaction }) => {
-		const [message] = Object.values(interaction.data.resolved.messages);
+	] satisfies RESTPostAPIContextMenuApplicationCommandsJSONBody[];
+	override message({ reply }: MessageReplies, { interaction }: MessageArgs) {
+		const message =
+			interaction.data.resolved.messages[interaction.data.target_id];
 
-		if (!message?.edited_timestamp) {
+		if (message?.edited_timestamp)
 			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "Questo messaggio non è stato modificato.",
-					flags: MessageFlags.Ephemeral,
-				},
-			});
-			return;
-		}
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: {
 				content: `Messaggio modificato dopo **${formatTime(Date.parse(message.edited_timestamp) - Date.parse(message.timestamp))}**`,
-			},
-		});
-	},
-} as const satisfies CommandOptions<ApplicationCommandType.Message>;
+			});
+		else
+			reply({
+				content: "Questo messaggio non è stato modificato.",
+				flags: MessageFlags.Ephemeral,
+			});
+	}
+}
