@@ -4,25 +4,26 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
 	MessageFlags,
 	Routes,
-	type APIApplicationCommandInteractionDataOption,
-	type APIApplicationCommandInteractionDataStringOption,
-	type APIApplicationCommandInteractionDataSubcommandOption,
 	type APIChatInputApplicationCommandInteraction,
 	type APIComponentInContainer,
 	type APIMessageComponentInteraction,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
+	Command,
 	maxLength,
 	normalizeError,
-	ok,
 	parseTime,
 	Reminder,
 	rest,
-	type CommandOptions,
+	TimeUnit,
+	type ChatInputArgs,
+	type ChatInputReplies,
+	type ComponentArgs,
+	type ComponentReplies,
 } from "../util";
 
 const sendPage = async (
@@ -121,123 +122,93 @@ const sendPage = async (
 	);
 };
 
-export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
+export class Remind extends Command {
+	static override chatInputData = {
+		name: "remind",
+		description: "Imposta un promemoria o gestisci quelli esistenti",
+		type: ApplicationCommandType.ChatInput,
+		options: [
+			{
+				name: "me",
+				description: "Imposta un promemoria",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "to",
+						description: "Il promemoria da impostare (es. Fare la spesa)",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+						max_length: 1000,
+					},
+					{
+						name: "in",
+						description: "Tra quanto tempo te lo dovrò ricordare (es. 1d3h)",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+						max_length: 1024,
+					},
+				],
+			},
+			{
+				name: "list",
+				description: "Elenca i tuoi promemoria",
+				type: ApplicationCommandOptionType.Subcommand,
+			},
+			{
+				name: "remove",
+				description: "Elimina un promemoria",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "id",
+						description: "L'id del promemoria da eliminare",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+						min_length: 8,
+						max_length: 8,
+					},
+				],
+			},
+		],
+	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
+	static override customId = "remind";
+	override async chatInput(
+		{ reply, defer }: ChatInputReplies,
 		{
-			name: "remind",
-			description: "Imposta un promemoria o gestisci quelli esistenti",
-			type: ApplicationCommandType.ChatInput,
-			options: [
-				{
-					name: "me",
-					description: "Imposta un promemoria",
-					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							name: "to",
-							description: "Il promemoria da impostare (es. Fare la spesa)",
-							type: ApplicationCommandOptionType.String,
-							required: true,
-							max_length: 1000,
-						},
-						{
-							name: "in",
-							description: "Tra quanto tempo te lo dovrò ricordare (es. 1d3h)",
-							type: ApplicationCommandOptionType.String,
-							required: true,
-							max_length: 1024,
-						},
-					],
-				},
-				{
-					name: "list",
-					description: "Elenca i tuoi promemoria",
-					type: ApplicationCommandOptionType.Subcommand,
-				},
-				{
-					name: "remove",
-					description: "Elimina un promemoria",
-					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							name: "id",
-							description: "L'id del promemoria da eliminare",
-							type: ApplicationCommandOptionType.String,
-							required: true,
-							min_length: 8,
-							max_length: 8,
-						},
-					],
-				},
-			],
-		},
-	],
-	run: async (reply, { interaction, env }) => {
-		const options = new Map<
-			string,
-			APIApplicationCommandInteractionDataOption
-		>();
-		const [subcommand] = interaction.data
-			.options as APIApplicationCommandInteractionDataSubcommandOption[];
-
-		ok(subcommand);
-		for (const option of subcommand.options!) options.set(option.name, option);
-		if (subcommand.name === "me") {
-			const { value: message } = options.get(
-				"to",
-			) as APIApplicationCommandInteractionDataStringOption;
-			const { value: date } = options.get(
-				"in",
-			) as APIApplicationCommandInteractionDataStringOption;
-			const duration = parseTime(date);
-
-			if (duration > 31_536_000_000) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Non puoi impostare una durata maggiore di 1 anno!",
-						flags: MessageFlags.Ephemeral,
-					},
+			interaction,
+			subcommand,
+			options,
+			user,
+		}: ChatInputArgs<typeof Remind.chatInputData>,
+	) {
+		if (subcommand === "me") {
+			const duration = parseTime(options.in);
+			if (duration > TimeUnit.Year)
+				return reply({
+					content: "Non puoi impostare una durata maggiore di 1 anno!",
+					flags: MessageFlags.Ephemeral,
 				});
-				return;
-			}
-			if (duration < 1_000) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Non puoi impostare una durata minore di 1 secondo!",
-						flags: MessageFlags.Ephemeral,
-					},
+			if (duration < TimeUnit.Second)
+				return reply({
+					content: "Non puoi impostare una durata minore di 1 secondo!",
+					flags: MessageFlags.Ephemeral,
 				});
-				return;
-			}
-			if (message.length > 1_000) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content:
-							"La lunghezza massima di un promemoria è di 1000 caratteri",
-						flags: MessageFlags.Ephemeral,
-					},
+			if (options.to.length > 1_000)
+				return reply({
+					content: "La lunghezza massima di un promemoria è di 1000 caratteri",
+					flags: MessageFlags.Ephemeral,
 				});
-				return;
-			}
-			reply({
-				type: InteractionResponseType.DeferredChannelMessageWithSource,
-				data: { flags: MessageFlags.Ephemeral },
-			});
-			const userId = (interaction.member ?? interaction).user!.id;
-
+			defer({ flags: MessageFlags.Ephemeral });
 			if (
 				((await env.DB.prepare(
 					`SELECT COUNT(*) as count
 						FROM Reminders
 						WHERE userId = ?1`,
 				)
-					.bind(userId)
+					.bind(user.id)
 					.first<number>("count")) ?? 0) >= 64
-			) {
-				await rest.patch(
+			)
+				return rest.patch(
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
 						body: {
@@ -245,24 +216,19 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				);
-				return;
-			}
-			const id = Array.from(
-				{ length: 8 },
-				() => Math.random().toString(36)[2],
-			).join("");
+			const id = Math.random().toString(36).slice(2, 10).padEnd(8, "0");
 			const result = await env.REMINDER.create({
-				id: `${userId}-${id}`,
+				id: `${user.id}-${id}`,
 				params: {
-					message: { content: `🔔 Promemoria: ${message}` },
+					message: { content: `🔔 Promemoria: ${options.to}` },
 					duration,
-					userId,
-					remind: message,
+					userId: user.id,
+					remind: options.to,
 				},
 			}).catch(normalizeError);
 
-			if (result instanceof Error) {
-				await rest.patch(
+			if (result instanceof Error)
+				return rest.patch(
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
 						body: {
@@ -270,9 +236,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				);
-				return;
-			}
-			await rest.patch(
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -280,51 +244,35 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-		} else if (subcommand.name === "list") {
-			const userId = (interaction.member ?? interaction).user!.id;
-
-			reply({
-				type: InteractionResponseType.DeferredChannelMessageWithSource,
-				data: { flags: MessageFlags.Ephemeral },
-			});
-			await sendPage(interaction, userId);
-		} else if (subcommand.name === "remove") {
-			const { value: id } = options.get(
-				"id",
-			) as APIApplicationCommandInteractionDataStringOption;
-			const userId = (interaction.user ?? interaction.member?.user)!.id;
-			const instance = await env.REMINDER.get(`${userId}-${id}`).catch(
+		}
+		if (subcommand === "list") {
+			defer({ flags: MessageFlags.Ephemeral });
+			return sendPage(interaction, user.id);
+		}
+		if (subcommand === "remove") {
+			const instance = await env.REMINDER.get(`${user.id}-${options.id}`).catch(
 				() => {},
 			);
-
-			if (!instance) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Promemoria non trovato!",
-						flags: MessageFlags.Ephemeral,
-					},
+			if (!instance)
+				return reply({
+					content: "Promemoria non trovato!",
+					flags: MessageFlags.Ephemeral,
 				});
-				return;
-			}
-			reply({
-				type: InteractionResponseType.DeferredChannelMessageWithSource,
-				data: { flags: MessageFlags.Ephemeral },
-			});
+			defer({ flags: MessageFlags.Ephemeral });
 			const error = await Promise.all([
 				instance.terminate(),
 				env.DB.prepare(
 					`DELETE FROM Reminders
 					WHERE id = ?1 AND userId = ?2`,
 				)
-					.bind(id, userId)
+					.bind(options.id, user.id)
 					.run(),
 			])
 				.then(() => {})
 				.catch(normalizeError);
 
-			if (error) {
-				await rest.patch(
+			if (error)
+				return rest.patch(
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
 						body: {
@@ -332,9 +280,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				);
-				return;
-			}
-			await rest.patch(
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -343,34 +289,26 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				},
 			);
 		}
-	},
-	component: async (reply, { interaction, env }) => {
-		const [, action, ...args] = interaction.data.custom_id.split("-");
-
+		return;
+	}
+	override async component(
+		{ reply, deferUpdate, defer }: ComponentReplies,
+		{ interaction, args: [action, ...args] }: ComponentArgs,
+	) {
 		if (action === "list") {
-			reply({ type: InteractionResponseType.DeferredMessageUpdate });
-			await sendPage(interaction, args[0], Number(args[1]));
-			return;
+			deferUpdate();
+			return sendPage(interaction, args[0], Number(args[1]));
 		}
 		if (action === "remove") {
 			const instance = await env.REMINDER.get(`${args[0]}-${args[1]}`).catch(
 				() => {},
 			);
-
-			if (!instance) {
-				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Promemoria non trovato!",
-						flags: MessageFlags.Ephemeral,
-					},
+			if (!instance)
+				return reply({
+					content: "Promemoria non trovato!",
+					flags: MessageFlags.Ephemeral,
 				});
-				return;
-			}
-			reply({
-				type: InteractionResponseType.DeferredChannelMessageWithSource,
-				data: { flags: MessageFlags.Ephemeral },
-			});
+			defer({ flags: MessageFlags.Ephemeral });
 			const error = await Promise.all([
 				instance.terminate(),
 				env.DB.prepare(
@@ -383,8 +321,8 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				.then(() => {})
 				.catch(normalizeError);
 
-			if (error) {
-				await rest.patch(
+			if (error)
+				return rest.patch(
 					Routes.webhookMessage(interaction.application_id, interaction.token),
 					{
 						body: {
@@ -392,9 +330,7 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					},
 				);
-				return;
-			}
-			await rest.patch(
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -403,5 +339,6 @@ export const remind: CommandOptions<ApplicationCommandType.ChatInput> = {
 				},
 			);
 		}
-	},
-};
+		return;
+	}
+}
