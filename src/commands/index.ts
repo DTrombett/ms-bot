@@ -16,6 +16,6 @@ export * from "./predict";
 export * from "./quelo";
 export * from "./random";
 export * from "./remind";
-// export * from "./rps";
+export * from "./rps";
 // export * from "./search";
 // export * from "./time";

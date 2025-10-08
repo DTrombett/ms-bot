@@ -1,87 +1,113 @@
 import {
-	APIApplicationCommandInteractionDataStringOption,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	InteractionResponseType,
+	ButtonStyle,
+	ComponentType,
 	MessageFlags,
+	type APIInteractionResponseCallbackData,
+	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { randomNumber, type CommandOptions } from "../util";
+import {
+	Command,
+	randomNumber,
+	type ChatInputArgs,
+	type ChatInputReplies,
+	type ComponentArgs,
+	type ComponentReplies,
+} from "../util";
 
-type PossibleChoice = (typeof choices)[number];
+type Choice = (typeof RPS.choices)[number];
 
-const choices = ["rock", "paper", "scissors"] as const;
-const emojis: Record<PossibleChoice, string> = {
-	rock: "✊",
-	paper: "✋",
-	scissors: "✌",
-};
-const winners: Record<PossibleChoice, PossibleChoice> = {
-	rock: "paper",
-	paper: "scissors",
-	scissors: "rock",
-};
+export class RPS extends Command {
+	static override chatInputData = {
+		name: "rps",
+		description: "Gioca a sasso, carta, forbici",
+		type: ApplicationCommandType.ChatInput,
+		options: [
+			{
+				name: "choice",
+				description: "La tua scelta",
+				type: ApplicationCommandOptionType.String,
+				required: true,
+				choices: [
+					{
+						name: "Sasso",
+						value: "rock",
+					},
+					{
+						name: "Carta",
+						value: "paper",
+					},
+					{
+						name: "Forbici",
+						value: "scissors",
+					},
+				],
+			},
+		],
+	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
+	static choices = ["rock", "paper", "scissors"] as const;
+	static emojis = {
+		rock: ":fist:",
+		paper: ":raised_hand:",
+		scissors: ":v:",
+	} as const;
+	static unicodeEmojis = {
+		rock: "✊",
+		paper: "✋",
+		scissors: "✌️",
+	} as const;
+	static winners = {
+		rock: "paper",
+		paper: "scissors",
+		scissors: "rock",
+	} as const;
+	static override customId = "rps";
+	override chatInput(
+		{ reply }: ChatInputReplies,
+		{ options: { choice } }: ChatInputArgs<typeof RPS.chatInputData>,
+	) {
+		reply(this.play(choice));
+	}
+	override component(
+		{ reply }: ComponentReplies,
+		{ args: [choice] }: ComponentArgs,
+	) {
+		reply(this.play(choice as Choice, MessageFlags.Ephemeral));
+	}
+	play(
+		choice: Choice,
+		flags?: MessageFlags,
+	): APIInteractionResponseCallbackData {
+		if (!RPS.choices.includes(choice))
+			return {
+				content: "La tua scelta non è valida!",
+				flags: MessageFlags.Ephemeral,
+			};
+		const myChoice = RPS.choices[randomNumber(0, 2)]!;
 
-export const rps: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
-		{
-			name: "rps",
-			description: "Gioca a sasso, carta, forbici",
-			type: ApplicationCommandType.ChatInput,
-			options: [
+		return {
+			content: `### Tu: ${RPS.emojis[choice]}\n### Io: ${
+				RPS.emojis[myChoice]
+			}\n## ${
+				myChoice === choice
+					? "Pareggio"
+					: RPS.winners[myChoice] === choice
+						? "Hai vinto"
+						: "Hai perso"
+			}!\n-# Rivincita?`,
+			components: [
 				{
-					name: "choice",
-					description: "La tua scelta",
-					type: ApplicationCommandOptionType.String,
-					required: true,
-					choices: [
-						{
-							name: "Sasso",
-							value: "rock",
-						},
-						{
-							name: "Carta",
-							value: "paper",
-						},
-						{
-							name: "Forbici",
-							value: "scissors",
-						},
-					],
+					type: ComponentType.ActionRow,
+					components: RPS.choices.map((choice) => ({
+						custom_id: `rps-${choice}`,
+						emoji: { name: RPS.unicodeEmojis[choice] },
+						style: ButtonStyle.Secondary,
+						type: ComponentType.Button,
+					})),
 				},
 			],
-		},
-	],
-	run: (reply, { interaction }) => {
-		const choice = interaction.data.options!.find(
-			(o): o is APIApplicationCommandInteractionDataStringOption =>
-				o.name === "choice" && o.type === ApplicationCommandOptionType.String,
-		)!.value as PossibleChoice;
-
-		if (!choices.includes(choice)) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "La tua scelta non è valida!",
-					flags: MessageFlags.Ephemeral,
-				},
-			});
-			return;
-		}
-		const myChoice = choices[randomNumber(0, 2)]!;
-
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: {
-				content: `Hai scelto ${emojis[choice]}\nLa mia scelta è ${
-					emojis[myChoice]
-				}\n\n**${
-					myChoice === choice
-						? "Pareggio"
-						: winners[myChoice] === choice
-							? "Hai vinto"
-							: "Hai perso"
-				}**!`,
-			},
-		});
-	},
-};
+			flags,
+		};
+	}
+}
