@@ -4,87 +4,90 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
 	MessageFlags,
+	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { randomNumber, type CommandOptions } from "../util";
+import {
+	Command,
+	randomNumber,
+	type ChatInputArgs,
+	type ChatInputReplies,
+	type ComponentArgs,
+	type ComponentReplies,
+} from "../util";
 
-const getRandom = (
-	{ min, max }: Partial<{ min: number; max: number }>,
-	ephemeral = false,
-): APIInteractionResponseCallbackData => {
-	if (typeof min !== typeof max)
-		return {
-			content:
-				"Devi specificare sia il minimo che il massimo o nessuno dei due se vuoi un numero decimale tra 0 e 1",
-			flags: MessageFlags.Ephemeral,
-		};
-	return {
-		content: `🎲 ${randomNumber(min, max)}`,
-		components: [
+export class Random extends Command {
+	static override chatInputData = {
+		name: "random",
+		description:
+			"Genera un numero casuale tra due numeri o, se non specificati, genera un numero decimale tra 0 e 1",
+		type: ApplicationCommandType.ChatInput,
+		options: [
 			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.Button,
-						label: "Genera un altro!",
-						style: ButtonStyle.Primary,
-						emoji: { name: "🎲" },
-						custom_id: `random-${min ?? "NaN"}-${max ?? "NaN"}`,
-					},
-				],
+				name: "min",
+				description: "Il numero minimo",
+				type: ApplicationCommandOptionType.Integer,
+				min_value: 0,
+				max_value: Number.MAX_SAFE_INTEGER - 1,
+			},
+			{
+				name: "max",
+				description: "Il numero massimo",
+				type: ApplicationCommandOptionType.Integer,
+				min_value: 0,
+				max_value: Number.MAX_SAFE_INTEGER,
 			},
 		],
-		flags: ephemeral ? MessageFlags.Ephemeral : undefined,
-	};
-};
+	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
+	static override customId = "random";
+	override chatInput(
+		{ reply }: ChatInputReplies,
+		{ options }: ChatInputArgs<typeof Random.chatInputData>,
+	) {
+		if (options.min! > options.max!)
+			[options.min, options.max] = [options.max, options.min];
+		reply(this.getRandom(options));
+	}
+	override component(
+		{ reply }: ComponentReplies,
+		{ args: [min, max] }: ComponentArgs,
+	) {
+		const options: { min?: number; max?: number } = {
+			min: Number(min),
+			max: Number(max),
+		};
 
-export const random: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
-		{
-			name: "random",
-			description:
-				"Genera un numero casuale tra due numeri o, se non specificati, genera un numero decimale tra 0 e 1",
-			type: ApplicationCommandType.ChatInput,
-			options: [
+		if (isNaN(options.min!) || isNaN(options.max!))
+			options.min = options.max = undefined;
+		reply(this.getRandom(options, MessageFlags.Ephemeral));
+	}
+	getRandom(
+		{ min, max }: { min?: number; max?: number },
+		flags?: MessageFlags,
+	): APIInteractionResponseCallbackData {
+		if (typeof min !== typeof max)
+			return {
+				content:
+					"Devi specificare sia il minimo che il massimo o nessuno dei due se vuoi un numero decimale tra 0 e 1",
+				flags: MessageFlags.Ephemeral,
+			};
+		return {
+			content: `🎲 ${randomNumber(min, max)}`,
+			components: [
 				{
-					name: "min",
-					description: "Il numero minimo",
-					type: ApplicationCommandOptionType.Integer,
-					min_value: Number.MIN_SAFE_INTEGER,
-					max_value: Number.MAX_SAFE_INTEGER - 1,
-				},
-				{
-					name: "max",
-					description: "Il numero massimo",
-					type: ApplicationCommandOptionType.Integer,
-					min_value: Number.MIN_SAFE_INTEGER + 1,
-					max_value: Number.MAX_SAFE_INTEGER,
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							label: "Genera un altro!",
+							style: ButtonStyle.Primary,
+							emoji: { name: "🎲" },
+							custom_id: `random-${min}-${max}`,
+						},
+					],
 				},
 			],
-		},
-	],
-	run: (reply, { interaction }) => {
-		const options: Partial<{ min: number; max: number }> = {};
-
-		if (interaction.data.options?.length)
-			for (const option of interaction.data.options)
-				if (option.type === ApplicationCommandOptionType.Integer)
-					options[option.name as "max" | "min"] = option.value;
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: getRandom(options),
-		});
-	},
-	component: (reply, { interaction }) => {
-		const [, min, max] = interaction.data.custom_id.split("-");
-
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: getRandom(
-				{ min: Number(min) || undefined, max: Number(max) || undefined },
-				true,
-			),
-		});
-	},
-};
+			flags,
+		};
+	}
+}
