@@ -158,179 +158,196 @@ export class Search extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
-	override chatInput(
+	google = (
 		{ reply }: ChatInputReplies,
 		{
-			interaction,
-			options,
-			subcommand,
-		}: ChatInputArgs<typeof Search.chatInputData>,
-	) {
-		switch (subcommand) {
-			case "google": {
-				const url = `https://google.com/search?q=${encodeURIComponent(options.query)}`;
+			options: { query },
+		}: ChatInputArgs<typeof Search.chatInputData, "google">,
+	) => {
+		const url = `https://google.com/search?q=${encodeURIComponent(query)}`;
 
-				reply({
-					content: `Risultati di Google per la ricerca "**[${escapeMarkdown(
-						options.query,
-					)}](${url} )**":`,
+		reply({
+			content: `Risultati di Google per la ricerca "**[${escapeMarkdown(
+				query,
+			)}](${url} )**":`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
 					components: [
 						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri nel browser!",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url,
-								},
-							],
+							type: ComponentType.Button,
+							label: "Apri nel browser!",
+							style: ButtonStyle.Link,
+							emoji: { name: "🔍" },
+							url,
 						},
 					],
-				});
-				break;
-			}
-			case "spotify":
-				reply({
-					content: `Risultati di Spotify per la ricerca "**${escapeMarkdown(
-						options.search,
-					)}**":`,
+				},
+			],
+		});
+	};
+	spotify = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { search },
+		}: ChatInputArgs<typeof Search.chatInputData, "spotify">,
+	) =>
+		reply({
+			content: `Risultati di Spotify per la ricerca "**${escapeMarkdown(
+				search,
+			)}**":`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
 					components: [
 						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri su spotify",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://open.spotify.com/search/${encodeURIComponent(
-										options.search,
-									)}`,
-								},
-							],
+							type: ComponentType.Button,
+							label: "Apri su spotify",
+							style: ButtonStyle.Link,
+							emoji: { name: "🔍" },
+							url: `https://open.spotify.com/search/${encodeURIComponent(
+								search,
+							)}`,
 						},
 					],
-				});
-				break;
-			case "youtube":
-				reply({
-					content: `Risultati di YouTube per la ricerca "**${escapeMarkdown(
-						options.query,
-					)}**":`,
+				},
+			],
+		});
+	youtube = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { query },
+		}: ChatInputArgs<typeof Search.chatInputData, "youtube">,
+	) =>
+		reply({
+			content: `Risultati di YouTube per la ricerca "**${escapeMarkdown(
+				query,
+			)}**":`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
 					components: [
 						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in YouTube",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://youtube.com/results?search_query=${encodeURIComponent(
-										options.query,
-									)}`,
-								},
-							],
+							type: ComponentType.Button,
+							label: "Apri in YouTube",
+							style: ButtonStyle.Link,
+							emoji: { name: "🔍" },
+							url: `https://youtube.com/results?search_query=${encodeURIComponent(
+								query,
+							)}`,
 						},
 					],
-				});
-				break;
-			case "yt-music":
-				reply({
-					content: `Risultati di YouTube Music per la ricerca "**${escapeMarkdown(
-						options.query,
-					)}**":`,
+				},
+			],
+		});
+	"yt-music" = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { query },
+		}: ChatInputArgs<typeof Search.chatInputData, "yt-music">,
+	) =>
+		reply({
+			content: `Risultati di YouTube Music per la ricerca "**${escapeMarkdown(
+				query,
+			)}**":`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
 					components: [
 						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in YouTube Music",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://music.youtube.com/search?q=${encodeURIComponent(
-										options.query,
-									)}`,
-								},
-							],
+							type: ComponentType.Button,
+							label: "Apri in YouTube Music",
+							style: ButtonStyle.Link,
+							emoji: { name: "🔍" },
+							url: `https://music.youtube.com/search?q=${encodeURIComponent(
+								query,
+							)}`,
 						},
 					],
-				});
-				break;
-			case "github":
-				reply({
-					content: `Risultati di GitHub per la ricerca "**${escapeMarkdown(
-						options.query,
-					)}**":`,
+				},
+			],
+		});
+	github = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { query, type },
+		}: ChatInputArgs<typeof Search.chatInputData, "github">,
+	) =>
+		reply({
+			content: `Risultati di GitHub per la ricerca "**${escapeMarkdown(
+				query,
+			)}**":`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
 					components: [
 						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in GitHub",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://github.com/search?q=${encodeURIComponent(
-										options.query,
-									)}${(options.type ?? "") && `&type=${options.type}`}`,
-								},
-							],
+							type: ComponentType.Button,
+							label: "Apri in GitHub",
+							style: ButtonStyle.Link,
+							emoji: { name: "🔍" },
+							url: `https://github.com/search?q=${encodeURIComponent(
+								query,
+							)}${(type ?? "") && `&type=${type}`}`,
 						},
 					],
-				});
-				break;
-			case "google-translate":
-				reply({
-					content: `Traduzione di "**${escapeMarkdown(options.text)}**":`,
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in Google Translate",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url: `https://translate.google.com/?sl=auto&tl=${
-										interaction.locale
-									}&text=${encodeURIComponent(options.text)}&op=translate`,
-								},
-							],
-						},
-					],
-				});
-				break;
-			case "wikipedia": {
-				const url = `https://wikipedia.org/w/index.php?search=${encodeURIComponent(
-					options.query,
-				)}`;
+				},
+			],
+		});
+	wikipedia = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { query },
+		}: ChatInputArgs<typeof Search.chatInputData, "wikipedia">,
+	) => {
+		const url = `https://wikipedia.org/w/index.php?search=${encodeURIComponent(
+			query,
+		)}`;
 
-				reply({
-					content: `Risultati di Wikipedia per la ricerca "**[${escapeMarkdown(
-						options.query,
-					)}](${url} )**":`,
+		reply({
+			content: `Risultati di Wikipedia per la ricerca "**[${escapeMarkdown(
+				query,
+			)}](${url} )**":`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
 					components: [
 						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									label: "Apri in Wikipedia",
-									style: ButtonStyle.Link,
-									emoji: { name: "🔍" },
-									url,
-								},
-							],
+							type: ComponentType.Button,
+							label: "Apri in Wikipedia",
+							style: ButtonStyle.Link,
+							emoji: { name: "🔍" },
+							url,
 						},
 					],
-				});
-				break;
-			}
-			default:
-		}
-	}
+				},
+			],
+		});
+	};
+	"google-translate" = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { text },
+			interaction: { locale },
+		}: ChatInputArgs<typeof Search.chatInputData, "google-translate">,
+	) =>
+		reply({
+			content: `Traduzione di "**${escapeMarkdown(text)}**":`,
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							label: "Apri in Google Translate",
+							style: ButtonStyle.Link,
+							emoji: { name: "🔍" },
+							url: `https://translate.google.com/?sl=auto&tl=${
+								locale
+							}&text=${encodeURIComponent(text)}&op=translate`,
+						},
+					],
+				},
+			],
+		});
 }

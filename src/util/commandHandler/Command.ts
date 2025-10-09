@@ -26,6 +26,7 @@ export class Command {
 	>;
 	static readonly customId?: string;
 	static readonly private?: boolean;
+	readonly supportComponentMethods?: boolean;
 	constructor(protected handler: CommandHandler) {}
 	chatInput?(replies: ChatInputReplies, args: ChatInputArgs): any;
 	autocomplete?(replies: AutocompleteReplies, args: AutocompleteArgs): any;

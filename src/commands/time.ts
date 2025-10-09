@@ -54,66 +54,60 @@ export class Time extends Command {
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static override customId = "time";
-	override async chatInput(
+	override supportComponentMethods = true;
+	stopwatch = async (
 		{ reply }: ChatInputReplies,
 		{
-			interaction,
-			subcommand,
-			options,
-		}: ChatInputArgs<typeof Time.chatInputData>,
-	) {
-		if (subcommand === "stopwatch") {
-			reply({
-				content: "Cronometro avviato",
-				components: [
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								custom_id: "time-stop",
-								label: "Ferma",
-								emoji: { name: "⏹️" },
-								style: ButtonStyle.Primary,
-							},
-						],
-					},
-				],
-			});
-			await timeout();
-			const { timestamp } = (await rest.get(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-			)) as APIMessage;
+			interaction: { application_id, token },
+		}: ChatInputArgs<typeof Time.chatInputData, "stopwatch">,
+	) => {
+		const fullRoute = Routes.webhookMessage(application_id, token);
 
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
+		reply({
+			content: "Cronometro avviato",
+			components: [
 				{
-					body: {
-						content: `Cronometro avviato <t:${Math.round(Date.parse(timestamp) / 1000)}:R>`,
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: "time-stop",
+							label: "Ferma",
+							emoji: { name: "⏹️" },
+							style: ButtonStyle.Primary,
+						},
+					],
 				},
-			);
-		}
-		if (subcommand === "compare-ids")
-			return reply({
-				content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(options.id2, options.id1))}**`,
-			});
-		return;
-	}
-	override component(
+			],
+		});
+		// Wait for next tick
+		await timeout();
+		return rest.patch(fullRoute, {
+			body: {
+				content: `Cronometro avviato <t:${Math.round(Date.parse(((await rest.get(fullRoute)) as APIMessage).timestamp) / 1000)}:R>`,
+			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		});
+	};
+	"compare-ids" = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { id1, id2 },
+		}: ChatInputArgs<typeof Time.chatInputData, "compare-ids">,
+	) =>
+		reply({
+			content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(id2, id1))}**`,
+		});
+	stop = (
 		{ reply, update }: ComponentReplies,
-		{ args: [action], interaction, user: { id } }: ComponentArgs,
-	) {
-		if (action === "stop")
-			if (interaction.message.interaction_metadata?.user.id === id)
-				update({
+		{ interaction, user: { id } }: ComponentArgs,
+	) =>
+		interaction.message.interaction_metadata?.user.id === id
+			? update({
 					content: `Cronometro fermato dopo **${formatTime(idDiff(interaction.id, interaction.message.id))}**`,
 					components: [],
-				});
-			else
-				reply({
+				})
+			: reply({
 					content: "Non puoi gestire questo cronometro!",
 					flags: MessageFlags.Ephemeral,
 				});
-	}
 }

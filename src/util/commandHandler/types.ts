@@ -18,6 +18,7 @@ import {
 } from "discord-api-types/v10";
 import type { Readonly } from "../types";
 import type { Command } from "./Command";
+import type { CommandHandler } from "./CommandHandler";
 
 export type ExtractOptionType<
 	T extends Readonly<APIApplicationCommandOption> = APIApplicationCommandOption,
@@ -80,17 +81,10 @@ export type Reply<T extends InteractionResponseType> = (
 		: never,
 ) => void;
 
-export const ReplyTypes = {
-	reply: InteractionResponseType.ChannelMessageWithSource,
-	defer: InteractionResponseType.DeferredChannelMessageWithSource,
-	modal: InteractionResponseType.Modal,
-	autocomplete: InteractionResponseType.ApplicationCommandAutocompleteResult,
-	update: InteractionResponseType.UpdateMessage,
-	deferUpdate: InteractionResponseType.DeferredMessageUpdate,
-} as const;
-
 export type Replies = {
-	[P in keyof typeof ReplyTypes]: Reply<(typeof ReplyTypes)[P]>;
+	[P in keyof typeof CommandHandler.ReplyTypes]: Reply<
+		(typeof CommandHandler.ReplyTypes)[P]
+	>;
 };
 
 export type BaseArgs<T extends APIInteraction = APIInteraction> = {
@@ -104,7 +98,11 @@ export type ChatInputReplies = Pick<Replies, "reply" | "defer" | "modal">;
 export type ChatInputArgs<
 	A extends
 		Readonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
-> = BaseArgs<APIChatInputApplicationCommandInteraction> & ParseOptions<A>;
+	B extends string | undefined = string | undefined,
+> = BaseArgs<APIChatInputApplicationCommandInteraction> &
+	ParseOptions<A> & {
+		subcommand: B;
+	};
 
 export type AutoCompleteReplies = Pick<Replies, "autocomplete">;
 
@@ -145,3 +143,16 @@ export type CommandRunners = NonNullable<
 			: never;
 	}[keyof Command]
 >;
+
+export type Runner = (
+	this: Command,
+	replies: Replies,
+	args: {
+		interaction: APIInteraction;
+		request: Request;
+		user: APIUser;
+		subcommand?: string;
+		options?: Record<string, string | number | boolean>;
+		args?: string[];
+	},
+) => Promise<any>;

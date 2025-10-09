@@ -4,25 +4,37 @@ import {
 	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
-	type APIApplicationCommandOption,
 	type APIInteraction,
 	type APIInteractionResponse,
+	type APIUser,
 } from "discord-api-types/v10";
 import { hexToUint8Array } from "../strings";
 import { Awaitable } from "../types";
 import type { Command } from "./Command";
 import {
-	ReplyTypes,
-	type BaseArgs,
 	type CommandRunners,
-	type CreateObject,
 	type Replies,
 	type Reply,
+	type Runner,
 } from "./types";
 
 export class CommandHandler {
-	#key?: CryptoKey;
-
+	static readonly #key = crypto.subtle.importKey(
+		"raw",
+		hexToUint8Array(env.DISCORD_PUBLIC_KEY),
+		"Ed25519",
+		false,
+		["verify"],
+	);
+	static ReplyTypes = {
+		reply: InteractionResponseType.ChannelMessageWithSource,
+		defer: InteractionResponseType.DeferredChannelMessageWithSource,
+		modal: InteractionResponseType.Modal,
+		autocomplete: InteractionResponseType.ApplicationCommandAutocompleteResult,
+		update: InteractionResponseType.UpdateMessage,
+		deferUpdate: InteractionResponseType.DeferredMessageUpdate,
+	} as const;
+	private static readonly replies = Object.entries(CommandHandler.ReplyTypes);
 	private interactionTypes: {
 		[K in Exclude<InteractionType, InteractionType.Ping>]: {
 			findCommand: (
@@ -90,13 +102,7 @@ export class CommandHandler {
 			if (
 				!(await crypto.subtle.verify(
 					"Ed25519",
-					(this.#key ??= await crypto.subtle.importKey(
-						"raw",
-						hexToUint8Array(env.DISCORD_PUBLIC_KEY),
-						"Ed25519",
-						false,
-						["verify"],
-					)),
+					await CommandHandler.#key,
 					hexToUint8Array(signature),
 					new TextEncoder().encode(timestamp + (body = await body)),
 				))
@@ -122,14 +128,14 @@ export class CommandHandler {
 		);
 		const { promise, resolve } =
 			Promise.withResolvers<APIInteractionResponse>();
-		const args = {
-			interaction,
-			request,
-			user,
-			subcommand: undefined as string | undefined,
-			options: {} as Record<string, string | number | boolean>,
-			args: [] as string[],
-		};
+		const args: {
+			interaction: APIInteraction;
+			request: Request;
+			user: APIUser;
+			subcommand?: string;
+			options?: Record<string, string | number | boolean>;
+			args?: string[];
+		} = { interaction, request, user };
 		if (
 			(interaction.type === InteractionType.ApplicationCommand ||
 				interaction.type === InteractionType.ApplicationCommandAutocomplete) &&
@@ -138,6 +144,7 @@ export class CommandHandler {
 			let { options } = interaction.data;
 			const subcommand: string[] = [];
 
+			args.options = {};
 			while (
 				options?.[0]?.type === ApplicationCommandOptionType.SubcommandGroup ||
 				options?.[0]?.type === ApplicationCommandOptionType.Subcommand
@@ -151,22 +158,41 @@ export class CommandHandler {
 		}
 		if ("custom_id" in interaction.data)
 			args.args = interaction.data.custom_id.split("-").slice(1);
-		context.waitUntil(
-			(
+		let runner: Runner;
+
+		if (
+			args.subcommand &&
+			args.subcommand in command &&
+			typeof command[args.subcommand as never] === "function" &&
+			![
+				"user",
+				"message",
+				"component",
+				"modal",
+				"autocomplete",
+				"chatInput",
+			].includes(args.subcommand)
+		)
+			runner = command[args.subcommand as never];
+		else if (
+			args.args?.[0] &&
+			args.args[0] in command &&
+			command.supportComponentMethods &&
+			typeof command[args.args[0] as never] === "function"
+		)
+			runner = command[args.args.shift() as never];
+		else
+			runner =
 				command[
 					this.interactionTypes[interaction.type].getRunner(
 						interaction as never,
-					)
-				] as (
-					replies: Replies,
-					args: BaseArgs &
-						CreateObject<APIApplicationCommandOption[], string | undefined> & {
-							args: string[];
-						},
-				) => Promise<any>
-			)(
+					) as never
+				];
+		context.waitUntil(
+			runner.call(
+				command,
 				Object.fromEntries<Reply<InteractionResponseType>>(
-					Object.entries(ReplyTypes).map(([key, type]) => [
+					CommandHandler.replies.map(([key, type]) => [
 						key,
 						(data) => resolve({ type, data } as never),
 					]),
