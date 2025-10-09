@@ -4,87 +4,88 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
 	MessageFlags,
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
+	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
+	Command,
 	formatTime,
 	idDiff,
-	resolveCommandOptions,
 	rest,
 	timeout,
-	type CommandOptions,
+	type ChatInputArgs,
+	type ChatInputReplies,
+	type ComponentArgs,
+	type ComponentReplies,
 } from "../util";
 
-export const time = {
-	data: [
+export class Time extends Command {
+	static override chatInputData = {
+		name: "time",
+		description: "Vari comandi per gestire il tempo",
+		type: ApplicationCommandType.ChatInput,
+		options: [
+			{
+				name: "stopwatch",
+				description: "Fai partire il cronometro!",
+				type: ApplicationCommandOptionType.Subcommand,
+			},
+			{
+				name: "compare-ids",
+				description: "Calcola la differenza di tempo tra due ID",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "id1",
+						description: "Primo ID",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+					},
+					{
+						name: "id2",
+						description: "Secondo ID",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+					},
+				],
+			},
+		],
+	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
+	static override customId = "time";
+	override async chatInput(
+		{ reply }: ChatInputReplies,
 		{
-			name: "time",
-			description: "Vari comandi per gestire il tempo",
-			type: ApplicationCommandType.ChatInput,
-			options: [
-				{
-					name: "stopwatch",
-					description: "Fai partire il cronometro!",
-					type: ApplicationCommandOptionType.Subcommand,
-				},
-				{
-					name: "compare-ids",
-					description: "Calcola la differenza di tempo tra due ID",
-					type: ApplicationCommandOptionType.Subcommand,
-					options: [
-						{
-							name: "id1",
-							description: "Primo ID",
-							type: ApplicationCommandOptionType.String,
-							required: true,
-						},
-						{
-							name: "id2",
-							description: "Secondo ID",
-							type: ApplicationCommandOptionType.String,
-							required: true,
-						},
-					],
-				},
-			],
-		},
-	],
-	run: async (reply, { interaction }) => {
-		const { subcommand, options } = resolveCommandOptions(
-			time.data,
 			interaction,
-		);
-
+			subcommand,
+			options,
+		}: ChatInputArgs<typeof Time.chatInputData>,
+	) {
 		if (subcommand === "stopwatch") {
 			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "Cronometro avviato",
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									custom_id: "time-stop",
-									label: "Ferma",
-									emoji: { name: "⏹️" },
-									style: ButtonStyle.Primary,
-								},
-							],
-						},
-					],
-				},
+				content: "Cronometro avviato",
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								custom_id: "time-stop",
+								label: "Ferma",
+								emoji: { name: "⏹️" },
+								style: ButtonStyle.Primary,
+							},
+						],
+					},
+				],
 			});
 			await timeout();
 			const { timestamp } = (await rest.get(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 			)) as APIMessage;
 
-			await rest.patch(
+			return rest.patch(
 				Routes.webhookMessage(interaction.application_id, interaction.token),
 				{
 					body: {
@@ -92,34 +93,27 @@ export const time = {
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 				},
 			);
-		} else
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(options.id2, options.id1))}**`,
-				},
+		}
+		if (subcommand === "compare-ids")
+			return reply({
+				content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(options.id2, options.id1))}**`,
 			});
-	},
-	component: (reply, { interaction }) => {
-		if (interaction.data.custom_id === "time-stop")
-			if (
-				interaction.message.interaction_metadata?.user.id ===
-				(interaction.member ?? interaction).user?.id
-			)
-				reply({
-					type: InteractionResponseType.UpdateMessage,
-					data: {
-						content: `Cronometro fermato dopo **${formatTime(idDiff(interaction.id, interaction.message.id))}**`,
-						components: [],
-					},
+		return;
+	}
+	override component(
+		{ reply, update }: ComponentReplies,
+		{ args: [action], interaction, user: { id } }: ComponentArgs,
+	) {
+		if (action === "stop")
+			if (interaction.message.interaction_metadata?.user.id === id)
+				update({
+					content: `Cronometro fermato dopo **${formatTime(idDiff(interaction.id, interaction.message.id))}**`,
+					components: [],
 				});
 			else
 				reply({
-					type: InteractionResponseType.ChannelMessageWithSource,
-					data: {
-						content: "Non puoi gestire questo cronometro!",
-						flags: MessageFlags.Ephemeral,
-					},
+					content: "Non puoi gestire questo cronometro!",
+					flags: MessageFlags.Ephemeral,
 				});
-	},
-} as const satisfies CommandOptions<ApplicationCommandType.ChatInput>;
+	}
+}
