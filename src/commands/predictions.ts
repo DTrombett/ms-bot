@@ -139,7 +139,7 @@ export class Predictions extends Command {
 		{ reply, modal }: ChatInputReplies,
 		{
 			interaction,
-			user: { id: userId },
+			user,
 			...args
 		}: ChatInputArgs<typeof Predictions.chatInputData>,
 	) {
@@ -148,7 +148,7 @@ export class Predictions extends Command {
 			await env.DB.prepare(
 				`UPDATE Users SET remindMinutes = ?1, reminded = 0 WHERE id = ?2`,
 			)
-				.bind(args.options.before || null, userId)
+				.bind(args.options.before || null, user.id)
 				.run();
 			return reply({
 				content: "Promemoria impostato correttamente!",
@@ -210,14 +210,15 @@ export class Predictions extends Command {
 			});
 		}
 		if (args.options.user !== undefined || args.options.day !== undefined)
-			if (!env.OWNER_ID.includes(userId))
+			if (!env.OWNER_ID.includes(user.id))
 				return reply({
 					flags: MessageFlags.Ephemeral,
 					content: "Quest'opzione è privata!",
 				});
-		if (args.options.user) userId = args.options.user;
+		if (args.options.user)
+			user = interaction.data.resolved?.users?.[args.options.user] ?? user;
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
-			userId,
+			user.id,
 			args.options.day,
 		);
 
@@ -227,12 +228,7 @@ export class Predictions extends Command {
 				content: "Non c'è nessuna giornata disponibile al momento!",
 			});
 		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5;
-
 		if (args.subcommand === "view") {
-			const user =
-				interaction.data.resolved?.users?.[userId] ??
-				(interaction.member ?? interaction).user!;
-
 			if (!existingPredictions.length)
 				return reply({
 					content: "Non hai inviato alcun pronostico per la giornata!",
@@ -287,7 +283,7 @@ export class Predictions extends Command {
 		if (
 			args.subcommand === "send" &&
 			existingPredictions.length === matches.length
-		) {
+		)
 			return reply({
 				content:
 					"Hai già inviato i pronostici per questa giornata! Clicca il pulsante se vuoi modificarli.",
@@ -299,7 +295,7 @@ export class Predictions extends Command {
 								type: ComponentType.Button,
 								custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${
 									args.options.user ? Infinity : startTime
-								}-${userId}`,
+								}-${user.id}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
 								style: ButtonStyle.Success,
@@ -309,13 +305,12 @@ export class Predictions extends Command {
 				],
 				flags: MessageFlags.Ephemeral,
 			});
-		}
 		modal(
 			this.buildModal(
 				matches,
 				matchDay,
 				1,
-				userId,
+				user.id,
 				existingPredictions,
 				args.options.user ? Infinity : undefined,
 			),
@@ -471,7 +466,7 @@ export class Predictions extends Command {
 				],
 				flags: MessageFlags.Ephemeral,
 			});
-		return reply({
+		reply({
 			content: `Parte **${part} di ${total}** inviata correttamente! Clicca il pulsante per continuare...`,
 			components: [
 				{
@@ -554,7 +549,7 @@ export class Predictions extends Command {
 				content: "Questi pronostici sono scaduti!",
 				flags: MessageFlags.Ephemeral,
 			});
-		return modal(
+		modal(
 			this.buildModal(
 				matches,
 				matchDay,
