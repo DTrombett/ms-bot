@@ -6,6 +6,7 @@ import {
 	MessageFlags,
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
+	type APIInteraction,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import type {
@@ -41,56 +42,59 @@ export class Cat extends Command {
 		}: ChatInputArgs<typeof Cat.chatInputData>,
 	) {
 		defer();
-		await rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{ body: await this.getCatBody(limit) },
-		);
+		return this.cat(interaction, limit);
 	}
 	override async component(
 		{ defer }: ComponentReplies,
 		{ interaction, args: [limit] }: ComponentArgs,
 	) {
 		defer({ flags: MessageFlags.Ephemeral });
-		await rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{ body: await this.getCatBody(Number(limit) || undefined) },
-		);
+		return this.cat(interaction, Number(limit) || undefined);
 	}
-	async getCatBody(
+	async cat(
+		interaction: Pick<APIInteraction, "application_id" | "token">,
 		limit = 1,
-	): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> {
+	): Promise<unknown> {
 		const data = await fetch(
 			`https://api.thecatapi.com/v1/images/search?limit=${limit}`,
 		).then((res) => res.json<CatResponse | null>());
+		const fullRoute = Routes.webhookMessage(
+			interaction.application_id,
+			interaction.token,
+		);
 
 		if (!data?.length)
-			return {
-				content: "Si è verificato un errore nel caricamento dell'immagine!",
-			};
-		return {
-			flags: MessageFlags.IsComponentsV2,
-			components: [
-				{
-					type: ComponentType.TextDisplay,
-					content: "# Meow! 🐱",
-				},
-				{
-					type: ComponentType.MediaGallery,
-					items: data.slice(0, limit).map((media) => ({ media })),
-				},
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							style: ButtonStyle.Success,
-							label: "Un altro!",
-							custom_id: "cat",
-							emoji: { name: "🐱" },
-						},
-					],
-				},
-			],
-		};
+			return rest.patch(fullRoute, {
+				body: {
+					content: "Si è verificato un errore nel caricamento dell'immagine!",
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			});
+		return rest.patch(fullRoute, {
+			body: {
+				flags: MessageFlags.IsComponentsV2,
+				components: [
+					{
+						type: ComponentType.TextDisplay,
+						content: "# Meow! 🐱",
+					},
+					{
+						type: ComponentType.MediaGallery,
+						items: data.slice(0, limit).map((media) => ({ media })),
+					},
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								style: ButtonStyle.Success,
+								label: "Un altro!",
+								custom_id: "cat",
+								emoji: { name: "🐱" },
+							},
+						],
+					},
+				],
+			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		});
 	}
 }
