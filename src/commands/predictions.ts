@@ -135,91 +135,97 @@ export class Predictions extends Command {
 		"X (3-3)",
 		"X (4-4)",
 	];
+	reminder = async (
+		{ reply }: ChatInputReplies,
+		{
+			user,
+			options,
+		}: ChatInputArgs<typeof Predictions.chatInputData, "reminder">,
+	) => {
+		await env.DB.prepare(
+			`UPDATE Users SET remindMinutes = ?1, reminded = 0 WHERE id = ?2`,
+		)
+			.bind(options.before || null, user.id)
+			.run();
+		reply({
+			content: "Promemoria impostato correttamente!",
+			flags: MessageFlags.Ephemeral,
+		});
+	};
+	dashboard = ({ reply }: ChatInputReplies) =>
+		reply({
+			content:
+				"Apri la [dashboard](https://ms-bot.trombett.org/) per inviare i pronostici!",
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							style: ButtonStyle.Link,
+							label: "Apri",
+							url: "https://ms-bot.trombett.org/predictions",
+						},
+					],
+				},
+			],
+		});
+	leaderboard = async ({ reply }: ChatInputReplies) => {
+		const { results } = await env.DB.prepare(
+			`SELECT id, dayPoints, matchPointsHistory, match
+					FROM Users
+					WHERE dayPoints IS NOT NULL`,
+		).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
+		const wins = calculateWins(results);
+		const sortedResults = sortLeaderboard(results);
+
+		reply({
+			embeds: [
+				{
+					thumbnail: {
+						url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
+					},
+					title: "Classifica Generale",
+					description: sortedResults
+						.map(
+							(user, i) =>
+								`${i + 1}. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
+									Math.abs(user.dayPoints ?? 0) === 1 ? "o" : "i"
+								} Giornata (**${wins[user.id] ?? 0}** vittori${
+									(wins[user.id] ?? 0) === 1 ? "a" : "e"
+								})`,
+						)
+						.join("\n"),
+					fields: [resolveStats(sortedResults)],
+					author: {
+						name: "Serie A Enilive",
+						url: "https://legaseriea.it/it/serie-a",
+					},
+					color: 0x3498db,
+				},
+			],
+		});
+	};
 	override async chatInput(
 		{ reply, modal }: ChatInputReplies,
 		{
 			interaction,
 			user,
-			...args
-		}: ChatInputArgs<typeof Predictions.chatInputData>,
+			subcommand,
+			options,
+		}: ChatInputArgs<typeof Predictions.chatInputData, "send" | "view">,
 	) {
-		if (args.subcommand === "reminder") {
-			if (typeof args.options.before !== "number") return;
-			await env.DB.prepare(
-				`UPDATE Users SET remindMinutes = ?1, reminded = 0 WHERE id = ?2`,
-			)
-				.bind(args.options.before || null, user.id)
-				.run();
-			return reply({
-				content: "Promemoria impostato correttamente!",
-				flags: MessageFlags.Ephemeral,
-			});
-		}
-		if (args.subcommand === "dashboard")
-			return reply({
-				content:
-					"Apri la [dashboard](https://ms-bot.trombett.org/) per inviare i pronostici!",
-				components: [
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								style: ButtonStyle.Link,
-								label: "Apri",
-								url: "https://ms-bot.trombett.org/predictions",
-							},
-						],
-					},
-				],
-			});
-		if (args.subcommand === "leaderboard") {
-			const { results } = await env.DB.prepare(
-				`SELECT id, dayPoints, matchPointsHistory, match
-					FROM Users
-					WHERE dayPoints IS NOT NULL`,
-			).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
-			const wins = calculateWins(results);
-			const sortedResults = sortLeaderboard(results);
-
-			return reply({
-				embeds: [
-					{
-						thumbnail: {
-							url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
-						},
-						title: "Classifica Generale",
-						description: sortedResults
-							.map(
-								(user, i) =>
-									`${i + 1}. <@${user.id}>: **${user.dayPoints ?? 0}** Punt${
-										Math.abs(user.dayPoints ?? 0) === 1 ? "o" : "i"
-									} Giornata (**${wins[user.id] ?? 0}** vittori${
-										(wins[user.id] ?? 0) === 1 ? "a" : "e"
-									})`,
-							)
-							.join("\n"),
-						fields: [resolveStats(sortedResults)],
-						author: {
-							name: "Serie A Enilive",
-							url: "https://legaseriea.it/it/serie-a",
-						},
-						color: 0x3498db,
-					},
-				],
-			});
-		}
-		if (args.options.user !== undefined || args.options.day !== undefined)
+		if (options.user !== undefined || options.day !== undefined)
 			if (!env.OWNER_ID.includes(user.id))
 				return reply({
 					flags: MessageFlags.Ephemeral,
 					content: "Quest'opzione è privata!",
 				});
-		if (args.options.user)
-			user = interaction.data.resolved?.users?.[args.options.user] ?? user;
+		if (options.user)
+			user = interaction.data.resolved?.users?.[options.user] ?? user;
 		const [matchDay, matches, existingPredictions] = await getMatchDayData(
 			user.id,
-			args.options.day,
+			options.day,
 		);
 
 		if (!(matchDay as MatchDay | null))
@@ -228,7 +234,7 @@ export class Predictions extends Command {
 				content: "Non c'è nessuna giornata disponibile al momento!",
 			});
 		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5;
-		if (args.subcommand === "view") {
+		if (subcommand === "view") {
 			if (!existingPredictions.length)
 				return reply({
 					content: "Non hai inviato alcun pronostico per la giornata!",
@@ -274,16 +280,13 @@ export class Predictions extends Command {
 				flags: MessageFlags.Ephemeral,
 			});
 		}
-		if (Date.now() >= startTime && !args.options.user && !args.options.day)
+		if (Date.now() >= startTime && !options.user && !options.day)
 			return reply({
 				content:
 					"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 				flags: MessageFlags.Ephemeral,
 			});
-		if (
-			args.subcommand === "send" &&
-			existingPredictions.length === matches.length
-		)
+		if (existingPredictions.length === matches.length)
 			return reply({
 				content:
 					"Hai già inviato i pronostici per questa giornata! Clicca il pulsante se vuoi modificarli.",
@@ -294,7 +297,7 @@ export class Predictions extends Command {
 							{
 								type: ComponentType.Button,
 								custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${
-									args.options.user ? Infinity : startTime
+									options.user ? Infinity : startTime
 								}-${user.id}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
@@ -312,7 +315,7 @@ export class Predictions extends Command {
 				1,
 				user.id,
 				existingPredictions,
-				args.options.user ? Infinity : undefined,
+				options.user ? Infinity : undefined,
 			),
 		);
 	}
@@ -560,35 +563,33 @@ export class Predictions extends Command {
 			),
 		);
 	}
-	buildModal(
+	buildModal = (
 		matches: Match[],
 		matchDay: MatchDay,
 		part: number,
 		userId: string,
 		predictions?: Pick<Prediction, "matchId" | "prediction">[],
 		timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5,
-	): APIModalInteractionResponseCallbackData {
-		return {
-			title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${matches.length / 5})`,
-			custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
-			components: matches.slice((part - 1) * 5, part * 5).map((m) => ({
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.TextInput,
-						custom_id: m.match_id.toString(),
-						label: [m.home_team_name, m.away_team_name]
-							.map(normalizeTeamName)
-							.join(" - "),
-						style: TextInputStyle.Short,
-						required: true,
-						placeholder: `es. ${Predictions.predictionExamples[Math.floor(Math.random() * Predictions.predictionExamples.length)]}`,
-						value: predictions?.find(
-							(prediction) => prediction.matchId === m.match_id,
-						)?.prediction,
-					},
-				],
-			})),
-		};
-	}
+	): APIModalInteractionResponseCallbackData => ({
+		title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${matches.length / 5})`,
+		custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
+		components: matches.slice((part - 1) * 5, part * 5).map((m) => ({
+			type: ComponentType.ActionRow,
+			components: [
+				{
+					type: ComponentType.TextInput,
+					custom_id: m.match_id.toString(),
+					label: [m.home_team_name, m.away_team_name]
+						.map(normalizeTeamName)
+						.join(" - "),
+					style: TextInputStyle.Short,
+					required: true,
+					placeholder: `es. ${Predictions.predictionExamples[Math.floor(Math.random() * Predictions.predictionExamples.length)]}`,
+					value: predictions?.find(
+						(prediction) => prediction.matchId === m.match_id,
+					)?.prediction,
+				},
+			],
+		})),
+	});
 }
