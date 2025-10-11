@@ -3,17 +3,18 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionType,
 	MessageFlags,
-	type APIInteractionResponseCallbackData,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
 	Command,
-	randomNumber,
+	ok,
+	randomArrayItem,
 	type ChatInputArgs,
-	type ChatInputReplies,
 	type ComponentArgs,
 	type ComponentReplies,
+	type Merge,
 } from "../util";
 
 type Choice = (typeof RPS.choices)[number];
@@ -63,30 +64,28 @@ export class RPS extends Command {
 		scissors: "rock",
 	} as const;
 	static override customId = "rps";
-	override chatInput(
-		{ reply }: ChatInputReplies,
-		{ options: { choice } }: ChatInputArgs<typeof RPS.chatInputData>,
-	) {
-		reply(this.play(choice));
-	}
-	override component(
+	play = (
 		{ reply }: ComponentReplies,
-		{ args: [choice] }: ComponentArgs,
-	) {
-		reply(this.play(choice as Choice, MessageFlags.Ephemeral));
-	}
-	play(
-		choice: Choice,
-		flags?: MessageFlags,
-	): APIInteractionResponseCallbackData {
+		{
+			args: [choiceArg] = [],
+			options: { choice } = { choice: choiceArg as Choice },
+			interaction: { type },
+		}: Pick<
+			Merge<ComponentArgs, ChatInputArgs<typeof RPS.chatInputData>>,
+			"args" | "interaction"
+		> & {
+			options?: Partial<ChatInputArgs<typeof RPS.chatInputData>["options"]>;
+		},
+	) => {
+		ok(choice);
 		if (!RPS.choices.includes(choice))
-			return {
+			return reply({
 				content: "La tua scelta non è valida!",
 				flags: MessageFlags.Ephemeral,
-			};
-		const myChoice = RPS.choices[randomNumber(0, 2)]!;
+			});
+		const myChoice = randomArrayItem(RPS.choices);
 
-		return {
+		return reply({
 			content: `### Tu: ${RPS.emojis[choice]}\n### Io: ${
 				RPS.emojis[myChoice]
 			}\n## ${
@@ -107,7 +106,12 @@ export class RPS extends Command {
 					})),
 				},
 			],
-			flags,
-		};
-	}
+			flags:
+				type === InteractionType.MessageComponent
+					? MessageFlags.Ephemeral
+					: undefined,
+		});
+	};
+	override component = this.play;
+	override chatInput = this.play;
 }

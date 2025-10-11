@@ -9,5 +9,5 @@ export const randomNumber = (min?: number, max?: number) =>
 		? Math.random()
 		: Math.floor(Math.random() * (max - min + 1)) + min;
 
-export const randomArrayItem = <T>(array: T[]): T =>
+export const randomArrayItem = <T>(array: T[] | readonly T[]): T =>
 	array[Math.floor(Math.random() * array.length)]!;
