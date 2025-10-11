@@ -130,5 +130,6 @@ export { LiveScore } from "./LiveScore";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";
 export { Shorten } from "./Shorten";
+export { BrawlStarsMonitor } from "./BrawlStarsMonitor";
 
 export default server;
