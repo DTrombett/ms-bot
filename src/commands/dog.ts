@@ -1,77 +1,101 @@
 import {
+	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
 	MessageFlags,
 	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
+	type APIInteraction,
+	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type { CommandOptions, DogResponse } from "../util";
-import { rest } from "../util";
+import type {
+	ChatInputArgs,
+	ChatInputReplies,
+	ComponentArgs,
+	ComponentReplies,
+	DogResponse,
+} from "../util";
+import { Command, rest } from "../util";
 
-const getDog = async (
-	key: string,
-): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
-	const data = await fetch(
-		"https://api.thedogapi.com/v1/images/search?order=RANDOM&limit=1&format=json",
-		{ headers: { "x-api-key": key } },
-	).then<DogResponse | null>((res) => res.json());
-
-	if (!data?.[0])
-		return {
-			content: "Si è verificato un errore nel caricamento dell'immagine!",
-		};
-	const [{ url }] = data;
-
-	return {
-		content: `[Woof!](${url}) 🐶`,
-		components: [
+export class Dog extends Command {
+	static override chatInputData = {
+		name: "dog",
+		description: "Mostra la foto di un adorabile cagnolino",
+		type: ApplicationCommandType.ChatInput,
+		options: [
 			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.Button,
-						url,
-						style: ButtonStyle.Link,
-						label: "Apri l'originale",
-					},
-					{
-						type: ComponentType.Button,
-						style: ButtonStyle.Success,
-						label: "Un altro!",
-						custom_id: "dog",
-						emoji: { name: "🐶" },
-					},
-				],
+				name: "limit",
+				description: "Numero di immagini da mostrare",
+				type: ApplicationCommandOptionType.Integer,
+				min_value: 1,
+				max_value: 9,
 			},
 		],
-	};
-};
-
-export const dog: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
+	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	static override customId = "dog";
+	override async chatInput(
+		{ defer }: ChatInputReplies,
 		{
-			name: "dog",
-			description: "Mostra la foto di un adorabile cagnolino",
-			type: ApplicationCommandType.ChatInput,
-		},
-	],
-	run: async (reply, { interaction, env }) => {
-		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		await rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{ body: await getDog(env.DOG_API_KEY) },
+			interaction,
+			options: { limit },
+		}: ChatInputArgs<typeof Dog.chatInputData>,
+	) {
+		defer();
+		return this.dog(interaction, limit);
+	}
+	override async component(
+		{ defer }: ComponentReplies,
+		{ interaction, args: [limit] }: ComponentArgs,
+	) {
+		defer({ flags: MessageFlags.Ephemeral });
+		return this.dog(interaction, Number(limit) || undefined);
+	}
+	async dog(
+		interaction: Pick<APIInteraction, "application_id" | "token">,
+		limit = 1,
+	): Promise<unknown> {
+		const data = await fetch(
+			`https://api.thedogapi.com/v1/images/search?limit=${limit}`,
+		).then((res) => res.json<DogResponse | null>());
+
+		const fullRoute = Routes.webhookMessage(
+			interaction.application_id,
+			interaction.token,
 		);
-	},
-	component: async (reply, { interaction, env }) => {
-		reply({
-			type: InteractionResponseType.DeferredChannelMessageWithSource,
-			data: { flags: MessageFlags.Ephemeral },
+
+		if (!data?.length)
+			return rest.patch(fullRoute, {
+				body: {
+					content: "Si è verificato un errore nel caricamento dell'immagine!",
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			});
+		return rest.patch(fullRoute, {
+			body: {
+				flags: MessageFlags.IsComponentsV2,
+				components: [
+					{
+						type: ComponentType.TextDisplay,
+						content: "# Woof! 🐶",
+					},
+					{
+						type: ComponentType.MediaGallery,
+						items: data.slice(0, limit).map((media) => ({ media })),
+					},
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								style: ButtonStyle.Success,
+								label: "Un altro!",
+								custom_id: "dog",
+								emoji: { name: "🐶" },
+							},
+						],
+					},
+				],
+			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 		});
-		await rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{ body: await getDog(env.DOG_API_KEY) },
-		);
-	},
-};
+	}
+}

@@ -19,7 +19,6 @@ import {
 	normalizeTeamName,
 	resolveLeaderboard,
 	rest,
-	type Env,
 	type Match,
 	type MatchDayResponse,
 	type Prediction,

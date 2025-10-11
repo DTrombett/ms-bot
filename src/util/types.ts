@@ -13,13 +13,12 @@ import type {
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type { Params as LMParams } from "../LiveMatch";
-import type { Params as LVParams } from "../LiveScore";
-import type { Params as PRParams } from "../PredictionsReminders";
-import type { Params as RParams } from "../Reminder";
-import type { Params as SParams } from "../Shorten";
 
 export type Awaitable<T> = Promise<T> | T;
+
+export type Readonly<T> = {
+	readonly [P in keyof T]: Readonly<T[P]>;
+};
 
 export type InteractionByType<
 	T extends InteractionType,
@@ -47,22 +46,22 @@ export type CommandData<
 	name: N;
 };
 
-export type Handler<T extends APIInteraction> = (options: {
-	interaction: T;
-	env: Env;
-	context: ExecutionContext;
-	host: string;
-}) => Awaitable<APIInteractionResponse | undefined>;
-
 export type ReplyFunction<
 	T extends APIInteractionResponse = APIInteractionResponse,
 > = (result: T) => void;
 
 export type ExecutorContext<T extends APIInteraction = APIInteraction> = {
-	env: Env;
 	context: ExecutionContext;
 	interaction: T;
 	host: string;
+};
+
+export type Merge<A, B> = {
+	[K in Exclude<keyof A, keyof B>]?: A[K];
+} & {
+	[K in Exclude<keyof B, keyof A>]?: B[K];
+} & {
+	[K in Extract<keyof A, keyof B>]: A[K] | B[K];
 };
 
 /**
@@ -261,31 +260,4 @@ export type ResolvedUser = Pick<
 	"dayPoints" | "id" | "match" | "matchPointsHistory"
 > & {
 	predictions: Pick<Prediction, "matchId" | "prediction">[];
-};
-
-export type EnvVars = {
-	NODE_ENV?: string;
-	CLOUDFLARE_API_TOKEN: string;
-	CLOUDFLARE_ACCOUNT_ID: string;
-	BULK_LIST_ID: string;
-	DISCORD_APPLICATION_ID: string;
-	DISCORD_PUBLIC_KEY: string;
-	DISCORD_TOKEN: string;
-	OWNER_ID: string;
-	TEST_GUILD: string;
-	CAT_API_KEY: string;
-	DOG_API_KEY: string;
-	PREDICTIONS_CHANNEL: string;
-	PREDICTIONS_ROLE: string;
-	SEASON_ID: string;
-	LIVE_MATCH_CHANNEL: string;
-};
-export type Env = EnvVars & {
-	DB: D1Database;
-	PREDICTIONS_REMINDERS: Workflow<PRParams>;
-	LIVE_SCORE: Workflow<LVParams>;
-	LIVE_MATCH: Workflow<LMParams>;
-	REMINDER: Workflow<RParams>;
-	SHORTEN: Workflow<SParams>;
-	KV: KVNamespace;
 };
