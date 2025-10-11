@@ -9,7 +9,6 @@ import {
 	type APIUser,
 } from "discord-api-types/v10";
 import { hexToUint8Array } from "../strings";
-import { Awaitable } from "../types";
 import type { Command } from "./Command";
 import {
 	type CommandRunners,
@@ -18,14 +17,15 @@ import {
 	type Runner,
 } from "./types";
 
+const key = await crypto.subtle.importKey(
+	"raw",
+	hexToUint8Array(env.DISCORD_PUBLIC_KEY),
+	"Ed25519",
+	false,
+	["verify"],
+);
+
 export class CommandHandler {
-	static readonly #key = crypto.subtle.importKey(
-		"raw",
-		hexToUint8Array(env.DISCORD_PUBLIC_KEY),
-		"Ed25519",
-		false,
-		["verify"],
-	);
 	static ReplyTypes = {
 		reply: InteractionResponseType.ChannelMessageWithSource,
 		defer: InteractionResponseType.DeferredChannelMessageWithSource,
@@ -89,35 +89,37 @@ export class CommandHandler {
 
 	constructor(public commands: (typeof Command)[]) {}
 
+	async verifySignature(request: Request): Promise<APIInteraction> {
+		const signature = request.headers.get("x-signature-ed25519");
+		const timestamp = request.headers.get("x-signature-timestamp");
+		if (!signature || !timestamp) throw new Response(null, { status: 401 });
+		const body = await request.text();
+
+		if (
+			!(await crypto.subtle.verify(
+				"Ed25519",
+				key,
+				hexToUint8Array(signature),
+				new TextEncoder().encode(timestamp + body),
+			))
+		)
+			throw new Response(null, { status: 401 });
+		return JSON.parse(body) as APIInteraction;
+	}
+
 	async handleInteraction(
 		request: Request,
 		context: ExecutionContext,
 	): Promise<Response> {
-		let body: Awaitable<string> = request.text();
-		{
-			const signature = request.headers.get("x-signature-ed25519");
-			const timestamp = request.headers.get("x-signature-timestamp");
-
-			if (!signature || !timestamp) return new Response(null, { status: 401 });
-			if (
-				!(await crypto.subtle.verify(
-					"Ed25519",
-					await CommandHandler.#key,
-					hexToUint8Array(signature),
-					new TextEncoder().encode(timestamp + (body = await body)),
-				))
-			)
-				return new Response(null, { status: 401 });
-		}
-		const interaction: APIInteraction = JSON.parse(body);
-
+		const interaction = await this.verifySignature(request);
 		if (interaction.type === InteractionType.Ping)
-			return new Response(JSON.stringify({ type: InteractionType.Ping }), {
+			return new Response('{"type":1}', {
 				headers: { "Content-Type": "application/json" },
 			});
 		const Command = this.interactionTypes[interaction.type].findCommand(
 			interaction as never,
 		);
+
 		if (!Command) return new Response(null, { status: 400 });
 		const user = (interaction.member ?? interaction).user!;
 		if (Command.private && !env.OWNER_ID.includes(user.id))

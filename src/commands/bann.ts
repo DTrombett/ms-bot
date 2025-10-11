@@ -160,7 +160,7 @@ export class Bann extends Command {
 			options,
 		}: ChatInputArgs<typeof Bann.chatInputData, "remove">,
 	) {
-		if (this.checkAppPerms(interaction.app_permissions, reply)) return;
+		this.checkPerms(interaction.app_permissions, reply);
 		reply(
 			await this.unban(
 				interaction.guild_id!,
@@ -173,7 +173,7 @@ export class Bann extends Command {
 		{ reply, defer }: ChatInputReplies,
 		{ interaction, options }: ChatInputArgs<typeof Bann.chatInputData, "add">,
 	) {
-		if (this.checkAppPerms(interaction.app_permissions, reply)) return;
+		this.checkPerms(interaction.app_permissions, reply);
 		ok(
 			interaction.guild_id &&
 				interaction.member &&
@@ -206,7 +206,7 @@ export class Bann extends Command {
 		{ reply }: ChatInputReplies,
 		{ interaction, options }: ChatInputArgs<typeof Bann.chatInputData, "check">,
 	) {
-		if (this.checkAppPerms(interaction.app_permissions, reply)) return;
+		this.checkPerms(interaction.app_permissions, reply);
 		const user = interaction.data.resolved?.users?.[options.user];
 		const bannData = (await rest
 			.get(Routes.guildBan(interaction.guild_id!, options.user))
@@ -266,10 +266,7 @@ export class Bann extends Command {
 		{ interaction, args: [id, action] }: ComponentArgs,
 	) {
 		ok(interaction.guild_id && interaction.member);
-		if (
-			!(BigInt(interaction.member.permissions) & PermissionFlagsBits.BanMembers)
-		)
-			return 'Hai bisogno del permesso "Bannare i membri" per poter eseguire questa azione!';
+		this.checkPerms(interaction.member.permissions, reply, false);
 		const target = (await rest.get(Routes.user(id))) as APIUser | undefined;
 
 		if (!target)
@@ -312,39 +309,39 @@ export class Bann extends Command {
 					},
 				],
 			});
-		defer();
-		const [guild, targetMember] = (await Promise.allSettled([
-			rest.get(Routes.guild(interaction.guild_id)),
-			rest.get(Routes.guildMember(interaction.guild_id, id)),
-		]).then((results) =>
-			results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
-		)) as [APIGuild | undefined, APIGuildMember | undefined];
-		ok(guild);
-		const content = Bann.checkPerms(
-			interaction.member,
-			guild,
-			target.id,
-			targetMember,
-		);
-		if (content)
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
+		if (action === "r") {
+			defer();
+			const [guild, targetMember] = (await Promise.allSettled([
+				rest.get(Routes.guild(interaction.guild_id)),
+				rest.get(Routes.guildMember(interaction.guild_id, id)),
+			]).then((results) =>
+				results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
+			)) as [APIGuild | undefined, APIGuildMember | undefined];
+			const fullRoute = Routes.webhookMessage(
+				interaction.application_id,
+				interaction.token,
+			);
+
+			ok(guild);
+			const content = Bann.checkPerms(
+				interaction.member,
+				guild,
+				target.id,
+				targetMember,
+			);
+			if (content)
+				return rest.patch(fullRoute, {
 					body: {
 						content,
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
-		if (action === "r")
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: (await this.unban(
-						interaction.guild_id,
-						target,
-					)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
+				});
+			return rest.patch(fullRoute, {
+				body: (await this.unban(
+					interaction.guild_id,
+					target,
+				)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			});
+		}
 		return;
 	}
 	override async modal(
@@ -352,10 +349,7 @@ export class Bann extends Command {
 		{ interaction, args: [id] }: ModalArgs,
 	) {
 		ok(interaction.guild_id && interaction.member);
-		if (
-			!(BigInt(interaction.member.permissions) & PermissionFlagsBits.BanMembers)
-		)
-			return 'Hai bisogno del permesso "Bannare i membri" per poter eseguire questa azione!';
+		this.checkPerms(interaction.member.permissions, reply, false);
 		const deleteMessageDays =
 			Number(
 				interaction.data.components.find(
@@ -554,16 +548,15 @@ export class Bann extends Command {
 			],
 		};
 	};
-	checkAppPerms = (
-		appPermissions: string,
+	checkPerms = (
+		permissions: string,
 		reply: Reply<InteractionResponseType.ChannelMessageWithSource>,
+		app = true,
 	) => {
-		if (BigInt(appPermissions) & PermissionFlagsBits.BanMembers) return false;
-		reply({
-			content:
-				'Ho bisogno del permesso "Bannare i membri" per poter eseguire questo comando!',
+		if (BigInt(permissions) & PermissionFlagsBits.BanMembers) return;
+		throw reply({
+			content: `${app ? "Ho" : "Hai"} bisogno del permesso "Bannare i membri" per poter eseguire questo comando!`,
 			flags: MessageFlags.Ephemeral,
 		});
-		return true;
 	};
 }

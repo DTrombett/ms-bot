@@ -12,6 +12,7 @@ const server: ExportedHandler<Env> = {
 			if (request.method === "POST") {
 				rest.setToken(env.DISCORD_TOKEN);
 				return handler.handleInteraction(request, context).catch((e) => {
+					if (e instanceof Response) return e;
 					console.error(e);
 					return new Response(null, { status: 500 });
 				});

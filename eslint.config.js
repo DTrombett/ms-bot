@@ -14,6 +14,15 @@ export default defineConfig([
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-enum-comparison": "off",
 			"@typescript-eslint/no-unused-vars": "off",
+			"@typescript-eslint/only-throw-error": [
+				"error",
+				{
+					allow: [
+						{ from: "lib", name: "void" },
+						{ from: "file", name: "Response" },
+					],
+				},
+			],
 			"constructor-super": "off",
 			"getter-return": "off",
 			"no-class-assign": "off",
