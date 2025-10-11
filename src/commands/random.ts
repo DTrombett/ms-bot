@@ -1,9 +1,9 @@
 import {
-	APIInteractionResponseCallbackData,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionType,
 	MessageFlags,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
@@ -11,9 +11,9 @@ import {
 	Command,
 	randomNumber,
 	type ChatInputArgs,
-	type ChatInputReplies,
 	type ComponentArgs,
 	type ComponentReplies,
+	type Merge,
 } from "../util";
 
 export class Random extends Command {
@@ -40,39 +40,31 @@ export class Random extends Command {
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static override customId = "random";
-	override chatInput(
-		{ reply }: ChatInputReplies,
-		{ options }: ChatInputArgs<typeof Random.chatInputData>,
-	) {
-		if (options.min! > options.max!)
-			[options.min, options.max] = [options.max, options.min];
-		reply(this.getRandom(options));
-	}
-	override component(
-		{ reply }: ComponentReplies,
-		{ args: [min, max] }: ComponentArgs,
-	) {
-		const options: { min?: number; max?: number } = {
-			min: Number(min),
-			max: Number(max),
-		};
-
+	random = (
+		{ reply }: Pick<ComponentReplies, "reply">,
+		{
+			args: [min, max] = [],
+			options = { min: Number(min), max: Number(max) },
+			interaction: { type },
+		}: Pick<
+			Merge<ComponentArgs, ChatInputArgs<typeof Random.chatInputData>>,
+			"args" | "interaction"
+		> & {
+			options?: Partial<ChatInputArgs<typeof Random.chatInputData>["options"]>;
+		},
+	) => {
 		if (isNaN(options.min!) || isNaN(options.max!))
 			options.min = options.max = undefined;
-		reply(this.getRandom(options, MessageFlags.Ephemeral));
-	}
-	getRandom(
-		{ min, max }: { min?: number; max?: number },
-		flags?: MessageFlags,
-	): APIInteractionResponseCallbackData {
+		else if (options.min! > options.max!)
+			[options.min, options.max] = [options.max, options.min];
 		if (typeof min !== typeof max)
-			return {
+			return reply({
 				content:
 					"Devi specificare sia il minimo che il massimo o nessuno dei due se vuoi un numero decimale tra 0 e 1",
 				flags: MessageFlags.Ephemeral,
-			};
-		return {
-			content: `🎲 ${randomNumber(min, max)}`,
+			});
+		reply({
+			content: `🎲 ${randomNumber(options.min, options.max)}`,
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -82,12 +74,17 @@ export class Random extends Command {
 							label: "Genera un altro!",
 							style: ButtonStyle.Primary,
 							emoji: { name: "🎲" },
-							custom_id: `random-${min}-${max}`,
+							custom_id: `random-${options.min ?? NaN}-${options.max ?? NaN}`,
 						},
 					],
 				},
 			],
-			flags,
-		};
-	}
+			flags:
+				type === InteractionType.MessageComponent
+					? MessageFlags.Ephemeral
+					: undefined,
+		});
+	};
+	override chatInput = this.random;
+	override component = this.random;
 }
