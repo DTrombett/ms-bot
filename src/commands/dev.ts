@@ -86,82 +86,86 @@ export class Dev extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	override async chatInput(
+	"register-commands" = async (
 		{ defer }: ChatInputReplies,
 		{
 			interaction,
 			options,
-			subcommand,
-		}: ChatInputArgs<typeof Dev.chatInputData>,
-	) {
+		}: ChatInputArgs<typeof Dev.chatInputData, "register-commands">,
+	) => {
 		defer({ flags: MessageFlags.Ephemeral });
-		if (subcommand === "register-commands") {
-			const isDev = options.dev ?? env.NODE_ENV !== "production";
-			const [privateAPICommands, publicAPICommands] = await Promise.all([
-				(
-					rest.put(
-						Routes.applicationGuildCommands(
-							env.DISCORD_APPLICATION_ID,
-							env.TEST_GUILD,
-						),
-						{
+		const isDev = options.dev ?? env.NODE_ENV !== "production";
+		const [privateAPICommands, publicAPICommands] = await Promise.all([
+			(
+				rest.put(
+					Routes.applicationGuildCommands(
+						env.DISCORD_APPLICATION_ID,
+						env.TEST_GUILD,
+					),
+					{
+						body: this.handler.commands
+							.filter((c) => isDev || c.private)
+							.flatMap((file) => [
+								...(file.chatInputData ? [file.chatInputData] : []),
+								...(file.contextMenuData ?? []),
+							]) satisfies Readonly<RESTPutAPIApplicationGuildCommandsJSONBody>,
+					},
+				) as Promise<APIApplicationCommand[]>
+			).catch(normalizeError),
+			isDev
+				? []
+				: (
+						rest.put(Routes.applicationCommands(env.DISCORD_APPLICATION_ID), {
 							body: this.handler.commands
-								.filter((c) => isDev || c.private)
+								.filter((c) => !c.private)
 								.flatMap((file) => [
 									...(file.chatInputData ? [file.chatInputData] : []),
 									...(file.contextMenuData ?? []),
-								]) satisfies Readonly<RESTPutAPIApplicationGuildCommandsJSONBody>,
-						},
-					) as Promise<APIApplicationCommand[]>
-				).catch(normalizeError),
-				isDev
-					? []
-					: (
-							rest.put(Routes.applicationCommands(env.DISCORD_APPLICATION_ID), {
-								body: this.handler.commands
-									.filter((c) => !c.private)
-									.flatMap((file) => [
-										...(file.chatInputData ? [file.chatInputData] : []),
-										...(file.contextMenuData ?? []),
-									]) satisfies Readonly<RESTPutAPIApplicationCommandsJSONBody>,
-							}) as Promise<APIApplicationCommand[]>
-						).catch(normalizeError),
-			]);
+								]) satisfies Readonly<RESTPutAPIApplicationCommandsJSONBody>,
+						}) as Promise<APIApplicationCommand[]>
+					).catch(normalizeError),
+		]);
 
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: {
-						content: `Private commands: \`${privateAPICommands instanceof Error ? privateAPICommands.message : privateAPICommands.map((c) => c.name).join(", ")}\`\nPublic commands: \`${publicAPICommands instanceof Error ? publicAPICommands.message : publicAPICommands.map((c) => c.name).join(", ")}\``,
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		return rest.patch(
+			Routes.webhookMessage(interaction.application_id, interaction.token),
+			{
+				body: {
+					content: `Private commands: \`${privateAPICommands instanceof Error ? privateAPICommands.message : privateAPICommands.map((c) => c.name).join(", ")}\`\nPublic commands: \`${publicAPICommands instanceof Error ? publicAPICommands.message : publicAPICommands.map((c) => c.name).join(", ")}\``,
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			},
+		);
+	};
+	shorten = async (
+		{ defer }: ChatInputReplies,
+		{
+			interaction,
+			options,
+		}: ChatInputArgs<typeof Dev.chatInputData, "shorten">,
+	) => {
+		defer({ flags: MessageFlags.Ephemeral });
+		return env.SHORTEN.create({
+			params: {
+				source: (options.source ??= btoa(
+					String.fromCharCode(...crypto.getRandomValues(new Uint8Array(8))),
+				)
+					.replace(/\+/g, "-")
+					.replace(/\//g, "_")
+					.replace(/=+$/, "")),
+				url: options.url,
+				status: options.status,
+				preserveQuery: options["preserve-query"],
+				preservePath: options["preserve-path"],
+				duration:
+					(options.duration
+						? options.duration === "Infinity"
+							? Infinity
+							: parseTime(options.duration)
+						: 0) || 24 * 60 * 60 * 1000,
+				interaction: {
+					application_id: interaction.application_id,
+					token: interaction.token,
 				},
-			);
-		}
-		if (subcommand === "shorten")
-			return env.SHORTEN.create({
-				params: {
-					source: (options.source ??= btoa(
-						String.fromCharCode(...crypto.getRandomValues(new Uint8Array(8))),
-					)
-						.replace(/\+/g, "-")
-						.replace(/\//g, "_")
-						.replace(/=+$/, "")),
-					url: options.url,
-					status: options.status,
-					preserveQuery: options["preserve-query"],
-					preservePath: options["preserve-path"],
-					duration:
-						(options.duration
-							? options.duration === "Infinity"
-								? Infinity
-								: parseTime(options.duration)
-							: 0) || 24 * 60 * 60 * 1000,
-					interaction: {
-						application_id: interaction.application_id,
-						token: interaction.token,
-					},
-				},
-			});
-		return;
-	}
+			},
+		});
+	};
 }
