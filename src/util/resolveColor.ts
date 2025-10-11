@@ -457,6 +457,9 @@ export const aliases: Record<string, string> = {
 	"steel blue": "steelblue",
 	"white smoke": "whitesmoke",
 	"yellow green": "yellowgreen",
+	// Easter egg
+	"p!nk": "pink",
+	"maroon 5": "maroon",
 };
 //#endregion
 
