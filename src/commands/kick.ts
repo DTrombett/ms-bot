@@ -58,15 +58,18 @@ export class Kick extends Command {
 					'Ho bisogno del permesso "Espellere i membri" per eseguire questo comando!',
 				flags: MessageFlags.Ephemeral,
 			});
-		ok(interaction.member && interaction.guild_id);
+		ok(
+			interaction.member &&
+				interaction.guild_id &&
+				interaction.data.resolved?.users,
+		);
 		const member = interaction.data.resolved?.members?.[options.member];
-
 		if (!member)
 			return reply({
 				content: "Questo utente non è nel server!",
 				flags: MessageFlags.Ephemeral,
 			});
-		const user = interaction.data.resolved?.users?.[options.member];
+		const user = interaction.data.resolved.users[options.member];
 		const guild = (await rest.get(
 			Routes.guild(interaction.guild_id),
 		)) as APIGuild;
@@ -76,13 +79,14 @@ export class Kick extends Command {
 			options.member,
 			member,
 		);
+
 		if (content)
 			return reply({
 				content,
 				flags: MessageFlags.Ephemeral,
 			});
 		defer();
-		await rest.patch(
+		return rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
 				body: await this.executeKick(
@@ -99,14 +103,14 @@ export class Kick extends Command {
 		reason?: string,
 	): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> {
 		reason = reason?.trim();
-		const result = await rest
+		const error = await rest
 			.delete(Routes.guildMember(guildId, user.id), { reason })
 			.then(() => {})
 			.catch(normalizeError);
 
-		if (result)
+		if (error)
 			return {
-				content: `Si è verificato un errore: \`${result.message.slice(
+				content: `Si è verificato un errore: \`${error.message.slice(
 					0,
 					1_000,
 				)}\``,
