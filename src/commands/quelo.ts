@@ -1,9 +1,9 @@
 import {
-	APIInteractionResponseCallbackData,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionType,
 	MessageFlags,
 	type APIButtonComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
@@ -16,7 +16,8 @@ import {
 	type AutoCompleteReplies,
 	type ChatInputArgs,
 	type ChatInputReplies,
-	type ComponentReplies,
+	type ComponentArgs,
+	type Merge,
 } from "../util";
 
 export class Quelo extends Command {
@@ -192,36 +193,15 @@ export class Quelo extends Command {
 		value: p.slice(0, 100),
 		phrase: p,
 	}));
-	override chatInput(
-		{ reply }: ChatInputReplies,
-		{ options: { phrase } }: ChatInputArgs<typeof Quelo.chatInputData>,
-	) {
-		reply(this.askQuelo({ phrase }));
-	}
-	override component({ reply }: ComponentReplies) {
-		reply(this.askQuelo({ flags: MessageFlags.Ephemeral }));
-	}
-	override autocomplete(
-		{ autocomplete }: AutoCompleteReplies,
-		{ options: { phrase } }: AutoCompleteArgs<typeof Quelo.chatInputData>,
-	) {
-		phrase = phrase?.toLowerCase();
-		autocomplete({
-			choices: (phrase
-				? Quelo.phrases.filter(({ phrase: p }) =>
-						p.toLowerCase().includes(phrase),
-					)
-				: Quelo.phrases
-			).slice(0, 25),
-		});
-	}
-	askQuelo({
-		phrase,
-		flags,
-	}: {
-		phrase?: string;
-		flags?: MessageFlags;
-	} = {}): APIInteractionResponseCallbackData {
+	askQuelo = (
+		{ reply }: Pick<ChatInputReplies, "reply">,
+		{
+			options: { phrase } = {},
+			interaction: { type },
+		}: Pick<Merge<ChatInputArgs, ComponentArgs>, "interaction"> & {
+			options?: Partial<ChatInputArgs<typeof Quelo.chatInputData>["options"]>;
+		},
+	) => {
 		phrase = phrase?.trim().toLowerCase();
 		const answer = phrase
 			? Quelo.queloAnswers.find(([p]) => p.toLowerCase().includes(phrase))
@@ -230,10 +210,10 @@ export class Quelo extends Command {
 				];
 
 		if (!answer)
-			return {
+			return reply({
 				content: "Frase non trovata!",
 				flags: MessageFlags.Ephemeral,
-			};
+			});
 		const components: APIButtonComponent[] = [
 			{
 				type: ComponentType.Button,
@@ -250,7 +230,7 @@ export class Quelo extends Command {
 				style: ButtonStyle.Link,
 				url: answer[1],
 			});
-		return {
+		return reply({
 			content: `>>> ${escapeList(answer[0])}`,
 			components: [
 				{
@@ -258,7 +238,26 @@ export class Quelo extends Command {
 					components,
 				},
 			],
-			flags,
-		};
+			flags:
+				type === InteractionType.MessageComponent
+					? MessageFlags.Ephemeral
+					: undefined,
+		});
+	};
+	override chatInput = this.askQuelo;
+	override component = this.askQuelo;
+	override autocomplete(
+		{ autocomplete }: AutoCompleteReplies,
+		{ options: { phrase } }: AutoCompleteArgs<typeof Quelo.chatInputData>,
+	) {
+		phrase = phrase?.toLowerCase();
+		autocomplete({
+			choices: (phrase
+				? Quelo.phrases.filter(({ phrase: p }) =>
+						p.toLowerCase().includes(phrase),
+					)
+				: Quelo.phrases
+			).slice(0, 25),
+		});
 	}
 }
