@@ -23,6 +23,7 @@ export default defineConfig([
 					],
 				},
 			],
+			"@typescript-eslint/prefer-promise-reject-errors": "off",
 			"constructor-super": "off",
 			"getter-return": "off",
 			"no-class-assign": "off",

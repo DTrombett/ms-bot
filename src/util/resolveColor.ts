@@ -1,4 +1,5 @@
 import capitalize from "./capitalize";
+import { randomArrayItem } from "./random";
 
 export type RGB = [red: number, green: number, blue: number];
 export type HSL = [hue: number, sat: number, light: number];
@@ -483,7 +484,8 @@ export const findColorName = (rgb: RGB): string | null => {
 
 export const resolveColor = (color: string): Color => {
 	color = color.toLowerCase().trim();
-	if (color in aliases) color = aliases[color]!;
+	if (color === "random") color = randomArrayItem(Object.keys(namedColors));
+	else if (color in aliases) color = aliases[color]!;
 	if (color in namedColors)
 		return {
 			name: (
