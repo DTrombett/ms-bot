@@ -1,13 +1,19 @@
 import {
-	APIInteractionResponseCallbackData,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionType,
 	MessageFlags,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command, type ChatInputReplies, type ComponentReplies } from "../util";
+import {
+	Command,
+	type ChatInputArgs,
+	type ChatInputReplies,
+	type ComponentArgs,
+	type Merge,
+} from "../util";
 
 export class Predict extends Command {
 	static override chatInputData = {
@@ -49,14 +55,13 @@ export class Predict extends Command {
 		"Non ne ho la più pallida idea",
 		"Quando ti troverai una ragazza... forse",
 	];
-	override chatInput({ reply }: ChatInputReplies) {
-		reply(this.makePrediction());
-	}
-	override component({ reply }: ComponentReplies) {
-		reply(this.makePrediction(MessageFlags.Ephemeral));
-	}
-	makePrediction(flags?: MessageFlags): APIInteractionResponseCallbackData {
-		return {
+	makePrediction = (
+		{ reply }: Pick<ChatInputReplies, "reply">,
+		{
+			interaction: { type },
+		}: Pick<Merge<ChatInputArgs, ComponentArgs>, "interaction">,
+	) =>
+		reply({
 			content:
 				Math.random() < 0.95
 					? Predict.replies[Math.floor(Math.random() * Predict.replies.length)]
@@ -75,7 +80,11 @@ export class Predict extends Command {
 					],
 				},
 			],
-			flags,
-		};
-	}
+			flags:
+				type === InteractionType.MessageComponent
+					? MessageFlags.Ephemeral
+					: undefined,
+		});
+	override chatInput = this.makePrediction;
+	override component = this.makePrediction;
 }
