@@ -143,7 +143,8 @@ export class Predictions extends Command {
 		}: ChatInputArgs<typeof Predictions.chatInputData, "reminder">,
 	) => {
 		await env.DB.prepare(
-			`UPDATE Users SET remindMinutes = ?1, reminded = 0 WHERE id = ?2`,
+			`UPDATE Users SET remindMinutes = ?1, reminded = 0
+				WHERE id = ?2`,
 		)
 			.bind(options.before || null, user.id)
 			.run();
@@ -173,9 +174,9 @@ export class Predictions extends Command {
 	leaderboard = async ({ reply }: ChatInputReplies) => {
 		const { results } = await env.DB.prepare(
 			`SELECT id, dayPoints, matchPointsHistory, match
-					FROM Users
-					WHERE dayPoints IS NOT NULL`,
-		).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory">>();
+				FROM Users
+				WHERE dayPoints IS NOT NULL`,
+		).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory" | "match">>();
 		const wins = calculateWins(results);
 		const sortedResults = sortLeaderboard(results);
 
@@ -280,44 +281,24 @@ export class Predictions extends Command {
 				flags: MessageFlags.Ephemeral,
 			});
 		}
-		if (Date.now() >= startTime && !options.user && !options.day)
-			return reply({
-				content:
-					"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
-				flags: MessageFlags.Ephemeral,
-			});
-		if (existingPredictions.length === matches.length)
-			return reply({
-				content:
-					"Hai già inviato i pronostici per questa giornata! Clicca il pulsante se vuoi modificarli.",
-				components: [
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${
-									options.user ? Infinity : startTime
-								}-${user.id}`,
-								emoji: { name: "✏️" },
-								label: "Modifica",
-								style: ButtonStyle.Success,
-							},
-						],
-					},
-				],
-				flags: MessageFlags.Ephemeral,
-			});
-		modal(
-			this.buildModal(
-				matches,
-				matchDay,
-				1,
-				user.id,
-				existingPredictions,
-				options.user ? Infinity : undefined,
-			),
-		);
+		if (subcommand === "send") {
+			if (Date.now() >= startTime && !options.user && !options.day)
+				return reply({
+					content:
+						"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
+					flags: MessageFlags.Ephemeral,
+				});
+			return modal(
+				this.buildModal(
+					matches,
+					matchDay,
+					1,
+					user.id,
+					existingPredictions,
+					options.user ? Infinity : undefined,
+				),
+			);
+		}
 	}
 	override async modal(
 		{ reply }: ModalReplies,
@@ -497,7 +478,6 @@ export class Predictions extends Command {
 		}: ComponentArgs,
 	) {
 		const time = parseInt(timestamp!);
-
 		if (Date.now() >= time)
 			return reply({
 				content:
@@ -508,6 +488,7 @@ export class Predictions extends Command {
 			userId,
 			Number(actionOrDay) || Number(part) || undefined,
 		);
+
 		if (!(matchDay as MatchDay | null))
 			return reply({
 				flags: MessageFlags.Ephemeral,
