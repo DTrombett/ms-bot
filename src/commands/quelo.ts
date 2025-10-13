@@ -18,7 +18,7 @@ import {
 	type ChatInputReplies,
 	type ComponentArgs,
 	type Merge,
-} from "../util";
+} from "../util/index.ts";
 
 export class Quelo extends Command {
 	static override chatInputData = {

@@ -10,7 +10,7 @@ import {
 	escapeMarkdown,
 	type ChatInputArgs,
 	type ChatInputReplies,
-} from "../util";
+} from "../util/index.ts";
 
 export class Search extends Command {
 	static override chatInputData = {

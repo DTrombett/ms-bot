@@ -1,10 +1,10 @@
 import { env } from "cloudflare:workers";
 import {
-	APIInteractionResponse,
 	InteractionType,
 	type APIInteraction,
+	type APIInteractionResponse,
 } from "discord-api-types/v10";
-import type { CommandOptions, ExecutorContext } from "./types";
+import type { CommandOptions, ExecutorContext } from "./types.ts";
 
 export const executeInteraction = async <I extends APIInteraction>(
 	interaction: I,

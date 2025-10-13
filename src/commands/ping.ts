@@ -1,8 +1,8 @@
 import {
-	APIMessage,
 	ApplicationCommandType,
-	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
+	type APIMessage,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
@@ -13,7 +13,7 @@ import {
 	timeout,
 	type ChatInputArgs,
 	type ChatInputReplies,
-} from "../util";
+} from "../util/index.ts";
 
 export class Ping extends Command {
 	static override chatInputData = {

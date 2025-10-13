@@ -15,7 +15,7 @@ import {
 	type ComponentArgs,
 	type ComponentReplies,
 	type Merge,
-} from "../util";
+} from "../util/index.ts";
 
 type Choice = (typeof RPS.choices)[number];
 

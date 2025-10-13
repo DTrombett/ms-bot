@@ -1,3 +1,3 @@
-export * from "./Command";
-export * from "./CommandHandler";
-export * from "./types";
+export * from "./Command.ts";
+export * from "./CommandHandler.ts";
+export * from "./types.ts";

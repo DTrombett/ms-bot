@@ -1,10 +1,10 @@
 import {
-	APIGuild,
 	ApplicationCommandType,
 	ComponentType,
 	InteractionContextType,
 	MessageFlags,
 	Routes,
+	type APIGuild,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
@@ -14,7 +14,7 @@ import {
 	rest,
 	type ChatInputArgs,
 	type ChatInputReplies,
-} from "../util";
+} from "../util/index.ts";
 
 export class Icon extends Command {
 	static override chatInputData = {

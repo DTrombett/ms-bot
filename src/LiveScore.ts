@@ -19,7 +19,7 @@ import {
 	type Prediction,
 	type ResolvedUser,
 	type User,
-} from "./util";
+} from "./util/index.ts";
 
 export type Params = {
 	matchDay: { day: number; id: number };
@@ -33,7 +33,6 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 	) {
 		let time: number | void = event.timestamp.getTime();
 
-		rest.setToken(this.env.DISCORD_TOKEN);
 		do {
 			await step.sleepUntil(
 				`sleep until ${time}`,

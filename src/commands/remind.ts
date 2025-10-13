@@ -18,7 +18,6 @@ import {
 	maxLength,
 	normalizeError,
 	parseTime,
-	Reminder,
 	rest,
 	TimeUnit,
 	type ChatInputArgs,
@@ -26,7 +25,8 @@ import {
 	type ComponentArgs,
 	type ComponentReplies,
 	type Merge,
-} from "../util";
+	type Reminder,
+} from "../util/index.ts";
 
 export class Remind extends Command {
 	static override chatInputData = {

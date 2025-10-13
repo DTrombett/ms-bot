@@ -1,6 +1,6 @@
-import type { User } from ".";
-import { calculateAveragePoints } from "./calculateAveragePoints";
-import { calculateWins } from "./calculateWins";
+import type { User } from "./index.ts";
+import { calculateAveragePoints } from "./calculateAveragePoints.ts";
+import { calculateWins } from "./calculateWins.ts";
 
 /**
  * Enhanced sorting function for leaderboards that considers:

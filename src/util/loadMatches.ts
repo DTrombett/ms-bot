@@ -1,4 +1,4 @@
-import { MatchesData } from ".";
+import type { MatchesData } from "./index.ts";
 
 export const loadMatches = async (id: number, limit?: number) => {
 	const matches = (await fetch(

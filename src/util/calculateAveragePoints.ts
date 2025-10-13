@@ -1,4 +1,4 @@
-import type { User } from ".";
+import type { User } from "./types.ts";
 
 /**
  * Calculate the average points per match day for each user

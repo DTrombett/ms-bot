@@ -1,22 +1,21 @@
-import * as commands from "./commands";
-import type { RGB } from "./util";
-import { CommandHandler, createSolidPng, JsonResponse, rest } from "./util";
+import { env } from "cloudflare:workers";
+import * as commands from "./commands/index.ts";
+import type { RGB } from "./util/index.ts";
+import { CommandHandler, createSolidPng, JsonResponse } from "./util/index.ts";
 
 const handler = new CommandHandler(Object.values(commands));
 
 const server: ExportedHandler<Env> = {
-	fetch: async (request, env, context) => {
+	fetch: async (request) => {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/") {
-			if (request.method === "POST") {
-				rest.setToken(env.DISCORD_TOKEN);
-				return handler.handleInteraction(request, context).catch((e) => {
+			if (request.method === "POST")
+				return handler.handleInteraction(request).catch((e) => {
 					if (e instanceof Response) return e;
 					console.error(e);
 					return new Response(null, { status: 500 });
 				});
-			}
 			if (request.method === "GET") return new Response("Ready!");
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
 		}
@@ -42,15 +41,15 @@ const server: ExportedHandler<Env> = {
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
-	scheduled: async ({}, env) => {
+	scheduled: async () => {
 		await env.PREDICTIONS_REMINDERS.create();
 	},
 };
 
 // export { LiveMatch } from "./LiveMatch";
-export { LiveScore } from "./LiveScore";
-export { PredictionsReminders } from "./PredictionsReminders";
-export { Reminder } from "./Reminder";
-export { Shorten } from "./Shorten";
+export { LiveScore } from "./LiveScore.ts";
+export { PredictionsReminders } from "./PredictionsReminders.ts";
+export { Reminder } from "./Reminder.ts";
+export { Shorten } from "./Shorten.ts";
 
 export default server;

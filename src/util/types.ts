@@ -20,6 +20,10 @@ export type Readonly<T> = {
 	readonly [P in keyof T]: Readonly<T[P]>;
 };
 
+export type RecursivePartial<T> = {
+	[P in keyof T]?: RecursivePartial<T[P]>;
+};
+
 export type InteractionByType<
 	T extends InteractionType,
 	I extends APIInteraction = APIInteraction,

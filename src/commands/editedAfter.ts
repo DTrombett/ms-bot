@@ -8,7 +8,7 @@ import {
 	formatTime,
 	type MessageArgs,
 	type MessageReplies,
-} from "../util";
+} from "../util/index.ts";
 
 export class EditedAfter extends Command {
 	static override contextMenuData = [

@@ -1,10 +1,10 @@
 import {
-	APIInteractionResponseCallbackData,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	type APIInteractionResponseCallbackData,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
@@ -14,7 +14,7 @@ import {
 	type ChatInputReplies,
 	type ComponentArgs,
 	type ComponentReplies,
-} from "../util";
+} from "../util/index.ts";
 
 export class Dice extends Command {
 	static override chatInputData = {

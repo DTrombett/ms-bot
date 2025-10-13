@@ -1,24 +1,25 @@
-import {
+import type {
 	APIApplicationCommandAutocompleteInteraction,
+	APIApplicationCommandInteraction,
 	APIApplicationCommandInteractionDataBasicOption,
 	APIApplicationCommandOption,
 	APIApplicationCommandSubcommandGroupOption,
 	APIApplicationCommandSubcommandOption,
 	APIChatInputApplicationCommandInteraction,
+	APIInteraction,
 	APIInteractionResponse,
 	APIMessageApplicationCommandInteraction,
 	APIMessageComponentInteraction,
 	APIModalSubmitInteraction,
+	APIUser,
 	APIUserApplicationCommandInteraction,
 	InteractionResponseType,
 	InteractionType,
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
-	type APIInteraction,
-	type APIUser,
 } from "discord-api-types/v10";
-import type { Readonly } from "../types";
-import type { Command } from "./Command";
-import type { CommandHandler } from "./CommandHandler";
+import type { Readonly } from "../types.ts";
+import type { Command } from "./Command.ts";
+import type { CommandHandler } from "./CommandHandler.ts";
 
 export type ExtractOptionType<
 	T extends Readonly<APIApplicationCommandOption> = APIApplicationCommandOption,
@@ -156,3 +157,14 @@ export type Runner = (
 		args?: string[];
 	},
 ) => Promise<any>;
+
+export type CommandTests = {
+	name: string;
+	interaction: Partial<
+		| APIApplicationCommandAutocompleteInteraction
+		| APIApplicationCommandInteraction
+		| APIMessageComponentInteraction
+		| APIModalSubmitInteraction
+	>;
+	response: APIInteractionResponse;
+}[];

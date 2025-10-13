@@ -31,6 +31,7 @@
 		"@eslint/js": "^9.37.0",
 		"@tsconfig/recommended": "^1.0.10",
 		"@tsconfig/strictest": "^2.0.6",
+		"@types/node": "^24.7.2",
 		"cloudflared": "^0.7.1",
 		"concurrently": "^9.2.1",
 		"eslint": "^9.37.0",

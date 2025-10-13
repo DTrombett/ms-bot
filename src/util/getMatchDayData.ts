@@ -1,11 +1,11 @@
 import { env } from "cloudflare:workers";
 import {
-	Prediction,
 	getMatchDayNumber,
 	loadMatches,
 	type MatchDayResponse,
+	type Prediction,
 	type User,
-} from ".";
+} from "./index.ts";
 
 export const getMatchDayData = async (userId: string, day?: number) => {
 	const matchDays = (await fetch(

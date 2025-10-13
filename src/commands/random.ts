@@ -14,7 +14,7 @@ import {
 	type ComponentArgs,
 	type ComponentReplies,
 	type Merge,
-} from "../util";
+} from "../util/index.ts";
 
 export class Random extends Command {
 	static override chatInputData = {

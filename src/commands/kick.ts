@@ -1,15 +1,15 @@
 import {
-	APIGuild,
-	APIUser,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	InteractionContextType,
 	MessageFlags,
 	PermissionFlagsBits,
-	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
-	Snowflake,
+	type APIGuild,
+	type APIUser,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
+	type Snowflake,
 } from "discord-api-types/v10";
 import {
 	Command,
@@ -21,8 +21,8 @@ import {
 	rest,
 	type ChatInputArgs,
 	type ChatInputReplies,
-} from "../util";
-import { Bann } from "./bann";
+} from "../util/index.ts";
+import { Bann } from "./bann.ts";
 
 export class Kick extends Command {
 	static override chatInputData = {

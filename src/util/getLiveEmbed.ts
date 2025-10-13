@@ -1,14 +1,14 @@
 import type { APIEmbed } from "discord-api-types/v10";
 import {
-	Leaderboard,
-	MatchStatus,
 	calculateAveragePoints,
 	calculateWins,
+	MatchStatus,
 	normalizeTeamName,
+	type Leaderboard,
 	type MatchesData,
 	type ResolvedUser,
 	type User,
-} from ".";
+} from "./index.ts";
 
 const finalEmojis: Record<number, string | undefined> = {
 	[-2]: "⏬",

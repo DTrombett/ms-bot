@@ -13,7 +13,7 @@ import {
 	type ChatInputReplies,
 	type ComponentArgs,
 	type Merge,
-} from "../util";
+} from "../util/index.ts";
 
 export class Predict extends Command {
 	static override chatInputData = {

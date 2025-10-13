@@ -10,11 +10,10 @@ import {
 	type ModalSubmitActionRowComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { resolveStats } from "../util/getLiveEmbed.ts";
 import {
-	Command,
-	MatchDay,
-	Prediction,
 	calculateWins,
+	Command,
 	getMatchDayData,
 	getMatchDayNumber,
 	normalizeTeamName,
@@ -25,11 +24,12 @@ import {
 	type ComponentArgs,
 	type ComponentReplies,
 	type Match,
+	type MatchDay,
 	type ModalArgs,
 	type ModalReplies,
+	type Prediction,
 	type User,
-} from "../util";
-import { resolveStats } from "../util/getLiveEmbed";
+} from "../util/index.ts";
 
 export class Predictions extends Command {
 	static override chatInputData = {

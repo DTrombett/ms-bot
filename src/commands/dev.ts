@@ -18,7 +18,7 @@ import {
 	type ChatInputArgs,
 	type ChatInputReplies,
 	type Readonly,
-} from "../util";
+} from "../util/index.ts";
 
 export class Dev extends Command {
 	static override private = true;

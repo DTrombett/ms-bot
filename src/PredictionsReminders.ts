@@ -24,7 +24,7 @@ import {
 	type Prediction,
 	type ResolvedUser,
 	type User,
-} from "./util";
+} from "./util/index.ts";
 
 const KV_KEY = "started-matchdays";
 
@@ -65,7 +65,6 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			console.log(`Next match day is in ${formatLongTime(diff)}`);
 			return;
 		}
-		rest.setToken(this.env.DISCORD_TOKEN);
 		if (diff > 1_000) {
 			const reminders = await step.do(
 				"get prediction reminders",

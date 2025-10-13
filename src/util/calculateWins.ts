@@ -1,4 +1,4 @@
-import type { User } from ".";
+import type { User } from "./types.ts";
 
 /**
  * Calculate the number of wins (days where user was top scorer) for each user

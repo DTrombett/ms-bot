@@ -14,7 +14,7 @@ import {
 	rest,
 	type ChatInputArgs,
 	type ChatInputReplies,
-} from "../util";
+} from "../util/index.ts";
 
 export class Banner extends Command {
 	static override chatInputData = {

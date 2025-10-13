@@ -1,12 +1,12 @@
 import {
-	APIMessage,
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
-	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
+	type APIMessage,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import {
@@ -19,7 +19,7 @@ import {
 	type ChatInputReplies,
 	type ComponentArgs,
 	type ComponentReplies,
-} from "../util";
+} from "../util/index.ts";
 
 export class Time extends Command {
 	static override chatInputData = {

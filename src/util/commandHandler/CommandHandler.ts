@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -8,14 +8,9 @@ import {
 	type APIInteractionResponse,
 	type APIUser,
 } from "discord-api-types/v10";
-import { hexToUint8Array } from "../strings";
-import type { Command } from "./Command";
-import {
-	type CommandRunners,
-	type Replies,
-	type Reply,
-	type Runner,
-} from "./types";
+import { hexToUint8Array } from "../strings.ts";
+import type { Command } from "./Command.ts";
+import type { CommandRunners, Replies, Reply, Runner } from "./types.ts";
 
 const key = await crypto.subtle.importKey(
 	"raw",
@@ -107,10 +102,7 @@ export class CommandHandler {
 		return JSON.parse(body) as APIInteraction;
 	}
 
-	async handleInteraction(
-		request: Request,
-		context: ExecutionContext,
-	): Promise<Response> {
+	async handleInteraction(request: Request): Promise<Response> {
 		const interaction = await this.verifySignature(request);
 		if (interaction.type === InteractionType.Ping)
 			return new Response('{"type":1}', {
@@ -190,7 +182,7 @@ export class CommandHandler {
 						interaction as never,
 					) as never
 				];
-		context.waitUntil(
+		waitUntil(
 			runner.call(
 				command,
 				Object.fromEntries<Reply<InteractionResponseType>>(

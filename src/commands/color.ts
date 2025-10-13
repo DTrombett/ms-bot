@@ -10,7 +10,7 @@ import {
 	resolveColor,
 	type ChatInputArgs,
 	type ChatInputReplies,
-} from "../util";
+} from "../util/index.ts";
 
 export class Color extends Command {
 	static override chatInputData = {

@@ -1,5 +1,5 @@
-import capitalize from "./capitalize";
-import { randomArrayItem } from "./random";
+import capitalize from "./capitalize.ts";
+import { randomArrayItem } from "./random.ts";
 
 export type RGB = [red: number, green: number, blue: number];
 export type HSL = [hue: number, sat: number, light: number];

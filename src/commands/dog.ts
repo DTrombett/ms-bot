@@ -4,9 +4,9 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
-	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
 	type APIInteraction,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import type {
@@ -15,8 +15,8 @@ import type {
 	ComponentArgs,
 	ComponentReplies,
 	DogResponse,
-} from "../util";
-import { Command, rest } from "../util";
+} from "../util/index.ts";
+import { Command, rest } from "../util/index.ts";
 
 export class Dog extends Command {
 	static override chatInputData = {
