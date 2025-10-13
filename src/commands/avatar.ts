@@ -7,7 +7,7 @@ import {
 	MessageFlags,
 	type APIMediaGalleryItem,
 } from "discord-api-types/v10";
-import { exampleUser } from "../util/commandHandler/testData.ts";
+import { exampleMember, exampleUser } from "../util/commandHandler/testData.ts";
 import {
 	Command,
 	rest,
@@ -159,6 +159,66 @@ export class Avatar extends Command {
 						{
 							type: ComponentType.MediaGallery,
 							items: [
+								{
+									media: {
+										url: `https://cdn.discordapp.com/avatars/597505862449496065/ad2ebc8f7abc838f21d2c286986b5ef1.png?size=4096`,
+									},
+								},
+							],
+						},
+					],
+					allowed_mentions: { parse: [] },
+				},
+			},
+		},
+		{
+			name: "Member avatar with option",
+			interaction: {
+				type: InteractionType.ApplicationCommand,
+				guild_id: "781085699487039520",
+				data: {
+					...this.createChatInputData(),
+					options: [
+						{
+							name: "user",
+							type: ApplicationCommandOptionType.User,
+							value: "597505862449496065",
+						},
+					],
+					resolved: {
+						users: {
+							"597505862449496065": {
+								...exampleUser,
+								avatar: "ad2ebc8f7abc838f21d2c286986b5ef1",
+							},
+						},
+						members: {
+							"597505862449496065": {
+								...exampleMember,
+								avatar: "a_d696aeefe71a8eb0146ad556d1d4399d",
+							},
+						},
+					},
+				},
+				user: exampleUser,
+			},
+			response: {
+				type: InteractionResponseType.ChannelMessageWithSource,
+				data: {
+					flags: MessageFlags.IsComponentsV2,
+					components: [
+						{
+							type: ComponentType.TextDisplay,
+							content: `Avatar di <@597505862449496065>`,
+						},
+						{
+							type: ComponentType.MediaGallery,
+							items: [
+								{
+									media: {
+										url: `https://cdn.discordapp.com/guilds/781085699487039520/users/597505862449496065/avatars/a_d696aeefe71a8eb0146ad556d1d4399d.gif?size=4096`,
+									},
+								},
 								{
 									media: {
 										url: `https://cdn.discordapp.com/avatars/597505862449496065/ad2ebc8f7abc838f21d2c286986b5ef1.png?size=4096`,

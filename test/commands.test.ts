@@ -1,25 +1,15 @@
-import { equal } from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { registerHooks } from "node:module";
 import { mock, suite, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { parseEnv } from "node:util";
+import { compareObjects } from "./utils.ts";
 
 registerHooks({
-	// load: (url, context, nextLoad) => {
-	// 	if (basename(url).startsWith("cloudflare:")) {
-	// 		console.log("load", url);
-	// 		return { format: "commonjs", source: "", shortCircuit: true };
-	// 	}
-	// 	console.log("loading", url);
-	// 	const loadOutput = nextLoad(url, context);
-	// 	console.log("loaded", url, loadOutput);
-	// 	return loadOutput;
-	// },
 	resolve: (specifier, context, nextResolve) => {
 		if (specifier.startsWith("cloudflare:"))
 			return {
-				url: pathToFileURL(`./test/loader.ts`).href,
+				url: pathToFileURL("./test/empty.cjs").href,
 				shortCircuit: true,
 			};
 		return nextResolve(specifier, context);
@@ -55,8 +45,7 @@ await suite("Command tests", { concurrency: true }, async () => {
 								)
 								.catch((e) => (e instanceof Response ? e : Promise.reject(e)));
 
-							if (result.ok)
-								equal(await result.text(), JSON.stringify(v.response));
+							if (result.ok) compareObjects(await result.json(), v.response);
 							else
 								throw new Error(`Response returned ${result.status}`, {
 									cause: await result.json(),

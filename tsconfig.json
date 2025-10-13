@@ -1,5 +1,5 @@
 {
-	"include": ["src/**/*", "**/*.ts", "**/*.tsx", "**/*.js"],
+	"include": ["src/**/*", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.cjs"],
 	"exclude": ["node_modules", "tmp"],
 	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
