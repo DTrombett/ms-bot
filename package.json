@@ -19,12 +19,12 @@
 		"dev": "concurrently \"wrangler dev --test-scheduled\" \"cloudflared tunnel --url localhost:8787\"",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
 		"publish": "wrangler deploy",
-		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src"
+		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src && node --test --experimental-transform-types --experimental-test-module-mocks"
 	},
 	"dependencies": {
 		"@discordjs/rest": "^2.6.0",
 		"cloudflare": "^5.2.0",
-		"discord-api-types": "^0.38.29",
+		"discord-api-types": "^0.38.30",
 		"socket.io-client": "^4.8.1"
 	},
 	"devDependencies": {
@@ -36,7 +36,7 @@
 		"concurrently": "^9.2.1",
 		"eslint": "^9.37.0",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.46.0",
+		"typescript-eslint": "^8.46.1",
 		"wrangler": "^4.42.2"
 	}
 }
