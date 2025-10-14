@@ -51,7 +51,7 @@ export class Random extends Command {
 			options.min = options.max = undefined;
 		else if (options.min! > options.max!)
 			[options.min, options.max] = [options.max, options.min];
-		if (typeof min !== typeof max)
+		if (typeof options.min !== typeof options.max)
 			return reply({
 				content:
 					"Devi specificare sia il minimo che il massimo o nessuno dei due se vuoi un numero decimale tra 0 e 1",
