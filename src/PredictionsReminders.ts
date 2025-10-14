@@ -11,20 +11,13 @@ import {
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
-import {
-	formatLongTime,
-	getLiveEmbed,
-	getMatchDayNumber,
-	loadMatches,
-	normalizeTeamName,
-	resolveLeaderboard,
-	rest,
-	type Match,
-	type MatchDayResponse,
-	type Prediction,
-	type ResolvedUser,
-	type User,
-} from "./util/index.ts";
+import { getLiveEmbed } from "./util/getLiveEmbed.ts";
+import { getMatchDayNumber } from "./util/getMatchDayNumber.ts";
+import { loadMatches } from "./util/loadMatches.ts";
+import normalizeTeamName from "./util/normalizeTeamName.ts";
+import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
+import { rest } from "./util/rest.ts";
+import { formatLongTime } from "./util/time.ts";
 
 const KV_KEY = "started-matchdays";
 

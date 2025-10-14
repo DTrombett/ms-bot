@@ -1,7 +1,9 @@
 import { env } from "cloudflare:workers";
+import { CommandHandler } from "./commandHandler/CommandHandler.ts";
 import * as commands from "./commands/index.ts";
-import type { RGB } from "./util/index.ts";
-import { CommandHandler, createSolidPng, JsonResponse } from "./util/index.ts";
+import { createSolidPng } from "./util/createSolidPng.ts";
+import { JsonResponse } from "./util/JsonResponse.ts";
+import type { RGB } from "./util/resolveColor.ts";
 
 const handler = new CommandHandler(Object.values(commands));
 

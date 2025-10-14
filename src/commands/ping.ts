@@ -5,15 +5,10 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	idDiff,
-	idToTimestamp,
-	rest,
-	timeout,
-	type ChatInputArgs,
-	type ChatInputReplies,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { timeout } from "../util/node.ts";
+import { rest } from "../util/rest.ts";
+import { idDiff, idToTimestamp } from "../util/time.ts";
 
 export class Ping extends Command {
 	static override chatInputData = {

@@ -13,20 +13,11 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	maxLength,
-	normalizeError,
-	parseTime,
-	rest,
-	TimeUnit,
-	type ChatInputArgs,
-	type ChatInputReplies,
-	type ComponentArgs,
-	type ComponentReplies,
-	type Merge,
-	type Reminder,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import normalizeError from "../util/normalizeError.ts";
+import { rest } from "../util/rest.ts";
+import { maxLength } from "../util/strings.ts";
+import { parseTime, TimeUnit } from "../util/time.ts";
 
 export class Remind extends Command {
 	static override chatInputData = {

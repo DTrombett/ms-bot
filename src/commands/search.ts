@@ -5,12 +5,8 @@ import {
 	ComponentType,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	escapeMarkdown,
-	type ChatInputArgs,
-	type ChatInputReplies,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { escapeMarkdown } from "../util/formatters.ts";
 
 export class Search extends Command {
 	static override chatInputData = {

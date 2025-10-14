@@ -9,17 +9,10 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	formatTime,
-	idDiff,
-	rest,
-	timeout,
-	type ChatInputArgs,
-	type ChatInputReplies,
-	type ComponentArgs,
-	type ComponentReplies,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { timeout } from "../util/node.ts";
+import { rest } from "../util/rest.ts";
+import { formatTime, idDiff } from "../util/time.ts";
 
 export class Time extends Command {
 	static override chatInputData = {

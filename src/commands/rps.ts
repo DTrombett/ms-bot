@@ -7,15 +7,9 @@ import {
 	MessageFlags,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	ok,
-	randomArrayItem,
-	type ChatInputArgs,
-	type ComponentArgs,
-	type ComponentReplies,
-	type Merge,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { ok } from "../util/node.ts";
+import { randomArrayItem } from "../util/random.ts";
 
 type Choice = (typeof RPS.choices)[number];
 

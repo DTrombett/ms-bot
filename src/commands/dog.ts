@@ -9,14 +9,8 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type {
-	ChatInputArgs,
-	ChatInputReplies,
-	ComponentArgs,
-	ComponentReplies,
-	DogResponse,
-} from "../util/index.ts";
-import { Command, rest } from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { rest } from "../util/rest.ts";
 
 export class Dog extends Command {
 	static override chatInputData = {

@@ -7,14 +7,8 @@ import {
 	MessageFlags,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	randomNumber,
-	type ChatInputArgs,
-	type ComponentArgs,
-	type ComponentReplies,
-	type Merge,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { randomNumber } from "../util/random.ts";
 
 export class Random extends Command {
 	static override chatInputData = {

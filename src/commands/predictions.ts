@@ -10,26 +10,14 @@ import {
 	type ModalSubmitActionRowComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { Command } from "../commandHandler/Command.ts";
+import { calculateWins } from "../util/calculateWins.ts";
 import { resolveStats } from "../util/getLiveEmbed.ts";
-import {
-	calculateWins,
-	Command,
-	getMatchDayData,
-	getMatchDayNumber,
-	normalizeTeamName,
-	rest,
-	sortLeaderboard,
-	type ChatInputArgs,
-	type ChatInputReplies,
-	type ComponentArgs,
-	type ComponentReplies,
-	type Match,
-	type MatchDay,
-	type ModalArgs,
-	type ModalReplies,
-	type Prediction,
-	type User,
-} from "../util/index.ts";
+import { getMatchDayData } from "../util/getMatchDayData.ts";
+import { getMatchDayNumber } from "../util/getMatchDayNumber.ts";
+import normalizeTeamName from "../util/normalizeTeamName.ts";
+import { rest } from "../util/rest.ts";
+import { sortLeaderboard } from "../util/sortLeaderboard.ts";
 
 export class Predictions extends Command {
 	static override chatInputData = {

@@ -9,7 +9,7 @@ import {
 	type RESTPostAPICurrentUserCreateDMChannelJSONBody,
 	type RESTPostAPICurrentUserCreateDMChannelResult,
 } from "discord-api-types/v10";
-import { rest } from "./util/index.ts";
+import { rest } from "./util/rest.ts";
 
 export type Params = {
 	message: RESTPostAPIChannelMessageJSONBody;

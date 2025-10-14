@@ -8,17 +8,9 @@ import {
 	type APIButtonComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	escapeList,
-	maxLength,
-	type AutoCompleteArgs,
-	type AutoCompleteReplies,
-	type ChatInputArgs,
-	type ChatInputReplies,
-	type ComponentArgs,
-	type Merge,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { escapeList } from "../util/formatters.ts";
+import { maxLength } from "../util/strings.ts";
 
 export class Quelo extends Command {
 	static override chatInputData = {

@@ -11,7 +11,7 @@ import { deepStrictEqual } from "node:assert/strict";
 import { mock } from "node:test";
 
 const [{ CommandHandler }, commandsObject] = await Promise.all([
-	import("../src/util/commandHandler/CommandHandler.ts"),
+	import("../src/commandHandler/CommandHandler.ts"),
 	import("../src/commands/index.ts"),
 ]);
 

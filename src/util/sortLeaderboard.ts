@@ -1,4 +1,3 @@
-import type { User } from "./index.ts";
 import { calculateAveragePoints } from "./calculateAveragePoints.ts";
 import { calculateWins } from "./calculateWins.ts";
 

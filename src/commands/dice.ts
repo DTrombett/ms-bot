@@ -7,14 +7,8 @@ import {
 	type APIInteractionResponseCallbackData,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	randomNumber,
-	type ChatInputArgs,
-	type ChatInputReplies,
-	type ComponentArgs,
-	type ComponentReplies,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { randomNumber } from "../util/random.ts";
 
 export class Dice extends Command {
 	static override chatInputData = {

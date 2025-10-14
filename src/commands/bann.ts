@@ -23,23 +23,14 @@ import {
 	type RESTPutAPIGuildBanJSONBody,
 	type Snowflake,
 } from "discord-api-types/v10";
-import {
-	Command,
-	Emojis,
-	escapeMarkdown,
-	maxLength,
-	normalizeError,
-	ok,
-	rest,
-	TimeUnit,
-	type ChatInputArgs,
-	type ChatInputReplies,
-	type ComponentArgs,
-	type ComponentReplies,
-	type ModalArgs,
-	type ModalReplies,
-	type Reply,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { Emojis } from "../util/Constants.ts";
+import { escapeMarkdown } from "../util/formatters.ts";
+import { ok } from "../util/node.ts";
+import normalizeError from "../util/normalizeError.ts";
+import { rest } from "../util/rest.ts";
+import { maxLength } from "../util/strings.ts";
+import { TimeUnit } from "../util/time.ts";
 
 export class Bann extends Command {
 	static override chatInputData = {

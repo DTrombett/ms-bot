@@ -1,5 +1,3 @@
-import type { MatchesData } from "./index.ts";
-
 export const loadMatches = async (id: number, limit?: number) => {
 	const matches = (await fetch(
 		`https://legaseriea.it/api/stats/live/match?match_day_id=${id}&order=oldest${limit ? `&limit=${limit}` : ""}`,

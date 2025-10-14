@@ -7,14 +7,10 @@ import {
 	type APIGuild,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	escapeMarkdown,
-	ok,
-	rest,
-	type ChatInputArgs,
-	type ChatInputReplies,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { escapeMarkdown } from "../util/formatters.ts";
+import { ok } from "../util/node.ts";
+import { rest } from "../util/rest.ts";
 
 export class Icon extends Command {
 	static override chatInputData = {

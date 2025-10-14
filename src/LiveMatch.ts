@@ -7,7 +7,8 @@ import {
 	Routes,
 	type RESTPostAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
-import { ok, rest, type CommentaryResponse } from "./util/index.ts";
+import { ok } from "./util/node.ts";
+import { rest } from "./util/rest.ts";
 
 export type Params = { slug: string };
 

@@ -8,18 +8,11 @@ import {
 	type RESTPatchAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
 import { io } from "socket.io-client";
-import {
-	getLiveEmbed,
-	loadMatches,
-	MatchStatus,
-	resolveLeaderboard,
-	rest,
-	type Leaderboard,
-	type Match,
-	type Prediction,
-	type ResolvedUser,
-	type User,
-} from "./util/index.ts";
+import { MatchStatus } from "./util/Constants.ts";
+import { getLiveEmbed } from "./util/getLiveEmbed.ts";
+import { loadMatches } from "./util/loadMatches.ts";
+import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
+import { rest } from "./util/rest.ts";
 
 export type Params = {
 	matchDay: { day: number; id: number };

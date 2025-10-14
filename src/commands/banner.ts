@@ -9,12 +9,8 @@ import {
 	type APIUser,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	rest,
-	type ChatInputArgs,
-	type ChatInputReplies,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { rest } from "../util/rest.ts";
 
 export class Banner extends Command {
 	static override chatInputData = {

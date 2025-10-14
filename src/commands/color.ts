@@ -4,13 +4,8 @@ import {
 	MessageFlags,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	cssRound,
-	resolveColor,
-	type ChatInputArgs,
-	type ChatInputReplies,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import { cssRound, resolveColor } from "../util/resolveColor.ts";
 
 export class Color extends Command {
 	static override chatInputData = {

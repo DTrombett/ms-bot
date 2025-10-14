@@ -10,15 +10,10 @@ import {
 	type RESTPutAPIApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationGuildCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	Command,
-	normalizeError,
-	parseTime,
-	rest,
-	type ChatInputArgs,
-	type ChatInputReplies,
-	type Readonly,
-} from "../util/index.ts";
+import { Command } from "../commandHandler/Command.ts";
+import normalizeError from "../util/normalizeError.ts";
+import { rest } from "../util/rest.ts";
+import { parseTime } from "../util/time.ts";
 
 export class Dev extends Command {
 	static override private = true;
@@ -108,7 +103,7 @@ export class Dev extends Command {
 							.flatMap((file) => [
 								...(file.chatInputData ? [file.chatInputData] : []),
 								...(file.contextMenuData ?? []),
-							]) satisfies Readonly<RESTPutAPIApplicationGuildCommandsJSONBody>,
+							]) satisfies RecursiveReadonly<RESTPutAPIApplicationGuildCommandsJSONBody>,
 					},
 				) as Promise<APIApplicationCommand[]>
 			).catch(normalizeError),
@@ -121,7 +116,7 @@ export class Dev extends Command {
 								.flatMap((file) => [
 									...(file.chatInputData ? [file.chatInputData] : []),
 									...(file.contextMenuData ?? []),
-								]) satisfies Readonly<RESTPutAPIApplicationCommandsJSONBody>,
+								]) satisfies RecursiveReadonly<RESTPutAPIApplicationCommandsJSONBody>,
 						}) as Promise<APIApplicationCommand[]>
 					).catch(normalizeError),
 		]);

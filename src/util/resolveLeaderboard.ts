@@ -1,9 +1,4 @@
-import {
-	MatchStatus,
-	type Leaderboard,
-	type MatchesData,
-	type ResolvedUser,
-} from "./index.ts";
+import { MatchStatus } from "./Constants.ts";
 
 export const resolveLeaderboard = (
 	users: ResolvedUser[],

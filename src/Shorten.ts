@@ -8,7 +8,7 @@ import {
 	Routes,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
-import { rest } from "./util/index.ts";
+import { rest } from "./util/rest.ts";
 
 export type Params = {
 	url: string;
