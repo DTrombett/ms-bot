@@ -16,7 +16,7 @@ registerHooks({
 });
 mock.module("cloudflare:workers", {
 	namedExports: {
-		env: parseEnv(await readFile(".dev.vars", { encoding: "utf-8" })),
+		env: parseEnv(await readFile(".test.vars", { encoding: "utf-8" })),
 		WorkflowEntrypoint: class {},
 		waitUntil: () => {},
 	},
