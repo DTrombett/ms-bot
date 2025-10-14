@@ -1,6 +1,4 @@
 import {
-	ApplicationCommandType,
-	type APIChatInputApplicationCommandInteractionData,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
@@ -11,7 +9,6 @@ import type {
 	AutoCompleteReplies as AutocompleteReplies,
 	ChatInputArgs,
 	ChatInputReplies,
-	CommandTests,
 	ComponentArgs,
 	ComponentReplies,
 	MessageArgs,
@@ -29,14 +26,6 @@ export class Command {
 	>;
 	static readonly customId?: string;
 	static readonly private?: boolean;
-	static readonly tests?: CommandTests;
-	static createChatInputData(): APIChatInputApplicationCommandInteractionData {
-		return {
-			name: this.chatInputData?.name ?? "",
-			type: ApplicationCommandType.ChatInput,
-			id: "",
-		};
-	}
 	readonly supportComponentMethods?: boolean;
 	constructor(protected handler: CommandHandler) {}
 	chatInput?(replies: ChatInputReplies, args: ChatInputArgs): any;
