@@ -157,7 +157,6 @@ export class Remind extends Command {
 			ComponentArgs
 		>,
 	) => {
-		console.log(userId, id);
 		const instance = await env.REMINDER.get(`${userId}-${id}`).catch(() => {});
 		if (!instance)
 			return reply({
