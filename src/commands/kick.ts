@@ -11,7 +11,7 @@ import {
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type Snowflake,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import { Emojis } from "../util/Constants.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
 import { ok } from "../util/node.ts";

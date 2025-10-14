@@ -4,7 +4,7 @@ import {
 	MessageFlags,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import { cssRound, resolveColor } from "../util/resolveColor.ts";
 
 export class Color extends Command {

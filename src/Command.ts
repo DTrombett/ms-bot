@@ -2,7 +2,7 @@ import {
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import type { CommandHandler } from "./CommandHandler.ts";
+import type { CommandHandler } from "./util/CommandHandler.ts";
 
 export class Command {
 	static readonly chatInputData?: RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody>;
@@ -20,3 +20,5 @@ export class Command {
 	user?(replies: UserReplies, args: UserArgs): any;
 	message?(replies: MessageReplies, args: MessageArgs): any;
 }
+
+export default Command;

@@ -3,7 +3,7 @@ import {
 	ApplicationCommandType,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 
 export class Love extends Command {
 	static override chatInputData = {

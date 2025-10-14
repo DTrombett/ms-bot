@@ -13,7 +13,7 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import normalizeError from "../util/normalizeError.ts";
 import { rest } from "../util/rest.ts";
 import { maxLength } from "../util/strings.ts";

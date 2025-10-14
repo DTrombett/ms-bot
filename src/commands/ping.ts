@@ -5,7 +5,7 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import { timeout } from "../util/node.ts";
 import { rest } from "../util/rest.ts";
 import { idDiff, idToTimestamp } from "../util/time.ts";

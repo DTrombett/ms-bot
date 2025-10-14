@@ -8,8 +8,8 @@ import {
 	type APIInteractionResponse,
 	type APIUser,
 } from "discord-api-types/v10";
-import { hexToUint8Array } from "../util/strings.ts";
-import type { Command } from "./Command.ts";
+import type { Command } from "../Command.ts";
+import { hexToUint8Array } from "./strings.ts";
 
 const key = await crypto.subtle.importKey(
 	"raw",

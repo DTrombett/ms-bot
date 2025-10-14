@@ -10,7 +10,7 @@ import {
 	type RESTPutAPIApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationGuildCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import normalizeError from "../util/normalizeError.ts";
 import { rest } from "../util/rest.ts";
 import { parseTime } from "../util/time.ts";

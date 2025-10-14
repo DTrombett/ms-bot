@@ -3,7 +3,7 @@ import {
 	MessageFlags,
 	type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import { formatTime } from "../util/time.ts";
 
 export class EditedAfter extends Command {

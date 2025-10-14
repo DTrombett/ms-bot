@@ -8,7 +8,7 @@ import {
 	type APIButtonComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import { escapeList } from "../util/formatters.ts";
 import { maxLength } from "../util/strings.ts";
 

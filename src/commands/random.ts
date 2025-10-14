@@ -7,7 +7,7 @@ import {
 	MessageFlags,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import { randomNumber } from "../util/random.ts";
 
 export class Random extends Command {

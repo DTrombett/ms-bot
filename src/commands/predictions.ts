@@ -10,7 +10,7 @@ import {
 	type ModalSubmitActionRowComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import { calculateWins } from "../util/calculateWins.ts";
 import { resolveStats } from "../util/getLiveEmbed.ts";
 import { getMatchDayData } from "../util/getMatchDayData.ts";

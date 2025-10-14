@@ -7,7 +7,7 @@ import {
 	type APIGuild,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { Command } from "../commandHandler/Command.ts";
+import Command from "../Command.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
 import { ok } from "../util/node.ts";
 import { rest } from "../util/rest.ts";
