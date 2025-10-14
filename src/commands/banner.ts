@@ -25,7 +25,7 @@ export class Banner extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	override async chatInput(
+	static override async chatInput(
 		{ reply }: ChatInputReplies,
 		{
 			options: { user: userId },

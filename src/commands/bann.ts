@@ -144,14 +144,14 @@ export class Bann extends Command {
 			return "Non puoi eseguire questa azione su un membro con una posizione superiore o uguale alla tua!";
 		return undefined;
 	};
-	async remove(
+	static async remove(
 		{ reply }: ChatInputReplies,
 		{
 			interaction,
 			options,
 		}: ChatInputArgs<typeof Bann.chatInputData, "remove">,
 	) {
-		this.checkPerms(interaction.app_permissions, reply);
+		this.checkBanPerms(interaction.app_permissions, reply);
 		reply(
 			await this.unban(
 				interaction.guild_id!,
@@ -160,11 +160,11 @@ export class Bann extends Command {
 			),
 		);
 	}
-	async add(
+	static async add(
 		{ reply, defer }: ChatInputReplies,
 		{ interaction, options }: ChatInputArgs<typeof Bann.chatInputData, "add">,
 	) {
-		this.checkPerms(interaction.app_permissions, reply);
+		this.checkBanPerms(interaction.app_permissions, reply);
 		ok(
 			interaction.guild_id &&
 				interaction.member &&
@@ -193,11 +193,11 @@ export class Bann extends Command {
 			},
 		);
 	}
-	async check(
+	static async check(
 		{ reply }: ChatInputReplies,
 		{ interaction, options }: ChatInputArgs<typeof Bann.chatInputData, "check">,
 	) {
-		this.checkPerms(interaction.app_permissions, reply);
+		this.checkBanPerms(interaction.app_permissions, reply);
 		const user = interaction.data.resolved?.users?.[options.user];
 		const bannData = (await rest
 			.get(Routes.guildBan(interaction.guild_id!, options.user))
@@ -252,12 +252,12 @@ export class Bann extends Command {
 					},
 		);
 	}
-	override async component(
+	static override async component(
 		{ reply, modal, defer }: ComponentReplies,
 		{ interaction, args: [id, action] }: ComponentArgs,
 	) {
 		ok(interaction.guild_id && interaction.member);
-		this.checkPerms(interaction.member.permissions, reply, false);
+		this.checkBanPerms(interaction.member.permissions, reply, false);
 		const target = (await rest.get(Routes.user(id))) as APIUser | undefined;
 
 		if (!target)
@@ -335,12 +335,12 @@ export class Bann extends Command {
 		}
 		return;
 	}
-	override async modal(
+	static override async modal(
 		{ reply }: ModalReplies,
 		{ interaction, args: [id] }: ModalArgs,
 	) {
 		ok(interaction.guild_id && interaction.member);
-		this.checkPerms(interaction.member.permissions, reply, false);
+		this.checkBanPerms(interaction.member.permissions, reply, false);
 		const deleteMessageDays =
 			Number(
 				interaction.data.components.find(
@@ -421,7 +421,7 @@ export class Bann extends Command {
 			},
 		);
 	}
-	unban = async (
+	static unban = async (
 		guildId: Snowflake,
 		user: APIUser,
 		reason?: string,
@@ -490,7 +490,7 @@ export class Bann extends Command {
 			],
 		};
 	};
-	executeBan = async (
+	static executeBan = async (
 		guildId: Snowflake,
 		user: APIUser,
 		deleteMessageSeconds?: number,
@@ -539,7 +539,7 @@ export class Bann extends Command {
 			],
 		};
 	};
-	checkPerms = (
+	static checkBanPerms = (
 		permissions: string,
 		reply: Reply<InteractionResponseType.ChannelMessageWithSource>,
 		app = true,

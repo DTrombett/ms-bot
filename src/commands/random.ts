@@ -34,7 +34,7 @@ export class Random extends Command {
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static override customId = "random";
-	random = (
+	static random = (
 		{ reply }: Pick<ComponentReplies, "reply">,
 		{
 			args: [min, max] = [],
@@ -79,6 +79,6 @@ export class Random extends Command {
 					: undefined,
 		});
 	};
-	override chatInput = this.random;
-	override component = this.random;
+	static override chatInput = this.random;
+	static override component = this.random;
 }

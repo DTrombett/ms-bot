@@ -26,19 +26,22 @@ export class Dice extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static override customId = "dice";
-	override chatInput(
+	static override chatInput(
 		{ reply }: ChatInputReplies,
 		{ options: { count } }: ChatInputArgs<typeof Dice.chatInputData>,
 	) {
 		reply(this.roll(count));
 	}
-	override component(
+	static override component(
 		{ reply }: ComponentReplies,
 		{ args: [count] }: ComponentArgs,
 	) {
 		reply(this.roll(Number(count) || undefined, MessageFlags.Ephemeral));
 	}
-	roll(count = 1, flags?: MessageFlags): APIInteractionResponseCallbackData {
+	static roll(
+		count = 1,
+		flags?: MessageFlags,
+	): APIInteractionResponseCallbackData {
 		if (count < 1 || count > 100)
 			return {
 				content: "Il numero dei dadi deve essere compreso tra 1 e 100.",

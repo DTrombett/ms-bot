@@ -123,7 +123,7 @@ export class Predictions extends Command {
 		"X (3-3)",
 		"X (4-4)",
 	];
-	reminder = async (
+	static reminder = async (
 		{ reply }: ChatInputReplies,
 		{
 			user,
@@ -141,7 +141,7 @@ export class Predictions extends Command {
 			flags: MessageFlags.Ephemeral,
 		});
 	};
-	dashboard = ({ reply }: ChatInputReplies) =>
+	static dashboard = ({ reply }: ChatInputReplies) =>
 		reply({
 			content:
 				"Apri la [dashboard](https://ms-bot.trombett.org/) per inviare i pronostici!",
@@ -159,7 +159,7 @@ export class Predictions extends Command {
 				},
 			],
 		});
-	leaderboard = async ({ reply }: ChatInputReplies) => {
+	static leaderboard = async ({ reply }: ChatInputReplies) => {
 		const { results } = await env.DB.prepare(
 			`SELECT id, dayPoints, matchPointsHistory, match
 				FROM Users
@@ -195,7 +195,7 @@ export class Predictions extends Command {
 			],
 		});
 	};
-	override async chatInput(
+	static override async chatInput(
 		{ reply, modal }: ChatInputReplies,
 		{
 			interaction,
@@ -288,7 +288,7 @@ export class Predictions extends Command {
 			);
 		}
 	}
-	override async modal(
+	static override async modal(
 		{ reply }: ModalReplies,
 		{
 			interaction,
@@ -457,7 +457,7 @@ export class Predictions extends Command {
 			flags: MessageFlags.Ephemeral,
 		});
 	}
-	override async component(
+	static override async component(
 		{ reply, modal }: ComponentReplies,
 		{
 			interaction,
@@ -532,7 +532,7 @@ export class Predictions extends Command {
 			),
 		);
 	}
-	buildModal = (
+	static buildModal = (
 		matches: Match[],
 		matchDay: MatchDay,
 		part: number,

@@ -37,7 +37,7 @@ export class Love extends Command {
 		":revolving_hearts:",
 		":heart_on_fire:",
 	];
-	override chatInput(
+	static override chatInput(
 		{ reply }: ChatInputReplies,
 		{
 			interaction,

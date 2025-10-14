@@ -28,7 +28,7 @@ export class Cat extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static override customId = "cat";
-	override async chatInput(
+	static override async chatInput(
 		{ defer }: ChatInputReplies,
 		{
 			interaction,
@@ -38,14 +38,14 @@ export class Cat extends Command {
 		defer();
 		return this.cat(interaction, limit);
 	}
-	override async component(
+	static override async component(
 		{ defer }: ComponentReplies,
 		{ interaction, args: [limit] }: ComponentArgs,
 	) {
 		defer({ flags: MessageFlags.Ephemeral });
 		return this.cat(interaction, Number(limit) || undefined);
 	}
-	async cat(
+	static async cat(
 		interaction: Pick<APIInteraction, "application_id" | "token">,
 		limit = 1,
 	): Promise<unknown> {

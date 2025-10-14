@@ -19,7 +19,7 @@ export class Icon extends Command {
 		type: ApplicationCommandType.ChatInput,
 		contexts: [InteractionContextType.Guild],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	override async chatInput(
+	static override async chatInput(
 		{ reply }: ChatInputReplies,
 		{ interaction }: ChatInputArgs<typeof Icon.chatInputData>,
 	) {

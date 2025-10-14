@@ -47,8 +47,8 @@ export class Time extends Command {
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static override customId = "time";
-	override supportComponentMethods = true;
-	stopwatch = async (
+	static override supportComponentMethods = true;
+	static stopwatch = async (
 		{ reply }: ChatInputReplies,
 		{
 			interaction: { application_id, token },
@@ -81,7 +81,7 @@ export class Time extends Command {
 			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 		});
 	};
-	"compare-ids" = (
+	static "compare-ids" = (
 		{ reply }: ChatInputReplies,
 		{
 			options: { id1, id2 },
@@ -90,7 +90,7 @@ export class Time extends Command {
 		reply({
 			content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(id2, id1))}**`,
 		});
-	stop = (
+	static stop = (
 		{ reply, update }: ComponentReplies,
 		{ interaction, user: { id } }: ComponentArgs,
 	) =>

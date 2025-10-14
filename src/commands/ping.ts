@@ -16,7 +16,7 @@ export class Ping extends Command {
 		description: "Pong!",
 		type: ApplicationCommandType.ChatInput,
 	} satisfies RESTPostAPIApplicationCommandsJSONBody;
-	override async chatInput(
+	static override async chatInput(
 		{ reply }: ChatInputReplies,
 		{ interaction, request }: ChatInputArgs,
 	) {

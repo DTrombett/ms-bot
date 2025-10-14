@@ -185,7 +185,7 @@ export class Quelo extends Command {
 		value: p.slice(0, 100),
 		phrase: p,
 	}));
-	askQuelo = (
+	static askQuelo = (
 		{ reply }: Pick<ChatInputReplies, "reply">,
 		{
 			options: { phrase } = {},
@@ -236,9 +236,9 @@ export class Quelo extends Command {
 					: undefined,
 		});
 	};
-	override chatInput = this.askQuelo;
-	override component = this.askQuelo;
-	override autocomplete(
+	static override chatInput = this.askQuelo;
+	static override component = this.askQuelo;
+	static override autocomplete(
 		{ autocomplete }: AutoCompleteReplies,
 		{ options: { phrase } }: AutoCompleteArgs<typeof Quelo.chatInputData>,
 	) {

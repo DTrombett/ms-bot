@@ -21,7 +21,7 @@ export class Avatar extends Command {
 			},
 		],
 	} as const;
-	override chatInput(
+	static override chatInput(
 		{ reply }: ChatInputReplies,
 		{
 			interaction,

@@ -13,7 +13,10 @@ export class EditedAfter extends Command {
 			type: ApplicationCommandType.Message,
 		},
 	] satisfies RESTPostAPIContextMenuApplicationCommandsJSONBody[];
-	override message({ reply }: MessageReplies, { interaction }: MessageArgs) {
+	static override message(
+		{ reply }: MessageReplies,
+		{ interaction }: MessageArgs,
+	) {
 		const message =
 			interaction.data.resolved.messages[interaction.data.target_id];
 

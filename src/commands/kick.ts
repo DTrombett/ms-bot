@@ -42,7 +42,7 @@ export class Kick extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	override async chatInput(
+	static override async chatInput(
 		{ reply, defer }: ChatInputReplies,
 		{ interaction, options }: ChatInputArgs<typeof Kick.chatInputData>,
 	) {
@@ -93,7 +93,7 @@ export class Kick extends Command {
 			},
 		);
 	}
-	async executeKick(
+	static async executeKick(
 		guildId: Snowflake,
 		user: APIUser,
 		reason?: string,

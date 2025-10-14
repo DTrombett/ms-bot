@@ -79,8 +79,6 @@ export class CommandHandler {
 		},
 	};
 
-	private built: Record<string, Command> = {};
-
 	constructor(public commands: (typeof Command)[]) {}
 
 	async verifySignature(request: Request): Promise<APIInteraction> {
@@ -115,7 +113,6 @@ export class CommandHandler {
 		const user = (interaction.member ?? interaction).user!;
 		if (Command.private && !env.OWNER_ID.includes(user.id))
 			return new Response(null, { status: 403 });
-		const command = (this.built[Command.name] ??= new Command(this));
 		console.log(
 			`Interaction type: ${InteractionType[interaction.type]}, command: ${"name" in interaction.data ? interaction.data.name : interaction.data.custom_id}, user: ${user.username} (${user.id}), channel: ${interaction.channel?.name} (${interaction.channel?.id})`,
 		);
@@ -155,8 +152,8 @@ export class CommandHandler {
 
 		if (
 			args.subcommand &&
-			args.subcommand in command &&
-			typeof command[args.subcommand as never] === "function" &&
+			args.subcommand in Command &&
+			typeof Command[args.subcommand as never] === "function" &&
 			![
 				"user",
 				"message",
@@ -166,24 +163,24 @@ export class CommandHandler {
 				"chatInput",
 			].includes(args.subcommand)
 		)
-			runner = command[args.subcommand as never];
+			runner = Command[args.subcommand as never];
 		else if (
 			args.args?.[0] &&
-			args.args[0] in command &&
-			command.supportComponentMethods &&
-			typeof command[args.args[0] as never] === "function"
+			args.args[0] in Command &&
+			Command.supportComponentMethods &&
+			typeof Command[args.args[0] as never] === "function"
 		)
-			runner = command[args.args.shift() as never];
+			runner = Command[args.args.shift() as never];
 		else
 			runner =
-				command[
+				Command[
 					this.interactionTypes[interaction.type].getRunner(
 						interaction as never,
 					) as never
 				];
 		waitUntil(
 			runner.call(
-				command,
+				Command,
 				Object.fromEntries<Reply<InteractionResponseType>>(
 					CommandHandler.replies.map(([key, type]) => [
 						key,

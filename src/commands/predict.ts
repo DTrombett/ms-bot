@@ -49,7 +49,7 @@ export class Predict extends Command {
 		"Non ne ho la più pallida idea",
 		"Quando ti troverai una ragazza... forse",
 	];
-	makePrediction = (
+	static makePrediction = (
 		{ reply }: Pick<ChatInputReplies, "reply">,
 		{
 			interaction: { type },
@@ -79,6 +79,6 @@ export class Predict extends Command {
 					? MessageFlags.Ephemeral
 					: undefined,
 		});
-	override chatInput = this.makePrediction;
-	override component = this.makePrediction;
+	static override chatInput = this.makePrediction;
+	static override component = this.makePrediction;
 }

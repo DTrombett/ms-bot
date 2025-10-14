@@ -69,8 +69,8 @@ export class Remind extends Command {
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static override customId = "remind";
-	override supportComponentMethods = true;
-	me = async (
+	static override supportComponentMethods = true;
+	static me = async (
 		{ reply, defer }: ChatInputReplies,
 		{
 			options,
@@ -133,7 +133,7 @@ export class Remind extends Command {
 			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 		});
 	};
-	list = (
+	static list = (
 		{ defer, deferUpdate }: Merge<ChatInputReplies, ComponentReplies>,
 		{
 			args: [, page] = [],
@@ -145,7 +145,7 @@ export class Remind extends Command {
 		else defer({ flags: MessageFlags.Ephemeral });
 		return this.sendPage(interaction, userId, Number(page) || 0);
 	};
-	remove = async (
+	static remove = async (
 		{ defer, reply }: ChatInputReplies | ComponentReplies,
 		{
 			args: [, argId] = [],
@@ -190,7 +190,7 @@ export class Remind extends Command {
 			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 		});
 	};
-	sendPage = async (
+	static sendPage = async (
 		{
 			application_id,
 			token,

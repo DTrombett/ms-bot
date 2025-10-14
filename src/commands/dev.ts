@@ -14,6 +14,7 @@ import Command from "../Command.ts";
 import normalizeError from "../util/normalizeError.ts";
 import { rest } from "../util/rest.ts";
 import { parseTime } from "../util/time.ts";
+import * as commandsObj from "./index.ts";
 
 export class Dev extends Command {
 	static override private = true;
@@ -81,7 +82,7 @@ export class Dev extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	"register-commands" = async (
+	static "register-commands" = async (
 		{ defer }: ChatInputReplies,
 		{
 			interaction,
@@ -89,6 +90,7 @@ export class Dev extends Command {
 		}: ChatInputArgs<typeof Dev.chatInputData, "register-commands">,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
+		const commands = Object.values(commandsObj);
 		const isDev = options.dev ?? env.NODE_ENV !== "production";
 		const [privateAPICommands, publicAPICommands] = await Promise.all([
 			(
@@ -98,7 +100,7 @@ export class Dev extends Command {
 						env.TEST_GUILD,
 					),
 					{
-						body: this.handler.commands
+						body: commands
 							.filter((c) => isDev || c.private)
 							.flatMap((file) => [
 								...(file.chatInputData ? [file.chatInputData] : []),
@@ -111,7 +113,7 @@ export class Dev extends Command {
 				? []
 				: (
 						rest.put(Routes.applicationCommands(env.DISCORD_APPLICATION_ID), {
-							body: this.handler.commands
+							body: commands
 								.filter((c) => !c.private)
 								.flatMap((file) => [
 									...(file.chatInputData ? [file.chatInputData] : []),
@@ -121,7 +123,7 @@ export class Dev extends Command {
 					).catch(normalizeError),
 		]);
 
-		return rest.patch(
+		await rest.patch(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
 				body: {
@@ -130,7 +132,7 @@ export class Dev extends Command {
 			},
 		);
 	};
-	shorten = async (
+	static shorten = async (
 		{ defer }: ChatInputReplies,
 		{
 			interaction,

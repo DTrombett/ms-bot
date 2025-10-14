@@ -58,7 +58,7 @@ export class RPS extends Command {
 		scissors: "rock",
 	} as const;
 	static override customId = "rps";
-	play = (
+	static play = (
 		{ reply }: ComponentReplies,
 		{
 			args: [choiceArg] = [],
@@ -106,6 +106,6 @@ export class RPS extends Command {
 					: undefined,
 		});
 	};
-	override component = this.play;
-	override chatInput = this.play;
+	static override component = this.play;
+	static override chatInput = this.play;
 }

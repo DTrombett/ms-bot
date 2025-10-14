@@ -396,16 +396,16 @@ declare global {
 
 	type CommandRunners = NonNullable<
 		{
-			[K in keyof Command]: Command[K] extends
+			[K in keyof typeof Command]: (typeof Command)[K] extends
 				| ((...args: any[]) => any)
 				| undefined
 				? K
 				: never;
-		}[keyof Command]
+		}[keyof typeof Command]
 	>;
 
 	type Runner = (
-		this: Command,
+		this: typeof Command,
 		replies: Replies,
 		args: {
 			interaction: APIInteraction;

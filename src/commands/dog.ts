@@ -28,7 +28,7 @@ export class Dog extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static override customId = "dog";
-	override async chatInput(
+	static override chatInput(
 		{ defer }: ChatInputReplies,
 		{
 			interaction,
@@ -38,14 +38,14 @@ export class Dog extends Command {
 		defer();
 		return this.dog(interaction, limit);
 	}
-	override async component(
+	static override component(
 		{ defer }: ComponentReplies,
 		{ interaction, args: [limit] }: ComponentArgs,
 	) {
 		defer({ flags: MessageFlags.Ephemeral });
 		return this.dog(interaction, Number(limit) || undefined);
 	}
-	async dog(
+	static async dog(
 		interaction: Pick<APIInteraction, "application_id" | "token">,
 		limit = 1,
 	): Promise<unknown> {

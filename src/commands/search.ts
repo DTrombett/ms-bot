@@ -154,7 +154,7 @@ export class Search extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
-	google = (
+	static google = (
 		{ reply }: ChatInputReplies,
 		{
 			options: { query },
@@ -182,7 +182,7 @@ export class Search extends Command {
 			],
 		});
 	};
-	spotify = (
+	static spotify = (
 		{ reply }: ChatInputReplies,
 		{
 			options: { search },
@@ -209,7 +209,7 @@ export class Search extends Command {
 				},
 			],
 		});
-	youtube = (
+	static youtube = (
 		{ reply }: ChatInputReplies,
 		{
 			options: { query },
@@ -236,7 +236,7 @@ export class Search extends Command {
 				},
 			],
 		});
-	"yt-music" = (
+	static "yt-music" = (
 		{ reply }: ChatInputReplies,
 		{
 			options: { query },
@@ -263,7 +263,7 @@ export class Search extends Command {
 				},
 			],
 		});
-	github = (
+	static github = (
 		{ reply }: ChatInputReplies,
 		{
 			options: { query, type },
@@ -290,7 +290,7 @@ export class Search extends Command {
 				},
 			],
 		});
-	wikipedia = (
+	static wikipedia = (
 		{ reply }: ChatInputReplies,
 		{
 			options: { query },
@@ -320,7 +320,7 @@ export class Search extends Command {
 			],
 		});
 	};
-	"google-translate" = (
+	static "google-translate" = (
 		{ reply }: ChatInputReplies,
 		{
 			options: { text },
