@@ -1,4 +1,5 @@
-import capitalize from "./capitalize";
+import capitalize from "./capitalize.ts";
+import { randomArrayItem } from "./random.ts";
 
 export type RGB = [red: number, green: number, blue: number];
 export type HSL = [hue: number, sat: number, light: number];
@@ -456,6 +457,9 @@ export const aliases: Record<string, string> = {
 	"steel blue": "steelblue",
 	"white smoke": "whitesmoke",
 	"yellow green": "yellowgreen",
+	// Easter egg
+	"p!nk": "pink",
+	"maroon 5": "maroon",
 };
 //#endregion
 
@@ -483,7 +487,8 @@ export const findColorName = (rgb: RGB): string | null => {
 
 export const resolveColor = (color: string): Color => {
 	color = color.toLowerCase().trim();
-	if (color in aliases) color = aliases[color]!;
+	if (color === "random") color = randomArrayItem(Object.keys(namedColors));
+	else if (color in aliases) color = aliases[color]!;
 	if (color in namedColors)
 		return {
 			name: (

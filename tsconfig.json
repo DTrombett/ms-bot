@@ -1,14 +1,15 @@
 {
-	"include": ["src/**/*", "**/*.ts", "**/*.tsx", "**/*.js"],
+	"include": ["src/**/*", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.cjs"],
 	"exclude": ["node_modules", "tmp"],
 	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
+		"allowImportingTsExtensions": true,
 		"allowSyntheticDefaultImports": true,
 		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,
 		"lib": ["esnext"],
-		"module": "esnext",
-		"moduleResolution": "bundler",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
 		"noEmit": true,
 		"noPropertyAccessFromIndexSignature": false,
 		"pretty": true,

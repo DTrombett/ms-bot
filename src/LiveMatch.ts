@@ -7,7 +7,8 @@ import {
 	Routes,
 	type RESTPostAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
-import { ok, rest, type CommentaryResponse, type Env } from "./util";
+import { ok } from "./util/node.ts";
+import { rest } from "./util/rest.ts";
 
 export type Params = { slug: string };
 
@@ -51,7 +52,6 @@ export class LiveMatch extends WorkflowEntrypoint<Env, Params> {
 		let lastCommentId: string | undefined;
 
 		ok(matchId, "Invalid match id");
-		rest.setToken(this.env.DISCORD_TOKEN);
 		do {
 			const newComments = await step.do(
 				`commentary ${Date.now()}`,

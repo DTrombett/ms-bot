@@ -1,72 +1,60 @@
 import {
-	APIGuild,
 	ApplicationCommandType,
-	ButtonStyle,
 	ComponentType,
-	InteractionResponseType,
+	InteractionContextType,
 	MessageFlags,
 	Routes,
+	type APIGuild,
+	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { escapeMarkdown, rest, type CommandOptions } from "../util";
+import Command from "../Command.ts";
+import { escapeMarkdown } from "../util/formatters.ts";
+import { ok } from "../util/node.ts";
+import { rest } from "../util/rest.ts";
 
-export const icon: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
-		{
-			name: "icon",
-			description: "Mostra l'icona del server",
-			type: ApplicationCommandType.ChatInput,
-		},
-	],
-	run: async (reply, { interaction }) => {
-		if (!interaction.guild_id) {
-			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					flags: MessageFlags.Ephemeral,
-					content:
-						"Questo comando può essere eseguito solo all'interno di un server!",
-				},
-			});
-			return;
-		}
+export class Icon extends Command {
+	static override chatInputData = {
+		name: "icon",
+		description: "Mostra l'icona del server",
+		type: ApplicationCommandType.ChatInput,
+		contexts: [InteractionContextType.Guild],
+	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	static override async chatInput(
+		{ reply }: ChatInputReplies,
+		{ interaction }: ChatInputArgs<typeof Icon.chatInputData>,
+	) {
+		ok(interaction.guild_id);
 		const guild = (await rest.get(
 			Routes.guild(interaction.guild_id),
 		)) as APIGuild;
 
-		if (guild.icon == null) {
+		if (guild.icon)
 			reply({
-				type: InteractionResponseType.ChannelMessageWithSource,
-				data: {
-					content: "Questo server non ha un'icona!",
-					flags: MessageFlags.Ephemeral,
-				},
-			});
-			return;
-		}
-		const url = rest.cdn.icon(interaction.guild_id, guild.icon, {
-			size: 4096,
-			extension: "png",
-		});
-
-		reply({
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: {
-				content: `Icona di **[${escapeMarkdown(guild.name)}](${url} )**:`,
-				allowed_mentions: { parse: [] },
+				flags: MessageFlags.IsComponentsV2,
 				components: [
 					{
-						type: ComponentType.ActionRow,
-						components: [
+						type: ComponentType.TextDisplay,
+						content: `Icona del server **${escapeMarkdown(guild.name)}**`,
+					},
+					{
+						type: ComponentType.MediaGallery,
+						items: [
 							{
-								type: ComponentType.Button,
-								label: "Apri l'originale",
-								style: ButtonStyle.Link,
-								url,
+								media: {
+									url: rest.cdn.icon(interaction.guild_id, guild.icon, {
+										size: 4096,
+										extension: "png",
+									}),
+								},
 							},
 						],
 					},
 				],
-			},
-		});
-	},
-};
+			});
+		else
+			reply({
+				content: "Questo server non ha un'icona!",
+				flags: MessageFlags.Ephemeral,
+			});
+	}
+}

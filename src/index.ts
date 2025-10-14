@@ -1,100 +1,23 @@
-/* eslint-disable no-sparse-arrays */
-import {
-	APIApplicationCommandAutocompleteInteraction,
-	APIApplicationCommandInteraction,
-	APIMessageComponentInteraction,
-	APIModalSubmitInteraction,
-	APIPingInteraction,
-	InteractionResponseType,
-} from "discord-api-types/v10";
-import * as commandsObject from "./commands";
-import type { CommandOptions, Env, Handler, RGB } from "./util";
-import {
-	createSolidPng,
-	executeInteraction,
-	JsonResponse,
-	rest,
-	verifyDiscordRequest,
-} from "./util";
+import { env } from "cloudflare:workers";
+import * as commands from "./commands/index.ts";
+import { CommandHandler } from "./util/CommandHandler.ts";
+import { createSolidPng } from "./util/createSolidPng.ts";
+import { JsonResponse } from "./util/JsonResponse.ts";
+import type { RGB } from "./util/resolveColor.ts";
 
-const commands = commandsObject as Record<string, CommandOptions>;
-const applicationCommands = Object.fromEntries(
-	Object.values(commands).flatMap((cmd) => cmd.data.map((d) => [d.name, cmd])),
-);
-const handlers: [
-	undefined,
-	Handler<APIPingInteraction>,
-	Handler<APIApplicationCommandInteraction>,
-	Handler<APIMessageComponentInteraction>,
-	Handler<APIApplicationCommandAutocompleteInteraction>,
-	Handler<APIModalSubmitInteraction>,
-] = [
-	,
-	() => ({
-		type: InteractionResponseType.Pong,
-	}),
-	({ interaction, env, context, host }) =>
-		executeInteraction(
-			interaction,
-			env,
-			context,
-			host,
-			"run",
-			applicationCommands[interaction.data.name],
-		),
-	({ interaction, env, context, host }) =>
-		executeInteraction(
-			interaction,
-			env,
-			context,
-			host,
-			"component",
-			commands[interaction.data.custom_id.split("-")[0]!],
-		),
-	({ interaction, env, context, host }) =>
-		executeInteraction(
-			interaction,
-			env,
-			context,
-			host,
-			"autocomplete",
-			commands[interaction.data.name],
-		),
-	({ interaction, env, context, host }) =>
-		executeInteraction(
-			interaction,
-			env,
-			context,
-			host,
-			"modalSubmit",
-			commands[interaction.data.custom_id.split("-")[0]!],
-		),
-];
+const handler = new CommandHandler(Object.values(commands));
 
 const server: ExportedHandler<Env> = {
-	fetch: async (request, env, context) => {
+	fetch: async (request) => {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/") {
-			if (request.method === "POST") {
-				rest.setToken(env.DISCORD_TOKEN);
-				const interaction = await verifyDiscordRequest(request, env);
-
-				if (interaction instanceof Response) return interaction;
-				const result = await handlers[interaction.type]({
-					interaction: interaction as never,
-					host: url.host,
-					context,
-					env,
+			if (request.method === "POST")
+				return handler.handleInteraction(request).catch((e) => {
+					if (e instanceof Response) return e;
+					console.error(e);
+					return new Response(null, { status: 500 });
 				});
-
-				return result
-					? new JsonResponse(result)
-					: new JsonResponse(
-							{ error: "Internal Server Error" },
-							{ status: 500 },
-						);
-			}
 			if (request.method === "GET") return new Response("Ready!");
 			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
 		}
@@ -120,15 +43,15 @@ const server: ExportedHandler<Env> = {
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
-	scheduled: async ({}, env) => {
+	scheduled: async () => {
 		await env.PREDICTIONS_REMINDERS.create();
 	},
 };
 
 // export { LiveMatch } from "./LiveMatch";
-export { LiveScore } from "./LiveScore";
-export { PredictionsReminders } from "./PredictionsReminders";
-export { Reminder } from "./Reminder";
-export { Shorten } from "./Shorten";
+export { LiveScore } from "./LiveScore.ts";
+export { PredictionsReminders } from "./PredictionsReminders.ts";
+export { Reminder } from "./Reminder.ts";
+export { Shorten } from "./Shorten.ts";
 
 export default server;

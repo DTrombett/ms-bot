@@ -9,7 +9,7 @@ import {
 	type RESTPostAPICurrentUserCreateDMChannelJSONBody,
 	type RESTPostAPICurrentUserCreateDMChannelResult,
 } from "discord-api-types/v10";
-import { rest, type Env } from "./util";
+import { rest } from "./util/rest.ts";
 
 export type Params = {
 	message: RESTPostAPIChannelMessageJSONBody;
@@ -26,7 +26,6 @@ export class Reminder extends WorkflowEntrypoint<Env, Params> {
 		const sleep = step.sleep("Sleep", event.payload.duration);
 
 		await step.do<void>("Store reminder", this.storeReminder.bind(this, event));
-		rest.setToken(this.env.DISCORD_TOKEN);
 		const channelId = await step.do(
 			"Create dm channel",
 			this.createDM.bind(this, event.payload.userId),

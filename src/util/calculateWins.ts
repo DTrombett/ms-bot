@@ -1,5 +1,3 @@
-import type { User } from ".";
-
 /**
  * Calculate the number of wins (days where user was top scorer) for each user
  */

@@ -1,31 +1,29 @@
 import {
-	APIMessage,
 	ApplicationCommandType,
-	InteractionResponseType,
-	RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	Routes,
+	type APIMessage,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import {
-	idDiff,
-	idToTimestamp,
-	rest,
-	timeout,
-	type CommandOptions,
-} from "../util";
+import Command from "../Command.ts";
+import { timeout } from "../util/node.ts";
+import { rest } from "../util/rest.ts";
+import { idDiff, idToTimestamp } from "../util/time.ts";
 
-export const ping: CommandOptions<ApplicationCommandType.ChatInput> = {
-	data: [
-		{
-			name: "ping",
-			description: "Pong!",
-			type: ApplicationCommandType.ChatInput,
-		},
-	],
-	run: async (reply, { interaction }) => {
-		const now = Date.now();
+export class Ping extends Command {
+	static override chatInputData = {
+		name: "ping",
+		description: "Pong!",
+		type: ApplicationCommandType.ChatInput,
+	} satisfies RESTPostAPIApplicationCommandsJSONBody;
+	static override async chatInput(
+		{ reply }: ChatInputReplies,
+		{ interaction, request }: ChatInputArgs,
+	) {
+		const content = `### 🏓\tPong!\n- Colo: **${request.cf?.colo as string}**\n- RTT: **${request.cf?.clientTcpRtt as number}ms**\n- Ping relativo: **${Date.now() - idToTimestamp(interaction.id)}ms**`;
 
-		reply({ type: InteractionResponseType.DeferredChannelMessageWithSource });
-		await timeout(1_000);
+		reply({ content });
+		await timeout();
 		const { id } = (await rest.get(
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 		)) as APIMessage;
@@ -33,11 +31,9 @@ export const ping: CommandOptions<ApplicationCommandType.ChatInput> = {
 			Routes.webhookMessage(interaction.application_id, interaction.token),
 			{
 				body: {
-					content: `🏓 **Pong!**\nRitardo relativo: **${
-						now - idToTimestamp(interaction.id)
-					}ms**\nRitardo totale: **${idDiff(id, interaction.id)}ms**`,
+					content: `${content}\n- Tempo totale: **${idDiff(id, interaction.id)}ms**`,
 				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			},
 		);
-	},
-};
+	}
+}
