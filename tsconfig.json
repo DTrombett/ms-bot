@@ -7,7 +7,6 @@
 		"allowSyntheticDefaultImports": true,
 		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,
-		"jsx": "react",
 		"lib": ["esnext"],
 		"module": "nodenext",
 		"moduleResolution": "nodenext",

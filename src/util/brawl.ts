@@ -1,21 +1,16 @@
+import { env } from "cloudflare:workers";
 import {
-	ActionRowBuilder,
-	ButtonBuilder,
-	ContainerBuilder,
-	EmbedBuilder,
-	SectionBuilder,
-	StringSelectMenuBuilder,
-} from "@discordjs/builders";
-import {
-	APIMessageTopLevelComponent,
 	ButtonStyle,
+	ComponentType,
 	SeparatorSpacingSize,
+	type APIEmbed,
+	type APIMessageTopLevelComponent,
+	type APISectionComponent,
 } from "discord-api-types/v10";
-import type { BrawlerStat, Player } from "./brawlTypes";
-import capitalize from "./capitalize";
-import type { Env } from "./types";
+import type { BrawlerStat, Player } from "./brawlTypes.ts";
+import capitalize from "./capitalize.ts";
 
-export const getProfile = async (tag: string, env: Env) => {
+export const getProfile = async (tag: string) => {
 	tag = tag.toUpperCase().replace(/O/g, "0");
 	if (!tag.startsWith("#")) tag = `#${tag}`;
 	if (!/^#[0289PYLQGRJCUV]{2,14}$/.test(tag))
@@ -33,6 +28,7 @@ export const getProfile = async (tag: string, env: Env) => {
 			},
 		},
 	);
+
 	if (res.status === 404) throw new Error("Giocatore non trovato.");
 	if (res.status !== 200) {
 		console.log(res.status, res.statusText, await res.text());
@@ -65,40 +61,35 @@ const roboRumbleLevels = [
 	"Smodata XVI",
 ];
 
-export const createPlayerEmbed = (player: Player) =>
-	new EmbedBuilder()
-		.setTitle(`${player.name} (${player.tag})`)
-		.setThumbnail(
-			`https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png`,
-		)
-		.setColor(
-			player.nameColor ? parseInt(player.nameColor.slice(4), 16) : 0xffffff,
-		)
-		.setDescription(
-			`Brawlers: **${player.brawlers.length}**\nClub: ${
-				player.club.tag
-					? `**${player.club.name}** (${player.club.tag})`
-					: "*In nessun club*"
-			}`,
-		)
-		.addFields(
-			{
-				name: "🏆 Trofei",
-				value: `**Attuali**: ${player.trophies}\n**Record**: ${player.highestTrophies}`,
-				inline: true,
-			},
-			{
-				name: "🏅 Vittorie",
-				value: `**3v3**: ${player["3vs3Victories"]}\n**Solo**: ${player.soloVictories}\n**Duo**: ${player.duoVictories}`,
-				inline: true,
-			},
-			{
-				name: "📊 Altre statistiche",
-				value: `**Robo Rumble**: ${roboRumbleLevels[player.bestRoboRumbleTime]}\n**Big Game**: ${roboRumbleLevels[player.bestTimeAsBigBrawler]}`,
-				inline: true,
-			},
-		)
-		.toJSON();
+export const createPlayerEmbed = (player: Player): APIEmbed => ({
+	title: `${player.name} (${player.tag})`,
+	thumbnail: {
+		url: `https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png`,
+	},
+	color: player.nameColor ? parseInt(player.nameColor.slice(4), 16) : 0xffffff,
+	description: `Brawlers: **${player.brawlers.length}**\nClub: ${
+		player.club.tag
+			? `**${player.club.name}** (${player.club.tag})`
+			: "*In nessun club*"
+	}`,
+	fields: [
+		{
+			name: "🏆 Trofei",
+			value: `**Attuali**: ${player.trophies}\n**Record**: ${player.highestTrophies}`,
+			inline: true,
+		},
+		{
+			name: "🏅 Vittorie",
+			value: `**3v3**: ${player["3vs3Victories"]}\n**Solo**: ${player.soloVictories}\n**Duo**: ${player.duoVictories}`,
+			inline: true,
+		},
+		{
+			name: "📊 Altre statistiche",
+			value: `**Robo Rumble**: ${roboRumbleLevels[player.bestRoboRumbleTime]}\n**Big Game**: ${roboRumbleLevels[player.bestTimeAsBigBrawler]}`,
+			inline: true,
+		},
+	],
+});
 
 export const brawlerEmojis: Record<string, [string, string, string, string]> = {
 	"0": [
@@ -700,84 +691,95 @@ export const createBrawlersComponents = (
 					: (a, b) => b.power - a.power,
 	);
 	return [
-		new ContainerBuilder()
-			.addMediaGalleryComponents((g) =>
-				g.addItems((i) => i.setURL(`https://${host}/brawlers.png`)),
-			)
-			.addSectionComponents(
-				player.brawlers.slice(page * 10, (page + 1) * 10).flatMap((brawler) =>
-					new SectionBuilder()
-						.addTextDisplayComponents((t) => {
-							const [l1, l2, l3, l4] =
-								brawlerEmojis[String(brawler.id)] ?? brawlerEmojis["0"]!;
+		{
+			type: ComponentType.Container,
+			components: [
+				{
+					type: ComponentType.MediaGallery,
+					items: [{ media: { url: `https://${host}/brawlers.png` } }],
+				},
+				...player.brawlers
+					.slice(page * 10, (page + 1) * 10)
+					.flatMap((brawler): APISectionComponent => {
+						const [l1, l2, l3, l4] =
+							brawlerEmojis[String(brawler.id)] ?? brawlerEmojis["0"]!;
 
-							return t.setContent(
-								`<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${brawler.gadgets.length ? "<:gadget:1412823343953874964>" : " \t "}${brawler.gears.length ? "<:gear:1412824093572731003>" : " \t "}${brawler.starPowers.length ? "<:starpower:1412824566392426689>" : " \t "}${brawler.gears.length >= 2 ? "<:gear:1412824093572731003>" : ""}\n<:l3:${l3}><:l4:${l4}>\t<:level:1412854877180133427> ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}`,
-							);
-						})
-						.setButtonAccessory((b) =>
-							b
-								.setStyle(ButtonStyle.Secondary)
-								.setCustomId(
-									`brawl-brawler-${player.tag}-${userId}-${brawler.id}-${order}-${page}`,
-								)
-								.setLabel("Dettagli"),
-						),
-				),
-			)
-			.addActionRowComponents(
-				new ActionRowBuilder<ButtonBuilder>().addComponents(
-					new ButtonBuilder()
-						.setEmoji({ name: "⬅️" })
-						.setCustomId(
-							`brawl-brawlers-${player.tag}-${userId}-${order}-${page - 1}`,
-						)
-						.setDisabled(!page)
-						.setStyle(ButtonStyle.Primary),
-					new ButtonBuilder()
-						.setLabel(`Pagina ${page + 1} di ${pages}`)
-						.setCustomId("brawl")
-						.setDisabled(true)
-						.setStyle(ButtonStyle.Secondary),
-					new ButtonBuilder()
-						.setEmoji({ name: "➡️" })
-						.setCustomId(
-							`brawl-brawlers-${player.tag}-${userId}-${order}-${page + 1}`,
-						)
-						.setDisabled(page >= pages - 1)
-						.setStyle(ButtonStyle.Primary),
-				),
-			)
-			.addActionRowComponents(
-				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-					new StringSelectMenuBuilder()
-						.addOptions(
-							{
-								label: "Nome",
-								value: String(BrawlerOrder.Name),
-								default: order === BrawlerOrder.Name,
+						return {
+							type: ComponentType.Section,
+							components: [
+								{
+									type: ComponentType.TextDisplay,
+									content: `<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${brawler.gadgets.length ? "<:gadget:1412823343953874964>" : " \t "}${brawler.gears.length ? "<:gear:1412824093572731003>" : " \t "}${brawler.starPowers.length ? "<:starpower:1412824566392426689>" : " \t "}${brawler.gears.length >= 2 ? "<:gear:1412824093572731003>" : ""}\n<:l3:${l3}><:l4:${l4}>\t<:level:1412854877180133427> ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}`,
+								},
+							],
+							accessory: {
+								type: ComponentType.Button,
+								style: ButtonStyle.Secondary,
+								custom_id: `brawl-brawler-${player.tag}-${userId}-${brawler.id}-${order}-${page}`,
+								label: "Dettagli",
 							},
-							{
-								label: "Più trofei",
-								value: String(BrawlerOrder.MostTrophies),
-								default: order === BrawlerOrder.MostTrophies,
-							},
-							{
-								label: "Meno trofei",
-								value: String(BrawlerOrder.LeastTrophies),
-								default: order === BrawlerOrder.LeastTrophies,
-							},
-							{
-								label: "Livello",
-								value: String(BrawlerOrder.PowerLevel),
-								default: order === BrawlerOrder.PowerLevel,
-							},
-						)
-						.setCustomId(`brawl-brawlers-${player.tag}-${userId}--${page}`)
-						.setPlaceholder("Ordina per..."),
-				),
-			)
-			.toJSON(),
+						};
+					}),
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							emoji: { name: "⬅️" },
+							custom_id: `brawl-brawlers-${player.tag}-${userId}-${order}-${page - 1}`,
+							disabled: !page,
+							style: ButtonStyle.Primary,
+						},
+						{
+							type: ComponentType.Button,
+							label: `Pagina ${page + 1} di ${pages}`,
+							custom_id: "brawl",
+							disabled: true,
+							style: ButtonStyle.Secondary,
+						},
+						{
+							type: ComponentType.Button,
+							emoji: { name: "➡️" },
+							custom_id: `brawl-brawlers-${player.tag}-${userId}-${order}-${page + 1}`,
+							disabled: page >= pages - 1,
+							style: ButtonStyle.Primary,
+						},
+					],
+				},
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.StringSelect,
+							options: [
+								{
+									label: "Nome",
+									value: String(BrawlerOrder.Name),
+									default: order === BrawlerOrder.Name,
+								},
+								{
+									label: "Più trofei",
+									value: String(BrawlerOrder.MostTrophies),
+									default: order === BrawlerOrder.MostTrophies,
+								},
+								{
+									label: "Meno trofei",
+									value: String(BrawlerOrder.LeastTrophies),
+									default: order === BrawlerOrder.LeastTrophies,
+								},
+								{
+									label: "Livello",
+									value: String(BrawlerOrder.PowerLevel),
+									default: order === BrawlerOrder.PowerLevel,
+								},
+							],
+							custom_id: `brawl-brawlers-${player.tag}-${userId}--${page}`,
+							placeholder: "Ordina per...",
+						},
+					],
+				},
+			],
+		},
 	];
 };
 
@@ -788,41 +790,57 @@ export const createBrawlerComponents = (
 	order = BrawlerOrder.Name,
 	page = 0,
 ): APIMessageTopLevelComponent[] => [
-	new ContainerBuilder()
-		.addSectionComponents((s) =>
-			s
-				.addTextDisplayComponents((t) =>
-					t.setContent(
-						`## ${brawler.name}\n<:level:1412854877180133427> Lvl. ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}\n- <:gadget:1412823343953874964> **${brawler.gadgets.length}**${brawler.gadgets.length ? ": " : ""}${brawler.gadgets.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:gear:1412824093572731003> **${brawler.gears.length}**${brawler.gears.length ? ": " : ""}${brawler.gears.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:starpower:1412824566392426689> **${brawler.starPowers.length}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}`,
-					),
-				)
-				.setThumbnailAccessory((t) =>
-					t.setURL(
-						`https://cdn.brawlify.com/brawlers/borders/${brawler.id}.png`,
-					),
-				),
-		)
-		.addSeparatorComponents((s) => s.setSpacing(SeparatorSpacingSize.Large))
-		.addMediaGalleryComponents((m) =>
-			m.addItems(
-				(i) =>
-					i.setURL(`https://cdn.brawlify.com/brawlers/model/${brawler.id}.png`),
-				(i) =>
-					i.setURL(`https://cdn.brawlify.com/brawlers/emoji/${brawler.id}.png`),
-			),
-		)
-		.addActionRowComponents(
-			new ActionRowBuilder<ButtonBuilder>().addComponents(
-				new ButtonBuilder()
-					.setEmoji({ name: "⬅️" })
-					.setLabel("Torna alla lista")
-					.setCustomId(
-						`brawl-brawlers-${player.tag}-${userId}-${order}-${page}`,
-					)
-					.setStyle(ButtonStyle.Secondary),
-			),
-		)
-		.toJSON(),
+	{
+		type: ComponentType.Container,
+		components: [
+			{
+				type: ComponentType.Section,
+				components: [
+					{
+						type: ComponentType.TextDisplay,
+						content: `## ${brawler.name}\n<:level:1412854877180133427> Lvl. ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}\n- <:gadget:1412823343953874964> **${brawler.gadgets.length}**${brawler.gadgets.length ? ": " : ""}${brawler.gadgets.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:gear:1412824093572731003> **${brawler.gears.length}**${brawler.gears.length ? ": " : ""}${brawler.gears.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:starpower:1412824566392426689> **${brawler.starPowers.length}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}`,
+					},
+				],
+				accessory: {
+					type: ComponentType.Thumbnail,
+					media: {
+						url: `https://cdn.brawlify.com/brawlers/borders/${brawler.id}.png`,
+					},
+				},
+			},
+			{
+				type: ComponentType.Separator,
+				spacing: SeparatorSpacingSize.Large,
+			},
+			{
+				type: ComponentType.MediaGallery,
+				items: [
+					{
+						media: {
+							url: `https://cdn.brawlify.com/brawlers/model/${brawler.id}.png`,
+						},
+					},
+					{
+						media: {
+							url: `https://cdn.brawlify.com/brawlers/emoji/${brawler.id}.png`,
+						},
+					},
+				],
+			},
+			{
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						emoji: { name: "⬅️" },
+						label: "Torna alla lista",
+						custom_id: `brawl-brawlers-${player.tag}-${userId}-${order}-${page}`,
+						style: ButtonStyle.Secondary,
+					},
+				],
+			},
+		],
+	},
 ];
 
 export enum NotificationType {
