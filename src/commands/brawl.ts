@@ -935,7 +935,7 @@ export class Brawl extends Command {
 		color: player.nameColor
 			? parseInt(player.nameColor.slice(4), 16)
 			: 0xffffff,
-		description: `Brawlers: **${player.brawlers.length}**\nClub: ${
+		description: `🛡️ Club: ${
 			player.club.tag
 				? `**${player.club.name}** (${player.club.tag})`
 				: "*In nessun club*"
@@ -943,7 +943,7 @@ export class Brawl extends Command {
 		fields: [
 			{
 				name: "🏆 Trofei",
-				value: `**Attuali**: ${player.trophies}\n**Record**: ${player.highestTrophies}`,
+				value: `**Attuali**: ${player.trophies}\n**Record**: ${player.highestTrophies}\n**Media**: ${Math.round(player.trophies / player.brawlers.length)}`,
 				inline: true,
 			},
 			{
@@ -953,11 +953,50 @@ export class Brawl extends Command {
 			},
 			{
 				name: "📊 Altre statistiche",
-				value: `**Robo Rumble**: ${this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]}\n**Big Game**: ${this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]}`,
+				value: `**Robo Rumble**: ${this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]}\n**Big Game**: ${this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]}\n**Brawlers**: ${player.brawlers.length}`,
 				inline: true,
 			},
 		],
 	});
+	static getProfile = async (tag: string, fullRoute: BaseArgs["fullRoute"]) => {
+		try {
+			tag = tag.toUpperCase().replace(/O/g, "0");
+			if (!tag.startsWith("#")) tag = `#${tag}`;
+			if (!/^#[0289PYLQGRJCUV]{2,14}$/.test(tag))
+				throw new TypeError("Tag giocatore non valido.");
+			const res = await fetch(
+				`https://api.brawlstars.com/v1/players/${encodeURIComponent(tag)}`,
+				{
+					cf: {
+						cacheEverything: true,
+						cacheTtl: 40,
+						cacheTtlByStatus: { "200-299": 40, "500-599": 10, "404": 86400 },
+					},
+					headers: {
+						Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}`,
+					},
+				},
+			);
+
+			if (res.status === 404) throw new Error("Giocatore non trovato.");
+			if (res.status !== 200) {
+				console.log(res.status, res.statusText, await res.text());
+				throw new Error(
+					"Si è verificato un errore imprevisto! Riprova più tardi.",
+				);
+			}
+			return await res.json<Brawl.Player>();
+		} catch (err) {
+			throw await rest.patch(fullRoute, {
+				body: {
+					content:
+						err instanceof Error
+							? err.message
+							: "Si è verificato un errore imprevisto! Riprova più tardi.",
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			});
+		}
+	};
 	static override async chatInput(
 		{ reply, defer }: ChatInputReplies,
 		{
@@ -1229,44 +1268,5 @@ export class Brawl extends Command {
 				),
 			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 		});
-	};
-	static getProfile = async (tag: string, fullRoute: BaseArgs["fullRoute"]) => {
-		try {
-			tag = tag.toUpperCase().replace(/O/g, "0");
-			if (!tag.startsWith("#")) tag = `#${tag}`;
-			if (!/^#[0289PYLQGRJCUV]{2,14}$/.test(tag))
-				throw new TypeError("Tag giocatore non valido.");
-			const res = await fetch(
-				`https://api.brawlstars.com/v1/players/${encodeURIComponent(tag)}`,
-				{
-					cf: {
-						cacheEverything: true,
-						cacheTtl: 40,
-						cacheTtlByStatus: { "200-299": 40, "500-599": 10, "404": 86400 },
-					},
-					headers: {
-						Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}`,
-					},
-				},
-			);
-
-			if (res.status === 404) throw new Error("Giocatore non trovato.");
-			if (res.status !== 200) {
-				console.log(res.status, res.statusText, await res.text());
-				throw new Error(
-					"Si è verificato un errore imprevisto! Riprova più tardi.",
-				);
-			}
-			return res.json<Brawl.Player>();
-		} catch (err) {
-			throw await rest.patch(fullRoute, {
-				body: {
-					content:
-						err instanceof Error
-							? err.message
-							: "Si è verificato un errore imprevisto! Riprova più tardi.",
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-			});
-		}
 	};
 }
