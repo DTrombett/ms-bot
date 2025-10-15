@@ -25,6 +25,7 @@ import type {
 	InteractionType,
 	RESTPostAPIApplicationCommandsJSONBody,
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
+	RoutesDeclarations,
 } from "discord-api-types/v10";
 import type Command from "./Command.ts";
 import type { CommandHandler } from "./util/CommandHandler.ts";
@@ -350,6 +351,7 @@ declare global {
 		interaction: T;
 		request: Request;
 		user: APIUser;
+		fullRoute: ReturnType<RoutesDeclarations["webhookMessage"]>;
 	};
 
 	type ChatInputReplies = Pick<Replies, "reply" | "defer" | "modal">;
@@ -413,6 +415,7 @@ declare global {
 			subcommand?: string;
 			options?: Record<string, string | number | boolean>;
 			args?: string[];
+			fullRoute?: ReturnType<RoutesDeclarations["webhookMessage"]>;
 		},
 	) => Promise<any>;
 
@@ -426,4 +429,57 @@ declare global {
 		>;
 		response: APIInteractionResponse;
 	}[];
+
+	namespace Brawl {
+		type Player = {
+			club: PlayerClub;
+			isQualifiedFromChampionshipChallenge: boolean;
+			"3vs3Victories": number;
+			icon: PlayerIcon;
+			tag: string;
+			name: string;
+			trophies: number;
+			expLevel: number;
+			expPoints: number;
+			highestTrophies: number;
+			soloVictories: number;
+			duoVictories: number;
+			bestRoboRumbleTime: number;
+			bestTimeAsBigBrawler: number;
+			brawlers: BrawlerStatList;
+			nameColor: string;
+		};
+		type PlayerClub = { tag: string; name: string };
+		type PlayerIcon = { id: number };
+		type BrawlerStatList = BrawlerStat[];
+		type BrawlerStat = {
+			gadgets: AccessoryList;
+			starPowers: StarPowerList;
+			id: number;
+			rank: number;
+			trophies: number;
+			highestTrophies: number;
+			power: number;
+			gears: GearStatList;
+			name: JsonLocalizedName;
+		};
+		type AccessoryList = Accessory[];
+		type Accessory = { id: number; name: JsonLocalizedName };
+		type JsonLocalizedName = string;
+		type StarPowerList = StarPower[];
+		type StarPower = { id: number; name: JsonLocalizedName };
+		type GearStatList = GearStat[];
+		type GearStat = {
+			id: number;
+			name: JsonLocalizedName;
+			level: number;
+		};
+		type BrawlerList = Brawler[];
+		type Brawler = {
+			gadgets: AccessoryList;
+			name: JsonLocalizedName;
+			id: number;
+			starPowers: StarPowerList;
+		};
+	}
 }

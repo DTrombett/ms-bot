@@ -4,9 +4,11 @@ import {
 	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
+	Routes,
 	type APIInteraction,
 	type APIInteractionResponse,
 	type APIUser,
+	type RoutesDeclarations,
 } from "discord-api-types/v10";
 import type { Command } from "../Command.ts";
 import { hexToUint8Array } from "./strings.ts";
@@ -58,7 +60,9 @@ export class CommandHandler {
 			findCommand: (interaction) => {
 				const [customId] = interaction.data.custom_id.split("-");
 
-				return this.commands.find((c) => c.customId === customId);
+				return this.commands.find(
+					(c) => (c.customId ?? c.name.toLowerCase()) === customId,
+				);
 			},
 			getRunner: () => "component",
 		},
@@ -73,7 +77,9 @@ export class CommandHandler {
 			findCommand: (interaction) => {
 				const [customId] = interaction.data.custom_id.split("-");
 
-				return this.commands.find((c) => c.customId === customId);
+				return this.commands.find(
+					(c) => (c.customId ?? c.name.toLowerCase()) === customId,
+				);
 			},
 			getRunner: () => "modal",
 		},
@@ -125,7 +131,16 @@ export class CommandHandler {
 			subcommand?: string;
 			options?: Record<string, string | number | boolean>;
 			args?: string[];
-		} = { interaction, request, user };
+			fullRoute?: ReturnType<RoutesDeclarations["webhookMessage"]>;
+		} = {
+			interaction,
+			request,
+			user,
+			fullRoute: Routes.webhookMessage(
+				interaction.application_id,
+				interaction.token,
+			),
+		};
 		if (
 			(interaction.type === InteractionType.ApplicationCommand ||
 				interaction.type === InteractionType.ApplicationCommandAutocomplete) &&

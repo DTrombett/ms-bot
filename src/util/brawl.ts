@@ -7,7 +7,6 @@ import {
 	type APIMessageTopLevelComponent,
 	type APISectionComponent,
 } from "discord-api-types/v10";
-import type { BrawlerStat, Player } from "./brawlTypes.ts";
 import capitalize from "./capitalize.ts";
 
 export const getProfile = async (tag: string) => {
@@ -34,7 +33,7 @@ export const getProfile = async (tag: string) => {
 		console.log(res.status, res.statusText, await res.text());
 		throw new Error("Si è verificato un errore imprevisto! Riprova più tardi.");
 	}
-	return res.json<Player>();
+	return res.json<Brawl.Player>();
 };
 
 const roboRumbleLevels = [
@@ -61,7 +60,7 @@ const roboRumbleLevels = [
 	"Smodata XVI",
 ];
 
-export const createPlayerEmbed = (player: Player): APIEmbed => ({
+export const createPlayerEmbed = (player: Brawl.Player): APIEmbed => ({
 	title: `${player.name} (${player.tag})`,
 	thumbnail: {
 		url: `https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png`,
@@ -671,9 +670,9 @@ export enum BrawlerOrder {
 }
 
 export const createBrawlersComponents = (
-	player: Player,
-	baseUrl: string,
-	userId: string,
+	player: Brawl.Player,
+	url: string,
+	id: string,
 	order = BrawlerOrder.Name,
 	page = 0,
 ): APIMessageTopLevelComponent[] => {
@@ -696,7 +695,7 @@ export const createBrawlersComponents = (
 			components: [
 				{
 					type: ComponentType.MediaGallery,
-					items: [{ media: { url: new URL("/brawlers.png", baseUrl).href } }],
+					items: [{ media: { url: new URL("/brawlers.png", url).href } }],
 				},
 				...player.brawlers
 					.slice(page * 10, (page + 1) * 10)
@@ -715,7 +714,7 @@ export const createBrawlersComponents = (
 							accessory: {
 								type: ComponentType.Button,
 								style: ButtonStyle.Secondary,
-								custom_id: `brawl-brawler-${player.tag}-${userId}-${brawler.id}-${order}-${page}`,
+								custom_id: `brawl-brawler-${player.tag}-${id}-${brawler.id}-${order}-${page}`,
 								label: "Dettagli",
 							},
 						};
@@ -726,7 +725,7 @@ export const createBrawlersComponents = (
 						{
 							type: ComponentType.Button,
 							emoji: { name: "⬅️" },
-							custom_id: `brawl-brawlers-${player.tag}-${userId}-${order}-${page - 1}`,
+							custom_id: `brawl-brawlers-${player.tag}-${id}-${order}-${page - 1}`,
 							disabled: !page,
 							style: ButtonStyle.Primary,
 						},
@@ -740,7 +739,7 @@ export const createBrawlersComponents = (
 						{
 							type: ComponentType.Button,
 							emoji: { name: "➡️" },
-							custom_id: `brawl-brawlers-${player.tag}-${userId}-${order}-${page + 1}`,
+							custom_id: `brawl-brawlers-${player.tag}-${id}-${order}-${page + 1}`,
 							disabled: page >= pages - 1,
 							style: ButtonStyle.Primary,
 						},
@@ -773,7 +772,7 @@ export const createBrawlersComponents = (
 									default: order === BrawlerOrder.PowerLevel,
 								},
 							],
-							custom_id: `brawl-brawlers-${player.tag}-${userId}--${page}`,
+							custom_id: `brawl-brawlers-${player.tag}-${id}--${page}`,
 							placeholder: "Ordina per...",
 						},
 					],
@@ -784,9 +783,9 @@ export const createBrawlersComponents = (
 };
 
 export const createBrawlerComponents = (
-	player: Player,
+	player: Brawl.Player,
 	userId: string,
-	brawler: BrawlerStat,
+	brawler: Brawl.BrawlerStat,
 	order = BrawlerOrder.Name,
 	page = 0,
 ): APIMessageTopLevelComponent[] => [

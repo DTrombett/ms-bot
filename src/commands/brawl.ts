@@ -5,7 +5,6 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
-	Routes,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPostAPIWebhookWithTokenJSONBody,
@@ -22,14 +21,13 @@ import {
 } from "../util/brawl.ts";
 import { rest } from "../util/rest.ts";
 
-const NOTIFICATION_TYPES = [
-	"Brawler Tier Max",
-	"New Brawler",
-	"Trophy Road Advancement",
-	"All",
-] as const;
-
 export class Brawl extends Command {
+	static NOTIFICATION_TYPES = [
+		"Brawler Tier Max",
+		"New Brawler",
+		"Trophy Road Advancement",
+		"All",
+	] as const;
 	static override chatInputData = {
 		name: "brawl",
 		description: "Interagisci con Brawl Stars!",
@@ -63,7 +61,7 @@ export class Brawl extends Command {
 								description: "Tipo di notifica da abilitare",
 								type: ApplicationCommandOptionType.String,
 								required: true,
-								choices: NOTIFICATION_TYPES.map((type) => ({
+								choices: this.NOTIFICATION_TYPES.map((type) => ({
 									name: type,
 									value: type,
 								})),
@@ -80,7 +78,7 @@ export class Brawl extends Command {
 								description: "Tipo di notifica da disabilitare",
 								type: ApplicationCommandOptionType.String,
 								required: true,
-								choices: NOTIFICATION_TYPES.map((type) => ({
+								choices: this.NOTIFICATION_TYPES.map((type) => ({
 									name: type,
 									value: type,
 								})),
@@ -140,110 +138,16 @@ export class Brawl extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	static override customId = "brawl";
 	static override async chatInput(
 		{ reply, defer }: ChatInputReplies,
 		{
-			interaction,
 			options,
 			subcommand,
 			user: { id },
-			request,
-		}: ChatInputArgs<typeof Brawl.chatInputData>,
+			request: { url },
+			fullRoute,
+		}: ChatInputArgs<typeof Brawl.chatInputData, `profile ${string}`>,
 	) {
-		if (subcommand === "link") {
-			defer({ flags: MessageFlags.Ephemeral });
-			const player = await getProfile(options.tag).catch((err) =>
-				err instanceof Error
-					? err
-					: new Error(
-							"Si è verificato un errore imprevisto! Riprova più tardi.",
-						),
-			);
-
-			if (player instanceof Error)
-				return rest.patch(
-					Routes.webhookMessage(interaction.application_id, interaction.token),
-					{
-						body: {
-							content: player.message,
-						} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					},
-				);
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: {
-						content: "Vuoi collegare questo profilo?",
-						embeds: [createPlayerEmbed(player)],
-						components: [
-							{
-								type: ComponentType.ActionRow,
-								components: [
-									{
-										type: ComponentType.Button,
-										custom_id: `brawl-link-${player.tag}-${id}`,
-										label: "Collega",
-										emoji: { name: "🔗" },
-										style: ButtonStyle.Primary,
-									},
-									{
-										type: ComponentType.Button,
-										custom_id: `brawl-undo-${player.tag}-${id}`,
-										label: "Annulla",
-										emoji: { name: "✖️" },
-										style: ButtonStyle.Danger,
-									},
-								],
-							},
-						],
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
-		}
-		if (subcommand === "notify enable") {
-			const result = await env.DB.prepare(
-				`INSERT INTO Users (id, brawlNotifications)
-				VALUES (?1, ?2)
-				ON CONFLICT(id) DO UPDATE
-				SET brawlNotifications = Users.brawlNotifications | ?2
-				RETURNING brawlNotifications, brawlTag`,
-			)
-				.bind(id, NotificationType[options.type])
-				.first<{ brawlNotifications: number; brawlTag: string | null }>();
-
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content: `Notifiche abilitate per il tipo **${options.type}**!\nAttualmente hai attivato le notifiche per ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
-			});
-		}
-		if (subcommand === "notify disable") {
-			const result = await env.DB.prepare(
-				`UPDATE Users
-				SET brawlNotifications = Users.brawlNotifications & ~?1
-				WHERE id = ?2
-				RETURNING brawlNotifications, brawlTag`,
-			)
-				.bind(NotificationType[options.type], id)
-				.first<{ brawlNotifications: number; brawlTag: string | null }>();
-
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content: `Notifiche disabilitate per il tipo **${options.type}**!\nAttualmente hai attivato le notifiche per ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
-			});
-		}
-		if (subcommand === "notify view") {
-			const result = await env.DB.prepare(
-				"SELECT brawlNotifications, brawlTag FROM Users WHERE id = ?",
-			)
-				.bind(id)
-				.first<{ brawlNotifications: number; brawlTag: string | null }>();
-
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content: `Notifiche attive per i seguenti tipi: ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
-			});
-		}
 		options.tag ??= (await env.DB.prepare(
 			"SELECT brawlTag FROM Users WHERE id = ?",
 		)
@@ -257,163 +161,279 @@ export class Brawl extends Command {
 			});
 		defer();
 		const player = await getProfile(options.tag).catch((err) =>
-			err instanceof Error
-				? err
-				: new Error("Si è verificato un errore imprevisto! Riprova più tardi."),
-		);
-		if (player instanceof Error)
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
+			rest
+				.patch(fullRoute, {
 					body: {
-						content: player.message,
+						content:
+							err instanceof Error
+								? err.message
+								: "Si è verificato un errore imprevisto! Riprova più tardi.",
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
-		return rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{
-				body: (subcommand === "profile view"
-					? {
-							embeds: [createPlayerEmbed(player)],
-							components: [
-								{
-									type: ComponentType.ActionRow,
-									components: [
-										{
-											type: ComponentType.Button,
-											custom_id: `brawl-brawlers-${player.tag}-${id}---1`,
-											label: "Brawlers",
-											emoji: { name: "🔫" },
-											style: ButtonStyle.Primary,
-										},
-									],
-								},
-							],
-						}
-					: {
-							components: createBrawlersComponents(
-								player,
-								request.url,
-								id,
-								options.order,
-							),
-							flags: MessageFlags.IsComponentsV2,
-						}) satisfies RESTPostAPIWebhookWithTokenJSONBody,
-			},
+				})
+				.then(() => {}),
 		);
-	}
-	static override async component(
-		{ reply, update, defer, deferUpdate }: ComponentReplies,
-		{
-			interaction,
-			request,
-			args: [action, tag, userId, arg1, arg2, arg3],
-			user: { id },
-		}: ComponentArgs,
-	) {
-		if (id !== userId)
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content: "Questa azione non è per te!",
-			});
-		if (action === "link") {
-			await env.DB.prepare(
-				"INSERT INTO Users (id, brawlTag) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET brawlTag = excluded.brawlTag",
-			)
-				.bind(userId, tag)
-				.run();
-			return update({
-				content: "Profilo collegato con successo!",
-				components: [
-					{
-						type: ComponentType.ActionRow,
+
+		if (!player) return;
+		return rest.patch(fullRoute, {
+			body: (subcommand === "profile view"
+				? {
+						embeds: [createPlayerEmbed(player)],
 						components: [
 							{
-								type: ComponentType.Button,
-								custom_id: interaction.data.custom_id,
-								label: "Collegato",
-								emoji: { name: "🔗" },
-								disabled: true,
-								style: ButtonStyle.Success,
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										custom_id: `brawl-brawlers-${player.tag}-${id}---1`,
+										label: "Brawlers",
+										emoji: { name: "🔫" },
+										style: ButtonStyle.Primary,
+									},
+								],
 							},
 						],
-					},
-				],
-			});
-		}
-		if (action === "undo")
-			return update({
-				content: "Azione annullata.",
+					}
+				: {
+						components: createBrawlersComponents(
+							player,
+							url,
+							id,
+							options.order,
+						),
+						flags: MessageFlags.IsComponentsV2,
+					}) satisfies RESTPostAPIWebhookWithTokenJSONBody,
+		});
+	}
+	static link = async (
+		{ defer }: ChatInputReplies,
+		{
+			options: { tag },
+			user: { id },
+			fullRoute,
+		}: ChatInputArgs<typeof Brawl.chatInputData, "link">,
+	) => {
+		defer({ flags: MessageFlags.Ephemeral });
+		const player = await getProfile(tag).catch((err) =>
+			rest
+				.patch(fullRoute, {
+					body: {
+						content:
+							err instanceof Error
+								? err.message
+								: "Si è verificato un errore imprevisto! Riprova più tardi.",
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				})
+				.then(() => {}),
+		);
+
+		if (!player) return;
+		return rest.patch(fullRoute, {
+			body: {
+				content: "Vuoi collegare questo profilo?",
+				embeds: [createPlayerEmbed(player)],
 				components: [
 					{
 						type: ComponentType.ActionRow,
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `brawl-link`,
+								custom_id: `brawl-link-${player.tag}-${id}`,
 								label: "Collega",
-								disabled: true,
 								emoji: { name: "🔗" },
 								style: ButtonStyle.Primary,
 							},
 							{
 								type: ComponentType.Button,
-								custom_id: interaction.data.custom_id,
-								label: "Annullato",
-								disabled: true,
+								custom_id: `brawl-undo-${player.tag}-${id}`,
+								label: "Annulla",
 								emoji: { name: "✖️" },
 								style: ButtonStyle.Danger,
 							},
 						],
 					},
 				],
-			});
-		if (action === "brawlers") {
-			if (arg3) defer();
-			else deferUpdate();
-			const player = await getProfile(tag!);
+			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		});
+	};
+	static "notify enable" = async (
+		{ reply }: ChatInputReplies,
+		{
+			options: { type },
+			user: { id },
+		}: ChatInputArgs<typeof Brawl.chatInputData, "notify enable">,
+	) => {
+		const result = await env.DB.prepare(
+			`INSERT INTO Users (id, brawlNotifications)
+				VALUES (?1, ?2)
+				ON CONFLICT(id) DO UPDATE
+				SET brawlNotifications = Users.brawlNotifications | ?2
+				RETURNING brawlNotifications, brawlTag`,
+		)
+			.bind(id, NotificationType[type])
+			.first<{ brawlNotifications: number; brawlTag: string | null }>();
 
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: {
-						components: createBrawlersComponents(
-							player,
-							request.url,
-							userId,
-							Number(
-								interaction.data.component_type === ComponentType.StringSelect
-									? interaction.data.values[0]
-									: arg1,
-							) || undefined,
-							Number(arg2) || undefined,
-						),
-						flags: MessageFlags.IsComponentsV2,
-					} satisfies RESTPostAPIWebhookWithTokenJSONBody,
-				},
-			);
-		}
-		if (action === "brawler") {
-			deferUpdate();
-			const player = await getProfile(tag!);
-			const brawlerId = Number(arg1);
+		return reply({
+			flags: MessageFlags.Ephemeral,
+			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+		});
+	};
+	static "notify disable" = async (
+		{ reply }: ChatInputReplies,
+		{
+			options: { type },
+			user: { id },
+		}: ChatInputArgs<typeof Brawl.chatInputData, "notify disable">,
+	) => {
+		const result = await env.DB.prepare(
+			`UPDATE Users
+				SET brawlNotifications = Users.brawlNotifications & ~?1
+				WHERE id = ?2
+				RETURNING brawlNotifications, brawlTag`,
+		)
+			.bind(NotificationType[type], id)
+			.first<{ brawlNotifications: number; brawlTag: string | null }>();
 
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: {
-						components: createBrawlerComponents(
-							player,
-							userId,
-							player.brawlers.find((b) => b.id === brawlerId)!,
-							Number(arg2) || undefined,
-							Number(arg3) || undefined,
-						),
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
-		}
-		return;
+		return reply({
+			flags: MessageFlags.Ephemeral,
+			content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+		});
+	};
+	static "notify view" = async (
+		{ reply }: ChatInputReplies,
+		{ user: { id } }: ChatInputArgs<typeof Brawl.chatInputData, "notify view">,
+	) => {
+		const result = await env.DB.prepare(
+			"SELECT brawlNotifications, brawlTag FROM Users WHERE id = ?",
+		)
+			.bind(id)
+			.first<{ brawlNotifications: number; brawlTag: string | null }>();
+
+		return reply({
+			flags: MessageFlags.Ephemeral,
+			content: `Notifiche attive per i seguenti tipi: ${calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+		});
+	};
+	static override async component(
+		replies: ComponentReplies,
+		args: ComponentArgs,
+	) {
+		if (args.user.id === args.args[2])
+			return this[
+				`${args.args[0] as "link" | "undo" | "brawler" | "brawlers"}Component`
+			]?.(replies, args);
+		return replies.reply({
+			flags: MessageFlags.Ephemeral,
+			content: "Questa azione non è per te!",
+		});
 	}
+	static linkComponent = async (
+		{ update }: ComponentReplies,
+		{ args: [, tag, userId] }: ComponentArgs,
+	) => {
+		await env.DB.prepare(
+			"INSERT INTO Users (id, brawlTag) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET brawlTag = excluded.brawlTag",
+		)
+			.bind(userId, tag)
+			.run();
+		return update({
+			content: "Profilo collegato con successo!",
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: "brawl",
+							label: "Collegato",
+							emoji: { name: "🔗" },
+							disabled: true,
+							style: ButtonStyle.Success,
+						},
+					],
+				},
+			],
+		});
+	};
+	static undoComponent = ({ update }: ComponentReplies) =>
+		update({
+			content: "Azione annullata.",
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: "brawl-link",
+							label: "Collega",
+							disabled: true,
+							emoji: { name: "🔗" },
+							style: ButtonStyle.Primary,
+						},
+						{
+							type: ComponentType.Button,
+							custom_id: "brawl",
+							label: "Annullato",
+							disabled: true,
+							emoji: { name: "✖️" },
+							style: ButtonStyle.Danger,
+						},
+					],
+				},
+			],
+		});
+	static brawlersComponent = async (
+		{ defer, deferUpdate }: ComponentReplies,
+		{
+			interaction: { data },
+			request,
+			args: [, tag, , order, page, replyFlag],
+			user: { id },
+			fullRoute,
+		}: ComponentArgs,
+	) => {
+		if (replyFlag) defer();
+		else deferUpdate();
+		const player = await getProfile(tag!);
+
+		return rest.patch(fullRoute, {
+			body: {
+				components: createBrawlersComponents(
+					player,
+					request.url,
+					id,
+					Number(
+						data.component_type === ComponentType.StringSelect
+							? data.values[0]
+							: order,
+					) || undefined,
+					Number(page) || undefined,
+				),
+				flags: MessageFlags.IsComponentsV2,
+			} satisfies RESTPostAPIWebhookWithTokenJSONBody,
+		});
+	};
+	static brawlerComponent = async (
+		{ deferUpdate }: ComponentReplies,
+		{
+			fullRoute,
+			args: [, tag, , brawler, order, page],
+			user: { id },
+		}: ComponentArgs,
+	) => {
+		deferUpdate();
+		const player = await getProfile(tag!);
+		const brawlerId = Number(brawler);
+
+		return rest.patch(fullRoute, {
+			body: {
+				components: createBrawlerComponents(
+					player,
+					id,
+					player.brawlers.find((b) => b.id === brawlerId)!,
+					Number(order) || undefined,
+					Number(page) || undefined,
+				),
+			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		});
+	};
 }
