@@ -1,4 +1,4 @@
-import capitalize from "./capitalize";
+import capitalize from "./capitalize.ts";
 
 export const normalizeTeamName = (team: string) =>
 	team

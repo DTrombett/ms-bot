@@ -1,5 +1,3 @@
-import type { User } from ".";
-
 /**
  * Calculate the average points per match day for each user
  */

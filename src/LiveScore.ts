@@ -8,19 +8,11 @@ import {
 	type RESTPatchAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
 import { io } from "socket.io-client";
-import {
-	getLiveEmbed,
-	loadMatches,
-	MatchStatus,
-	resolveLeaderboard,
-	rest,
-	type Env,
-	type Leaderboard,
-	type Match,
-	type Prediction,
-	type ResolvedUser,
-	type User,
-} from "./util";
+import { MatchStatus } from "./util/Constants.ts";
+import { getLiveEmbed } from "./util/getLiveEmbed.ts";
+import { loadMatches } from "./util/loadMatches.ts";
+import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
+import { rest } from "./util/rest.ts";
 
 export type Params = {
 	matchDay: { day: number; id: number };
@@ -34,7 +26,6 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 	) {
 		let time: number | void = event.timestamp.getTime();
 
-		rest.setToken(this.env.DISCORD_TOKEN);
 		do {
 			await step.sleepUntil(
 				`sleep until ${time}`,
@@ -62,7 +53,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 							reject(new Error("Socket connection failed"));
 							return;
 						}
-						socket.on("callApi", (data) => {
+						socket.on("callApi", (data: string) => {
 							const updates: {
 								ora: string;
 								match_id: number;

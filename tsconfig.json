@@ -1,22 +1,19 @@
 {
-	"include": ["src/**/*"],
-	"extends": [
-		"@tsconfig/recommended/tsconfig.json",
-		"@tsconfig/strictest/tsconfig.json"
-	],
+	"include": ["src/**/*", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.cjs"],
+	"exclude": ["node_modules", "tmp"],
+	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
+		"allowImportingTsExtensions": true,
 		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true,
+		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,
 		"jsx": "react",
 		"lib": ["esnext"],
-		"module": "esnext",
-		"exactOptionalPropertyTypes": false,
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"noEmit": true,
 		"noPropertyAccessFromIndexSignature": false,
-		"moduleResolution": "bundler",
-		"outDir": "dist",
 		"pretty": true,
-		"target": "esnext",
-		"types": ["@cloudflare/workers-types/experimental"]
+		"target": "esnext"
 	}
 }

@@ -1,17 +1,8 @@
-import {
-	Env,
-	Prediction,
-	getMatchDayNumber,
-	loadMatches,
-	type MatchDayResponse,
-	type User,
-} from ".";
+import { env } from "cloudflare:workers";
+import { getMatchDayNumber } from "./getMatchDayNumber.ts";
+import { loadMatches } from "./loadMatches.ts";
 
-export const getMatchDayData = async (
-	env: Env,
-	userId: string,
-	day?: number,
-) => {
+export const getMatchDayData = async (userId: string, day?: number) => {
 	const matchDays = (await fetch(
 		`https://legaseriea.it/api/season/${env.SEASON_ID}/championship/A/matchday`,
 	).then((res) => res.json())) as MatchDayResponse;

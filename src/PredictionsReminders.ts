@@ -1,4 +1,3 @@
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
 	WorkflowEntrypoint,
 	type WorkflowEvent,
@@ -6,26 +5,19 @@ import {
 } from "cloudflare:workers";
 import {
 	ButtonStyle,
+	ComponentType,
 	Routes,
 	type APIUser,
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
-import ms from "ms";
-import {
-	getLiveEmbed,
-	getMatchDayNumber,
-	loadMatches,
-	normalizeTeamName,
-	resolveLeaderboard,
-	rest,
-	type Env,
-	type Match,
-	type MatchDayResponse,
-	type Prediction,
-	type ResolvedUser,
-	type User,
-} from "./util";
+import { getLiveEmbed } from "./util/getLiveEmbed.ts";
+import { getMatchDayNumber } from "./util/getMatchDayNumber.ts";
+import { loadMatches } from "./util/loadMatches.ts";
+import normalizeTeamName from "./util/normalizeTeamName.ts";
+import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
+import { rest } from "./util/rest.ts";
+import { formatLongTime } from "./util/time.ts";
 
 const KV_KEY = "started-matchdays";
 
@@ -40,11 +32,16 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	) {
 		const started = await step.do(
 			"load started matchdays",
+			{ timeout: 10_000 },
 			this.loadStartedMatchdays.bind(this),
 		);
 		const matchDay =
 			event.payload.matchDay ??
-			(await step.do("get match day", this.getMatchDay.bind(this, started)));
+			(await step.do(
+				"get match day",
+				{ timeout: 10_000 },
+				this.getMatchDay.bind(this, started),
+			));
 
 		if (!matchDay) {
 			console.log("No match day available");
@@ -52,18 +49,19 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		}
 		const startTime = await step.do(
 			"get start time",
+			{ timeout: 20_000 },
 			this.getStartTime.bind(this, matchDay),
 		);
 		const diff = startTime - event.timestamp.getTime();
 
 		if (diff > 24 * 60 * 60 * 1_000) {
-			console.log(`Next match day is in ${ms(diff, { long: true })}`);
+			console.log(`Next match day is in ${formatLongTime(diff)}`);
 			return;
 		}
-		rest.setToken(this.env.DISCORD_TOKEN);
 		if (diff > 1_000) {
 			const reminders = await step.do(
 				"get prediction reminders",
+				{ timeout: 10_000 },
 				this.getReminders.bind(this, startTime),
 			);
 
@@ -72,11 +70,13 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					if (
 						await step.do(
 							`check if ${userId} remind already set`,
+							{ timeout: 10_000 },
 							this.notExists.bind(this, userId, matchDay.id),
 						)
 					)
 						await step.do<void>(
 							`create ${userId} reminder`,
+							{ timeout: 10_000 },
 							this.createReminder.bind(this, userId, date, startTime, matchDay),
 						);
 				}),
@@ -88,10 +88,12 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		);
 		const matches = await step.do(
 			"load matches",
+			{ timeout: 10_000 },
 			loadMatches.bind(null, matchDay.id),
 		);
 		const users = await step.do(
 			"load predictions",
+			{ timeout: 10_000 },
 			this.loadPredictions.bind(this, matches),
 		);
 		const promises: Promise<void>[] = [];
@@ -100,6 +102,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			promises.push(
 				step.do<void>(
 					`send chunk ${i / 5}`,
+					{ timeout: 40_000 },
 					this.sendEmbeds.bind(
 						this,
 						matchDay.day,
@@ -111,17 +114,24 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		await Promise.all(promises);
 		const messageId = await step.do(
 			"send message",
+			{ timeout: 20_000 },
 			this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
 		);
 		started.push(matchDay.id);
 		await Promise.all([
-			step.do<void>("pin message", this.pinMessage.bind(this, messageId)),
+			step.do<void>(
+				"pin message",
+				{ timeout: 20_000 },
+				this.pinMessage.bind(this, messageId),
+			),
 			step.do<void>(
 				"start live score",
+				{ timeout: 10_000 },
 				this.startLiveScore.bind(this, matchDay, messageId),
 			),
 			step.do<void>(
 				"update started matchday",
+				{ timeout: 10_000 },
 				this.updateStartedMatchday.bind(this, started),
 			),
 		]);
@@ -136,6 +146,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		}
 		const newStartTime = await step.do(
 			"Get new start time",
+			{ timeout: 10_000 },
 			this.getStartTime.bind(this, newMatchDay),
 		);
 		const date = Math.round(newStartTime / 1_000);
@@ -143,6 +154,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		if (date - Date.now() / 1_000 > 1)
 			await step.do(
 				"Send new match day message",
+				{ timeout: 20_000 },
 				this.sendNewMatchDayMessage.bind(this, date, newStartTime, newMatchDay),
 			);
 	}
@@ -207,22 +219,25 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					content:
 						"⚽ È l'ora di inviare i pronostici per la prossima giornata!",
 					components: [
-						new ActionRowBuilder<ButtonBuilder>()
-							.addComponents(
-								new ButtonBuilder()
-									.setCustomId(
-										`predictions-${Number(matchDay.day)}-1-${startTime}-${userId}`,
-									)
-									.setEmoji({ name: "⚽" })
-									.setLabel("Invia pronostici")
-									.setStyle(ButtonStyle.Primary),
-								new ButtonBuilder()
-									.setURL("https://ms-bot.trombett.org/predictions")
-									.setEmoji({ name: "🌐" })
-									.setLabel("Utilizza la dashboard")
-									.setStyle(ButtonStyle.Link),
-							)
-							.toJSON(),
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									custom_id: `predictions-${Number(matchDay.day)}-1-${startTime}-${userId}`,
+									emoji: { name: "⚽" },
+									label: "Invia pronostici",
+									style: ButtonStyle.Primary,
+									type: ComponentType.Button,
+								},
+								{
+									emoji: { name: "🌐" },
+									label: "Utilizza la dashboard",
+									style: ButtonStyle.Link,
+									type: ComponentType.Button,
+									url: "https://ms-bot.trombett.org/predictions",
+								},
+							],
+						},
 					],
 				},
 				remind: "*Pronostici*",
@@ -385,20 +400,25 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			body: {
 				content: `<@&${this.env.PREDICTIONS_ROLE}>, potete inviare da ora i pronostici per la prossima giornata!\nPer farlo inviate il comando \`/predictions send\` e seguire le istruzioni o premete il pulsante qui in basso. Avete tempo fino a <t:${date}:F> (<t:${date}:R>)!`,
 				components: [
-					new ActionRowBuilder<ButtonBuilder>()
-						.addComponents(
-							new ButtonBuilder()
-								.setCustomId(`predictions-${day.day}-1-${startTime}`)
-								.setEmoji({ name: "⚽" })
-								.setLabel("Invia pronostici")
-								.setStyle(ButtonStyle.Primary),
-							new ButtonBuilder()
-								.setURL("https://ms-bot.trombett.org/predictions")
-								.setEmoji({ name: "🌐" })
-								.setLabel("Utilizza la dashboard")
-								.setStyle(ButtonStyle.Link),
-						)
-						.toJSON(),
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								custom_id: `predictions-${day.day}-1-${startTime}`,
+								emoji: { name: "⚽" },
+								label: "Invia pronostici",
+								style: ButtonStyle.Primary,
+								type: ComponentType.Button,
+							},
+							{
+								emoji: { name: "🌐" },
+								label: "Utilizza la dashboard",
+								style: ButtonStyle.Link,
+								type: ComponentType.Button,
+								url: "https://ms-bot.trombett.org/predictions",
+							},
+						],
+					},
 				],
 			} satisfies RESTPostAPIChannelMessageJSONBody,
 		});
