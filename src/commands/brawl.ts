@@ -140,6 +140,7 @@ export class Brawl extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	static override customId = "brawl";
 	static override async chatInput(
 		{ reply, defer }: ChatInputReplies,
 		{
@@ -293,7 +294,7 @@ export class Brawl extends Command {
 					: {
 							components: createBrawlersComponents(
 								player,
-								new URL(request.url).host,
+								request.url,
 								id,
 								options.order,
 							),
@@ -379,7 +380,7 @@ export class Brawl extends Command {
 					body: {
 						components: createBrawlersComponents(
 							player,
-							new URL(request.url).host,
+							request.url,
 							userId,
 							Number(
 								interaction.data.component_type === ComponentType.StringSelect

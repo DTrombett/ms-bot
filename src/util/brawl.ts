@@ -672,7 +672,7 @@ export enum BrawlerOrder {
 
 export const createBrawlersComponents = (
 	player: Player,
-	host: string,
+	baseUrl: string,
 	userId: string,
 	order = BrawlerOrder.Name,
 	page = 0,
@@ -696,7 +696,7 @@ export const createBrawlersComponents = (
 			components: [
 				{
 					type: ComponentType.MediaGallery,
-					items: [{ media: { url: `https://${host}/brawlers.png` } }],
+					items: [{ media: { url: new URL("/brawlers.png", baseUrl).href } }],
 				},
 				...player.brawlers
 					.slice(page * 10, (page + 1) * 10)
