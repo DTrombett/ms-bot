@@ -94,15 +94,15 @@ export class CommandHandler {
 		const body = await request.text();
 
 		if (
-			!(await crypto.subtle.verify(
+			await crypto.subtle.verify(
 				"Ed25519",
 				key,
 				hexToUint8Array(signature),
 				new TextEncoder().encode(timestamp + body),
-			))
+			)
 		)
-			throw new Response(null, { status: 401 });
-		return JSON.parse(body) as APIInteraction;
+			return JSON.parse(body) as APIInteraction;
+		throw new Response(null, { status: 401 });
 	}
 
 	async handleInteraction(request: Request): Promise<Response> {
