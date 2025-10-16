@@ -962,19 +962,17 @@ export class Brawl extends Command {
 		try {
 			tag = tag.toUpperCase().replace(/O/g, "0");
 			if (!tag.startsWith("#")) tag = `#${tag}`;
-			if (!/^#[0289PYLQGRJCUV]{2,14}$/.test(tag))
+			if (!/^#[0289PYLQGRJCUV]{3,15}$/.test(tag))
 				throw new TypeError("Tag giocatore non valido.");
 			const res = await fetch(
 				`https://api.brawlstars.com/v1/players/${encodeURIComponent(tag)}`,
 				{
 					cf: {
 						cacheEverything: true,
-						cacheTtl: 40,
-						cacheTtlByStatus: { "200-299": 40, "500-599": 10, "404": 86400 },
+						cacheTtl: 60,
+						cacheTtlByStatus: { "200-299": 60, "404": 86400, "500-599": 10 },
 					},
-					headers: {
-						Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}`,
-					},
+					headers: { Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}` },
 				},
 			);
 
@@ -992,7 +990,7 @@ export class Brawl extends Command {
 					content:
 						err instanceof Error
 							? err.message
-							: "Si è verificato un errore imprevisto! Riprova più tardi.",
+							: "Non è stato possibile recuperare il profilo. Riprova più tardi.",
 				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			});
 		}
