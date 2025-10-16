@@ -90,7 +90,8 @@ export class CommandHandler {
 	async verifySignature(request: Request): Promise<APIInteraction> {
 		const signature = request.headers.get("x-signature-ed25519");
 		const timestamp = request.headers.get("x-signature-timestamp");
-		if (!signature || !timestamp) throw new Response(null, { status: 401 });
+		if (!signature || !timestamp || +timestamp * 1000 < Date.now() - 10_000)
+			throw new Response(null, { status: 401 });
 		const body = await request.text();
 
 		if (
