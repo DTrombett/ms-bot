@@ -724,8 +724,8 @@ export class Brawl extends Command {
 				],
 			},
 			{
-				name: "profile",
-				description: "Visualizza un profilo Brawl Stars",
+				name: "player",
+				description: "Visualizza un giocatore Brawl Stars",
 				type: ApplicationCommandOptionType.SubcommandGroup,
 				options: [
 					{
@@ -1140,7 +1140,7 @@ export class Brawl extends Command {
 			components,
 		};
 	};
-	static getProfile = async (tag: string, edit: BaseReplies["edit"]) => {
+	static getPlayer = async (tag: string, edit: BaseReplies["edit"]) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			const res = await fetch(
@@ -1202,17 +1202,17 @@ export class Brawl extends Command {
 		args: ChatInputArgs<typeof Brawl.chatInputData>,
 	) {
 		return this[
-			`${args.subcommand.split(" ")[0] as "profile" | "club"}Command`
+			`${args.subcommand.split(" ")[0] as "player" | "club"}Command`
 		]?.(replies, args as never);
 	}
-	static profileCommand = async (
+	static playerCommand = async (
 		{ reply, defer, edit }: ChatInputReplies,
 		{
 			options,
 			subcommand,
 			user: { id },
 			request: { url },
-		}: ChatInputArgs<typeof Brawl.chatInputData, `${"profile"} ${string}`>,
+		}: ChatInputArgs<typeof Brawl.chatInputData, `${"player"} ${string}`>,
 	) => {
 		options.tag ??= (await env.DB.prepare(
 			"SELECT brawlTag FROM Users WHERE id = ?",
@@ -1226,11 +1226,11 @@ export class Brawl extends Command {
 					"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag giocatore come parametro.",
 			});
 		defer();
-		const player = await this.getProfile(options.tag, edit);
+		const player = await this.getPlayer(options.tag, edit);
 
-		return subcommand === "profile view"
+		return subcommand === "player view"
 			? edit(Brawl.createPlayerMessage(player, id))
-			: subcommand === "profile brawlers"
+			: subcommand === "player brawlers"
 				? edit({
 						components: this.createBrawlersComponents(
 							player,
@@ -1260,7 +1260,7 @@ export class Brawl extends Command {
 				.first<string>("brawlTag");
 
 			if (playerTag)
-				options.tag = (await this.getProfile(playerTag, edit)).club.tag;
+				options.tag = (await this.getPlayer(playerTag, edit)).club.tag;
 		}
 		if (!options.tag)
 			return edit({
@@ -1280,7 +1280,7 @@ export class Brawl extends Command {
 		}: ChatInputArgs<typeof Brawl.chatInputData, "link">,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
-		const player = await this.getProfile(tag, edit);
+		const player = await this.getPlayer(tag, edit);
 
 		return edit({
 			content: "Vuoi collegare questo profilo?",
@@ -1449,7 +1449,7 @@ export class Brawl extends Command {
 		else deferUpdate();
 		return edit({
 			components: this.createBrawlersComponents(
-				await this.getProfile(tag!, edit),
+				await this.getPlayer(tag!, edit),
 				request.url,
 				id,
 				Number(
@@ -1467,7 +1467,7 @@ export class Brawl extends Command {
 		{ args: [tag, brawler, order, page], user: { id } }: ComponentArgs,
 	) => {
 		deferUpdate();
-		const player = await this.getProfile(tag!, edit);
+		const player = await this.getPlayer(tag!, edit);
 		const brawlerId = Number(brawler);
 
 		return edit({
@@ -1491,7 +1491,7 @@ export class Brawl extends Command {
 		defer({ flags: MessageFlags.Ephemeral });
 		return edit(
 			this.createPlayerMessage(
-				await this.getProfile(interaction.data.values[0], edit),
+				await this.getPlayer(interaction.data.values[0], edit),
 				id,
 			),
 		);
