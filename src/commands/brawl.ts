@@ -1108,6 +1108,38 @@ export class Brawl extends Command {
 			],
 		};
 	};
+	static createPlayerMessage = (
+		player: Brawl.Player,
+		id: string,
+	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
+		const components: APIActionRowComponent<APIButtonComponent>[] = [
+			{
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						custom_id: `brawl-brawlers-${id}-${player.tag}---1`,
+						label: "Brawlers",
+						emoji: { name: "🔫" },
+						style: ButtonStyle.Primary,
+					},
+				],
+			},
+		];
+
+		if (player.club.tag)
+			components[0]!.components.push({
+				type: ComponentType.Button,
+				custom_id: `brawl-club-${id}-${player.club.tag}`,
+				label: "Club",
+				emoji: { name: "🫂" },
+				style: ButtonStyle.Primary,
+			});
+		return {
+			embeds: [this.createPlayerEmbed(player)],
+			components,
+		};
+	};
 	static getProfile = async (tag: string, edit: BaseReplies["edit"]) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
@@ -1166,101 +1198,79 @@ export class Brawl extends Command {
 		return tag;
 	};
 	static override async chatInput(
+		replies: ChatInputReplies,
+		args: ChatInputArgs<typeof Brawl.chatInputData>,
+	) {
+		return this[
+			`${args.subcommand.split(" ")[0] as "profile" | "club"}Command`
+		]?.(replies, args as never);
+	}
+	static profileCommand = async (
 		{ reply, defer, edit }: ChatInputReplies,
 		{
 			options,
 			subcommand,
 			user: { id },
 			request: { url },
+		}: ChatInputArgs<typeof Brawl.chatInputData, `${"profile"} ${string}`>,
+	) => {
+		options.tag ??= (await env.DB.prepare(
+			"SELECT brawlTag FROM Users WHERE id = ?",
+		)
+			.bind(id)
+			.first("brawlTag"))!;
+		if (!options.tag)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content:
+					"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag giocatore come parametro.",
+			});
+		defer();
+		const player = await this.getProfile(options.tag, edit);
+
+		return subcommand === "profile view"
+			? edit(Brawl.createPlayerMessage(player, id))
+			: subcommand === "profile brawlers"
+				? edit({
+						components: this.createBrawlersComponents(
+							player,
+							url,
+							id,
+							options.order,
+						),
+						flags: MessageFlags.IsComponentsV2,
+					})
+				: Promise.reject();
+	};
+	static clubCommand = async (
+		{ defer, edit }: ChatInputReplies,
+		{
+			options,
+			subcommand,
+			user: { id },
 			interaction: { locale },
-		}: ChatInputArgs<
-			typeof Brawl.chatInputData,
-			`${"profile" | "club"} ${string}`
-		>,
-	) {
-		if (subcommand.startsWith("profile")) {
-			options.tag ??= (await env.DB.prepare(
+		}: ChatInputArgs<typeof Brawl.chatInputData, `${"club"} ${string}`>,
+	) => {
+		defer();
+		if (!options.tag) {
+			const playerTag = await env.DB.prepare(
 				"SELECT brawlTag FROM Users WHERE id = ?",
 			)
 				.bind(id)
-				.first("brawlTag"))!;
-			if (!options.tag)
-				return reply({
-					flags: MessageFlags.Ephemeral,
-					content:
-						"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag giocatore come parametro.",
-				});
-			defer();
-			const player = await this.getProfile(options.tag, edit);
+				.first<string>("brawlTag");
 
-			return subcommand === "profile view"
-				? edit(Brawl.createPlayerMessage(player, id))
-				: subcommand === "profile brawlers"
-					? edit({
-							components: this.createBrawlersComponents(
-								player,
-								url,
-								id,
-								options.order,
-							),
-							flags: MessageFlags.IsComponentsV2,
-						})
-					: undefined;
+			if (playerTag)
+				options.tag = (await this.getProfile(playerTag, edit)).club.tag;
 		}
-		if (subcommand.startsWith("club")) {
-			defer();
-			if (!options.tag) {
-				const playerTag = await env.DB.prepare(
-					"SELECT brawlTag FROM Users WHERE id = ?",
-				)
-					.bind(id)
-					.first<string>("brawlTag");
-
-				if (playerTag)
-					options.tag = (await this.getProfile(playerTag, edit)).club.tag;
-			}
-			if (!options.tag)
-				return edit({
-					content:
-						"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag del club come parametro.",
-				});
-			const club = await this.getClub(options.tag, edit);
-
-			if (subcommand === "club view")
-				return edit(this.createClubMessage(club, locale));
-		}
-	}
-	static createPlayerMessage = (
-		player: Brawl.Player,
-		id: string,
-	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
-		const components: APIActionRowComponent<APIButtonComponent>[] = [
-			{
-				type: ComponentType.ActionRow,
-				components: [
-					{
-						type: ComponentType.Button,
-						custom_id: `brawl-brawlers-${id}-${player.tag}---1`,
-						label: "Brawlers",
-						emoji: { name: "🔫" },
-						style: ButtonStyle.Primary,
-					},
-				],
-			},
-		];
-
-		if (player.club.tag)
-			components[0]!.components.push({
-				type: ComponentType.Button,
-				custom_id: `brawl-club-${id}-${player.club.tag}`,
-				label: "Club",
-				emoji: { name: "🫂" },
-				style: ButtonStyle.Primary,
+		if (!options.tag)
+			return edit({
+				content:
+					"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag del club come parametro.",
 			});
-		return {
-			embeds: [this.createPlayerEmbed(player)],
-			components,
-		};
+		const club = await this.getClub(options.tag, edit);
+
+		if (subcommand === "club view")
+			return edit(this.createClubMessage(club, locale));
 	};
 	static link = async (
 		{ defer, edit }: ChatInputReplies,
