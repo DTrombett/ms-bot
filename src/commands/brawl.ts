@@ -6,16 +6,19 @@ import {
 	ComponentType,
 	MessageFlags,
 	SeparatorSpacingSize,
+	type APIActionRowComponent,
+	type APIButtonComponent,
 	type APIEmbed,
 	type APIMessageTopLevelComponent,
 	type APISectionComponent,
-	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	type Locale,
+	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
-	type RESTPostAPIWebhookWithTokenJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
 import capitalize from "../util/capitalize.ts";
-import { rest } from "../util/rest.ts";
+import { percentile } from "../util/maths.ts";
+import { ok } from "../util/node.ts";
 
 enum NotificationType {
 	"Brawler Tier Max" = 1 << 0,
@@ -28,6 +31,20 @@ enum BrawlerOrder {
 	MostTrophies,
 	LeastTrophies,
 	PowerLevel,
+}
+enum ClubType {
+	open = "Aperto",
+	inviteOnly = "Su invito",
+	closed = "Chiuso",
+	unknown = "Sconosciuto",
+}
+enum MemberEmoji {
+	president = "👑",
+	vicePresident = "⭐",
+	senior = "🔰",
+	member = "👤",
+	notMember = "❌",
+	unknown = "❓",
 }
 
 export class Brawl extends Command {
@@ -634,6 +651,14 @@ export class Brawl extends Command {
 		"Smodata XV",
 		"Smodata XVI",
 	];
+	static readonly #requestData = {
+		cf: {
+			cacheEverything: true,
+			cacheTtl: 60,
+			cacheTtlByStatus: { "200-299": 60, "404": 86400, "500-599": 10 },
+		},
+		headers: { Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}` },
+	};
 	static override chatInputData = {
 		name: "brawl",
 		description: "Interagisci con Brawl Stars!",
@@ -742,6 +767,50 @@ export class Brawl extends Command {
 					},
 				],
 			},
+			{
+				name: "club",
+				description: "Visualizza un club Brawl Stars",
+				type: ApplicationCommandOptionType.SubcommandGroup,
+				options: [
+					{
+						name: "view",
+						description: "Vedi i dettagli di un club!",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "tag",
+								description:
+									"Il tag del club (es. #2UPUQCYLR). Di default viene usato quello del profilo salvato",
+								type: ApplicationCommandOptionType.String,
+							},
+						],
+					},
+					{
+						name: "members",
+						description: "Vedi i membri di un club",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "tag",
+								description:
+									"Il tag del club (es. #2UPUQCYLR). Di default viene usato quello del profilo salvato",
+								type: ApplicationCommandOptionType.String,
+							},
+							{
+								name: "order",
+								description: "Come ordinare i membri (default. Nome)",
+								type: ApplicationCommandOptionType.Number,
+								choices: [
+									{ name: "Nome", value: BrawlerOrder.Name },
+									{ name: "Più Trofei", value: BrawlerOrder.MostTrophies },
+									{ name: "Meno Trofei", value: BrawlerOrder.LeastTrophies },
+									{ name: "Livello", value: BrawlerOrder.PowerLevel },
+								],
+							},
+						],
+					},
+				],
+			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static calculateFlags = (flags = 0) =>
@@ -806,7 +875,7 @@ export class Brawl extends Command {
 							type: ComponentType.Button,
 							emoji: { name: "⬅️" },
 							label: "Torna alla lista",
-							custom_id: `brawl-brawlers-${player.tag}-${userId}-${order}-${page}`,
+							custom_id: `brawl-brawlers-${userId}-${player.tag}-${order}-${page}`,
 							style: ButtonStyle.Secondary,
 						},
 					],
@@ -860,7 +929,7 @@ export class Brawl extends Command {
 								accessory: {
 									type: ComponentType.Button,
 									style: ButtonStyle.Secondary,
-									custom_id: `brawl-brawler-${player.tag}-${id}-${brawler.id}-${order}-${page}`,
+									custom_id: `brawl-brawler-${id}-${player.tag}-${brawler.id}-${order}-${page}`,
 									label: "Dettagli",
 								},
 							};
@@ -871,7 +940,7 @@ export class Brawl extends Command {
 							{
 								type: ComponentType.Button,
 								emoji: { name: "⬅️" },
-								custom_id: `brawl-brawlers-${player.tag}-${id}-${order}-${page - 1}`,
+								custom_id: `brawl-brawlers-${id}-${player.tag}-${order}-${page - 1}`,
 								disabled: !page,
 								style: ButtonStyle.Primary,
 							},
@@ -885,7 +954,7 @@ export class Brawl extends Command {
 							{
 								type: ComponentType.Button,
 								emoji: { name: "➡️" },
-								custom_id: `brawl-brawlers-${player.tag}-${id}-${order}-${page + 1}`,
+								custom_id: `brawl-brawlers-${id}-${player.tag}-${order}-${page + 1}`,
 								disabled: page >= pages - 1,
 								style: ButtonStyle.Primary,
 							},
@@ -918,7 +987,7 @@ export class Brawl extends Command {
 										default: order === BrawlerOrder.PowerLevel,
 									},
 								],
-								custom_id: `brawl-brawlers-${player.tag}-${id}--${page}`,
+								custom_id: `brawl-brawlers-${id}-${player.tag}--${page}`,
 								placeholder: "Ordina per...",
 							},
 						],
@@ -958,22 +1027,93 @@ export class Brawl extends Command {
 			},
 		],
 	});
-	static getProfile = async (tag: string, fullRoute: BaseArgs["fullRoute"]) => {
+	static createClubMessage = (
+		club: Brawl.Club,
+		locale: Locale,
+	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
+		club.members.sort((a, b) => b.trophies - a.trophies);
+		const members: number[] = [];
+		const staff: {
+			president: Pick<Brawl.ClubMember, "nameColor" | "name">;
+			vicePresident: string[];
+			senior: string[];
+		} = {
+			president: { name: "*Non trovato*", nameColor: "" },
+			vicePresident: [],
+			senior: [],
+		};
+
+		for (const member of club.members) {
+			members.push(member.trophies);
+			if (member.role === "president") staff.president = member;
+			else if (member.role === "vicePresident")
+				staff.vicePresident.push(member.name);
+			else if (member.role === "senior") staff.senior.push(member.name);
+		}
+		return {
+			embeds: [
+				{
+					title: `${club.name} (${club.tag})`,
+					thumbnail: {
+						url: `https://cdn.brawlify.com/club-badges/regular/${club.badgeId}.png`,
+					},
+					color: parseInt(staff.president?.nameColor.slice(4) ?? "ffffff", 16),
+					description: club.description
+						.replaceAll("|", " | ")
+						.replace(
+							/(?:\p{Extended_Pictographic}|\p{Regional_Indicator})+/gu,
+							(s) => `${s} `,
+						),
+					fields: [
+						{
+							name: "📊 Dati generali",
+							value: `**Trofei**: ${club.trophies.toLocaleString(locale)}\n**Tipo**: ${ClubType[club.type]}\n**Trofei richiesti**: ${club.requiredTrophies.toLocaleString(locale)}`,
+							inline: true,
+						},
+						{
+							name: "🏆 Membri",
+							value: `**Mediana**: ${Math.round(
+								percentile(members, 0.5),
+							).toLocaleString(locale)}\n**75° Percentile**: ${Math.round(
+								percentile(members, 0.75),
+							).toLocaleString(locale)}\n**90° Percentile**: ${Math.round(
+								percentile(members, 0.9),
+							).toLocaleString(locale)}`,
+							inline: true,
+						},
+						{
+							name: "👥 Staff",
+							value: `**Presidente**: ${staff.president.name}\n**Co-capo**: ${staff.vicePresident.join(", ") || "*Nessuno*"}\n**Anziani**: ${staff.senior.join(", ") || "*Nessuno*"}`,
+							inline: true,
+						},
+					],
+				},
+			],
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.StringSelect,
+							custom_id: "brawl-player",
+							placeholder: "Visualizza un membro...",
+							options: club.members.slice(0, 25).map((m) => ({
+								label: m.name,
+								value: m.tag,
+								emoji: { name: MemberEmoji[m.role] ?? "👤" },
+							})),
+						},
+					],
+				},
+			],
+		};
+	};
+	static getProfile = async (tag: string, edit: BaseReplies["edit"]) => {
 		try {
-			tag = tag.toUpperCase().replace(/O/g, "0");
-			if (!tag.startsWith("#")) tag = `#${tag}`;
-			if (!/^#[0289PYLQGRJCUV]{3,15}$/.test(tag))
-				throw new TypeError("Tag giocatore non valido.");
+			tag = Brawl.normalizeTag(tag);
 			const res = await fetch(
 				`https://api.brawlstars.com/v1/players/${encodeURIComponent(tag)}`,
-				{
-					cf: {
-						cacheEverything: true,
-						cacheTtl: 60,
-						cacheTtlByStatus: { "200-299": 60, "404": 86400, "500-599": 10 },
-					},
-					headers: { Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}` },
-				},
+				Brawl.#requestData,
 			);
 
 			if (res.status === 404) throw new Error("Giocatore non trovato.");
@@ -985,107 +1125,177 @@ export class Brawl extends Command {
 			}
 			return await res.json<Brawl.Player>();
 		} catch (err) {
-			throw await rest.patch(fullRoute, {
-				body: {
-					content:
-						err instanceof Error
-							? err.message
-							: "Non è stato possibile recuperare il profilo. Riprova più tardi.",
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			throw await edit({
+				content:
+					err instanceof Error
+						? err.message
+						: "Non è stato possibile recuperare il profilo. Riprova più tardi.",
 			});
 		}
 	};
+	static getClub = async (tag: string, edit: BaseReplies["edit"]) => {
+		try {
+			tag = Brawl.normalizeTag(tag);
+			const res = await fetch(
+				`https://api.brawlstars.com/v1/clubs/${encodeURIComponent(tag)}`,
+				Brawl.#requestData,
+			);
+
+			if (res.status === 404) throw new Error("Club non trovato.");
+			if (res.status !== 200) {
+				console.log(res.status, res.statusText, await res.text());
+				throw new Error(
+					"Si è verificato un errore imprevisto! Riprova più tardi.",
+				);
+			}
+			return await res.json<Brawl.Club>();
+		} catch (err) {
+			throw await edit({
+				content:
+					err instanceof Error
+						? err.message
+						: "Non è stato possibile recuperare il club. Riprova più tardi.",
+			});
+		}
+	};
+	static normalizeTag = (tag: string) => {
+		tag = tag.toUpperCase().replace(/O/g, "0");
+		if (!tag.startsWith("#")) tag = `#${tag}`;
+		if (!/^#[0289PYLQGRJCUV]{3,15}$/.test(tag))
+			throw new TypeError("Tag giocatore non valido.");
+		return tag;
+	};
 	static override async chatInput(
-		{ reply, defer }: ChatInputReplies,
+		{ reply, defer, edit }: ChatInputReplies,
 		{
 			options,
 			subcommand,
 			user: { id },
 			request: { url },
-			fullRoute,
-		}: ChatInputArgs<typeof Brawl.chatInputData, `profile ${string}`>,
+			interaction: { locale },
+		}: ChatInputArgs<
+			typeof Brawl.chatInputData,
+			`${"profile" | "club"} ${string}`
+		>,
 	) {
-		options.tag ??= (await env.DB.prepare(
-			"SELECT brawlTag FROM Users WHERE id = ?",
-		)
-			.bind(id)
-			.first("brawlTag"))!;
-		if (!options.tag)
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content:
-					"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag giocatore come parametro.",
-			});
-		defer();
-		const player = await this.getProfile(options.tag, fullRoute);
+		if (subcommand.startsWith("profile")) {
+			options.tag ??= (await env.DB.prepare(
+				"SELECT brawlTag FROM Users WHERE id = ?",
+			)
+				.bind(id)
+				.first("brawlTag"))!;
+			if (!options.tag)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content:
+						"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag giocatore come parametro.",
+				});
+			defer();
+			const player = await this.getProfile(options.tag, edit);
 
-		return rest.patch(fullRoute, {
-			body: (subcommand === "profile view"
-				? {
-						embeds: [this.createPlayerEmbed(player)],
-						components: [
-							{
-								type: ComponentType.ActionRow,
-								components: [
-									{
-										type: ComponentType.Button,
-										custom_id: `brawl-brawlers-${player.tag}-${id}---1`,
-										label: "Brawlers",
-										emoji: { name: "🔫" },
-										style: ButtonStyle.Primary,
-									},
-								],
-							},
-						],
-					}
-				: {
-						components: this.createBrawlersComponents(
-							player,
-							url,
-							id,
-							options.order,
-						),
-						flags: MessageFlags.IsComponentsV2,
-					}) satisfies RESTPostAPIWebhookWithTokenJSONBody,
-		});
+			return subcommand === "profile view"
+				? edit(Brawl.createPlayerMessage(player, id))
+				: subcommand === "profile brawlers"
+					? edit({
+							components: this.createBrawlersComponents(
+								player,
+								url,
+								id,
+								options.order,
+							),
+							flags: MessageFlags.IsComponentsV2,
+						})
+					: undefined;
+		}
+		if (subcommand.startsWith("club")) {
+			defer();
+			if (!options.tag) {
+				const playerTag = await env.DB.prepare(
+					"SELECT brawlTag FROM Users WHERE id = ?",
+				)
+					.bind(id)
+					.first<string>("brawlTag");
+
+				if (playerTag)
+					options.tag = (await this.getProfile(playerTag, edit)).club.tag;
+			}
+			if (!options.tag)
+				return edit({
+					content:
+						"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag del club come parametro.",
+				});
+			const club = await this.getClub(options.tag, edit);
+
+			if (subcommand === "club view")
+				return edit(this.createClubMessage(club, locale));
+		}
 	}
+	static createPlayerMessage = (
+		player: Brawl.Player,
+		id: string,
+	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
+		const components: APIActionRowComponent<APIButtonComponent>[] = [
+			{
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						custom_id: `brawl-brawlers-${id}-${player.tag}---1`,
+						label: "Brawlers",
+						emoji: { name: "🔫" },
+						style: ButtonStyle.Primary,
+					},
+				],
+			},
+		];
+
+		if (player.club.tag)
+			components[0]!.components.push({
+				type: ComponentType.Button,
+				custom_id: `brawl-club-${id}-${player.club.tag}`,
+				label: "Club",
+				emoji: { name: "🫂" },
+				style: ButtonStyle.Primary,
+			});
+		return {
+			embeds: [this.createPlayerEmbed(player)],
+			components,
+		};
+	};
 	static link = async (
-		{ defer }: ChatInputReplies,
+		{ defer, edit }: ChatInputReplies,
 		{
 			options: { tag },
 			user: { id },
-			fullRoute,
 		}: ChatInputArgs<typeof Brawl.chatInputData, "link">,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
-		const player = await this.getProfile(tag, fullRoute);
+		const player = await this.getProfile(tag, edit);
 
-		return rest.patch(fullRoute, {
-			body: {
-				content: "Vuoi collegare questo profilo?",
-				embeds: [this.createPlayerEmbed(player)],
-				components: [
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								custom_id: `brawl-link-${player.tag}-${id}`,
-								label: "Collega",
-								emoji: { name: "🔗" },
-								style: ButtonStyle.Primary,
-							},
-							{
-								type: ComponentType.Button,
-								custom_id: `brawl-undo-${player.tag}-${id}`,
-								label: "Annulla",
-								emoji: { name: "✖️" },
-								style: ButtonStyle.Danger,
-							},
-						],
-					},
-				],
-			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		return edit({
+			content: "Vuoi collegare questo profilo?",
+			embeds: [this.createPlayerEmbed(player)],
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: `brawl-link-${id}-${player.tag}`,
+							label: "Collega",
+							emoji: { name: "🔗" },
+							style: ButtonStyle.Primary,
+						},
+						{
+							type: ComponentType.Button,
+							custom_id: `brawl-undo-${id}-${player.tag}`,
+							label: "Annulla",
+							emoji: { name: "✖️" },
+							style: ButtonStyle.Danger,
+						},
+					],
+				},
+			],
 		});
 	};
 	static "notify enable" = async (
@@ -1150,9 +1360,11 @@ export class Brawl extends Command {
 		replies: ComponentReplies,
 		args: ComponentArgs,
 	) {
-		if (args.user.id === args.args[2])
+		const [action, userId] = args.args.splice(0, 2);
+
+		if (!userId || args.user.id === userId)
 			return this[
-				`${args.args[0] as "link" | "undo" | "brawler" | "brawlers"}Component`
+				`${action as "link" | "undo" | "brawler" | "brawlers"}Component`
 			]?.(replies, args);
 		return replies.reply({
 			flags: MessageFlags.Ephemeral,
@@ -1161,12 +1373,12 @@ export class Brawl extends Command {
 	}
 	static linkComponent = async (
 		{ update }: ComponentReplies,
-		{ args: [, tag, userId] }: ComponentArgs,
+		{ args: [tag], user: { id } }: ComponentArgs,
 	) => {
 		await env.DB.prepare(
 			"INSERT INTO Users (id, brawlTag) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET brawlTag = excluded.brawlTag",
 		)
-			.bind(userId, tag)
+			.bind(id, tag)
 			.run();
 		return update({
 			content: "Profilo collegato con successo!",
@@ -1215,56 +1427,70 @@ export class Brawl extends Command {
 			],
 		});
 	static brawlersComponent = async (
-		{ defer, deferUpdate }: ComponentReplies,
+		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
 			interaction: { data },
 			request,
-			args: [, tag, , order, page, replyFlag],
+			args: [tag, order, page, replyFlag],
 			user: { id },
-			fullRoute,
 		}: ComponentArgs,
 	) => {
 		if (replyFlag) defer();
 		else deferUpdate();
-		return rest.patch(fullRoute, {
-			body: {
-				components: this.createBrawlersComponents(
-					await this.getProfile(tag!, fullRoute),
-					request.url,
-					id,
-					Number(
-						data.component_type === ComponentType.StringSelect
-							? data.values[0]
-							: order,
-					) || undefined,
-					Number(page) || undefined,
-				),
-				flags: MessageFlags.IsComponentsV2,
-			} satisfies RESTPostAPIWebhookWithTokenJSONBody,
+		return edit({
+			components: this.createBrawlersComponents(
+				await this.getProfile(tag!, edit),
+				request.url,
+				id,
+				Number(
+					data.component_type === ComponentType.StringSelect
+						? data.values[0]
+						: order,
+				) || undefined,
+				Number(page) || undefined,
+			),
+			flags: MessageFlags.IsComponentsV2,
 		});
 	};
 	static brawlerComponent = async (
-		{ deferUpdate }: ComponentReplies,
-		{
-			fullRoute,
-			args: [, tag, , brawler, order, page],
-			user: { id },
-		}: ComponentArgs,
+		{ deferUpdate, edit }: ComponentReplies,
+		{ args: [tag, brawler, order, page], user: { id } }: ComponentArgs,
 	) => {
 		deferUpdate();
-		const player = await this.getProfile(tag!, fullRoute);
+		const player = await this.getProfile(tag!, edit);
 		const brawlerId = Number(brawler);
 
-		return rest.patch(fullRoute, {
-			body: {
-				components: this.createBrawlerComponents(
-					player,
-					id,
-					player.brawlers.find((b) => b.id === brawlerId)!,
-					Number(order) || undefined,
-					Number(page) || undefined,
-				),
-			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		return edit({
+			components: this.createBrawlerComponents(
+				player,
+				id,
+				player.brawlers.find((b) => b.id === brawlerId)!,
+				Number(order) || undefined,
+				Number(page) || undefined,
+			),
 		});
+	};
+	static playerComponent = async (
+		{ defer, edit }: ComponentReplies,
+		{ user: { id }, interaction }: ComponentArgs,
+	) => {
+		ok(
+			interaction.data.component_type === ComponentType.StringSelect &&
+				interaction.data.values[0],
+		);
+		defer({ flags: MessageFlags.Ephemeral });
+		return edit(
+			this.createPlayerMessage(
+				await this.getProfile(interaction.data.values[0], edit),
+				id,
+			),
+		);
+	};
+	static clubComponent = async (
+		{ defer, edit }: ComponentReplies,
+		{ args: [tag], interaction: { locale } }: ComponentArgs,
+	) => {
+		defer();
+		return edit(this.createClubMessage(await this.getClub(tag!, edit), locale));
 	};
 }

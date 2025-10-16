@@ -23,8 +23,10 @@ import type {
 	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
+	RESTPatchAPIInteractionOriginalResponseJSONBody,
 	RESTPostAPIApplicationCommandsJSONBody,
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
+	RESTPostAPIInteractionFollowupJSONBody,
 	RoutesDeclarations,
 } from "discord-api-types/v10";
 import type Command from "./Command.ts";
@@ -340,12 +342,18 @@ declare global {
 			? D
 			: never,
 	) => void;
-
+	type BaseReplies = {
+		edit: (
+			data: RESTPatchAPIInteractionOriginalResponseJSONBody,
+		) => Promise<void>;
+		delete: () => Promise<void>;
+		followup: (data: RESTPostAPIInteractionFollowupJSONBody) => Promise<void>;
+	};
 	type Replies = {
 		[P in keyof typeof CommandHandler.ReplyTypes]: Reply<
 			(typeof CommandHandler.ReplyTypes)[P]
 		>;
-	};
+	} & BaseReplies;
 
 	type BaseArgs<T extends APIInteraction = APIInteraction> = {
 		interaction: T;
@@ -354,7 +362,8 @@ declare global {
 		fullRoute: ReturnType<RoutesDeclarations["webhookMessage"]>;
 	};
 
-	type ChatInputReplies = Pick<Replies, "reply" | "defer" | "modal">;
+	type ChatInputReplies = Pick<Replies, "reply" | "defer" | "modal"> &
+		BaseReplies;
 
 	type ChatInputArgs<
 		A extends
@@ -375,23 +384,25 @@ declare global {
 	type ComponentReplies = Pick<
 		Replies,
 		"reply" | "defer" | "modal" | "update" | "deferUpdate"
-	>;
+	> &
+		BaseReplies;
 
 	type ComponentArgs = BaseArgs<APIMessageComponentInteraction> & {
 		args: string[];
 	};
 
-	type ModalReplies = Pick<Replies, "reply" | "defer">;
+	type ModalReplies = Pick<Replies, "reply" | "defer"> & BaseReplies;
 
 	type ModalArgs = BaseArgs<APIModalSubmitInteraction> & {
 		args: string[];
 	};
 
-	type UserReplies = Pick<Replies, "reply" | "defer" | "modal">;
+	type UserReplies = Pick<Replies, "reply" | "defer" | "modal"> & BaseReplies;
 
 	type UserArgs = BaseArgs<APIUserApplicationCommandInteraction>;
 
-	type MessageReplies = Pick<Replies, "reply" | "defer" | "modal">;
+	type MessageReplies = Pick<Replies, "reply" | "defer" | "modal"> &
+		BaseReplies;
 
 	type MessageArgs = BaseArgs<APIMessageApplicationCommandInteraction>;
 
@@ -480,6 +491,31 @@ declare global {
 			name: JsonLocalizedName;
 			id: number;
 			starPowers: StarPowerList;
+		};
+		type Club = {
+			tag: string;
+			name: string;
+			description: string;
+			trophies: number;
+			requiredTrophies: number;
+			members: ClubMemberList;
+			type: "open" | "inviteOnly" | "closed" | "unknown";
+			badgeId: number;
+		};
+		type ClubMemberList = ClubMember[];
+		type ClubMember = {
+			icon: PlayerIcon;
+			tag: string;
+			name: string;
+			trophies: number;
+			role:
+				| "notMember"
+				| "member"
+				| "vicePresident"
+				| "president"
+				| "unknown"
+				| "senior";
+			nameColor: string;
 		};
 	}
 }

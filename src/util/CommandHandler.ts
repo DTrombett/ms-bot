@@ -11,6 +11,7 @@ import {
 	type RoutesDeclarations,
 } from "discord-api-types/v10";
 import type { Command } from "../Command.ts";
+import { rest } from "./rest.ts";
 import { hexToUint8Array } from "./strings.ts";
 
 const key = await crypto.subtle.importKey(
@@ -132,7 +133,7 @@ export class CommandHandler {
 			subcommand?: string;
 			options?: Record<string, string | number | boolean>;
 			args?: string[];
-			fullRoute?: ReturnType<RoutesDeclarations["webhookMessage"]>;
+			fullRoute: ReturnType<RoutesDeclarations["webhookMessage"]>;
 		} = {
 			interaction,
 			request,
@@ -197,12 +198,24 @@ export class CommandHandler {
 		waitUntil(
 			runner.call(
 				Command,
-				Object.fromEntries<Reply<InteractionResponseType>>(
-					CommandHandler.replies.map(([key, type]) => [
-						key,
-						(data) => resolve({ type, data } as never),
-					]),
-				) as Replies,
+				{
+					...Object.fromEntries<Reply<InteractionResponseType>>(
+						CommandHandler.replies.map(([key, type]) => [
+							key,
+							(data) => resolve({ type, data } as never),
+						]),
+					),
+					edit: (body) =>
+						rest.patch(args.fullRoute, { body }).catch(console.error),
+					delete: () => rest.delete(args.fullRoute).catch(console.error),
+					followup: (body) =>
+						rest
+							.post(
+								Routes.webhook(interaction.application_id, interaction.token),
+								{ body },
+							)
+							.catch(console.error),
+				} as Replies,
 				args,
 			),
 		);
