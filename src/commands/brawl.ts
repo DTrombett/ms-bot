@@ -32,6 +32,12 @@ enum BrawlerOrder {
 	LeastTrophies,
 	PowerLevel,
 }
+enum MembersOrder {
+	Name,
+	MostTrophies,
+	LeastTrophies,
+	Role,
+}
 enum ClubType {
 	open = "Aperto",
 	inviteOnly = "Su invito",
@@ -45,6 +51,22 @@ enum MemberEmoji {
 	member = "👤",
 	notMember = "❌",
 	unknown = "❓",
+}
+enum MemberRole {
+	president,
+	vicePresident,
+	senior,
+	member,
+	notMember,
+	unknown,
+}
+enum ResolvedMemberRole {
+	president = "Presidente",
+	vicePresident = "Vicepresidente",
+	senior = "Anziano",
+	member = "Socio",
+	notMember = "Non socio",
+	unknown = "Sconosciuto",
 }
 
 export class Brawl extends Command {
@@ -801,10 +823,10 @@ export class Brawl extends Command {
 								description: "Come ordinare i membri (default. Nome)",
 								type: ApplicationCommandOptionType.Number,
 								choices: [
-									{ name: "Nome", value: BrawlerOrder.Name },
-									{ name: "Più Trofei", value: BrawlerOrder.MostTrophies },
-									{ name: "Meno Trofei", value: BrawlerOrder.LeastTrophies },
-									{ name: "Livello", value: BrawlerOrder.PowerLevel },
+									{ name: "Nome", value: MembersOrder.Name },
+									{ name: "Più Trofei", value: MembersOrder.MostTrophies },
+									{ name: "Meno Trofei", value: MembersOrder.LeastTrophies },
+									{ name: "Ruolo", value: MembersOrder.Role },
 								],
 							},
 						],
@@ -996,6 +1018,111 @@ export class Brawl extends Command {
 			},
 		];
 	};
+	static createMembersComponents = (
+		club: Brawl.Club,
+		url: string,
+		id: string,
+		order = MembersOrder.MostTrophies,
+		page = 0,
+	): APIMessageTopLevelComponent[] => {
+		const pages = Math.ceil(club.members.length / 10);
+
+		club.members.sort(
+			order === MembersOrder.Name
+				? (a, b) => a.name.localeCompare(b.name)
+				: order === MembersOrder.MostTrophies
+					? (a, b) => b.trophies - a.trophies
+					: order === MembersOrder.LeastTrophies
+						? (a, b) => a.trophies - b.trophies
+						: (a, b) => MemberRole[a.role] - MemberRole[b.role],
+		);
+		return [
+			{
+				type: ComponentType.Container,
+				components: [
+					{
+						type: ComponentType.MediaGallery,
+						items: [{ media: { url: new URL("/brawlers.png", url).href } }],
+					},
+					...club.members.slice(page * 10, (page + 1) * 10).flatMap(
+						(member, i): APISectionComponent => ({
+							type: ComponentType.Section,
+							components: [
+								{
+									type: ComponentType.TextDisplay,
+									content: `${i + page * 10 + 1}.\t**${member.name}**\n${MemberEmoji[member.role]} ${ResolvedMemberRole[member.role]}\t🏆 ${member.trophies}`,
+								},
+							],
+							accessory: {
+								type: ComponentType.Button,
+								style: ButtonStyle.Secondary,
+								custom_id: `brawl-player-${id}-${member.tag}`,
+								label: "Dettagli",
+							},
+						}),
+					),
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								emoji: { name: "⬅️" },
+								custom_id: `brawl-members-${id}-${club.tag}-${order}-${page - 1}`,
+								disabled: !page,
+								style: ButtonStyle.Primary,
+							},
+							{
+								type: ComponentType.Button,
+								label: `Pagina ${page + 1} di ${pages}`,
+								custom_id: "brawl",
+								disabled: true,
+								style: ButtonStyle.Secondary,
+							},
+							{
+								type: ComponentType.Button,
+								emoji: { name: "➡️" },
+								custom_id: `brawl-members-${id}-${club.tag}-${order}-${page + 1}`,
+								disabled: page >= pages - 1,
+								style: ButtonStyle.Primary,
+							},
+						],
+					},
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.StringSelect,
+								options: [
+									{
+										label: "Nome",
+										value: String(MembersOrder.Name),
+										default: order === MembersOrder.Name,
+									},
+									{
+										label: "Più trofei",
+										value: String(MembersOrder.MostTrophies),
+										default: order === MembersOrder.MostTrophies,
+									},
+									{
+										label: "Meno trofei",
+										value: String(MembersOrder.LeastTrophies),
+										default: order === MembersOrder.LeastTrophies,
+									},
+									{
+										label: "Ruolo",
+										value: String(MembersOrder.Role),
+										default: order === MembersOrder.Role,
+									},
+								],
+								custom_id: `brawl-members-${id}-${club.tag}--${page}`,
+								placeholder: "Ordina per...",
+							},
+						],
+					},
+				],
+			},
+		];
+	};
 	static createPlayerEmbed = (player: Brawl.Player): APIEmbed => ({
 		title: `${player.name} (${player.tag})`,
 		thumbnail: {
@@ -1029,6 +1156,7 @@ export class Brawl extends Command {
 	});
 	static createClubMessage = (
 		club: Brawl.Club,
+		userId: string,
 		locale: Locale,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		club.members.sort((a, b) => b.trophies - a.trophies);
@@ -1083,7 +1211,7 @@ export class Brawl extends Command {
 						},
 						{
 							name: "👥 Staff",
-							value: `**Presidente**: ${staff.president.name}\n**Co-capo**: ${staff.vicePresident.join(", ") || "*Nessuno*"}\n**Anziani**: ${staff.senior.join(", ") || "*Nessuno*"}`,
+							value: `**Presidente**: ${staff.president.name}\n**Vicepresidente**: ${staff.vicePresident.join(", ") || "*Nessuno*"}\n**Anziani**: ${staff.senior.join(", ") || "*Nessuno*"}`,
 							inline: true,
 						},
 					],
@@ -1102,6 +1230,18 @@ export class Brawl extends Command {
 								value: m.tag,
 								emoji: { name: MemberEmoji[m.role] ?? "👤" },
 							})),
+						},
+					],
+				},
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: `brawl-members-${userId}-${club.tag}---1`,
+							style: ButtonStyle.Primary,
+							label: "Lista Membri",
+							emoji: { name: "👥" },
 						},
 					],
 				},
@@ -1249,6 +1389,7 @@ export class Brawl extends Command {
 			subcommand,
 			user: { id },
 			interaction: { locale },
+			request: { url },
 		}: ChatInputArgs<typeof Brawl.chatInputData, `${"club"} ${string}`>,
 	) => {
 		defer();
@@ -1270,7 +1411,12 @@ export class Brawl extends Command {
 		const club = await this.getClub(options.tag, edit);
 
 		if (subcommand === "club view")
-			return edit(this.createClubMessage(club, locale));
+			return edit(this.createClubMessage(club, id, locale));
+		else if (subcommand === "club members")
+			return edit({
+				components: this.createMembersComponents(club, url, id, options.order),
+				flags: MessageFlags.IsComponentsV2,
+			});
 	};
 	static link = async (
 		{ defer, edit }: ChatInputReplies,
@@ -1462,6 +1608,32 @@ export class Brawl extends Command {
 			flags: MessageFlags.IsComponentsV2,
 		});
 	};
+	static membersComponent = async (
+		{ defer, deferUpdate, edit }: ComponentReplies,
+		{
+			interaction: { data },
+			request: { url },
+			args: [tag, order, page, replyFlag],
+			user: { id },
+		}: ComponentArgs,
+	) => {
+		if (replyFlag) defer();
+		else deferUpdate();
+		return edit({
+			components: this.createMembersComponents(
+				await this.getClub(tag!, edit),
+				url,
+				id,
+				Number(
+					data.component_type === ComponentType.StringSelect
+						? data.values[0]
+						: order,
+				) || undefined,
+				Number(page) || undefined,
+			),
+			flags: MessageFlags.IsComponentsV2,
+		});
+	};
 	static brawlerComponent = async (
 		{ deferUpdate, edit }: ComponentReplies,
 		{ args: [tag, brawler, order, page], user: { id } }: ComponentArgs,
@@ -1482,25 +1654,21 @@ export class Brawl extends Command {
 	};
 	static playerComponent = async (
 		{ defer, edit }: ComponentReplies,
-		{ user: { id }, interaction }: ComponentArgs,
+		{ user: { id }, interaction, args: [tag] }: ComponentArgs,
 	) => {
-		ok(
-			interaction.data.component_type === ComponentType.StringSelect &&
-				interaction.data.values[0],
-		);
+		if (interaction.data.component_type === ComponentType.StringSelect)
+			[tag] = interaction.data.values;
+		ok(tag);
 		defer({ flags: MessageFlags.Ephemeral });
-		return edit(
-			this.createPlayerMessage(
-				await this.getPlayer(interaction.data.values[0], edit),
-				id,
-			),
-		);
+		return edit(this.createPlayerMessage(await this.getPlayer(tag, edit), id));
 	};
 	static clubComponent = async (
 		{ defer, edit }: ComponentReplies,
-		{ args: [tag], interaction: { locale } }: ComponentArgs,
+		{ args: [tag], interaction: { locale }, user: { id } }: ComponentArgs,
 	) => {
 		defer();
-		return edit(this.createClubMessage(await this.getClub(tag!, edit), locale));
+		return edit(
+			this.createClubMessage(await this.getClub(tag!, edit), id, locale),
+		);
 	};
 }
