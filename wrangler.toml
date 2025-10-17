@@ -13,7 +13,7 @@ enabled = true
 SEASON_ID = "266660"
 
 [triggers]
-crons = ["0 0 * * *"]
+crons = ["0 0 * * *", "*/10 * * * *"]
 
 [assets]
 directory = "./public"
@@ -39,10 +39,10 @@ name = "live-score"
 binding = "LIVE_SCORE"
 class_name = "LiveScore"
 
-# [[workflows]]
-# name = "live-match"
-# binding = "LIVE_MATCH"
-# class_name = "LiveMatch"
+[[workflows]]
+name = "brawl-notifications"
+binding = "BRAWL_NOTIFICATIONS"
+class_name = "BrawlNotifications"
 
 [[workflows]]
 name = "reminder"

@@ -264,6 +264,10 @@ declare global {
 		matchPointsHistory?: string | null;
 		match?: number | null;
 		remindMinutes?: number | null;
+		brawlTag?: string;
+		brawlNotifications: number;
+		brawlTrophies?: number | null;
+		brawlers?: string | null;
 	};
 	type Reminder = {
 		id: string;

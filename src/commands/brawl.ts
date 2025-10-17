@@ -15,17 +15,12 @@ import {
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { NotificationType } from "../BrawlNotifications.ts";
 import Command from "../Command.ts";
 import capitalize from "../util/capitalize.ts";
 import { percentile } from "../util/maths.ts";
 import { ok } from "../util/node.ts";
 
-enum NotificationType {
-	"Brawler Tier Max" = 1 << 0,
-	"New Brawler" = 1 << 2,
-	"Trophy Road Advancement" = 1 << 3,
-	"All" = 1 << 4,
-}
 enum BrawlerOrder {
 	Name,
 	MostTrophies,
@@ -673,7 +668,7 @@ export class Brawl extends Command {
 		"Smodata XV",
 		"Smodata XVI",
 	];
-	static readonly #requestData = {
+	static readonly #requestData: RequestInit<RequestInitCfProperties> = {
 		cf: {
 			cacheEverything: true,
 			cacheTtl: 60,
@@ -1195,12 +1190,12 @@ export class Brawl extends Command {
 					fields: [
 						{
 							name: "📊 Dati generali",
-							value: `**Trofei**: ${club.trophies.toLocaleString(locale)}\n**Tipo**: ${ClubType[club.type]}\n**Trofei richiesti**: ${club.requiredTrophies.toLocaleString(locale)}`,
+							value: `**Tipo**: ${ClubType[club.type]}\n**Membri**: ${members.length.toLocaleString(locale)}\n**Trofei totali**: ${club.trophies.toLocaleString(locale)}\n**Trofei richiesti**: ${club.requiredTrophies.toLocaleString(locale)}`,
 							inline: true,
 						},
 						{
 							name: "🏆 Membri",
-							value: `**Mediana**: ${Math.round(
+							value: `**Trofei medi**: ${Math.round(club.trophies / club.members.length).toLocaleString(locale)}\n**Mediana**: ${Math.round(
 								percentile(members, 0.5),
 							).toLocaleString(locale)}\n**75° Percentile**: ${Math.round(
 								percentile(members, 0.75),
@@ -1211,7 +1206,7 @@ export class Brawl extends Command {
 						},
 						{
 							name: "👥 Staff",
-							value: `**Presidente**: ${staff.president.name}\n**Vicepresidente**: ${staff.vicePresident.join(", ") || "*Nessuno*"}\n**Anziani**: ${staff.senior.join(", ") || "*Nessuno*"}`,
+							value: `**Presidente**: ${staff.president.name}\n**Vicepresidenti**: ${staff.vicePresident.join(", ") || "*Nessuno*"}\n**Anziani**: ${staff.senior.join(", ") || "*Nessuno*"}`,
 							inline: true,
 						},
 					],
@@ -1280,14 +1275,15 @@ export class Brawl extends Command {
 			components,
 		};
 	};
-	static getPlayer = async (tag: string, edit: BaseReplies["edit"]) => {
+	static getPlayer = async (tag: string, edit?: BaseReplies["edit"]) => {
+		let res: Response | undefined;
+
 		try {
 			tag = Brawl.normalizeTag(tag);
-			const res = await fetch(
+			res = await fetch(
 				`https://api.brawlstars.com/v1/players/${encodeURIComponent(tag)}`,
 				Brawl.#requestData,
 			);
-
 			if (res.status === 404) throw new Error("Giocatore non trovato.");
 			if (res.status !== 200) {
 				console.log(res.status, res.statusText, await res.text());
@@ -1297,22 +1293,25 @@ export class Brawl extends Command {
 			}
 			return await res.json<Brawl.Player>();
 		} catch (err) {
-			throw await edit({
-				content:
-					err instanceof Error
-						? err.message
-						: "Non è stato possibile recuperare il profilo. Riprova più tardi.",
-			});
+			void res?.body?.cancel();
+			if (edit)
+				throw await edit({
+					content:
+						err instanceof Error
+							? err.message
+							: "Non è stato possibile recuperare il profilo. Riprova più tardi.",
+				});
+			throw err;
 		}
 	};
 	static getClub = async (tag: string, edit: BaseReplies["edit"]) => {
+		let res: Response | undefined;
 		try {
 			tag = Brawl.normalizeTag(tag);
-			const res = await fetch(
+			res = await fetch(
 				`https://api.brawlstars.com/v1/clubs/${encodeURIComponent(tag)}`,
 				Brawl.#requestData,
 			);
-
 			if (res.status === 404) throw new Error("Club non trovato.");
 			if (res.status !== 200) {
 				console.log(res.status, res.statusText, await res.text());
@@ -1322,6 +1321,7 @@ export class Brawl extends Command {
 			}
 			return await res.json<Brawl.Club>();
 		} catch (err) {
+			void res?.body?.cancel();
 			throw await edit({
 				content:
 					err instanceof Error
@@ -1528,15 +1528,30 @@ export class Brawl extends Command {
 		});
 	}
 	static linkComponent = async (
-		{ update }: ComponentReplies,
+		{ edit, deferUpdate }: ComponentReplies,
 		{ args: [tag], user: { id } }: ComponentArgs,
 	) => {
+		deferUpdate();
+		const player = await this.getPlayer(tag!, edit);
+
 		await env.DB.prepare(
-			"INSERT INTO Users (id, brawlTag) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET brawlTag = excluded.brawlTag",
+			`INSERT INTO Users (id, brawlTag, brawlTrophies, brawlers)
+				VALUES (?, ?, ?, ?) ON CONFLICT(id) DO
+				UPDATE
+				SET brawlTag = excluded.brawlTag,
+					brawlTrophies = excluded.brawlTrophies,
+					brawlers = excluded.brawlers`,
 		)
-			.bind(id, tag)
+			.bind(
+				id,
+				tag,
+				player.highestTrophies,
+				JSON.stringify(
+					player.brawlers.map((b) => ({ id: b.id, rank: b.rank })),
+				),
+			)
 			.run();
-		return update({
+		return edit({
 			content: "Profilo collegato con successo!",
 			components: [
 				{

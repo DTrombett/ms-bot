@@ -43,12 +43,13 @@ const server: ExportedHandler<Env> = {
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
-	scheduled: async () => {
-		await env.PREDICTIONS_REMINDERS.create();
+	scheduled: async ({ cron }) => {
+		if (cron === "0 0 * * *") await env.PREDICTIONS_REMINDERS.create();
+		else if (cron === "*/10 * * * *") await env.BRAWL_NOTIFICATIONS.create();
 	},
 };
 
-// export { LiveMatch } from "./LiveMatch";
+export { BrawlNotifications } from "./BrawlNotifications.ts";
 export { LiveScore } from "./LiveScore.ts";
 export { PredictionsReminders } from "./PredictionsReminders.ts";
 export { Reminder } from "./Reminder.ts";
