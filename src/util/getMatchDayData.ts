@@ -18,7 +18,7 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 		matchDayData = matchDays.data.find((d) => getMatchDayNumber(d) === day);
 	else {
 		// Check LIVE match day first
-		const liveMatchDay = matchDays.data.find(
+		const liveMatchDay = matchDays.data.findLast(
 			(d) => d.category_status === "LIVE",
 		);
 		if (liveMatchDay) {
