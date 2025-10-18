@@ -13,6 +13,7 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 			cause: matchDays.errors,
 		});
 	let matchDayData: MatchDay | undefined;
+	let matches: Match[] | undefined;
 	if (day)
 		matchDayData = matchDays.data.find((d) => getMatchDayNumber(d) === day);
 	else {
@@ -26,8 +27,10 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 			if (
 				liveMatches.length &&
 				Date.parse(liveMatches[0]!.date_time) > Date.now() + TimeUnit.Minute * 5
-			)
+			) {
 				matchDayData = liveMatchDay;
+				matches = liveMatches;
+			}
 		}
 		// Otherwise, use TO BE PLAYED day
 		if (!matchDayData)
@@ -37,7 +40,7 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 	}
 
 	if (!matchDayData) return [];
-	const matches = await loadMatches(matchDayData.id_category);
+	if (!matches) matches = await loadMatches(matchDayData.id_category);
 
 	if (!matches.length) return [];
 	const { results: existingPredictions } = await env.DB.prepare(
