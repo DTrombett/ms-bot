@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { getMatchDayNumber } from "./getMatchDayNumber.ts";
 import { loadMatches } from "./loadMatches.ts";
+import { TimeUnit } from "./time.ts";
 
 export const getMatchDayData = async (userId: string, day?: number) => {
 	const matchDays = (await fetch(
@@ -24,7 +25,7 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 			// If the first match hasn't started yet (more than 5 minutes from now), use LIVE day
 			if (
 				liveMatches.length &&
-				Date.parse(liveMatches[0]!.date_time) > Date.now() + 1_000 * 60 * 5
+				Date.parse(liveMatches[0]!.date_time) > Date.now() + TimeUnit.Minute * 5
 			)
 				matchDayData = liveMatchDay;
 		}
