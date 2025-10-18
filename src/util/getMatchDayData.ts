@@ -33,10 +33,9 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 			}
 		}
 		// Otherwise, use TO BE PLAYED day
-		if (!matchDayData)
-			matchDayData = matchDays.data.find(
-				(d) => d.category_status === "TO BE PLAYED",
-			);
+		matchDayData ??= matchDays.data.find(
+			(d) => d.category_status === "TO BE PLAYED",
+		);
 	}
 
 	if (!matchDayData) return [];
