@@ -40,7 +40,7 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 	}
 
 	if (!matchDayData) return [];
-	if (!matches) matches = await loadMatches(matchDayData.id_category);
+	matches ??= await loadMatches(matchDayData.id_category);
 
 	if (!matches.length) return [];
 	const { results: existingPredictions } = await env.DB.prepare(
