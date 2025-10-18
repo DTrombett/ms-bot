@@ -207,7 +207,6 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 		player: Pick<Brawl.Player, "name">,
 	) {
 		await rest.post(Routes.channelMessages(this.env.BRAWL_STARS_CHANNEL), {
-			query: new URLSearchParams({ wait: true.toString() }),
 			body: {
 				flags: MessageFlags.IsComponentsV2,
 				components: [

@@ -119,7 +119,9 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 		})
 		.join("\n");
 };
-export const resolveStats = (users: User[]) => {
+export const resolveStats = (
+	users: Pick<User, "id" | "matchPointsHistory">[],
+) => {
 	let currentStreaks: { id: string; days: number }[] = [];
 	let totalPoints = 0;
 	const highestAvg: { users: Set<string>; avg: number } = {
