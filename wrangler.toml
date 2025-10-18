@@ -13,7 +13,7 @@ enabled = true
 SEASON_ID = "266660"
 
 [triggers]
-crons = ["0 0 * * *", "*/10 * * * *"]
+crons = ["0 0 * * *", "*/2 * * * *"]
 
 [assets]
 directory = "./public"

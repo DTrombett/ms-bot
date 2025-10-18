@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import type { UserResult } from "./BrawlNotifications.ts";
 import * as commands from "./commands/index.ts";
 import { CommandHandler } from "./util/CommandHandler.ts";
 import { createSolidPng } from "./util/createSolidPng.ts";
@@ -45,7 +46,27 @@ const server: ExportedHandler<Env> = {
 	},
 	scheduled: async ({ cron }) => {
 		if (cron === "0 0 * * *") await env.PREDICTIONS_REMINDERS.create();
-		else if (cron === "*/10 * * * *") await env.BRAWL_NOTIFICATIONS.create();
+		else if (cron === "*/2 * * * *") {
+			const { results } = await env.DB.prepare(
+				`SELECT id,
+					brawlTag,
+					brawlNotifications,
+					brawlTrophies,
+					brawlers
+				FROM Users
+				WHERE brawlTag IS NOT NULL
+					AND brawlNotifications != 0`,
+			).all<UserResult>();
+			const usersChunks = results.reduce((arr, v, i) => {
+				if (i % 16 === 0) arr.push([]);
+				arr.at(-1)!.push(v);
+				return arr;
+			}, [] as UserResult[][]);
+
+			await env.BRAWL_NOTIFICATIONS.createBatch(
+				usersChunks.map((users) => ({ params: { users } })),
+			);
+		}
 	},
 };
 

@@ -2,10 +2,12 @@ import {
 	WorkflowEntrypoint,
 	type WorkflowEvent,
 	type WorkflowStep,
+	type WorkflowStepConfig,
 } from "cloudflare:workers";
 import {
 	ButtonStyle,
 	ComponentType,
+	MessageFlags,
 	Routes,
 	type APIContainerComponent,
 	type RESTPostAPIChannelMessageJSONBody,
@@ -14,7 +16,7 @@ import { Brawl } from "./commands/brawl.ts";
 import { escapeMarkdown } from "./util/formatters.ts";
 import { rest } from "./util/rest.ts";
 
-type UserResult = Pick<
+export type UserResult = Pick<
 	User,
 	"id" | "brawlNotifications" | "brawlTrophies" | "brawlers"
 > &
@@ -25,63 +27,60 @@ export enum NotificationType {
 	"New Brawler" = 1 << 2,
 	"Trophy Road Advancement" = 1 << 3,
 }
+export type Params = { users: UserResult[] };
 
-export class BrawlNotifications extends WorkflowEntrypoint<Env> {
+export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 	static readonly trophyRoadTiers = [
 		500, 1_500, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 40_000, 50_000,
 		60_000, 70_000, 80_000, 90_000, 100_000,
 	];
+	static config: WorkflowStepConfig = {
+		retries: { limit: 1, delay: 5000, backoff: "constant" },
+	};
 
-	override async run({}: WorkflowEvent<Params>, step: WorkflowStep) {
-		const data = await step.do("Read data from db", this.readData.bind(this));
-
-		return Promise.all(
-			data.map(async (user) => {
+	override async run(
+		{ payload: { users } }: WorkflowEvent<Params>,
+		step: WorkflowStep,
+	) {
+		console.log(`Processing Brawl Notifications for ${users.length} users`);
+		const results = await Promise.allSettled(
+			users.map(async (user) => {
 				const { components, player } = await step.do(
 					`Process user ${user.id}`,
+					BrawlNotifications.config,
 					this.processUser.bind(this, user),
 				);
-				const promises: Promise<any>[] = [
-					step.do(
-						`Update user ${user.id} data`,
-						this.updateUser.bind(this, user, player),
-					),
-				];
 
+				console.log(`User ${user.id} has ${components.length} notification(s)`);
 				if (components.length)
-					promises.push(
-						step.do(
-							`Send message for user ${user.id}`,
-							this.sendMessage.bind(this, user, components, player),
-						),
+					await step.do(
+						`Send message for user ${user.id}`,
+						BrawlNotifications.config,
+						this.sendMessage.bind(this, user, components, player),
 					);
-				return Promise.all(promises);
+				return step.do(
+					`Update user ${user.id} data`,
+					BrawlNotifications.config,
+					this.updateUser.bind(this, user, player),
+				);
 			}),
 		);
-	}
+		const errors = [];
 
-	private async readData() {
-		const { results } = await this.env.DB.prepare(
-			`SELECT id,
-					brawlTag,
-					brawlNotifications,
-					brawlTrophies,
-					brawlers
-				FROM Users
-				WHERE brawlTag IS NOT NULL
-					AND brawlNotifications != 0
-				LIMIT 25`,
-		).all<UserResult>();
-
-		return results;
+		for (const result of results)
+			if (result.status === "rejected") {
+				console.error(result.reason);
+				errors.push(result.reason);
+			}
+		if (errors.length)
+			throw new Error(
+				`Failed to process Brawl Notifications for ${errors.length} users`,
+				{ cause: errors },
+			);
 	}
 
 	private async processUser(user: UserResult) {
 		const player = await Brawl.getPlayer(user.brawlTag);
-		const oldBrawlers = await Promise.try<
-			Pick<Brawl.BrawlerStat, "id" | "rank">[],
-			Parameters<typeof JSON.parse>
-		>(JSON.parse, user.brawlers ?? "[]").catch(() => []);
 		const components: APIContainerComponent[] = [];
 
 		if (
@@ -91,13 +90,13 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env> {
 		) {
 			const tier =
 				BrawlNotifications.trophyRoadTiers.findLast(
-					(tier) => tier < player.highestTrophies,
+					(tier) => tier <= player.highestTrophies,
 				) ?? 0;
 
 			if (
 				tier >
 				(BrawlNotifications.trophyRoadTiers.findLast(
-					(tier) => tier < user.brawlTrophies!,
+					(tier) => tier <= user.brawlTrophies!,
 				) ?? 0)
 			)
 				components.push({
@@ -128,63 +127,70 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env> {
 			user.brawlNotifications & NotificationType["New Brawler"] ||
 			user.brawlNotifications & NotificationType["Brawler Tier Max"] ||
 			user.brawlNotifications & NotificationType["All"]
-		)
-			for (const brawler of player.brawlers) {
-				const rank = oldBrawlers.find((b) => b.id === brawler.id)?.rank;
+		) {
+			const oldBrawlers = await Promise.try<
+				Pick<Brawl.BrawlerStat, "id" | "rank">[],
+				Parameters<typeof JSON.parse>
+			>(JSON.parse, user.brawlers ?? "[]").catch(() => {});
 
-				if (
-					rank == null &&
-					(user.brawlNotifications & NotificationType["New Brawler"] ||
-						user.brawlNotifications & NotificationType["All"])
-				)
-					components.push({
-						type: ComponentType.Container,
-						components: [
-							{
-								type: ComponentType.Section,
-								components: [
-									{
-										type: ComponentType.TextDisplay,
-										content: `## Nuovo Brawler sbloccato!\nHai sbloccato **${brawler.name}**!`,
-									},
-								],
-								accessory: {
-									type: ComponentType.Thumbnail,
-									media: {
-										url: `https://cdn.brawlify.com/brawlers/borders/${brawler.id}.png`,
-									},
-								},
-							},
-						],
-					});
-				if (
-					rank !== 51 &&
-					brawler.rank === 51 &&
-					(user.brawlNotifications & NotificationType["Brawler Tier Max"] ||
-						user.brawlNotifications & NotificationType["All"])
-				)
-					components.push({
-						type: ComponentType.Container,
-						accent_color: 0xd7faff,
-						components: [
-							{
-								type: ComponentType.Section,
-								components: [
-									{
-										type: ComponentType.TextDisplay,
-										content: `## Nuovo Brawler al Rank Massimo!\nHai portato **${brawler.name}** a 1.000 trofei!`,
-									},
-								],
-								accessory: {
-									type: ComponentType.Thumbnail,
-									media: {
-										url: "https://cdn.brawlify.com/tiers/regular/51.png",
+			if (oldBrawlers)
+				for (const brawler of player.brawlers) {
+					const rank = oldBrawlers.find((b) => b.id === brawler.id)?.rank;
+
+					if (
+						rank == null &&
+						(user.brawlNotifications & NotificationType["New Brawler"] ||
+							user.brawlNotifications & NotificationType["All"])
+					)
+						components.push({
+							type: ComponentType.Container,
+							components: [
+								{
+									type: ComponentType.Section,
+									components: [
+										{
+											type: ComponentType.TextDisplay,
+											content: `## Nuovo Brawler sbloccato!\nHai sbloccato **${brawler.name}**!`,
+										},
+									],
+									accessory: {
+										type: ComponentType.Thumbnail,
+										media: {
+											url: `https://cdn.brawlify.com/brawlers/borderless/${brawler.id}.png`,
+										},
 									},
 								},
-							},
-						],
-					});
-			}
+							],
+						});
+					if (
+						rank !== 51 &&
+						brawler.rank === 51 &&
+						(user.brawlNotifications & NotificationType["Brawler Tier Max"] ||
+							user.brawlNotifications & NotificationType["All"])
+					)
+						components.push({
+							type: ComponentType.Container,
+							accent_color: 0xd7faff,
+							components: [
+								{
+									type: ComponentType.Section,
+									components: [
+										{
+											type: ComponentType.TextDisplay,
+											content: `## Nuovo Brawler al Rank Massimo!\nHai portato **${brawler.name}** a 1.000 trofei!`,
+										},
+									],
+									accessory: {
+										type: ComponentType.Thumbnail,
+										media: {
+											url: `https://cdn.brawlify.com/brawlers/borderless/${brawler.id}.png`,
+										},
+									},
+								},
+							],
+						});
+				}
+		}
 		return {
 			components,
 			player: {
@@ -201,17 +207,15 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env> {
 		player: Pick<Brawl.Player, "name">,
 	) {
 		await rest.post(Routes.channelMessages(this.env.BRAWL_STARS_CHANNEL), {
+			query: new URLSearchParams({ wait: true.toString() }),
 			body: {
+				flags: MessageFlags.IsComponentsV2,
 				components: [
 					{
 						type: ComponentType.TextDisplay,
 						content: `**${escapeMarkdown(player.name)}** (${user.brawlTag}) ha raggiunto nuovi traguardi!`,
 					},
-					...components,
-					{
-						type: ComponentType.TextDisplay,
-						content: `-# Messaggio inviato per conto di <@${user.id}>.\n-# Usa il comando \`/brawl notify\` per gestire le tue notifiche`,
-					},
+					...components.slice(0, 9),
 					{
 						type: ComponentType.ActionRow,
 						components: [
@@ -223,6 +227,10 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env> {
 								emoji: { name: "👤" },
 							},
 						],
+					},
+					{
+						type: ComponentType.TextDisplay,
+						content: `-# <@${user.id}> usa il comando \`/brawl notify\` per gestire le tue notifiche`,
 					},
 				],
 				allowed_mentions: { parse: [] },
