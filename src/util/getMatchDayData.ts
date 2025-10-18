@@ -11,11 +11,29 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 		throw new Error(`Couldn't load season data: ${matchDays.message}`, {
 			cause: matchDays.errors,
 		});
-	const matchDayData = matchDays.data.find(
-		day
-			? (d) => getMatchDayNumber(d) === day
-			: (d) => d.category_status === "TO BE PLAYED",
-	);
+	let matchDayData: MatchDay | undefined;
+	if (day)
+		matchDayData = matchDays.data.find((d) => getMatchDayNumber(d) === day);
+	else {
+		// Check LIVE match day first
+		const liveMatchDay = matchDays.data.find(
+			(d) => d.category_status === "LIVE",
+		);
+		if (liveMatchDay) {
+			const liveMatches = await loadMatches(liveMatchDay.id_category);
+			// If the first match hasn't started yet (more than 5 minutes from now), use LIVE day
+			if (
+				liveMatches.length &&
+				Date.parse(liveMatches[0]!.date_time) > Date.now() + 1_000 * 60 * 5
+			)
+				matchDayData = liveMatchDay;
+		}
+		// Otherwise, use TO BE PLAYED day
+		if (!matchDayData)
+			matchDayData = matchDays.data.find(
+				(d) => d.category_status === "TO BE PLAYED",
+			);
+	}
 
 	if (!matchDayData) return [];
 	const matches = await loadMatches(matchDayData.id_category);
