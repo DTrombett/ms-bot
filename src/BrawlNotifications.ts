@@ -21,6 +21,10 @@ export type UserResult = Pick<
 	"id" | "brawlNotifications" | "brawlTrophies" | "brawlers"
 > &
 	Required<Pick<User, "brawlTag">>;
+export type PartialPlayer = Pick<
+	Brawl.Player,
+	"name" | "highestTrophies" | "nameColor" | "icon"
+> & { brawlers: Pick<Brawl.BrawlerStat, "id" | "rank" | "name">[] };
 export enum NotificationType {
 	"All" = 1 << 0,
 	"Brawler Tier Max" = 1 << 1,
@@ -79,8 +83,10 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 			);
 	}
 
-	private async processUser(user: UserResult) {
-		const player = await Brawl.getPlayer(user.brawlTag);
+	private async processUser(
+		user: UserResult,
+	): Promise<{ components: APIContainerComponent[]; player: PartialPlayer }> {
+		const player: PartialPlayer = await Brawl.getPlayer(user.brawlTag);
 		const components: APIContainerComponent[] = [];
 
 		if (
@@ -195,8 +201,14 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 			components,
 			player: {
 				name: player.name,
-				brawlers: player.brawlers,
+				brawlers: player.brawlers.map(({ id, rank, name }) => ({
+					id,
+					rank,
+					name,
+				})),
 				highestTrophies: player.highestTrophies,
+				icon: player.icon,
+				nameColor: player.nameColor,
 			},
 		};
 	}
@@ -237,10 +249,7 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 		});
 	}
 
-	private async updateUser(
-		user: UserResult,
-		player: Pick<Brawl.Player, "name" | "brawlers" | "highestTrophies">,
-	) {
+	private async updateUser(user: UserResult, player: PartialPlayer) {
 		await this.env.DB.prepare(
 			`UPDATE Users
 				SET brawlTrophies = ?1,
@@ -249,9 +258,7 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 		)
 			.bind(
 				player.highestTrophies,
-				JSON.stringify(
-					player.brawlers.map((b) => ({ id: b.id, rank: b.rank })),
-				),
+				JSON.stringify(player.brawlers.map(({ id, rank }) => ({ id, rank }))),
 				user.id,
 			)
 			.run();

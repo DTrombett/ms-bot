@@ -445,6 +445,10 @@ declare global {
 		response: APIInteractionResponse;
 	}[];
 
+	type Filter<T, U> = {
+		[K in keyof T as T[K] extends U ? K : never]: T[K];
+	};
+
 	namespace Brawl {
 		type Player = {
 			club: PlayerClub;
