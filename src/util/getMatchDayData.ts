@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { getMatchDayNumber } from "./getMatchDayNumber.ts";
 import { loadMatches } from "./loadMatches.ts";
+import { TimeUnit } from "./time.ts";
 
 export const getMatchDayData = async (userId: string, day?: number) => {
 	const matchDays = (await fetch(
@@ -11,14 +12,34 @@ export const getMatchDayData = async (userId: string, day?: number) => {
 		throw new Error(`Couldn't load season data: ${matchDays.message}`, {
 			cause: matchDays.errors,
 		});
-	const matchDayData = matchDays.data.find(
-		day
-			? (d) => getMatchDayNumber(d) === day
-			: (d) => d.category_status === "TO BE PLAYED",
-	);
+	let matchDayData: MatchDay | undefined;
+	let matches: Match[] | undefined;
+	if (day)
+		matchDayData = matchDays.data.find((d) => getMatchDayNumber(d) === day);
+	else {
+		// Check LIVE match day first
+		const liveMatchDay = matchDays.data.findLast(
+			(d) => d.category_status === "LIVE",
+		);
+		if (liveMatchDay) {
+			const liveMatches = await loadMatches(liveMatchDay.id_category);
+			// If the first match hasn't started yet (more than 5 minutes from now), use LIVE day
+			if (
+				liveMatches.length &&
+				Date.parse(liveMatches[0]!.date_time) > Date.now() + TimeUnit.Minute * 5
+			) {
+				matchDayData = liveMatchDay;
+				matches = liveMatches;
+			}
+		}
+		// Otherwise, use TO BE PLAYED day
+		matchDayData ??= matchDays.data.find(
+			(d) => d.category_status === "TO BE PLAYED",
+		);
+	}
 
 	if (!matchDayData) return [];
-	const matches = await loadMatches(matchDayData.id_category);
+	matches ??= await loadMatches(matchDayData.id_category);
 
 	if (!matches.length) return [];
 	const { results: existingPredictions } = await env.DB.prepare(
