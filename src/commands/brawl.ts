@@ -676,6 +676,7 @@ export class Brawl extends Command {
 		},
 		headers: { Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}` },
 	};
+	static readonly API_BASE = "https://api-brawlstars.trombett.org/v1";
 	static override chatInputData = {
 		name: "brawl",
 		description: "Interagisci con Brawl Stars!",
@@ -1281,7 +1282,7 @@ export class Brawl extends Command {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			res = await fetch(
-				`https://api.brawlstars.com/v1/players/${encodeURIComponent(tag)}`,
+				`${Brawl.API_BASE}/players/${encodeURIComponent(tag)}`,
 				Brawl.#requestData,
 			);
 			if (res.status === 404) throw new Error("Giocatore non trovato.");
@@ -1309,7 +1310,7 @@ export class Brawl extends Command {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			res = await fetch(
-				`https://api.brawlstars.com/v1/clubs/${encodeURIComponent(tag)}`,
+				`${Brawl.API_BASE}/clubs/${encodeURIComponent(tag)}`,
 				Brawl.#requestData,
 			);
 			if (res.status === 404) throw new Error("Club non trovato.");
