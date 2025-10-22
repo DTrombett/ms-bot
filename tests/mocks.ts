@@ -7,7 +7,8 @@ import { registerHooks } from "node:module";
 import { mock } from "node:test";
 import { pathToFileURL } from "node:url";
 import { parseEnv } from "node:util";
-import { MockAgent, setGlobalDispatcher } from "undici";
+import { caches, fetch, MockAgent, Request, setGlobalDispatcher } from "undici";
+import { constant } from "./utils.ts";
 
 const run = async <T>(): Promise<D1Result<T>> => ({
 	results: DB.results,
@@ -100,6 +101,7 @@ const additionalEnv: Omit<Filter<Env, object>, keyof Filter<Env, Workflow>> = {
 };
 export const env = { ...parsedEnv, ...additionalEnv } as Env;
 export const agent = new MockAgent().enableCallHistory();
+const cache = await caches.open("default");
 type Instance = WorkflowInstance & { promise: Promise<unknown> };
 class WorkflowBase implements Workflow {
 	instances: Instance[] = [];
@@ -185,6 +187,16 @@ mock.module("cloudflare:workers", {
 		},
 		waitUntil: () => {},
 	},
+});
+Object.defineProperties(cache.constructor.prototype, {
+	match: { value: constant(Promise.resolve()) },
+	put: { value: constant(Promise.resolve()) },
+});
+Object.defineProperty(caches, "default", { value: cache });
+Object.defineProperties(global, {
+	caches: { value: caches },
+	Request: { value: Request },
+	fetch: { value: fetch },
 });
 setGlobalDispatcher(agent);
 export const brawlNotificationsWorkflow = new WorkflowBase(

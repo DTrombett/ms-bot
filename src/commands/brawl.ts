@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -668,15 +668,14 @@ export class Brawl extends Command {
 		"Smodata XV",
 		"Smodata XVI",
 	];
-	static readonly #requestData: RequestInit<RequestInitCfProperties> = {
-		cf: {
-			cacheEverything: true,
-			cacheTtl: 60,
-			cacheTtlByStatus: { "200-299": 60, "404": 86400, "500-599": 10 },
-		},
-		headers: { Authorization: `Bearer ${env.BRAWL_STARS_API_TOKEN}` },
+	private static readonly ERROR_MESSAGES = {
+		400: "Parametri non validi forniti.",
+		403: "Accesso all'API negato.",
+		404: "Dati non trovati.",
+		429: "Limite di richieste API raggiunto.",
+		500: "Errore interno dell'API.",
+		503: "Manutenzione in corso!",
 	};
-	static readonly API_BASE = "https://api-brawlstars.trombett.org/v1";
 	static override chatInputData = {
 		name: "brawl",
 		description: "Interagisci con Brawl Stars!",
@@ -1276,25 +1275,39 @@ export class Brawl extends Command {
 			components,
 		};
 	};
-	static getPlayer = async (tag: string, edit?: BaseReplies["edit"]) => {
-		let res: Response | undefined;
+	static async callApi<T>(path: string, errors: Record<number, string> = {}) {
+		Object.assign(errors, Brawl.ERROR_MESSAGES);
+		const request = new Request(`https://proxy.trombett.org:8443/v1${path}`, {
+			headers: { "X-Host": "api.brawlstars.com" },
+		});
+		let res = await caches.default.match(request);
 
+		if (!res) {
+			const clone = request.clone();
+
+			clone.headers.set("Authorization", `Bearer ${env.BRAWL_STARS_API_TOKEN}`);
+			res = await fetch(clone);
+			waitUntil(caches.default.put(request, res.clone()));
+		}
+		if (res.ok) return res.json<T>();
+		const body = await res.json<{ message: string }>().catch(() => {});
+
+		console.log(body);
+		throw new Error(
+			errors[res.status] ??
+				`Errore interno: \`${body?.message ?? "Unknown error"}\``,
+		);
+	}
+	static getPlayer = async (tag: string, edit?: BaseReplies["edit"]) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
-			res = await fetch(
-				`${Brawl.API_BASE}/players/${encodeURIComponent(tag)}`,
-				Brawl.#requestData,
+			return await Brawl.callApi<Brawl.Player>(
+				`/players/${encodeURIComponent(tag)}`,
+				{
+					404: "Giocatore non trovato.",
+				},
 			);
-			if (res.status === 404) throw new Error("Giocatore non trovato.");
-			if (res.status !== 200) {
-				console.log(res.status, res.statusText, await res.text());
-				throw new Error(
-					"Si è verificato un errore imprevisto! Riprova più tardi.",
-				);
-			}
-			return await res.json<Brawl.Player>();
 		} catch (err) {
-			void res?.body?.cancel();
 			if (edit)
 				throw await edit({
 					content:
@@ -1305,30 +1318,22 @@ export class Brawl extends Command {
 			throw err;
 		}
 	};
-	static getClub = async (tag: string, edit: BaseReplies["edit"]) => {
-		let res: Response | undefined;
+	static getClub = async (tag: string, edit?: BaseReplies["edit"]) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
-			res = await fetch(
-				`${Brawl.API_BASE}/clubs/${encodeURIComponent(tag)}`,
-				Brawl.#requestData,
+			return await Brawl.callApi<Brawl.Club>(
+				`/clubs/${encodeURIComponent(tag)}`,
+				{ 404: "Club non trovato." },
 			);
-			if (res.status === 404) throw new Error("Club non trovato.");
-			if (res.status !== 200) {
-				console.log(res.status, res.statusText, await res.text());
-				throw new Error(
-					"Si è verificato un errore imprevisto! Riprova più tardi.",
-				);
-			}
-			return await res.json<Brawl.Club>();
 		} catch (err) {
-			void res?.body?.cancel();
-			throw await edit({
-				content:
-					err instanceof Error
-						? err.message
-						: "Non è stato possibile recuperare il club. Riprova più tardi.",
-			});
+			if (edit)
+				throw await edit({
+					content:
+						err instanceof Error
+							? err.message
+							: "Non è stato possibile recuperare il club. Riprova più tardi.",
+				});
+			throw err;
 		}
 	};
 	static normalizeTag = (tag: string) => {
