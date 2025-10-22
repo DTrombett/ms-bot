@@ -1292,7 +1292,7 @@ export class Brawl extends Command {
 		if (res.ok) return res.json<T>();
 		const body = await res.json<{ message: string }>().catch(() => {});
 
-		console.log(body);
+		console.error(body);
 		throw new Error(
 			errors[res.status] ??
 				`Errore interno: \`${body?.message ?? "Unknown error"}\``,
