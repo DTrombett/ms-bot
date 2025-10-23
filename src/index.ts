@@ -46,7 +46,7 @@ const server: ExportedHandler<Env> = {
 	},
 	scheduled: async ({ cron }) => {
 		if (cron === "0 0 * * *") await env.PREDICTIONS_REMINDERS.create();
-		else if (cron === "*/2 * * * *") {
+		else if (cron === "*/5 * * * *") {
 			const { results } = await env.DB.prepare(
 				`SELECT id,
 					brawlTag,
