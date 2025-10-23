@@ -1364,7 +1364,7 @@ export class Brawl extends Command {
 			"SELECT brawlTag FROM Users WHERE id = ?",
 		)
 			.bind(id)
-			.first("brawlTag"))!;
+			.first("brawlTag")) ?? undefined;
 		if (!options.tag)
 			return reply({
 				flags: MessageFlags.Ephemeral,
