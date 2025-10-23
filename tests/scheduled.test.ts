@@ -44,7 +44,7 @@ await suite("Scheduled tests", async () => {
 					icon: { id: 0 },
 				} satisfies PartialPlayer);
 			await server.scheduled!(
-				{ cron: "*/2 * * * *", scheduledTime: Date.now(), noRetry: noop },
+				{ cron: "*/5 * * * *", scheduledTime: Date.now(), noRetry: noop },
 				env,
 				{ props: null, passThroughOnException: noop, waitUntil: noop },
 			);
