@@ -6,8 +6,8 @@ import {
 	PermissionFlagsBits,
 	Routes,
 	type APIGuild,
+	type APIInteractionResponseCallbackData,
 	type APIUser,
-	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type Snowflake,
 } from "discord-api-types/v10";
@@ -43,7 +43,7 @@ export class Kick extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static override async chatInput(
-		{ reply, defer }: ChatInputReplies,
+		{ reply, defer, edit }: ChatInputReplies,
 		{ interaction, options }: ChatInputArgs<typeof Kick.chatInputData>,
 	) {
 		if (
@@ -82,22 +82,15 @@ export class Kick extends Command {
 				flags: MessageFlags.Ephemeral,
 			});
 		defer();
-		return rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{
-				body: await this.executeKick(
-					interaction.guild_id,
-					user!,
-					options.reason,
-				),
-			},
+		return edit(
+			await this.executeKick(interaction.guild_id, user!, options.reason),
 		);
 	}
 	static async executeKick(
 		guildId: Snowflake,
 		user: APIUser,
 		reason?: string,
-	): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> {
+	): Promise<APIInteractionResponseCallbackData> {
 		reason = reason?.trim();
 		const error = await rest
 			.delete(Routes.guildMember(guildId, user.id), { reason })

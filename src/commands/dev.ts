@@ -5,7 +5,6 @@ import {
 	MessageFlags,
 	Routes,
 	type APIApplicationCommand,
-	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationGuildCommandsJSONBody,
@@ -83,7 +82,7 @@ export class Dev extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static "register-commands" = async (
-		{ defer }: ChatInputReplies,
+		{ defer, edit }: ChatInputReplies,
 		{
 			interaction,
 			options,
@@ -123,14 +122,9 @@ export class Dev extends Command {
 					).catch(normalizeError),
 		]);
 
-		await rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{
-				body: {
-					content: `Private commands: \`${privateAPICommands instanceof Error ? privateAPICommands.message : privateAPICommands.map((c) => c.name).join(", ")}\`\nPublic commands: \`${publicAPICommands instanceof Error ? publicAPICommands.message : publicAPICommands.map((c) => c.name).join(", ")}\``,
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-			},
-		);
+		await edit({
+			content: `Private commands: \`${privateAPICommands instanceof Error ? privateAPICommands.message : privateAPICommands.map((c) => c.name).join(", ")}\`\nPublic commands: \`${publicAPICommands instanceof Error ? publicAPICommands.message : publicAPICommands.map((c) => c.name).join(", ")}\``,
+		});
 	};
 	static shorten = async (
 		{ defer }: ChatInputReplies,

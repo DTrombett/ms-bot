@@ -4,9 +4,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
-	Routes,
 	type APIMessage,
-	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
@@ -49,13 +47,12 @@ export class Time extends Command {
 	static override customId = "time";
 	static override supportComponentMethods = true;
 	static stopwatch = async (
-		{ reply }: ChatInputReplies,
+		{ reply, edit }: ChatInputReplies,
 		{
+			fullRoute,
 			interaction: { application_id, token },
 		}: ChatInputArgs<typeof Time.chatInputData, "stopwatch">,
 	) => {
-		const fullRoute = Routes.webhookMessage(application_id, token);
-
 		reply({
 			content: "Cronometro avviato",
 			components: [
@@ -75,10 +72,8 @@ export class Time extends Command {
 		});
 		// Wait for next tick
 		await timeout();
-		return rest.patch(fullRoute, {
-			body: {
-				content: `Cronometro avviato <t:${Math.round(Date.parse(((await rest.get(fullRoute)) as APIMessage).timestamp) / 1000)}:R>`,
-			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		return edit({
+			content: `Cronometro avviato <t:${Math.round(Date.parse(((await rest.get(fullRoute)) as APIMessage).timestamp) / 1000)}:R>`,
 		});
 	};
 	static "compare-ids" = (
