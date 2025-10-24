@@ -34,7 +34,7 @@ await suite("Scheduled tests", async () => {
 
 		await t.test("No notifications", async () => {
 			agent
-				.get("https://proxy.trombett.org:8443")
+				.get("https://api.brawlstars.com")
 				.intercept({ path: constant(true), method: "GET" })
 				.reply(200, {
 					name: "GX DTrombett",
@@ -54,7 +54,7 @@ await suite("Scheduled tests", async () => {
 
 		await t.test("Too many notifications", async () => {
 			agent
-				.get("https://proxy.trombett.org:8443")
+				.get("https://api.brawlstars.com")
 				.intercept({ path: constant(true), method: "GET" })
 				.reply(200, {
 					name: "GX DTrombett",
