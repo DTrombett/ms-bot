@@ -24,20 +24,20 @@
 	"dependencies": {
 		"@discordjs/rest": "^2.6.0",
 		"cloudflare": "^5.2.0",
-		"discord-api-types": "^0.38.30",
+		"discord-api-types": "^0.38.31",
 		"socket.io-client": "^4.8.1"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.38.0",
 		"@tsconfig/recommended": "^1.0.10",
 		"@tsconfig/strictest": "^2.0.6",
-		"@types/node": "^24.8.1",
+		"@types/node": "^24.9.1",
 		"cloudflared": "^0.7.1",
 		"concurrently": "^9.2.1",
 		"eslint": "^9.38.0",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.46.1",
+		"typescript-eslint": "^8.46.2",
 		"undici": "^7.16.0",
-		"wrangler": "^4.43.0"
+		"wrangler": "^4.45.0"
 	}
 }

@@ -1301,7 +1301,7 @@ export class Brawl extends Command {
 		const json = await Promise.try<{ message: string }, [string]>(
 			JSON.parse,
 			body,
-		).catch(() => null);
+		).catch(() => {});
 
 		console.error(json ?? body);
 		throw new Error(
