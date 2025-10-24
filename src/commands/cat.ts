@@ -44,7 +44,7 @@ export class Cat extends Command {
 	}
 	static async cat(
 		edit: ChatInputReplies["edit"],
-		interaction: Pick<APIInteraction, "application_id" | "token">,
+		_interaction: Pick<APIInteraction, "application_id" | "token">,
 		limit = 1,
 	): Promise<unknown> {
 		const data = await fetch(

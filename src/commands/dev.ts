@@ -83,10 +83,7 @@ export class Dev extends Command {
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static "register-commands" = async (
 		{ defer, edit }: ChatInputReplies,
-		{
-			interaction,
-			options,
-		}: ChatInputArgs<typeof Dev.chatInputData, "register-commands">,
+		{ options }: ChatInputArgs<typeof Dev.chatInputData, "register-commands">,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
 		const commands = Object.values(commandsObj);

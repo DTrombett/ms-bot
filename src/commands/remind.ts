@@ -6,9 +6,7 @@ import {
 	ComponentType,
 	InteractionType,
 	MessageFlags,
-	type APIChatInputApplicationCommandInteraction,
 	type APIComponentInContainer,
-	type APIMessageComponentInteraction,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
@@ -69,11 +67,10 @@ export class Remind extends Command {
 	static override supportComponentMethods = true;
 	static me = async (
 		{ reply, defer, edit }: ChatInputReplies,
-		{
-			options,
-			user: { id: userId },
-			interaction: { application_id, token },
-		}: ChatInputArgs<typeof Remind.chatInputData, "me">,
+		{ options, user: { id: userId } }: ChatInputArgs<
+			typeof Remind.chatInputData,
+			"me"
+		>,
 	) => {
 		const duration = parseTime(options.in);
 		if (duration > TimeUnit.Year)
@@ -141,7 +138,6 @@ export class Remind extends Command {
 			args: [, argId] = [],
 			options: { id } = { id: argId! },
 			user: { id: userId },
-			interaction: { application_id, token },
 		}: Merge<
 			ChatInputArgs<typeof Remind.chatInputData, "remove">,
 			ComponentArgs

@@ -48,10 +48,7 @@ export class Time extends Command {
 	static override supportComponentMethods = true;
 	static stopwatch = async (
 		{ reply, edit }: ChatInputReplies,
-		{
-			fullRoute,
-			interaction: { application_id, token },
-		}: ChatInputArgs<typeof Time.chatInputData, "stopwatch">,
+		{ fullRoute }: ChatInputArgs<typeof Time.chatInputData, "stopwatch">,
 	) => {
 		reply({
 			content: "Cronometro avviato",
