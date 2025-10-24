@@ -1458,6 +1458,9 @@ export class Brawl extends Command {
 		{
 			options: { tag },
 			user: { id },
+			interaction: {
+				data: { id: commandId },
+			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, "link">,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
@@ -1472,7 +1475,7 @@ export class Brawl extends Command {
 					components: [
 						{
 							type: ComponentType.Button,
-							custom_id: `brawl-link-${id}-${player.tag}`,
+							custom_id: `brawl-link-${id}-${player.tag}-${commandId}`,
 							label: "Collega",
 							emoji: { name: "🔗" },
 							style: ButtonStyle.Primary,
@@ -1564,7 +1567,7 @@ export class Brawl extends Command {
 	}
 	static linkComponent = async (
 		{ edit, deferUpdate }: ComponentReplies,
-		{ args: [tag], user: { id } }: ComponentArgs,
+		{ args: [tag, commandId], user: { id } }: ComponentArgs,
 	) => {
 		deferUpdate();
 		const player = await this.getPlayer(tag!, edit);
@@ -1587,7 +1590,7 @@ export class Brawl extends Command {
 			)
 			.run();
 		return edit({
-			content: "Profilo collegato con successo!",
+			content: `Profilo collegato con successo!\nUsa </brawl notify enable:${commandId}> per attivare le notifiche.`,
 			components: [
 				{
 					type: ComponentType.ActionRow,
