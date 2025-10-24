@@ -23,8 +23,11 @@ import type {
 	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
+	RESTPatchAPIInteractionOriginalResponseJSONBody,
 	RESTPostAPIApplicationCommandsJSONBody,
 	RESTPostAPIChatInputApplicationCommandsJSONBody,
+	RESTPostAPIInteractionFollowupJSONBody,
+	RoutesDeclarations,
 } from "discord-api-types/v10";
 import type Command from "./Command.ts";
 import type { CommandHandler } from "./util/CommandHandler.ts";
@@ -261,6 +264,10 @@ declare global {
 		matchPointsHistory?: string | null;
 		match?: number | null;
 		remindMinutes?: number | null;
+		brawlTag?: string;
+		brawlNotifications: number;
+		brawlTrophies?: number | null;
+		brawlers?: string | null;
 	};
 	type Reminder = {
 		id: string;
@@ -339,20 +346,28 @@ declare global {
 			? D
 			: never,
 	) => void;
-
+	type BaseReplies = {
+		edit: (
+			data: RESTPatchAPIInteractionOriginalResponseJSONBody,
+		) => Promise<void>;
+		delete: () => Promise<void>;
+		followup: (data: RESTPostAPIInteractionFollowupJSONBody) => Promise<void>;
+	};
 	type Replies = {
 		[P in keyof typeof CommandHandler.ReplyTypes]: Reply<
 			(typeof CommandHandler.ReplyTypes)[P]
 		>;
-	};
+	} & BaseReplies;
 
 	type BaseArgs<T extends APIInteraction = APIInteraction> = {
 		interaction: T;
 		request: Request;
 		user: APIUser;
+		fullRoute: ReturnType<RoutesDeclarations["webhookMessage"]>;
 	};
 
-	type ChatInputReplies = Pick<Replies, "reply" | "defer" | "modal">;
+	type ChatInputReplies = Pick<Replies, "reply" | "defer" | "modal"> &
+		BaseReplies;
 
 	type ChatInputArgs<
 		A extends
@@ -373,23 +388,25 @@ declare global {
 	type ComponentReplies = Pick<
 		Replies,
 		"reply" | "defer" | "modal" | "update" | "deferUpdate"
-	>;
+	> &
+		BaseReplies;
 
 	type ComponentArgs = BaseArgs<APIMessageComponentInteraction> & {
 		args: string[];
 	};
 
-	type ModalReplies = Pick<Replies, "reply" | "defer">;
+	type ModalReplies = Pick<Replies, "reply" | "defer"> & BaseReplies;
 
 	type ModalArgs = BaseArgs<APIModalSubmitInteraction> & {
 		args: string[];
 	};
 
-	type UserReplies = Pick<Replies, "reply" | "defer" | "modal">;
+	type UserReplies = Pick<Replies, "reply" | "defer" | "modal"> & BaseReplies;
 
 	type UserArgs = BaseArgs<APIUserApplicationCommandInteraction>;
 
-	type MessageReplies = Pick<Replies, "reply" | "defer" | "modal">;
+	type MessageReplies = Pick<Replies, "reply" | "defer" | "modal"> &
+		BaseReplies;
 
 	type MessageArgs = BaseArgs<APIMessageApplicationCommandInteraction>;
 
@@ -413,6 +430,7 @@ declare global {
 			subcommand?: string;
 			options?: Record<string, string | number | boolean>;
 			args?: string[];
+			fullRoute?: ReturnType<RoutesDeclarations["webhookMessage"]>;
 		},
 	) => Promise<any>;
 
@@ -426,4 +444,86 @@ declare global {
 		>;
 		response: APIInteractionResponse;
 	}[];
+
+	type Filter<T, U> = {
+		[K in keyof T as T[K] extends U ? K : never]: T[K];
+	};
+
+	namespace Brawl {
+		type Player = {
+			club: PlayerClub;
+			isQualifiedFromChampionshipChallenge: boolean;
+			"3vs3Victories": number;
+			icon: PlayerIcon;
+			tag: string;
+			name: string;
+			trophies: number;
+			expLevel: number;
+			expPoints: number;
+			highestTrophies: number;
+			soloVictories: number;
+			duoVictories: number;
+			bestRoboRumbleTime: number;
+			bestTimeAsBigBrawler: number;
+			brawlers: BrawlerStatList;
+			nameColor: string;
+		};
+		type PlayerClub = { tag: string; name: string };
+		type PlayerIcon = { id: number };
+		type BrawlerStatList = BrawlerStat[];
+		type BrawlerStat = {
+			gadgets: AccessoryList;
+			starPowers: StarPowerList;
+			id: number;
+			rank: number;
+			trophies: number;
+			highestTrophies: number;
+			power: number;
+			gears: GearStatList;
+			name: JsonLocalizedName;
+		};
+		type AccessoryList = Accessory[];
+		type Accessory = { id: number; name: JsonLocalizedName };
+		type JsonLocalizedName = string;
+		type StarPowerList = StarPower[];
+		type StarPower = { id: number; name: JsonLocalizedName };
+		type GearStatList = GearStat[];
+		type GearStat = {
+			id: number;
+			name: JsonLocalizedName;
+			level: number;
+		};
+		type BrawlerList = Brawler[];
+		type Brawler = {
+			gadgets: AccessoryList;
+			name: JsonLocalizedName;
+			id: number;
+			starPowers: StarPowerList;
+		};
+		type Club = {
+			tag: string;
+			name: string;
+			description: string;
+			trophies: number;
+			requiredTrophies: number;
+			members: ClubMemberList;
+			type: "open" | "inviteOnly" | "closed" | "unknown";
+			badgeId: number;
+		};
+		type ClubMemberList = ClubMember[];
+		type ClubMember = {
+			icon: PlayerIcon;
+			tag: string;
+			name: string;
+			trophies: number;
+			role:
+				| "notMember"
+				| "member"
+				| "vicePresident"
+				| "president"
+				| "unknown"
+				| "senior";
+			nameColor: string;
+		};
+	}
 }

@@ -1,6 +1,7 @@
 export * from "./avatar.ts";
 export * from "./bann.ts";
 export * from "./banner.ts";
+export * from "./brawl.ts";
 export * from "./cat.ts";
 export * from "./color.ts";
 export * from "./dev.ts";

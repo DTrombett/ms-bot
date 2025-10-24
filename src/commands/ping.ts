@@ -1,6 +1,5 @@
 import {
 	ApplicationCommandType,
-	Routes,
 	type APIMessage,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
@@ -18,22 +17,22 @@ export class Ping extends Command {
 	} satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static override async chatInput(
 		{ reply }: ChatInputReplies,
-		{ interaction, request }: ChatInputArgs,
+		{
+			fullRoute,
+			interaction: { id: interactionId },
+			request: { cf: { colo, clientTcpRtt } = {} },
+		}: ChatInputArgs,
 	) {
-		const content = `### 🏓\tPong!\n- Colo: **${request.cf?.colo as string}**\n- RTT: **${request.cf?.clientTcpRtt as number}ms**\n- Ping relativo: **${Date.now() - idToTimestamp(interaction.id)}ms**`;
-
-		reply({ content });
+		reply({
+			content: `### 🏓\tPong!\n- Colo: **${colo as string}**\n- RTT: **${clientTcpRtt as number}ms**\n- Ping relativo: **${Date.now() - idToTimestamp(interactionId)}ms**`,
+		});
 		await timeout();
-		const { id } = (await rest.get(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-		)) as APIMessage;
-		await rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{
-				body: {
-					content: `${content}\n- Tempo totale: **${idDiff(id, interaction.id)}ms**`,
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-			},
-		);
+		const { id, content } = (await rest.get(fullRoute)) as APIMessage;
+
+		return rest.patch(fullRoute, {
+			body: {
+				content: `${content}\n- Tempo totale: **${idDiff(id, interactionId)}ms**`,
+			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		});
 	}
 }

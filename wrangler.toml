@@ -13,7 +13,11 @@ enabled = true
 SEASON_ID = "266660"
 
 [triggers]
-crons = ["0 0 * * *"]
+crons = ["0 0 * * *", "*/5 * * * *"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"
@@ -23,6 +27,7 @@ database_id = "8a298455-ac11-4e0c-b160-4db807cf3572"
 [[kv_namespaces]]
 binding = "KV"
 id = "aa87b0da6cf14778b6ae760075fa327f"
+preview_id = "b6201e9445474c9fb9293f6ba6a10ffc"
 
 [[workflows]]
 name = "predictions-reminders"
@@ -34,10 +39,10 @@ name = "live-score"
 binding = "LIVE_SCORE"
 class_name = "LiveScore"
 
-# [[workflows]]
-# name = "live-match"
-# binding = "LIVE_MATCH"
-# class_name = "LiveMatch"
+[[workflows]]
+name = "brawl-notifications"
+binding = "BRAWL_NOTIFICATIONS"
+class_name = "BrawlNotifications"
 
 [[workflows]]
 name = "reminder"

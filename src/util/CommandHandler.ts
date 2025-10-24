@@ -4,12 +4,16 @@ import {
 	ApplicationCommandType,
 	InteractionResponseType,
 	InteractionType,
+	Routes,
 	type APIInteraction,
 	type APIInteractionResponse,
 	type APIUser,
+	type RoutesDeclarations,
 } from "discord-api-types/v10";
 import type { Command } from "../Command.ts";
+import { rest } from "./rest.ts";
 import { hexToUint8Array } from "./strings.ts";
+import { TimeUnit } from "./time.ts";
 
 const key = await crypto.subtle.importKey(
 	"raw",
@@ -58,7 +62,9 @@ export class CommandHandler {
 			findCommand: (interaction) => {
 				const [customId] = interaction.data.custom_id.split("-");
 
-				return this.commands.find((c) => c.customId === customId);
+				return this.commands.find(
+					(c) => (c.customId ?? c.name.toLowerCase()) === customId,
+				);
 			},
 			getRunner: () => "component",
 		},
@@ -73,7 +79,9 @@ export class CommandHandler {
 			findCommand: (interaction) => {
 				const [customId] = interaction.data.custom_id.split("-");
 
-				return this.commands.find((c) => c.customId === customId);
+				return this.commands.find(
+					(c) => (c.customId ?? c.name.toLowerCase()) === customId,
+				);
 			},
 			getRunner: () => "modal",
 		},
@@ -84,19 +92,24 @@ export class CommandHandler {
 	async verifySignature(request: Request): Promise<APIInteraction> {
 		const signature = request.headers.get("x-signature-ed25519");
 		const timestamp = request.headers.get("x-signature-timestamp");
-		if (!signature || !timestamp) throw new Response(null, { status: 401 });
+		if (
+			!signature ||
+			!timestamp ||
+			Date.now() - +timestamp * TimeUnit.Second > 10 * TimeUnit.Second
+		)
+			throw new Response(null, { status: 401 });
 		const body = await request.text();
 
 		if (
-			!(await crypto.subtle.verify(
+			await crypto.subtle.verify(
 				"Ed25519",
 				key,
 				hexToUint8Array(signature),
 				new TextEncoder().encode(timestamp + body),
-			))
+			)
 		)
-			throw new Response(null, { status: 401 });
-		return JSON.parse(body) as APIInteraction;
+			return JSON.parse(body) as APIInteraction;
+		throw new Response(null, { status: 401 });
 	}
 
 	async handleInteraction(request: Request): Promise<Response> {
@@ -125,7 +138,16 @@ export class CommandHandler {
 			subcommand?: string;
 			options?: Record<string, string | number | boolean>;
 			args?: string[];
-		} = { interaction, request, user };
+			fullRoute: ReturnType<RoutesDeclarations["webhookMessage"]>;
+		} = {
+			interaction,
+			request,
+			user,
+			fullRoute: Routes.webhookMessage(
+				interaction.application_id,
+				interaction.token,
+			),
+		};
 		if (
 			(interaction.type === InteractionType.ApplicationCommand ||
 				interaction.type === InteractionType.ApplicationCommandAutocomplete) &&
@@ -181,12 +203,24 @@ export class CommandHandler {
 		waitUntil(
 			runner.call(
 				Command,
-				Object.fromEntries<Reply<InteractionResponseType>>(
-					CommandHandler.replies.map(([key, type]) => [
-						key,
-						(data) => resolve({ type, data } as never),
-					]),
-				) as Replies,
+				{
+					...Object.fromEntries<Reply<InteractionResponseType>>(
+						CommandHandler.replies.map(([key, type]) => [
+							key,
+							(data) => resolve({ type, data } as never),
+						]),
+					),
+					edit: (body) =>
+						rest.patch(args.fullRoute, { body }).catch(console.error),
+					delete: () => rest.delete(args.fullRoute).catch(console.error),
+					followup: (body) =>
+						rest
+							.post(
+								Routes.webhook(interaction.application_id, interaction.token),
+								{ body },
+							)
+							.catch(console.error),
+				} as Replies,
 				args,
 			),
 		);

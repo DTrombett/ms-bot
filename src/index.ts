@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import type { UserResult } from "./BrawlNotifications.ts";
 import * as commands from "./commands/index.ts";
 import { CommandHandler } from "./util/CommandHandler.ts";
 import { createSolidPng } from "./util/createSolidPng.ts";
@@ -43,12 +44,33 @@ const server: ExportedHandler<Env> = {
 		}
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
-	scheduled: async () => {
-		await env.PREDICTIONS_REMINDERS.create();
+	scheduled: async ({ cron }) => {
+		if (cron === "0 0 * * *") await env.PREDICTIONS_REMINDERS.create();
+		else if (cron === "*/5 * * * *") {
+			const { results } = await env.DB.prepare(
+				`SELECT id,
+					brawlTag,
+					brawlNotifications,
+					brawlTrophies,
+					brawlers
+				FROM Users
+				WHERE brawlTag IS NOT NULL
+					AND brawlNotifications != 0`,
+			).all<UserResult>();
+			const usersChunks = results.reduce((arr, v, i) => {
+				if (i % 16 === 0) arr.push([]);
+				arr.at(-1)!.push(v);
+				return arr;
+			}, [] as UserResult[][]);
+
+			await env.BRAWL_NOTIFICATIONS.createBatch(
+				usersChunks.map((users) => ({ params: { users } })),
+			);
+		}
 	},
 };
 
-// export { LiveMatch } from "./LiveMatch";
+export { BrawlNotifications } from "./BrawlNotifications.ts";
 export { LiveScore } from "./LiveScore.ts";
 export { PredictionsReminders } from "./PredictionsReminders.ts";
 export { Reminder } from "./Reminder.ts";
