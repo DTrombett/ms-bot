@@ -13,6 +13,7 @@ import {
 import type { Command } from "../Command.ts";
 import { rest } from "./rest.ts";
 import { hexToUint8Array } from "./strings.ts";
+import { TimeUnit } from "./time.ts";
 
 const key = await crypto.subtle.importKey(
 	"raw",
@@ -91,7 +92,11 @@ export class CommandHandler {
 	async verifySignature(request: Request): Promise<APIInteraction> {
 		const signature = request.headers.get("x-signature-ed25519");
 		const timestamp = request.headers.get("x-signature-timestamp");
-		if (!signature || !timestamp || +timestamp * 1000 < Date.now() - 10_000)
+		if (
+			!signature ||
+			!timestamp ||
+			+timestamp * TimeUnit.Second < Date.now() - 10 * TimeUnit.Second
+		)
 			throw new Response(null, { status: 401 });
 		const body = await request.text();
 

@@ -1118,7 +1118,10 @@ export class Brawl extends Command {
 			},
 		];
 	};
-	static createPlayerEmbed = (player: Brawl.Player): APIEmbed => ({
+	static createPlayerEmbed = (
+		player: Brawl.Player,
+		playerId?: string,
+	): APIEmbed => ({
 		title: `${player.name} (${player.tag})`,
 		thumbnail: {
 			url: `https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png`,
@@ -1130,7 +1133,7 @@ export class Brawl extends Command {
 			player.club.tag
 				? `**${player.club.name}** (${player.club.tag})`
 				: "*In nessun club*"
-		}`,
+		}${playerId ? `\n👤 Discord: <@${playerId}>` : ""}`,
 		fields: [
 			{
 				name: "🏆 Trofei",
@@ -1246,6 +1249,7 @@ export class Brawl extends Command {
 	static createPlayerMessage = (
 		player: Brawl.Player,
 		id: string,
+		playerId?: string,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		const components: APIActionRowComponent<APIButtonComponent>[] = [
 			{
@@ -1271,15 +1275,18 @@ export class Brawl extends Command {
 				style: ButtonStyle.Primary,
 			});
 		return {
-			embeds: [this.createPlayerEmbed(player)],
+			embeds: [this.createPlayerEmbed(player, playerId)],
 			components,
 		};
 	};
 	static async callApi<T>(path: string, errors: Record<number, string> = {}) {
 		Object.assign(errors, Brawl.ERROR_MESSAGES);
-		const request = new Request(`https://proxy.trombett.org:8443/v1${path}`, {
-			headers: { "X-Host": "api.brawlstars.com" },
-		});
+		const request =
+			env.NODE_ENV === "production"
+				? new Request(new URL(path, "https://proxy.trombett.org:8443/v1/"), {
+						headers: { "X-Host": "api.brawlstars.com" },
+					})
+				: new Request(new URL(path, "https://api.brawlstars.com/v1/"));
 		let res = await caches.default.match(request);
 
 		if (!res) {
@@ -1290,19 +1297,23 @@ export class Brawl extends Command {
 			waitUntil(caches.default.put(request, res.clone()));
 		}
 		if (res.ok) return res.json<T>();
-		const body = await res.json<{ message: string }>().catch(() => {});
+		const body = await res.text();
+		const json = await Promise.try<{ message: string }, [string]>(
+			JSON.parse,
+			body,
+		).catch(() => null);
 
-		console.error(body);
+		console.error(json ?? body);
 		throw new Error(
 			errors[res.status] ??
-				`Errore interno: \`${body?.message ?? "Unknown error"}\``,
+				`Errore interno: \`${json?.message ?? "Unknown error"}\``,
 		);
 	}
 	static getPlayer = async (tag: string, edit?: BaseReplies["edit"]) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Brawl.callApi<Brawl.Player>(
-				`/players/${encodeURIComponent(tag)}`,
+				`players/${encodeURIComponent(tag)}`,
 				{
 					404: "Giocatore non trovato.",
 				},
@@ -1322,7 +1333,7 @@ export class Brawl extends Command {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Brawl.callApi<Brawl.Club>(
-				`/clubs/${encodeURIComponent(tag)}`,
+				`clubs/${encodeURIComponent(tag)}`,
 				{ 404: "Club non trovato." },
 			);
 		} catch (err) {
@@ -1360,33 +1371,51 @@ export class Brawl extends Command {
 			request: { url },
 		}: ChatInputArgs<typeof Brawl.chatInputData, `${"player"} ${string}`>,
 	) => {
-		options.tag ??= (await env.DB.prepare(
-			"SELECT brawlTag FROM Users WHERE id = ?",
-		)
-			.bind(id)
-			.first("brawlTag")) ?? undefined;
+		const userId = options.tag ? undefined : id;
+		options.tag ??=
+			(await env.DB.prepare("SELECT brawlTag FROM Users WHERE id = ?")
+				.bind(id)
+				.first("brawlTag")) ?? undefined;
 		if (!options.tag)
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content:
 					"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag giocatore come parametro.",
 			});
+		try {
+			options.tag = this.normalizeTag(options.tag);
+		} catch (err) {
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content:
+					err instanceof Error ? err.message : "Il tag fornito non è valido.",
+			});
+		}
 		defer();
 		const player = await this.getPlayer(options.tag, edit);
 
-		return subcommand === "player view"
-			? edit(Brawl.createPlayerMessage(player, id))
-			: subcommand === "player brawlers"
-				? edit({
-						components: this.createBrawlersComponents(
-							player,
-							url,
-							id,
-							options.order,
-						),
-						flags: MessageFlags.IsComponentsV2,
-					})
-				: Promise.reject();
+		if (subcommand === "player view")
+			return edit(
+				Brawl.createPlayerMessage(
+					player,
+					id,
+					userId ??
+						(await env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
+							.bind(options.tag)
+							.first("id")) ??
+						undefined,
+				),
+			);
+		if (subcommand === "player brawlers")
+			return edit({
+				components: this.createBrawlersComponents(
+					player,
+					url,
+					id,
+					options.order,
+				),
+				flags: MessageFlags.IsComponentsV2,
+			});
 	};
 	static clubCommand = async (
 		{ defer, edit }: ChatInputReplies,
@@ -1418,7 +1447,7 @@ export class Brawl extends Command {
 
 		if (subcommand === "club view")
 			return edit(this.createClubMessage(club, id, locale));
-		else if (subcommand === "club members")
+		if (subcommand === "club members")
 			return edit({
 				components: this.createMembersComponents(club, url, id, options.order),
 				flags: MessageFlags.IsComponentsV2,
@@ -1681,7 +1710,15 @@ export class Brawl extends Command {
 			[tag] = interaction.data.values;
 		ok(tag);
 		defer({ flags: MessageFlags.Ephemeral });
-		return edit(this.createPlayerMessage(await this.getPlayer(tag, edit), id));
+		return edit(
+			this.createPlayerMessage(
+				await this.getPlayer(tag, edit),
+				id,
+				(await env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
+					.bind(tag)
+					.first("id")) ?? undefined,
+			),
+		);
 	};
 	static clubComponent = async (
 		{ defer, edit }: ComponentReplies,
