@@ -95,7 +95,7 @@ export class CommandHandler {
 		if (
 			!signature ||
 			!timestamp ||
-			+timestamp * TimeUnit.Second < Date.now() - 10 * TimeUnit.Second
+			Date.now() - +timestamp * TimeUnit.Second > 10 * TimeUnit.Second
 		)
 			throw new Response(null, { status: 401 });
 		const body = await request.text();
