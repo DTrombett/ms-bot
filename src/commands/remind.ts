@@ -67,10 +67,10 @@ export class Remind extends Command {
 	static override supportComponentMethods = true;
 	static me = async (
 		{ reply, defer, edit }: ChatInputReplies,
-		{ options, user: { id: userId } }: ChatInputArgs<
-			typeof Remind.chatInputData,
-			"me"
-		>,
+		{
+			options,
+			user: { id: userId },
+		}: ChatInputArgs<typeof Remind.chatInputData, "me">,
 	) => {
 		const duration = parseTime(options.in);
 		if (duration > TimeUnit.Year)
@@ -98,9 +98,7 @@ export class Remind extends Command {
 				.bind(userId)
 				.first<number>("count")) ?? 0) >= 64
 		)
-			return edit({
-				content: "Non puoi impostare più di 64 promemoria!",
-			});
+			return edit({ content: "Non puoi impostare più di 64 promemoria!" });
 		const id = Math.random().toString(36).slice(2, 10).padEnd(8, "0");
 		const result = await env.REMINDER.create({
 			id: `${userId}-${id}`,
@@ -116,9 +114,7 @@ export class Remind extends Command {
 			return edit({
 				content: `Si è verificato un errore: \`${result.message}\``,
 			});
-		return edit({
-			content: `Promemoria \`${id}\` impostato correttamente!`,
-		});
+		return edit({ content: `Promemoria \`${id}\` impostato correttamente!` });
 	};
 	static list = (
 		{ defer, deferUpdate, edit }: Merge<ChatInputReplies, ComponentReplies>,

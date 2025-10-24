@@ -183,8 +183,7 @@ export class Bann extends Command {
 				interaction.guild_id,
 				interaction.data.resolved.users[options.user]!,
 				options["delete-messages"] &&
-					Number(options["delete-messages"]) *
-						(TimeUnit.Day / TimeUnit.Second),
+					Number(options["delete-messages"]) * (TimeUnit.Day / TimeUnit.Second),
 				options.reason,
 			),
 		);
@@ -312,10 +311,7 @@ export class Bann extends Command {
 				target.id,
 				targetMember,
 			);
-			if (content)
-				return edit({
-					content,
-				});
+			if (content) return edit({ content });
 			return edit(await this.unban(interaction.guild_id, target));
 		}
 		return;
@@ -361,20 +357,14 @@ export class Bann extends Command {
 			APIGuildMember | undefined,
 		];
 		ok(guild);
-		if (!target)
-			return edit({
-				content: "Utente non trovato!",
-			});
+		if (!target) return edit({ content: "Utente non trovato!" });
 		const content = Bann.checkPerms(
 			interaction.member,
 			guild,
 			target.id,
 			targetMember,
 		);
-		if (content)
-			return edit({
-				content,
-			});
+		if (content) return edit({ content });
 		return edit(
 			await this.executeBan(
 				interaction.guild_id,

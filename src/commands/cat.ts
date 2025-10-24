@@ -4,7 +4,6 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
-	type APIInteraction,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
@@ -26,25 +25,21 @@ export class Cat extends Command {
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static override customId = "cat";
 	static override async chatInput(
-		replies: ChatInputReplies,
-		{
-			interaction,
-			options: { limit },
-		}: ChatInputArgs<typeof Cat.chatInputData>,
+		{ defer, edit }: ChatInputReplies,
+		{ options: { limit } }: ChatInputArgs<typeof Cat.chatInputData>,
 	) {
-		replies.defer();
-		return this.cat(replies.edit, interaction, limit);
+		defer();
+		return this.cat(edit, limit);
 	}
 	static override async component(
-		replies: ComponentReplies,
-		{ interaction, args: [limit] }: ComponentArgs,
+		{ defer, edit }: ComponentReplies,
+		{ args: [limit] }: ComponentArgs,
 	) {
-		replies.defer({ flags: MessageFlags.Ephemeral });
-		return this.cat(replies.edit, interaction, Number(limit) || undefined);
+		defer({ flags: MessageFlags.Ephemeral });
+		return this.cat(edit, Number(limit) || undefined);
 	}
 	static async cat(
 		edit: ChatInputReplies["edit"],
-		_interaction: Pick<APIInteraction, "application_id" | "token">,
 		limit = 1,
 	): Promise<unknown> {
 		const data = await fetch(
