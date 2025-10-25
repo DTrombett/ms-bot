@@ -1367,6 +1367,9 @@ export class Brawl extends Command {
 			subcommand,
 			user: { id },
 			request: { url },
+			interaction: {
+				data: { id: commandId },
+			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, `${"player"} ${string}`>,
 	) => {
 		const userId = options.tag ? undefined : id;
@@ -1377,8 +1380,7 @@ export class Brawl extends Command {
 		if (!options.tag)
 			return reply({
 				flags: MessageFlags.Ephemeral,
-				content:
-					"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag giocatore come parametro.",
+				content: `Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> o specifica il tag giocatore come parametro.`,
 			});
 		try {
 			options.tag = this.normalizeTag(options.tag);
@@ -1420,7 +1422,10 @@ export class Brawl extends Command {
 			options,
 			subcommand,
 			user: { id },
-			interaction: { locale },
+			interaction: {
+				locale,
+				data: { id: commandId },
+			},
 			request: { url },
 		}: ChatInputArgs<typeof Brawl.chatInputData, `${"club"} ${string}`>,
 	) => {
@@ -1437,8 +1442,7 @@ export class Brawl extends Command {
 		}
 		if (!options.tag)
 			return edit({
-				content:
-					"Non hai ancora collegato un profilo Brawl Stars! Usa il comando `/brawl link` o specifica il tag del club come parametro.",
+				content: `Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> o specifica il tag del club come parametro.`,
 			});
 		const club = await this.getClub(options.tag, edit);
 
@@ -1494,6 +1498,9 @@ export class Brawl extends Command {
 		{
 			options: { type },
 			user: { id },
+			interaction: {
+				data: { id: commandId },
+			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, "notify enable">,
 	) => {
 		const result = await env.DB.prepare(
@@ -1508,7 +1515,7 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> per iniziare a ricevere le notifiche.` : ""}`,
 		});
 	};
 	static "notify disable" = async (
@@ -1516,6 +1523,9 @@ export class Brawl extends Command {
 		{
 			options: { type },
 			user: { id },
+			interaction: {
+				data: { id: commandId },
+			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, "notify disable">,
 	) => {
 		const result = await env.DB.prepare(
@@ -1529,12 +1539,17 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> per iniziare a ricevere le notifiche.` : ""}`,
 		});
 	};
 	static "notify view" = async (
 		{ reply }: ChatInputReplies,
-		{ user: { id } }: ChatInputArgs<typeof Brawl.chatInputData, "notify view">,
+		{
+			user: { id },
+			interaction: {
+				data: { id: commandId },
+			},
+		}: ChatInputArgs<typeof Brawl.chatInputData, "notify view">,
 	) => {
 		const result = await env.DB.prepare(
 			"SELECT brawlNotifications, brawlTag FROM Users WHERE id = ?",
@@ -1544,7 +1559,7 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando \`/brawl link\` per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> per iniziare a ricevere le notifiche.` : ""}`,
 		});
 	};
 	static override async component(
