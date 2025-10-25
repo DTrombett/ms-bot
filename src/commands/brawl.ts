@@ -1154,7 +1154,6 @@ export class Brawl extends Command {
 	});
 	static createClubMessage = (
 		club: Brawl.Club,
-		userId: string,
 		locale: Locale,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		club.members.sort((a, b) => b.trophies - a.trophies);
@@ -1236,7 +1235,7 @@ export class Brawl extends Command {
 					components: [
 						{
 							type: ComponentType.Button,
-							custom_id: `brawl-members-${userId}-${club.tag}---1`,
+							custom_id: `brawl-members--${club.tag}---1`,
 							style: ButtonStyle.Primary,
 							label: "Lista Membri",
 							emoji: { name: "👥" },
@@ -1248,7 +1247,6 @@ export class Brawl extends Command {
 	};
 	static createPlayerMessage = (
 		player: Brawl.Player,
-		id: string,
 		playerId?: string,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		const components: APIActionRowComponent<APIButtonComponent>[] = [
@@ -1257,7 +1255,7 @@ export class Brawl extends Command {
 				components: [
 					{
 						type: ComponentType.Button,
-						custom_id: `brawl-brawlers-${id}-${player.tag}---1`,
+						custom_id: `brawl-brawlers--${player.tag}---1`,
 						label: "Brawlers",
 						emoji: { name: "🔫" },
 						style: ButtonStyle.Primary,
@@ -1269,7 +1267,7 @@ export class Brawl extends Command {
 		if (player.club.tag)
 			components[0]!.components.push({
 				type: ComponentType.Button,
-				custom_id: `brawl-club-${id}-${player.club.tag}`,
+				custom_id: `brawl-club--${player.club.tag}`,
 				label: "Club",
 				emoji: { name: "🫂" },
 				style: ButtonStyle.Primary,
@@ -1398,7 +1396,6 @@ export class Brawl extends Command {
 			return edit(
 				Brawl.createPlayerMessage(
 					player,
-					id,
 					userId ??
 						(await env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
 							.bind(options.tag)
@@ -1446,7 +1443,7 @@ export class Brawl extends Command {
 		const club = await this.getClub(options.tag, edit);
 
 		if (subcommand === "club view")
-			return edit(this.createClubMessage(club, id, locale));
+			return edit(this.createClubMessage(club, locale));
 		if (subcommand === "club members")
 			return edit({
 				components: this.createMembersComponents(club, url, id, options.order),
@@ -1707,16 +1704,14 @@ export class Brawl extends Command {
 	};
 	static playerComponent = async (
 		{ defer, edit }: ComponentReplies,
-		{ user: { id }, interaction, args: [tag] }: ComponentArgs,
+		{ interaction: { data }, args: [tag] }: ComponentArgs,
 	) => {
-		if (interaction.data.component_type === ComponentType.StringSelect)
-			[tag] = interaction.data.values;
+		if (data.component_type === ComponentType.StringSelect) [tag] = data.values;
 		ok(tag);
 		defer({ flags: MessageFlags.Ephemeral });
 		return edit(
 			this.createPlayerMessage(
 				await this.getPlayer(tag, edit),
-				id,
 				(await env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
 					.bind(tag)
 					.first("id")) ?? undefined,
@@ -1725,11 +1720,9 @@ export class Brawl extends Command {
 	};
 	static clubComponent = async (
 		{ defer, edit }: ComponentReplies,
-		{ args: [tag], interaction: { locale }, user: { id } }: ComponentArgs,
+		{ args: [tag], interaction: { locale } }: ComponentArgs,
 	) => {
 		defer();
-		return edit(
-			this.createClubMessage(await this.getClub(tag!, edit), id, locale),
-		);
+		return edit(this.createClubMessage(await this.getClub(tag!, edit), locale));
 	};
 }
