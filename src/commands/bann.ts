@@ -18,7 +18,6 @@ import {
 	type APIUser,
 	type InteractionResponseType,
 	type ModalSubmitLabelComponent,
-	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPutAPIGuildBanJSONBody,
 	type Snowflake,
@@ -161,7 +160,7 @@ export class Bann extends Command {
 		);
 	}
 	static async add(
-		{ reply, defer }: ChatInputReplies,
+		{ reply, defer, edit }: ChatInputReplies,
 		{ interaction, options }: ChatInputArgs<typeof Bann.chatInputData, "add">,
 	) {
 		this.checkBanPerms(interaction.app_permissions, reply);
@@ -179,18 +178,14 @@ export class Bann extends Command {
 
 		if (content) return reply({ content, flags: MessageFlags.Ephemeral });
 		defer();
-		await rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{
-				body: (await this.executeBan(
-					interaction.guild_id,
-					interaction.data.resolved.users[options.user]!,
-					options["delete-messages"] &&
-						Number(options["delete-messages"]) *
-							(TimeUnit.Day / TimeUnit.Second),
-					options.reason,
-				)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-			},
+		await edit(
+			await this.executeBan(
+				interaction.guild_id,
+				interaction.data.resolved.users[options.user]!,
+				options["delete-messages"] &&
+					Number(options["delete-messages"]) * (TimeUnit.Day / TimeUnit.Second),
+				options.reason,
+			),
 		);
 	}
 	static async check(
@@ -253,7 +248,7 @@ export class Bann extends Command {
 		);
 	}
 	static override async component(
-		{ reply, modal, defer }: ComponentReplies,
+		{ reply, modal, defer, edit }: ComponentReplies,
 		{ interaction, args: [id, action] }: ComponentArgs,
 	) {
 		ok(interaction.guild_id && interaction.member);
@@ -308,10 +303,6 @@ export class Bann extends Command {
 			]).then((results) =>
 				results.map((r) => (r.status === "fulfilled" ? r.value : undefined)),
 			)) as [APIGuild | undefined, APIGuildMember | undefined];
-			const fullRoute = Routes.webhookMessage(
-				interaction.application_id,
-				interaction.token,
-			);
 
 			ok(guild);
 			const content = Bann.checkPerms(
@@ -320,23 +311,13 @@ export class Bann extends Command {
 				target.id,
 				targetMember,
 			);
-			if (content)
-				return rest.patch(fullRoute, {
-					body: {
-						content,
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				});
-			return rest.patch(fullRoute, {
-				body: (await this.unban(
-					interaction.guild_id,
-					target,
-				)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-			});
+			if (content) return edit({ content });
+			return edit(await this.unban(interaction.guild_id, target));
 		}
 		return;
 	}
 	static override async modal(
-		{ reply }: ModalReplies,
+		{ reply, edit }: ModalReplies,
 		{ interaction, args: [id] }: ModalArgs,
 	) {
 		ok(interaction.guild_id && interaction.member);
@@ -376,59 +357,37 @@ export class Bann extends Command {
 			APIGuildMember | undefined,
 		];
 		ok(guild);
-		if (!target)
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: {
-						content: "Utente non trovato!",
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
+		if (!target) return edit({ content: "Utente non trovato!" });
 		const content = Bann.checkPerms(
 			interaction.member,
 			guild,
 			target.id,
 			targetMember,
 		);
-		if (content)
-			return rest.patch(
-				Routes.webhookMessage(interaction.application_id, interaction.token),
-				{
-					body: {
-						content,
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				},
-			);
-		return rest.patch(
-			Routes.webhookMessage(interaction.application_id, interaction.token),
-			{
-				body: (await this.executeBan(
-					interaction.guild_id,
-					target,
-					deleteMessageDays * 60 * 60 * 24,
-					interaction.data.components.find(
-						(
-							v,
-						): v is ModalSubmitLabelComponent & {
-							component: APIModalSubmitTextInputComponent;
-						} =>
-							v.type === ComponentType.Label &&
-							v.component.type === ComponentType.TextInput &&
-							v.component.custom_id === "reason",
-					)?.component.value,
-				)) satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-			},
+		if (content) return edit({ content });
+		return edit(
+			await this.executeBan(
+				interaction.guild_id,
+				target,
+				deleteMessageDays * 60 * 60 * 24,
+				interaction.data.components.find(
+					(
+						v,
+					): v is ModalSubmitLabelComponent & {
+						component: APIModalSubmitTextInputComponent;
+					} =>
+						v.type === ComponentType.Label &&
+						v.component.type === ComponentType.TextInput &&
+						v.component.custom_id === "reason",
+				)?.component.value,
+			),
 		);
 	}
 	static unban = async (
 		guildId: Snowflake,
 		user: APIUser,
 		reason?: string,
-	): Promise<
-		RESTPatchAPIWebhookWithTokenMessageJSONBody &
-			APIInteractionResponseCallbackData
-	> => {
+	): Promise<APIInteractionResponseCallbackData> => {
 		reason = reason?.trim();
 		const result = await rest
 			.delete(Routes.guildBan(guildId, user.id), { reason })
@@ -495,7 +454,7 @@ export class Bann extends Command {
 		user: APIUser,
 		deleteMessageSeconds?: number,
 		reason?: string,
-	): Promise<RESTPatchAPIWebhookWithTokenMessageJSONBody> => {
+	): Promise<APIInteractionResponseCallbackData> => {
 		reason = reason?.trim();
 		const result = await rest
 			.put(Routes.guildBan(guildId, user.id), {

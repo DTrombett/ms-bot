@@ -6,16 +6,11 @@ import {
 	ComponentType,
 	InteractionType,
 	MessageFlags,
-	Routes,
-	type APIChatInputApplicationCommandInteraction,
 	type APIComponentInContainer,
-	type APIMessageComponentInteraction,
-	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
 import normalizeError from "../util/normalizeError.ts";
-import { rest } from "../util/rest.ts";
 import { maxLength } from "../util/strings.ts";
 import { parseTime, TimeUnit } from "../util/time.ts";
 
@@ -71,15 +66,13 @@ export class Remind extends Command {
 	static override customId = "remind";
 	static override supportComponentMethods = true;
 	static me = async (
-		{ reply, defer }: ChatInputReplies,
+		{ reply, defer, edit }: ChatInputReplies,
 		{
 			options,
 			user: { id: userId },
-			interaction: { application_id, token },
 		}: ChatInputArgs<typeof Remind.chatInputData, "me">,
 	) => {
 		const duration = parseTime(options.in);
-		const fullRoute = Routes.webhookMessage(application_id, token);
 		if (duration > TimeUnit.Year)
 			return reply({
 				content: "Non puoi impostare una durata maggiore di 1 anno!",
@@ -105,11 +98,7 @@ export class Remind extends Command {
 				.bind(userId)
 				.first<number>("count")) ?? 0) >= 64
 		)
-			return rest.patch(fullRoute, {
-				body: {
-					content: "Non puoi impostare più di 64 promemoria!",
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-			});
+			return edit({ content: "Non puoi impostare più di 64 promemoria!" });
 		const id = Math.random().toString(36).slice(2, 10).padEnd(8, "0");
 		const result = await env.REMINDER.create({
 			id: `${userId}-${id}`,
@@ -122,19 +111,13 @@ export class Remind extends Command {
 		}).catch(normalizeError);
 
 		if (result instanceof Error)
-			return rest.patch(fullRoute, {
-				body: {
-					content: `Si è verificato un errore: \`${result.message}\``,
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			return edit({
+				content: `Si è verificato un errore: \`${result.message}\``,
 			});
-		return rest.patch(fullRoute, {
-			body: {
-				content: `Promemoria \`${id}\` impostato correttamente!`,
-			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-		});
+		return edit({ content: `Promemoria \`${id}\` impostato correttamente!` });
 	};
 	static list = (
-		{ defer, deferUpdate }: Merge<ChatInputReplies, ComponentReplies>,
+		{ defer, deferUpdate, edit }: Merge<ChatInputReplies, ComponentReplies>,
 		{
 			args: [, page] = [],
 			user: { id: userId },
@@ -143,15 +126,14 @@ export class Remind extends Command {
 	) => {
 		if (interaction.type === InteractionType.MessageComponent) deferUpdate!();
 		else defer({ flags: MessageFlags.Ephemeral });
-		return this.sendPage(interaction, userId, Number(page) || 0);
+		return this.sendPage(edit, userId, Number(page) || 0);
 	};
 	static remove = async (
-		{ defer, reply }: ChatInputReplies | ComponentReplies,
+		{ defer, reply, edit }: ChatInputReplies | ComponentReplies,
 		{
 			args: [, argId] = [],
 			options: { id } = { id: argId! },
 			user: { id: userId },
-			interaction: { application_id, token },
 		}: Merge<
 			ChatInputArgs<typeof Remind.chatInputData, "remove">,
 			ComponentArgs
@@ -175,29 +157,17 @@ export class Remind extends Command {
 		])
 			.then(() => {})
 			.catch(normalizeError);
-		const fullRoute = Routes.webhookMessage(application_id, token);
 
 		if (error)
-			return rest.patch(fullRoute, {
-				body: {
-					content: `Si è verificato un errore: \`${error.message}\``,
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			return edit({
+				content: `Si è verificato un errore: \`${error.message}\``,
 			});
-		return rest.patch(fullRoute, {
-			body: {
-				content: "Promemoria rimosso correttamente!",
-			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		return edit({
+			content: "Promemoria rimosso correttamente!",
 		});
 	};
 	static sendPage = async (
-		{
-			application_id,
-			token,
-		}: Pick<
-			| APIChatInputApplicationCommandInteraction
-			| APIMessageComponentInteraction,
-			"application_id" | "token"
-		>,
+		edit: ChatInputReplies["edit"],
 		userId: string | undefined,
 		page = 0,
 	) => {
@@ -213,77 +183,75 @@ export class Remind extends Command {
 			.all<Pick<Reminder, "date" | "id" | "remind"> & { count: number }>();
 		const count = results[0]?.count ?? 0;
 
-		return rest.patch(Routes.webhookMessage(application_id, token), {
-			body: {
-				flags: MessageFlags.IsComponentsV2,
-				components: [
-					{
-						type: ComponentType.Container,
-						components: results.length
-							? [
-									{
-										type: ComponentType.TextDisplay,
-										content: "## ⏰ Promemoria",
-									},
-									{ type: ComponentType.Separator },
-									...results.map((r, i) => {
-										const date = Math.round(Date.parse(`${r.date}Z`) / 1000);
+		return edit({
+			flags: MessageFlags.IsComponentsV2,
+			components: [
+				{
+					type: ComponentType.Container,
+					components: results.length
+						? [
+								{
+									type: ComponentType.TextDisplay,
+									content: "## ⏰ Promemoria",
+								},
+								{ type: ComponentType.Separator },
+								...results.map((r, i) => {
+									const date = Math.round(Date.parse(`${r.date}Z`) / 1000);
 
-										return {
-											type: ComponentType.Section,
-											components: [
-												{
-													type: ComponentType.TextDisplay,
-													content: `${i + 1 + page * 8}. \`${r.id}\` <t:${date}:F> (<t:${date}:R>)\n>>> ${maxLength(
-														r.remind,
-														148,
-													)}`,
-												},
-											],
-											accessory: {
-												type: ComponentType.Button,
-												label: "Elimina",
-												style: ButtonStyle.Danger,
-												custom_id: `remind-remove-${userId}-${r.id}`,
-											},
-										} satisfies APIComponentInContainer;
-									}),
-									{
-										type: ComponentType.ActionRow,
+									return {
+										type: ComponentType.Section,
 										components: [
 											{
-												custom_id: `remind-list-${userId}-${page - 1}`,
-												disabled: page <= 0,
-												emoji: { name: "⬅️" },
-												style: ButtonStyle.Primary,
-												type: ComponentType.Button,
-											},
-											{
-												custom_id: `remind-list-${userId}-${page}`,
-												disabled: true,
-												label: `Pagina ${page + 1} di ${Math.ceil(count / 8)}`,
-												style: ButtonStyle.Secondary,
-												type: ComponentType.Button,
-											},
-											{
-												custom_id: `remind-list-${userId}-${page + 1}`,
-												disabled: count <= (page + 1) * 8,
-												emoji: { name: "➡️" },
-												style: ButtonStyle.Primary,
-												type: ComponentType.Button,
+												type: ComponentType.TextDisplay,
+												content: `${i + 1 + page * 8}. \`${r.id}\` <t:${date}:F> (<t:${date}:R>)\n>>> ${maxLength(
+													r.remind,
+													148,
+												)}`,
 											},
 										],
-									},
-								]
-							: [
-									{
-										type: ComponentType.TextDisplay,
-										content: "Non è presente alcun promemoria!",
-									},
-								],
-					},
-				],
-			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+										accessory: {
+											type: ComponentType.Button,
+											label: "Elimina",
+											style: ButtonStyle.Danger,
+											custom_id: `remind-remove-${userId}-${r.id}`,
+										},
+									} satisfies APIComponentInContainer;
+								}),
+								{
+									type: ComponentType.ActionRow,
+									components: [
+										{
+											custom_id: `remind-list-${userId}-${page - 1}`,
+											disabled: page <= 0,
+											emoji: { name: "⬅️" },
+											style: ButtonStyle.Primary,
+											type: ComponentType.Button,
+										},
+										{
+											custom_id: `remind-list-${userId}-${page}`,
+											disabled: true,
+											label: `Pagina ${page + 1} di ${Math.ceil(count / 8)}`,
+											style: ButtonStyle.Secondary,
+											type: ComponentType.Button,
+										},
+										{
+											custom_id: `remind-list-${userId}-${page + 1}`,
+											disabled: count <= (page + 1) * 8,
+											emoji: { name: "➡️" },
+											style: ButtonStyle.Primary,
+											type: ComponentType.Button,
+										},
+									],
+								},
+							]
+						: [
+								{
+									type: ComponentType.TextDisplay,
+									content: "Non è presente alcun promemoria!",
+								},
+							],
+				},
+			],
 		});
 	};
 }

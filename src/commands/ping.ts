@@ -1,7 +1,6 @@
 import {
 	ApplicationCommandType,
 	type APIMessage,
-	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
@@ -16,7 +15,7 @@ export class Ping extends Command {
 		type: ApplicationCommandType.ChatInput,
 	} satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static override async chatInput(
-		{ reply }: ChatInputReplies,
+		{ reply, edit }: ChatInputReplies,
 		{
 			fullRoute,
 			interaction: { id: interactionId },
@@ -29,10 +28,8 @@ export class Ping extends Command {
 		await timeout();
 		const { id, content } = (await rest.get(fullRoute)) as APIMessage;
 
-		return rest.patch(fullRoute, {
-			body: {
-				content: `${content}\n- Tempo totale: **${idDiff(id, interactionId)}ms**`,
-			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+		return edit({
+			content: `${content}\n- Tempo totale: **${idDiff(id, interactionId)}ms**`,
 		});
 	}
 }
