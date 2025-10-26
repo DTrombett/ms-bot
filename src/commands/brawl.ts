@@ -1416,21 +1416,21 @@ export class Brawl extends Command {
 			});
 		}
 		defer();
-		const player = await this.getPlayer(options.tag, edit);
 
 		if (subcommand === "player view") {
-			const playerId =
+			const [player, playerId] = await Promise.all([
+				this.getPlayer(options.tag, edit),
 				userId ??
-				(await env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
-					.bind(options.tag)
-					.first("id")) ??
-				undefined;
+					env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
+						.bind(options.tag)
+						.first<string>("id"),
+			]);
 
 			return edit(
 				Brawl.createPlayerMessage(
 					player,
 					id,
-					playerId,
+					playerId ?? undefined,
 					commandId,
 					userId ? false : playerId !== id,
 				),
@@ -1439,7 +1439,7 @@ export class Brawl extends Command {
 		if (subcommand === "player brawlers")
 			return edit({
 				components: this.createBrawlersComponents(
-					player,
+					await this.getPlayer(options.tag, edit),
 					url,
 					id,
 					options.order,
