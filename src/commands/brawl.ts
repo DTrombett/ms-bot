@@ -1511,7 +1511,7 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e cicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
 		});
 	};
 	static "notify disable" = async (
