@@ -28,9 +28,9 @@ enum BrawlerOrder {
 	PowerLevel,
 }
 enum MembersOrder {
-	Name,
 	MostTrophies,
 	LeastTrophies,
+	Name,
 	Role,
 }
 enum ClubType {
@@ -682,19 +682,6 @@ export class Brawl extends Command {
 		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
-				name: "link",
-				description: "Collega il tuo profilo di Brawl Stars",
-				type: ApplicationCommandOptionType.Subcommand,
-				options: [
-					{
-						name: "tag",
-						description: "Il tuo tag giocatore di Brawl Stars (es. #8QJR0YC)",
-						type: ApplicationCommandOptionType.String,
-						required: true,
-					},
-				],
-			},
-			{
 				name: "notify",
 				description: "Gestisci le notifiche per il tuo profilo Brawl Stars",
 				type: ApplicationCommandOptionType.SubcommandGroup,
@@ -1015,12 +1002,13 @@ export class Brawl extends Command {
 	};
 	static createMembersComponents = (
 		club: Brawl.Club,
-		url: string,
+		locale: string,
 		id: string,
 		order = MembersOrder.MostTrophies,
 		page = 0,
 	): APIMessageTopLevelComponent[] => {
 		const pages = Math.ceil(club.members.length / 10);
+		const members = club.members.map((m) => m.trophies).sort((a, b) => b - a);
 
 		club.members.sort(
 			order === MembersOrder.Name
@@ -1036,8 +1024,25 @@ export class Brawl extends Command {
 				type: ComponentType.Container,
 				components: [
 					{
-						type: ComponentType.MediaGallery,
-						items: [{ media: { url: new URL("/brawlers.png", url).href } }],
+						type: ComponentType.Section,
+						components: [
+							{
+								type: ComponentType.TextDisplay,
+								content: `## ${club.name} (${club.tag})\n- Trofei medi: 🏆 ${Math.round(club.trophies / club.members.length).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
+									percentile(members, 0.5),
+								).toLocaleString(locale)}\n- 75° Percentile: 🏆 ${Math.round(
+									percentile(members, 0.75),
+								).toLocaleString(locale)}\n- 90° Percentile: 🏆 ${Math.round(
+									percentile(members, 0.9),
+								).toLocaleString(locale)}`,
+							},
+						],
+						accessory: {
+							type: ComponentType.Thumbnail,
+							media: {
+								url: `https://cdn.brawlify.com/club-badges/regular/${club.badgeId}.png`,
+							},
+						},
 					},
 					...club.members.slice(page * 10, (page + 1) * 10).flatMap(
 						(member, i): APISectionComponent => ({
@@ -1089,11 +1094,6 @@ export class Brawl extends Command {
 								type: ComponentType.StringSelect,
 								options: [
 									{
-										label: "Nome",
-										value: String(MembersOrder.Name),
-										default: order === MembersOrder.Name,
-									},
-									{
 										label: "Più trofei",
 										value: String(MembersOrder.MostTrophies),
 										default: order === MembersOrder.MostTrophies,
@@ -1102,6 +1102,11 @@ export class Brawl extends Command {
 										label: "Meno trofei",
 										value: String(MembersOrder.LeastTrophies),
 										default: order === MembersOrder.LeastTrophies,
+									},
+									{
+										label: "Nome",
+										value: String(MembersOrder.Name),
+										default: order === MembersOrder.Name,
 									},
 									{
 										label: "Ruolo",
@@ -1247,7 +1252,10 @@ export class Brawl extends Command {
 	};
 	static createPlayerMessage = (
 		player: Brawl.Player,
+		userId: string,
 		playerId?: string,
+		commandId?: string,
+		link?: boolean,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		const components: APIActionRowComponent<APIButtonComponent>[] = [
 			{
@@ -1264,6 +1272,22 @@ export class Brawl extends Command {
 			},
 		];
 
+		if (link)
+			components[0]!.components.unshift({
+				type: ComponentType.Button,
+				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}`,
+				label: "Salva",
+				emoji: { name: "🔗" },
+				style: ButtonStyle.Success,
+			});
+		else if (link === false)
+			components[0]!.components.unshift({
+				type: ComponentType.Button,
+				custom_id: `brawl-unlink-${userId}-${player.tag}-${commandId || "0"}`,
+				label: "Scollega",
+				emoji: { name: "⛓️‍💥" },
+				style: ButtonStyle.Danger,
+			});
 		if (player.club.tag)
 			components[0]!.components.push({
 				type: ComponentType.Button,
@@ -1380,7 +1404,7 @@ export class Brawl extends Command {
 		if (!options.tag)
 			return reply({
 				flags: MessageFlags.Ephemeral,
-				content: `Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> o specifica il tag giocatore come parametro.`,
+				content: `Non hai ancora collegato un profilo Brawl Stars! Specifica il tag giocatore come parametro e poi clicca su **Salva**.`,
 			});
 		try {
 			options.tag = this.normalizeTag(options.tag);
@@ -1394,17 +1418,24 @@ export class Brawl extends Command {
 		defer();
 		const player = await this.getPlayer(options.tag, edit);
 
-		if (subcommand === "player view")
+		if (subcommand === "player view") {
+			const playerId =
+				userId ??
+				(await env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
+					.bind(options.tag)
+					.first("id")) ??
+				undefined;
+
 			return edit(
 				Brawl.createPlayerMessage(
 					player,
-					userId ??
-						(await env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
-							.bind(options.tag)
-							.first("id")) ??
-						undefined,
+					id,
+					playerId,
+					commandId,
+					userId ? false : playerId !== id,
 				),
 			);
+		}
 		if (subcommand === "player brawlers")
 			return edit({
 				components: this.createBrawlersComponents(
@@ -1426,7 +1457,6 @@ export class Brawl extends Command {
 				locale,
 				data: { id: commandId },
 			},
-			request: { url },
 		}: ChatInputArgs<typeof Brawl.chatInputData, `${"club"} ${string}`>,
 	) => {
 		defer();
@@ -1442,7 +1472,7 @@ export class Brawl extends Command {
 		}
 		if (!options.tag)
 			return edit({
-				content: `Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> o specifica il tag del club come parametro.`,
+				content: `Non hai ancora collegato un profilo Brawl Stars! Specifica il tag del club come parametro o collega un profilo con </brawl profile:${commandId}>.`,
 			});
 		const club = await this.getClub(options.tag, edit);
 
@@ -1450,48 +1480,14 @@ export class Brawl extends Command {
 			return edit(this.createClubMessage(club, locale));
 		if (subcommand === "club members")
 			return edit({
-				components: this.createMembersComponents(club, url, id, options.order),
+				components: this.createMembersComponents(
+					club,
+					locale,
+					id,
+					options.order,
+				),
 				flags: MessageFlags.IsComponentsV2,
 			});
-	};
-	static link = async (
-		{ defer, edit }: ChatInputReplies,
-		{
-			options: { tag },
-			user: { id },
-			interaction: {
-				data: { id: commandId },
-			},
-		}: ChatInputArgs<typeof Brawl.chatInputData, "link">,
-	) => {
-		defer({ flags: MessageFlags.Ephemeral });
-		const player = await this.getPlayer(tag, edit);
-
-		return edit({
-			content: "Vuoi collegare questo profilo?",
-			embeds: [this.createPlayerEmbed(player)],
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: `brawl-link-${id}-${player.tag}-${commandId}`,
-							label: "Collega",
-							emoji: { name: "🔗" },
-							style: ButtonStyle.Primary,
-						},
-						{
-							type: ComponentType.Button,
-							custom_id: `brawl-undo-${id}-${player.tag}`,
-							label: "Annulla",
-							emoji: { name: "✖️" },
-							style: ButtonStyle.Danger,
-						},
-					],
-				},
-			],
-		});
 	};
 	static "notify enable" = async (
 		{ reply }: ChatInputReplies,
@@ -1515,7 +1511,7 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e cicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
 		});
 	};
 	static "notify disable" = async (
@@ -1539,7 +1535,7 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
 		});
 	};
 	static "notify view" = async (
@@ -1559,7 +1555,7 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl link:${commandId}> per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
 		});
 	};
 	static override async component(
@@ -1570,7 +1566,7 @@ export class Brawl extends Command {
 
 		if (!userId || args.user.id === userId)
 			return this[
-				`${action as "link" | "undo" | "brawler" | "brawlers"}Component`
+				`${action as "link" | "brawler" | "brawlers" | "unlink"}Component`
 			]?.(replies, args);
 		return replies.reply({
 			flags: MessageFlags.Ephemeral,
@@ -1579,7 +1575,13 @@ export class Brawl extends Command {
 	}
 	static linkComponent = async (
 		{ edit, deferUpdate }: ComponentReplies,
-		{ args: [tag, commandId], user: { id } }: ComponentArgs,
+		{
+			args: [tag, commandId],
+			user: { id },
+			interaction: {
+				message: { components },
+			},
+		}: ComponentArgs,
 	) => {
 		deferUpdate();
 		const player = await this.getPlayer(tag!, edit);
@@ -1601,52 +1603,48 @@ export class Brawl extends Command {
 				),
 			)
 			.run();
+		if (components?.[0]?.type === ComponentType.ActionRow)
+			components[0].components[0] = {
+				type: ComponentType.Button,
+				custom_id: `brawl-unlink-${id}-${tag}-${commandId || "0"}`,
+				label: "Scollega",
+				emoji: { name: "⛓️‍💥" },
+				style: ButtonStyle.Danger,
+			};
 		return edit({
-			content: `Profilo collegato con successo!\nUsa </brawl notify enable:${commandId}> per attivare le notifiche.`,
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: "brawl",
-							label: "Collegato",
-							emoji: { name: "🔗" },
-							disabled: true,
-							style: ButtonStyle.Success,
-						},
-					],
-				},
-			],
+			content: `Profilo collegato con successo!\nUsa </brawl notify enable:${commandId || "0"}> per attivare le notifiche.`,
+			components,
 		});
 	};
-	static undoComponent = ({ update }: ComponentReplies) =>
-		update({
-			content: "Azione annullata.",
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: "brawl-link",
-							label: "Collega",
-							disabled: true,
-							emoji: { name: "🔗" },
-							style: ButtonStyle.Primary,
-						},
-						{
-							type: ComponentType.Button,
-							custom_id: "brawl",
-							label: "Annullato",
-							disabled: true,
-							emoji: { name: "✖️" },
-							style: ButtonStyle.Danger,
-						},
-					],
-				},
-			],
-		});
+	static unlinkComponent = async (
+		{ update }: ComponentReplies,
+		{
+			args: [tag, commandId],
+			user: { id },
+			interaction: {
+				message: { components },
+			},
+		}: ComponentArgs,
+	) => {
+		await env.DB.prepare(
+			`UPDATE Users
+				SET brawlTag = NULL,
+					brawlTrophies = NULL,
+					brawlers = NULL
+				WHERE id = ?`,
+		)
+			.bind(id)
+			.run();
+		if (components?.[0]?.type === ComponentType.ActionRow)
+			components[0].components[0] = {
+				type: ComponentType.Button,
+				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}`,
+				label: "Salva",
+				emoji: { name: "🔗" },
+				style: ButtonStyle.Success,
+			};
+		return update({ content: "Profilo scollegato con successo!", components });
+	};
 	static brawlersComponent = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
@@ -1676,8 +1674,7 @@ export class Brawl extends Command {
 	static membersComponent = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
-			interaction: { data },
-			request: { url },
+			interaction: { data, locale },
 			args: [tag, order, page, replyFlag],
 			user: { id },
 		}: ComponentArgs,
@@ -1687,7 +1684,7 @@ export class Brawl extends Command {
 		return edit({
 			components: this.createMembersComponents(
 				await this.getClub(tag!, edit),
-				url,
+				locale,
 				id,
 				Number(
 					data.component_type === ComponentType.StringSelect
@@ -1719,17 +1716,25 @@ export class Brawl extends Command {
 	};
 	static playerComponent = async (
 		{ defer, edit }: ComponentReplies,
-		{ interaction: { data }, args: [tag] }: ComponentArgs,
+		{ user: { id }, interaction: { data }, args: [tag] }: ComponentArgs,
 	) => {
 		if (data.component_type === ComponentType.StringSelect) [tag] = data.values;
 		ok(tag);
 		defer({ flags: MessageFlags.Ephemeral });
+		const [player, playerId] = await Promise.all([
+			this.getPlayer(tag, edit),
+			env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
+				.bind(tag)
+				.first<string>("id"),
+		]);
+
 		return edit(
 			this.createPlayerMessage(
-				await this.getPlayer(tag, edit),
-				(await env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
-					.bind(tag)
-					.first("id")) ?? undefined,
+				player,
+				id,
+				playerId ?? undefined,
+				undefined,
+				playerId !== id && (!playerId || undefined),
 			),
 		);
 	};
