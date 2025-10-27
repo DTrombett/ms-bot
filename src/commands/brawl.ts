@@ -1654,7 +1654,7 @@ export class Brawl extends Command {
 			user: { id },
 		}: ComponentArgs,
 	) => {
-		if (replyFlag) defer();
+		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
 		else deferUpdate();
 		return edit({
 			components: this.createBrawlersComponents(
@@ -1679,7 +1679,7 @@ export class Brawl extends Command {
 			user: { id },
 		}: ComponentArgs,
 	) => {
-		if (replyFlag) defer();
+		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
 		else deferUpdate();
 		return edit({
 			components: this.createMembersComponents(
@@ -1742,7 +1742,7 @@ export class Brawl extends Command {
 		{ defer, edit }: ComponentReplies,
 		{ args: [tag], interaction: { locale } }: ComponentArgs,
 	) => {
-		defer();
+		defer({ flags: MessageFlags.Ephemeral });
 		return edit(this.createClubMessage(await this.getClub(tag!, edit), locale));
 	};
 }
