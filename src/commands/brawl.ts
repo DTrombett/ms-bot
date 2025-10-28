@@ -1305,7 +1305,7 @@ export class Brawl extends Command {
 		Object.assign(errors, Brawl.ERROR_MESSAGES);
 		const request =
 			env.NODE_ENV === "production"
-				? new Request(new URL(path, "https://proxy.trombett.org:8443/v1/"), {
+				? new Request(new URL(path, "https://proxy.trombett.org/v1/"), {
 						headers: { "X-Host": "api.brawlstars.com" },
 					})
 				: new Request(new URL(path, "https://api.brawlstars.com/v1/"));
