@@ -80,7 +80,7 @@ export class Remind extends Command {
 			});
 		if (duration < TimeUnit.Second)
 			return reply({
-				content: "Non puoi impostare una durata minore di 1 secondo!",
+				content: `Non puoi impostare una durata minore di 1 secondo (<t:${Math.round((Date.now() + duration) / 1_000)}:R>)!`,
 				flags: MessageFlags.Ephemeral,
 			});
 		if (options.to.length > 1_000)
