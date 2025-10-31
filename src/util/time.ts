@@ -63,6 +63,8 @@ export const idDiff = (id1: string, id2: string): number =>
 export const idToTimestamp = (id: string): number =>
 	Number((BigInt(id) >> 22n) + 1420070400000n);
 
+const parseNumber = (string?: string) => Number(string) || 0;
+
 export const parseTime = (str: string): number => {
 	str = str.trim().toLowerCase();
 	const date = new Date();
@@ -91,20 +93,14 @@ export const parseTime = (str: string): number => {
 	match = str.match(
 		/^(?:(?<months>\d+)\s*(?:mos?|mesi|mese|months?))?\s*,?\s*e?\s*(?:(?<weeks>\d+)\s*(?:ws?|settimana|settimane|weeks?))?\s*,?\s*e?\s*(?:(?<days>\d+)\s*(?:ds?|giorni|giorno|days?|gg?))?\s*,?\s*e?\s*(?:(?<hours>\d+)\s*(?:hs?|ore|hours?|ore|ora|hrs?))?\s*,?\s*e?\s*(?:(?<minutes>\d+)\s*(?:mins?|minuti|minuto|minutes?|m))?\s*,?\s*e?\s*(?:(?<seconds>\d+)\s*(?:secs?|secondi|secondo|ss?|seconds?))?$/,
 	);
-	if (match?.groups) {
-		date.setMonth(
-			date.getMonth() + (Number(match.groups.months) || 0),
-			date.getDate() +
-				(Number(match.groups.days) || 0) +
-				(Number(match.groups.weeks) || 0) * 7,
+	if (match?.groups)
+		return (
+			parseNumber(match.groups.months) * TimeUnit.Month +
+			parseNumber(match.groups.weeks) * TimeUnit.Week +
+			parseNumber(match.groups.days) * TimeUnit.Day +
+			parseNumber(match.groups.hours) * TimeUnit.Hour +
+			parseNumber(match.groups.minutes) * TimeUnit.Minute +
+			parseNumber(match.groups.seconds) * TimeUnit.Second
 		);
-		date.setHours(
-			date.getHours() + (Number(match.groups.hours) || 0),
-			date.getMinutes() + (Number(match.groups.minutes) || 0),
-			date.getSeconds() + (Number(match.groups.seconds) || 0),
-			0,
-		);
-		return date.getTime() - now;
-	}
 	return 0;
 };
