@@ -114,7 +114,9 @@ export class Remind extends Command {
 			return edit({
 				content: `Si è verificato un errore: \`${result.message}\``,
 			});
-		return edit({ content: `Promemoria \`${id}\` impostato correttamente!` });
+		return edit({
+			content: `Promemoria \`${id}\` impostato correttamente <t:${Math.round((Date.now() + duration) / 1_000)}:R>!`,
+		});
 	};
 	static list = (
 		{ defer, deferUpdate, edit }: Merge<ChatInputReplies, ComponentReplies>,

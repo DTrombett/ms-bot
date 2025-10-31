@@ -67,14 +67,26 @@ const parseNumber = (string?: string) => Number(string) || 0;
 
 export const parseTime = (str: string): number => {
 	str = str.trim().toLowerCase();
-	const date = new Date();
-	const now = date.getTime();
 	let match = str.match(
-		/^(?:(?<day>\d{1,2})\/(?<month>\d{1,2})(?:\/(?<year>\d{2}|\d{4}))?)?\s*,?\s*(?:(?<hours>\d{1,2}):(?<minutes>\d{1,2})(?::(?<seconds>\d{1,2}))?)?$/,
+		/^(?:(?<months>\d+)\s*(?:mos?|mesi|mese|months?))?\s*,?\s*e?\s*(?:(?<weeks>\d+)\s*(?:ws?|settimana|settimane|weeks?))?\s*,?\s*e?\s*(?:(?<days>\d+)\s*(?:ds?|giorni|giorno|days?|gg?))?\s*,?\s*e?\s*(?:(?<hours>\d+)\s*(?:hs?|ore|hours?|ore|ora|hrs?))?\s*,?\s*e?\s*(?:(?<minutes>\d+)\s*(?:mins?|minuti|minuto|minutes?|m))?\s*,?\s*e?\s*(?:(?<seconds>\d+)\s*(?:secs?|secondi|secondo|ss?|seconds?))?$/,
 	);
 
+	if (match?.groups)
+		return (
+			parseNumber(match.groups.months) * TimeUnit.Month +
+			parseNumber(match.groups.weeks) * TimeUnit.Week +
+			parseNumber(match.groups.days) * TimeUnit.Day +
+			parseNumber(match.groups.hours) * TimeUnit.Hour +
+			parseNumber(match.groups.minutes) * TimeUnit.Minute +
+			parseNumber(match.groups.seconds) * TimeUnit.Second
+		);
+	match = str.match(
+		/^(?:(?<day>\d{1,2})\/(?<month>\d{1,2})(?:\/(?<year>\d{2}|\d{4}))?)?\s*,?\s*(?:(?<hours>\d{1,2}):(?<minutes>\d{1,2})(?::(?<seconds>\d{1,2}))?)?$/,
+	);
 	if (match?.groups) {
-		const year = Number(match.groups.year);
+		const date = new Date();
+		const now = date.getTime();
+		const year = parseNumber(match.groups.year);
 
 		date.setFullYear(
 			(year >= 1000 ? year : year + 2000) || date.getFullYear(),
@@ -90,17 +102,5 @@ export const parseTime = (str: string): number => {
 		if (date.getTime() < now) date.setDate(date.getDate() + 1);
 		return date.getTime() - now;
 	}
-	match = str.match(
-		/^(?:(?<months>\d+)\s*(?:mos?|mesi|mese|months?))?\s*,?\s*e?\s*(?:(?<weeks>\d+)\s*(?:ws?|settimana|settimane|weeks?))?\s*,?\s*e?\s*(?:(?<days>\d+)\s*(?:ds?|giorni|giorno|days?|gg?))?\s*,?\s*e?\s*(?:(?<hours>\d+)\s*(?:hs?|ore|hours?|ore|ora|hrs?))?\s*,?\s*e?\s*(?:(?<minutes>\d+)\s*(?:mins?|minuti|minuto|minutes?|m))?\s*,?\s*e?\s*(?:(?<seconds>\d+)\s*(?:secs?|secondi|secondo|ss?|seconds?))?$/,
-	);
-	if (match?.groups)
-		return (
-			parseNumber(match.groups.months) * TimeUnit.Month +
-			parseNumber(match.groups.weeks) * TimeUnit.Week +
-			parseNumber(match.groups.days) * TimeUnit.Day +
-			parseNumber(match.groups.hours) * TimeUnit.Hour +
-			parseNumber(match.groups.minutes) * TimeUnit.Minute +
-			parseNumber(match.groups.seconds) * TimeUnit.Second
-		);
 	return 0;
 };
