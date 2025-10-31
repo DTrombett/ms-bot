@@ -86,10 +86,11 @@ export const parseTime = (str: string): number => {
 	if (match?.groups) {
 		const date = new Date();
 		const now = date.getTime();
-		const year = parseNumber(match.groups.year);
+		let year = parseNumber(match.groups.year);
 
+		if (year > 0 && year < 1000) year += 2000;
 		date.setFullYear(
-			(year >= 1000 ? year : year + 2000) || date.getFullYear(),
+			year || date.getFullYear(),
 			Number(match.groups.month) - 1 || date.getMonth(),
 			Number(match.groups.day) || date.getDate(),
 		);
