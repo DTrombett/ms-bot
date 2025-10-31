@@ -88,19 +88,32 @@ export const parseTime = (str: string): number => {
 		const now = date.getTime();
 		let year = parseNumber(match.groups.year);
 
-		if (year > 0 && year < 1000) year += 2000;
-		date.setFullYear(
-			year || date.getFullYear(),
-			Number(match.groups.month) - 1 || date.getMonth(),
-			Number(match.groups.day) || date.getDate(),
+		if (year > 0 && year < 1_000)
+			year += Math.floor(date.getUTCFullYear() / 1_000);
+		date.setUTCFullYear(
+			year || date.getUTCFullYear(),
+			Number(match.groups.month) - 1 || date.getUTCMonth(),
+			parseNumber(match.groups.day) || date.getUTCDate(),
 		);
-		date.setHours(
-			Number(match.groups.hours) || 0,
-			Number(match.groups.minutes) || 0,
-			Number(match.groups.seconds) || 0,
+		date.setUTCHours(
+			parseNumber(match.groups.hours),
+			parseNumber(match.groups.minutes),
+			parseNumber(match.groups.seconds),
 			0,
 		);
-		if (date.getTime() < now) date.setDate(date.getDate() + 1);
+		match = new Intl.DateTimeFormat("it", {
+			timeZoneName: "longOffset",
+			timeZone: "Europe/Rome",
+			month: "numeric",
+		})
+			.format(date)
+			.match(/(\+|-)(\d{2}):(\d{2})$/)!;
+		date.setUTCMinutes(
+			date.getUTCMinutes() +
+				(match[1] === "+" ? 1 : -1) *
+					(Number(match[2]) * 60 + Number(match[3])),
+		);
+		if (date.getTime() < now) date.setUTCDate(date.getUTCDate() + 1);
 		return date.getTime() - now;
 	}
 	return 0;
