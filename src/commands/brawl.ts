@@ -1303,19 +1303,16 @@ export class Brawl extends Command {
 	};
 	static async callApi<T>(path: string, errors: Record<number, string> = {}) {
 		Object.assign(errors, Brawl.ERROR_MESSAGES);
-		const request =
-			env.NODE_ENV === "production"
-				? new Request(new URL(path, "https://proxy.trombett.org/v1/"), {
-						headers: { "X-Host": "api.brawlstars.com" },
-					})
-				: new Request(new URL(path, "https://api.brawlstars.com/v1/"));
+		const request = new Request(
+			new URL(path, "https://api.brawlstars.com/v1/"),
+		);
 		let res = await caches.default.match(request);
 
 		if (!res) {
 			const clone = request.clone();
 
 			clone.headers.set("Authorization", `Bearer ${env.BRAWL_STARS_API_TOKEN}`);
-			res = await fetch(clone);
+			res = await env.BRAWL_STARS.fetch(clone);
 			waitUntil(caches.default.put(request, res.clone()));
 		}
 		if (res.ok) return res.json<T>();

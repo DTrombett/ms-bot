@@ -19,6 +19,11 @@ crons = ["0 0 * * *", "*/5 * * * *"]
 directory = "./public"
 binding = "ASSETS"
 
+[[vpc_services]]
+binding = "BRAWL_STARS"
+service_id = "019a5526-d448-7030-8492-1e4572309bc6"
+remote = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "database"

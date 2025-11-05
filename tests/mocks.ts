@@ -91,10 +91,14 @@ const additionalEnv: Omit<Filter<Env, object>, keyof Filter<Env, Workflow>> = {
 	DB,
 	KV,
 	ASSETS: {
+		fetch: fetch as unknown as Fetcher["fetch"],
 		connect: () => {
 			throw new Error("Not implemented");
 		},
-		fetch: () => {
+	},
+	BRAWL_STARS: {
+		fetch: fetch as unknown as Fetcher["fetch"],
+		connect: () => {
 			throw new Error("Not implemented");
 		},
 	},
@@ -170,8 +174,7 @@ registerHooks({
 	resolve: (specifier, context, nextResolve) =>
 		specifier.startsWith("cloudflare:")
 			? {
-					url: pathToFileURL("./package.json").href,
-					importAttributes: { type: "json" },
+					url: pathToFileURL("./tests/utils.ts").href,
 					shortCircuit: true,
 				}
 			: nextResolve(specifier, context),
