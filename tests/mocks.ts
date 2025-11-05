@@ -174,7 +174,7 @@ registerHooks({
 	resolve: (specifier, context, nextResolve) =>
 		specifier.startsWith("cloudflare:")
 			? {
-					url: pathToFileURL("./tests/utils.ts").href,
+					url: pathToFileURL("./tests/empty.js").href,
 					shortCircuit: true,
 				}
 			: nextResolve(specifier, context),
