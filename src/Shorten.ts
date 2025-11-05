@@ -28,7 +28,7 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
-		const client = new Cloudflare({ apiToken: this.env.CLOUDFLARE_API_TOKEN });
+		const client = new Cloudflare({ apiToken: this.env.CLOUDFLARE_API_KEY });
 
 		await step.do<void>(
 			"Create short url",
