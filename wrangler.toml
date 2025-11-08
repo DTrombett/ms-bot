@@ -8,6 +8,8 @@ send_metrics = false
 
 [observability]
 enabled = true
+[observability.traces]
+enabled = true
 
 [vars]
 SEASON_ID = "266660"
