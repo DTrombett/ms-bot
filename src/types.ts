@@ -46,12 +46,11 @@ declare global {
 
 	type InteractionByType<
 		T extends InteractionType,
-		I extends APIInteraction = APIInteraction,
+		I extends APIInteraction = APIInteraction
 	> = I extends APIInteraction & { type: T } ? I : never;
 	type CommandInteractionByType<
 		T extends ApplicationCommandType,
-		I extends
-			InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>,
+		I extends InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>
 	> = I extends InteractionByType<InteractionType.ApplicationCommand> & {
 		data: { type: T };
 	}
@@ -61,7 +60,7 @@ declare global {
 	type CommandData<
 		T extends ApplicationCommandType = ApplicationCommandType,
 		O extends ApplicationCommandOptionType = ApplicationCommandOptionType,
-		N extends string = string,
+		N extends string = string
 	> = RESTPostAPIApplicationCommandsJSONBody & {
 		type: T;
 		options?: (APIApplicationCommandOption & {
@@ -71,7 +70,7 @@ declare global {
 	};
 
 	type ReplyFunction<
-		T extends APIInteractionResponse = APIInteractionResponse,
+		T extends APIInteractionResponse = APIInteractionResponse
 	> = (result: T) => void;
 
 	type ExecutorContext<T extends APIInteraction = APIInteraction> = {
@@ -94,7 +93,7 @@ declare global {
 	type CommandOptions<
 		T extends ApplicationCommandType = ApplicationCommandType,
 		O extends ApplicationCommandOptionType = ApplicationCommandOptionType,
-		N extends string = string,
+		N extends string = string
 	> = {
 		/**
 		 * The data for this command
@@ -115,7 +114,7 @@ declare global {
 			reply: ReplyFunction<APIApplicationCommandAutocompleteResponse>,
 			context: ExecutorContext<
 				InteractionByType<InteractionType.ApplicationCommandAutocomplete>
-			>,
+			>
 		) => Awaitable<void>;
 
 		/**
@@ -133,7 +132,7 @@ declare global {
 			>,
 			context: ExecutorContext<
 				InteractionByType<InteractionType.MessageComponent>
-			>,
+			>
 		) => Awaitable<void>;
 
 		/**
@@ -147,7 +146,7 @@ declare global {
 				| APIInteractionResponseDeferredChannelMessageWithSource
 				| APIInteractionResponseDeferredMessageUpdate
 			>,
-			context: ExecutorContext<InteractionByType<InteractionType.ModalSubmit>>,
+			context: ExecutorContext<InteractionByType<InteractionType.ModalSubmit>>
 		) => Awaitable<void>;
 
 		/**
@@ -161,7 +160,7 @@ declare global {
 				| APIInteractionResponseDeferredChannelMessageWithSource
 				| APIModalInteractionResponse
 			>,
-			context: ExecutorContext<CommandInteractionByType<T>>,
+			context: ExecutorContext<CommandInteractionByType<T>>
 		) => Awaitable<void>;
 	};
 
@@ -250,7 +249,7 @@ declare global {
 		user: ResolvedUser,
 		matchPoints: number,
 		dayPoints: number,
-		maxPoints: number,
+		maxPoints: number
 	][];
 
 	type Prediction = {
@@ -284,59 +283,57 @@ declare global {
 	};
 
 	type ExtractOptionType<
-		T extends
-			RecursiveReadonly<APIApplicationCommandOption> = APIApplicationCommandOption,
+		T extends RecursiveReadonly<APIApplicationCommandOption> = APIApplicationCommandOption
 	> = T extends {
 		choices: { value: infer V }[];
 	}
 		? V
 		: (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
 				type: T["type"];
-			})["value"];
+		  })["value"];
 	type ResolvedOptions<
 		T extends RecursiveReadonly<
 			| APIApplicationCommandSubcommandGroupOption
 			| APIApplicationCommandSubcommandOption
 		>,
-		S extends string | undefined = undefined,
+		S extends string | undefined = undefined
 	> = T extends any
 		? CreateObject<
 				NonNullable<T["options"]>,
 				undefined extends S ? T["name"] : `${S} ${T["name"]}`
-			>
+		  >
 		: never;
 	type CreateObject<
 		T extends RecursiveReadonly<APIApplicationCommandOption[]>,
 		S extends string | undefined = undefined,
-		R extends boolean = true,
-	> =
-		T extends RecursiveReadonly<
-			(
-				| APIApplicationCommandSubcommandGroupOption
-				| APIApplicationCommandSubcommandOption
-			)[]
-		>
-			? ResolvedOptions<T[number], S>
-			: {
-					subcommand: S;
-					options: {
-						[P in T[number] as P["name"]]: R extends true
-							? P["required"] extends true
-								? ExtractOptionType<P>
-								: ExtractOptionType<P> | undefined
-							: ExtractOptionType<P> | undefined;
-					};
+		R extends boolean = true
+	> = T extends RecursiveReadonly<
+		(
+			| APIApplicationCommandSubcommandGroupOption
+			| APIApplicationCommandSubcommandOption
+		)[]
+	>
+		? ResolvedOptions<T[number], S>
+		: {
+				subcommand: S;
+				options: {
+					[P in T[number] as P["name"]]: R extends true
+						? P["required"] extends true
+							? ExtractOptionType<P>
+							: ExtractOptionType<P> | undefined
+						: ExtractOptionType<P> | undefined;
 				};
+		  };
 	type ParseOptions<
 		T extends
 			| RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody>
 			| undefined,
-		R extends boolean = true,
+		R extends boolean = true
 	> = RESTPostAPIChatInputApplicationCommandsJSONBody extends T
 		? {
 				subcommand?: string;
 				options: Record<string, ExtractOptionType | undefined>;
-			}
+		  }
 		: CreateObject<NonNullable<NonNullable<T>["options"]>, undefined, R>;
 
 	type Reply<T extends InteractionResponseType> = (
@@ -344,11 +341,11 @@ declare global {
 			data?: infer D;
 		}
 			? D
-			: never,
+			: never
 	) => void;
 	type BaseReplies = {
 		edit: (
-			data: RESTPatchAPIInteractionOriginalResponseJSONBody,
+			data: RESTPatchAPIInteractionOriginalResponseJSONBody
 		) => Promise<void>;
 		delete: () => Promise<void>;
 		followup: (data: RESTPostAPIInteractionFollowupJSONBody) => Promise<void>;
@@ -370,9 +367,8 @@ declare global {
 		BaseReplies;
 
 	type ChatInputArgs<
-		A extends
-			RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
-		B extends string | undefined = string | undefined,
+		A extends RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
+		B extends string | undefined = string | undefined
 	> = BaseArgs<APIChatInputApplicationCommandInteraction> &
 		ParseOptions<A> & {
 			subcommand: B;
@@ -381,8 +377,7 @@ declare global {
 	type AutoCompleteReplies = Pick<Replies, "autocomplete">;
 
 	type AutoCompleteArgs<
-		A extends
-			RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
+		A extends RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody
 	> = BaseArgs<APIApplicationCommandAutocompleteInteraction> & ParseOptions<A>;
 
 	type ComponentReplies = Pick<
@@ -431,7 +426,7 @@ declare global {
 			options?: Record<string, string | number | boolean>;
 			args?: string[];
 			fullRoute?: ReturnType<RoutesDeclarations["webhookMessage"]>;
-		},
+		}
 	) => Promise<any>;
 
 	type CommandTests = {
@@ -524,6 +519,116 @@ declare global {
 				| "unknown"
 				| "senior";
 			nameColor: string;
+		};
+	}
+	namespace Clash {
+		type Player = {
+			clan: PlayerClan;
+			legacyTrophyRoadHighScore: number;
+			currentDeck: PlayerItemLevelList;
+			currentDeckSupportCards: PlayerItemLevelList;
+			arena: Arena;
+			role: "NOT_MEMBER" | "MEMBER" | "LEADER" | "ADMIN" | "COLEADER";
+			wins: number;
+			losses: number;
+			totalDonations: number;
+			leagueStatistics: PlayerLeagueStatistics;
+			cards: PlayerItemLevelList;
+			supportCards: PlayerItemLevelList;
+			currentFavouriteCard: Item;
+			badges: PlayerAchievementBadgeList;
+			tag: string;
+			name: string;
+			expLevel: number;
+			trophies: number;
+			bestTrophies: number;
+			donations: number;
+			donationsReceived: number;
+			achievements: PlayerAchievementProgressList;
+			battleCount: number;
+			threeCrownWins: number;
+			challengeCardsWon: number;
+			challengeMaxWins: number;
+			tournamentCardsWon: number;
+			tournamentBattleCount: number;
+			warDayWins: number;
+			clanCardsCollected: number;
+			starPoints: number;
+			expPoints: number;
+			totalExpPoints: number;
+			currentPathOfLegendSeasonResult: PathOfLegendSeasonResult;
+			lastPathOfLegendSeasonResult: PathOfLegendSeasonResult;
+			bestPathOfLegendSeasonResult: PathOfLegendSeasonResult;
+			progress: unknown;
+		};
+		type PlayerClan = {
+			badgeId: number;
+			tag: string;
+			name: string;
+		};
+		type PlayerItemLevelList = PlayerItemLevel[];
+		type PlayerItemLevel = {
+			id: number;
+			rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "CHAMPION";
+			count: number;
+			level: number;
+			starLevel: number;
+			evolutionLevel: number;
+			used: boolean;
+			name: JsonLocalizedName;
+			maxLevel: number;
+			elixirCost: number;
+			maxEvolutionLevel: number;
+			iconUrls: unknown;
+		};
+		type JsonLocalizedName = string;
+		type Arena = {
+			name: JsonLocalizedName;
+			id: number;
+			iconUrls: unknown;
+		};
+		type PlayerLeagueStatistics = {
+			previousSeason: LeagueSeasonResult;
+			bestSeason: LeagueSeasonResult;
+			currentSeason: LeagueSeasonResult;
+		};
+		type LeagueSeasonResult = {
+			trophies: number;
+			rank: number;
+			bestTrophies: number;
+			id: string;
+		};
+		type Item = {
+			iconUrls: unknown;
+			name: JsonLocalizedName;
+			id: number;
+			rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "CHAMPION";
+			maxLevel: number;
+			elixirCost: number;
+			maxEvolutionLevel: number;
+		};
+		type PlayerAchievementBadgeList = PlayerAchievementBadge[];
+		type PlayerAchievementBadge = {
+			iconUrls: unknown;
+			maxLevel: number;
+			progress: number;
+			level: number;
+			target: number;
+			name: string;
+		};
+		type PlayerAchievementProgressList = PlayerAchievementProgress[];
+		type PlayerAchievementProgress = {
+			stars: number;
+			value: number;
+			name: JsonLocalizedName;
+			target: number;
+			info: JsonLocalizedName;
+			completionInfo: JsonLocalizedName;
+		};
+		type PathOfLegendSeasonResult = {
+			trophies: number;
+			rank: number;
+			leagueNumber: number;
 		};
 	}
 }

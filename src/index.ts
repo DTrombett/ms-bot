@@ -26,7 +26,7 @@ const server: ExportedHandler<Env> = {
 			if (request.method !== "GET")
 				return new JsonResponse(
 					{ error: "Method Not Allowed" },
-					{ status: 405 },
+					{ status: 405 }
 				);
 			const rgb = [
 				url.searchParams.get("red"),
@@ -36,7 +36,7 @@ const server: ExportedHandler<Env> = {
 			if (rgb.some(isNaN))
 				return new JsonResponse(
 					{ error: "Missing 'red', 'green' or 'blue' query parameter" },
-					{ status: 400 },
+					{ status: 400 }
 				);
 			return new Response(await createSolidPng(256, 256, ...rgb), {
 				headers: { "Content-Type": "image/png" },
@@ -55,7 +55,7 @@ const server: ExportedHandler<Env> = {
 					brawlers
 				FROM Users
 				WHERE brawlTag IS NOT NULL
-					AND brawlNotifications != 0`,
+					AND brawlNotifications != 0`
 			).all<UserResult>();
 			const usersChunks = results.reduce((arr, v, i) => {
 				if (i % 16 === 0) arr.push([]);
@@ -64,7 +64,7 @@ const server: ExportedHandler<Env> = {
 			}, [] as UserResult[][]);
 
 			await env.BRAWL_NOTIFICATIONS.createBatch(
-				usersChunks.map((users) => ({ params: { users } })),
+				usersChunks.map((users) => ({ params: { users } }))
 			);
 		}
 	},
