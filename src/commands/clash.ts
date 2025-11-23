@@ -1227,25 +1227,88 @@ Account creato <t:${Math.round(
 						.join(";")}&l=Royals&id=${player.tag.slice(1)})`,
 				},
 				{
+					name: "<:collection:1442124435162136667> Collezione",
+					value: `
+			<:badges:1442135547115077773> Emblemi: **${player.badges.length.toLocaleString(
+				locale,
+			)}**
+			<:cards:1442124435162136667> Carte: **${player.cards.length.toLocaleString(
+				locale,
+			)}**
+			<:level:1442127173434736761> Livello medio: **${percentile(
+				player.cards
+					.map(
+						(c) =>
+							c.level +
+							(LevelOffset[
+								c.rarity.toUpperCase() as Uppercase<
+									Clash.PlayerItemLevel["rarity"]
+								>
+							] ?? 0),
+					)
+					.sort((a, b) => a - b),
+				0.5,
+			)}**
+			<:tower:1442138907410956511> Truppe torri: **${player.supportCards.length.toLocaleString(
+				locale,
+			)}**
+				`,
+					inline: true,
+				},
+				{
+					name: "<:donations:1442140198036312258> Donazioni",
+					value: `
+			Totali: **${player.totalDonations.toLocaleString(locale)}**${
+						daysPlayed
+							? `
+			Media: **${(player.totalDonations / daysPlayed).toLocaleString(locale, {
+				maximumFractionDigits: 1,
+			})}/g**`
+							: ""
+					}
+			Settimanali: **${player.donations.toLocaleString(locale)}**
+			Ricevute: **${player.donationsReceived.toLocaleString(locale)}**
+				`,
+					inline: true,
+				},
+				{
+					name: "<:tournament:1442195961496473802> Sfide",
+					value: `
+			<:blueCrown:1441876288251101367> Record vittorie: **${player.challengeMaxWins.toLocaleString(
+				locale,
+			)}**
+			<:cards:1442124435162136667> Carte vinte: **${player.challengeCardsWon.toLocaleString(
+				locale,
+			)}**
+			<:battle:1441877350697668679> Battaglie in tornei: **${player.tournamentBattleCount.toLocaleString(
+				locale,
+			)}**
+			<:cards:1442124435162136667> Carte vinte: **${player.tournamentCardsWon.toLocaleString(
+				locale,
+			)}**
+				`,
+					inline: true,
+				},
+				{
 					name: "👑 Statistiche Royale",
 					value: `
 <:blueCrown:1441876288251101367> Vittorie: **${player.wins.toLocaleString(
 						locale,
 					)}** (${((player.wins / player.battleCount) * 100).toLocaleString(
 						locale,
-						{ maximumFractionDigits: 3 },
+						{ maximumFractionDigits: 2 },
 					)}%)
 <:blueCrown:1441876288251101367> 3 corone: **${player.threeCrownWins.toLocaleString(
 						locale,
 					)}** (${((player.threeCrownWins / player.wins) * 100).toLocaleString(
 						locale,
-						{ maximumFractionDigits: 3 },
+						{ maximumFractionDigits: 2 },
 					)}%)
 <:redCrown:1441876632800329820> Sconfitte: **${player.losses.toLocaleString(
 						locale,
 					)}** (${((player.losses / player.battleCount) * 100).toLocaleString(
 						locale,
-						{ maximumFractionDigits: 3 },
+						{ maximumFractionDigits: 2 },
 					)}%)
 <:battle:1441877350697668679> Battaglie totali: **${player.battleCount.toLocaleString(
 						locale,
@@ -1280,70 +1343,6 @@ Stagione migliore: **Lega ${player.bestPathOfLegendSeasonResult.leagueNumber}${
 Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 						locale,
 					)}** 🏆
-				`,
-					inline: true,
-				},
-				{ name: "", value: "" },
-				{
-					name: "<:collection:1442124435162136667> Collezione",
-					value: `
-<:badges:1442135547115077773> Emblemi: **${player.badges.length.toLocaleString(
-						locale,
-					)}**
-<:cards:1442124435162136667> Carte: **${player.cards.length.toLocaleString(
-						locale,
-					)}**
-<:level:1442127173434736761> Livello medio: **${percentile(
-						player.cards
-							.map(
-								(c) =>
-									c.level +
-									(LevelOffset[
-										c.rarity.toUpperCase() as Uppercase<
-											Clash.PlayerItemLevel["rarity"]
-										>
-									] ?? 0),
-							)
-							.sort((a, b) => a - b),
-						0.5,
-					)}**
-<:tower:1442138907410956511> Truppe torri: **${player.supportCards.length.toLocaleString(
-						locale,
-					)}**
-				`,
-					inline: true,
-				},
-				{
-					name: "<:donations:1442140198036312258> Donazioni",
-					value: `
-Totali: **${player.totalDonations.toLocaleString(locale)}**${
-						daysPlayed
-							? `
-Media: **${(player.totalDonations / daysPlayed).toLocaleString(locale, {
-									maximumFractionDigits: 1,
-							  })}/g**`
-							: ""
-					}
-Settimanali: **${player.donations.toLocaleString(locale)}**
-Ricevute: **${player.donationsReceived.toLocaleString(locale)}**
-				`,
-					inline: true,
-				},
-				{
-					name: "<:tournament:1442195961496473802> Sfide",
-					value: `
-<:blueCrown:1441876288251101367> Record vittorie: **${player.challengeMaxWins.toLocaleString(
-						locale,
-					)}**
-<:cards:1442124435162136667> Carte vinte: **${player.challengeCardsWon.toLocaleString(
-						locale,
-					)}**
-<:battle:1441877350697668679> Battaglie in tornei: **${player.tournamentBattleCount.toLocaleString(
-						locale,
-					)}**
-<:cards:1442124435162136667> Carte vinte: **${player.tournamentCardsWon.toLocaleString(
-						locale,
-					)}**
 				`,
 					inline: true,
 				},
