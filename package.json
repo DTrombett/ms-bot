@@ -16,7 +16,7 @@
 		"url": "https://github.com/DTrombett/ms-bot/issues"
 	},
 	"scripts": {
-		"dev": "concurrently \"wrangler dev --test-scheduled\" \"cloudflared tunnel --url localhost:8787\"",
+		"dev": "wrangler dev --test-scheduled",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
 		"publish": "wrangler deploy",
 		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src && node --test --experimental-transform-types --experimental-test-module-mocks"
