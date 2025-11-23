@@ -1135,14 +1135,28 @@ export class Clash extends Command {
 		locale: Locale,
 		playerId?: string,
 	): APIEmbed => {
-		let progress = Object.entries(player.progress).find(([k]) =>
-			k.startsWith("seasonal-trophy-road-"),
-		)?.[1];
-
-		if (!progress || progress.bestTrophies < player.bestTrophies)
-			progress = player;
+		let trophyProgress: {
+				arena: Clash.Arena;
+				trophies: number;
+				bestTrophies: number;
+			} = player,
+			mergeTactics:
+				| {
+						arena: Clash.Arena;
+						trophies: number;
+						bestTrophies: number;
+				  }
+				| undefined;
 		const daysPlayed =
 			player.badges.find((b) => b.name === "YearsPlayed")?.progress ?? 0;
+
+		for (const [k, v] of Object.entries(player.progress))
+			if (
+				k.startsWith("seasonal-trophy-road-") &&
+				v.bestTrophies >= player.bestTrophies
+			)
+				trophyProgress = v;
+			else if (k.startsWith("AutoChess")) mergeTactics = v;
 		return {
 			title: `${escapeMarkdown(player.name)} (${player.tag})`,
 			url: `https://link.clashroyale.com?clashroyale://playerInfo?id=${player.tag.slice(
@@ -1153,10 +1167,19 @@ export class Clash extends Command {
 				: undefined,
 			color: 0x5197ed,
 			description: `
-🏆 **Trofei**: ${progress.trophies.toLocaleString(
+🏆 **Trofei**: ${trophyProgress.trophies.toLocaleString(
 				locale,
-			)}/${progress.bestTrophies.toLocaleString(locale)}
-<:arena:1442133142419935352> **Arena**: ${progress.arena.name}
+			)}/${trophyProgress.bestTrophies.toLocaleString(locale)}${
+				mergeTactics
+					? `
+⭐ **Tattiche Royale**: ${mergeTactics.trophies.toLocaleString(
+							locale,
+					  )}/${mergeTactics.bestTrophies.toLocaleString(locale)} (${
+							mergeTactics.arena.name
+					  })`
+					: ""
+			}
+<:arena:1442133142419935352> **Arena**: ${trophyProgress.arena.name}
 <:level:1442127173434736761> **Livello**: ${
 				player.expLevel
 			} (${player.expPoints.toLocaleString(locale)} XP)
