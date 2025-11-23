@@ -15,6 +15,7 @@ import { NotificationType } from "../BrawlNotifications.ts";
 import Command from "../Command.ts";
 import capitalize from "../util/capitalize.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
+import { percentile } from "../util/maths.ts";
 import { ok } from "../util/node.ts";
 import { TimeUnit } from "../util/time.ts";
 import { Brawl } from "./brawl.ts";
@@ -1138,6 +1139,8 @@ export class Clash extends Command {
 
 		if (!progress || progress.bestTrophies < player.bestTrophies)
 			progress = player;
+		const daysPlayed =
+			player.badges.find((b) => b.name === "YearsPlayed")?.progress ?? 0;
 		return {
 			title: `${escapeMarkdown(player.name)} (${player.tag})`,
 			url: `https://link.clashroyale.com?clashroyale://playerInfo?id=${player.tag.slice(
@@ -1153,7 +1156,16 @@ export class Clash extends Command {
 <:level:1442127173434736761> **Livello**: ${
 				player.expLevel
 			} (${player.expPoints.toLocaleString()} XP)
-<:starlevel:1441845434153697392> **Punti stella**: ${player.starPoints.toLocaleString()}
+<:starlevel:1441845434153697392> **Punti stella**: ${player.starPoints.toLocaleString()}${
+				daysPlayed
+					? `
+	<:battle:1441877350697668679> **Media partite**: ${(
+		player.battleCount / daysPlayed
+	).toLocaleString(undefined, {
+		maximumFractionDigits: 1,
+	})}/giorno`
+					: ""
+			}
 ⭐ **Carta preferita**: ${player.currentFavouriteCard.name} 💧${
 				player.currentFavouriteCard.elixirCost
 			}${
@@ -1163,10 +1175,7 @@ export class Clash extends Command {
 					: ""
 			}
 Account creato <t:${Math.round(
-				(Date.now() -
-					(player.badges.find((b) => b.name === "YearsPlayed")?.progress ?? 0) *
-						TimeUnit.Day) /
-					1000,
+				(Date.now() - daysPlayed * TimeUnit.Day) / 1000,
 			)}:R>
 		`,
 			fields: [
@@ -1187,11 +1196,11 @@ Account creato <t:${Math.round(
 							(c) =>
 								`${c.name} (<:level:1442127173434736761> ${
 									c.level +
-									LevelOffset[
+									(LevelOffset[
 										c.rarity.toUpperCase() as Uppercase<
 											Clash.PlayerItemLevel["rarity"]
 										>
-									]
+									] ?? 0)
 								})`,
 						)
 						.reduce(
@@ -1258,16 +1267,47 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString()}** �
 					value: `
 <:badges:1442135547115077773> Emblemi: **${player.badges.length.toLocaleString()}**
 <:cards:1442124435162136667> Carte: **${player.cards.length.toLocaleString()}**
-<:tower:1442138907410956511> Truppe delle torri: **${player.supportCards.length.toLocaleString()}**
+<:level:1442127173434736761> Livello medio: **${percentile(
+						player.cards
+							.map(
+								(c) =>
+									c.level +
+									(LevelOffset[
+										c.rarity.toUpperCase() as Uppercase<
+											Clash.PlayerItemLevel["rarity"]
+										>
+									] ?? 0),
+							)
+							.sort((a, b) => a - b),
+						0.5,
+					)}**
+<:tower:1442138907410956511> Truppe torri: **${player.supportCards.length.toLocaleString()}**
 				`,
 					inline: true,
 				},
 				{
 					name: "<:donations:1442140198036312258> Donazioni",
 					value: `
-Totali: **${player.totalDonations.toLocaleString()}**
+Totali: **${player.totalDonations.toLocaleString()}**${
+						daysPlayed
+							? `
+Media: **${(player.totalDonations / daysPlayed).toLocaleString(undefined, {
+									maximumFractionDigits: 1,
+							  })}/g**`
+							: ""
+					}
 Settimanali: **${player.donations.toLocaleString()}**
 Ricevute: **${player.donationsReceived.toLocaleString()}**
+				`,
+					inline: true,
+				},
+				{
+					name: "<:tournament:1442195961496473802> Sfide",
+					value: `
+<:blueCrown:1441876288251101367> Record vittorie: **${player.challengeMaxWins.toLocaleString()}**
+<:cards:1442124435162136667> Carte vinte: **${player.challengeCardsWon.toLocaleString()}**
+<:battle:1441877350697668679> Battaglie in tornei: **${player.tournamentBattleCount.toLocaleString()}**
+<:cards:1442124435162136667> Carte vinte: **${player.tournamentCardsWon.toLocaleString()}**
 				`,
 					inline: true,
 				},
@@ -1413,6 +1453,13 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 				emoji: { id: "1442125625052889128" },
 				style: ButtonStyle.Primary,
 			});
+		components[0]!.components.push({
+			type: ComponentType.Button,
+			custom_id: `clash-log--${player.tag}`,
+			label: "Battaglie",
+			emoji: { name: "📜" },
+			style: ButtonStyle.Primary,
+		});
 		return {
 			embeds: [this.createPlayerEmbed(player, playerId)],
 			components,
