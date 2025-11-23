@@ -633,5 +633,46 @@ declare global {
 			rank?: number;
 			leagueNumber: number;
 		};
+		type Clan = {
+			memberList: ClanMemberList;
+			tag: string;
+			donationsPerWeek: number;
+			clanChestMaxLevel: number;
+			clanChestStatus: "INACTIVE" | "ACTIVE" | "COMPLETED" | "UNKNOWN";
+			clanChestLevel: number;
+			clanWarTrophies: number;
+			requiredTrophies: number;
+			badgeId: number;
+			clanScore: number;
+			name: string;
+			location: Location;
+			type: "OPEN" | "CLOSED" | "INVITE_ONLY";
+			members: number;
+			description: string;
+			clanChestPoints: number;
+			badgeUrls?: unknown;
+		};
+		type ClanMemberList = ClanMember[];
+		type ClanMember = {
+			clanChestPoints: number;
+			arena: Arena;
+			lastSeen: string;
+			tag: string;
+			name: string;
+			role: "NOT_MEMBER" | "MEMBER" | "LEADER" | "ADMIN" | "COLEADER" | "ELDER";
+			expLevel: number;
+			trophies: number;
+			clanRank: number;
+			previousClanRank: number;
+			donations: number;
+			donationsReceived: number;
+		};
+		type Location = {
+			localizedName?: string;
+			id: number;
+			name: string;
+			isCountry: boolean;
+			countryCode: string;
+		};
 	}
 }

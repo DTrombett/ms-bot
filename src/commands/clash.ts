@@ -18,6 +18,7 @@ import capitalize from "../util/capitalize.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
 import { percentile } from "../util/maths.ts";
 import { ok } from "../util/node.ts";
+import { multiline } from "../util/strings.ts";
 import { TimeUnit } from "../util/time.ts";
 import { Brawl } from "./brawl.ts";
 
@@ -40,20 +41,19 @@ enum LevelOffset {
 	LEGENDARY = 8,
 	CHAMPION = 10,
 }
-// enum ClanType {
-// 	open = "Aperto",
-// 	inviteOnly = "Su invito",
-// 	closed = "Chiuso",
-// 	unknown = "Sconosciuto",
-// }
-// enum MemberEmoji {
-// 	president = "👑",
-// 	vicePresident = "⭐",
-// 	senior = "🔰",
-// 	member = "👤",
-// 	notMember = "❌",
-// 	unknown = "❓",
-// }
+enum ClanType {
+	OPEN = "Aperto",
+	INVITE_ONLY = "Su invito",
+	CLOSED = "Chiuso",
+}
+enum MemberEmoji {
+	LEADER = "👑",
+	ADMIN = "💼",
+	COLEADER = "⭐",
+	ELDER = "🔰",
+	MEMBER = "👤",
+	NOT_MEMBER = "❌",
+}
 // enum MemberRole {
 // 	president,
 // 	vicePresident,
@@ -1014,10 +1014,10 @@ export class Clash extends Command {
 	// 	order = MembersOrder.MostTrophies,
 	// 	page = 0,
 	// ): APIMessageTopLevelComponent[] => {
-	// 	const pages = Math.ceil(clan.members.length / 10);
-	// 	const members = clan.members.map((m) => m.trophies).sort((a, b) => b - a);
+	// 	const pages = Math.ceil(clan.memberList.length / 10);
+	// 	const members = clan.memberList.map((m) => m.trophies).sort((a, b) => b - a);
 
-	// 	clan.members.sort(
+	// 	clan.memberList.sort(
 	// 		order === MembersOrder.Name
 	// 			? (a, b) => a.name.localeCompare(b.name)
 	// 			: order === MembersOrder.MostTrophies
@@ -1035,7 +1035,7 @@ export class Clash extends Command {
 	// 					components: [
 	// 						{
 	// 							type: ComponentType.TextDisplay,
-	// 							content: `## ${clan.name} (${clan.tag})\n- Trofei medi: 🏆 ${Math.round(clan.trophies / clan.members.length).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
+	// 							content: `## ${clan.name} (${clan.tag})\n- Trofei medi: 🏆 ${Math.round(clan.trophies / clan.memberList.length).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
 	// 								percentile(members, 0.5),
 	// 							).toLocaleString(locale)}\n- 75° Percentile: 🏆 ${Math.round(
 	// 								percentile(members, 0.75),
@@ -1051,7 +1051,7 @@ export class Clash extends Command {
 	// 						},
 	// 					},
 	// 				},
-	// 				...clan.members.slice(page * 10, (page + 1) * 10).flatMap(
+	// 				...clan.memberList.slice(page * 10, (page + 1) * 10).flatMap(
 	// 					(member, i): APISectionComponent => ({
 	// 						type: ComponentType.Section,
 	// 						components: [
@@ -1372,99 +1372,128 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 			],
 		};
 	};
-	// static createClanMessage = (
-	// 	clan: Clash.Clan,
-	// 	locale: Locale,
-	// ): RESTPatchAPIInteractionOriginalResponseJSONBody => {
-	// 	clan.members.sort((a, b) => b.trophies - a.trophies);
-	// 	const members: number[] = [];
-	// 	const staff: {
-	// 		president: Pick<Clash.ClanMember, "nameColor" | "name">;
-	// 		vicePresident: string[];
-	// 		senior: string[];
-	// 	} = {
-	// 		president: { name: "*Non trovato*", nameColor: "" },
-	// 		vicePresident: [],
-	// 		senior: [],
-	// 	};
+	static createClanMessage = (
+		clan: Clash.Clan,
+		locale: Locale,
+	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
+		const members: number[] = [];
+		const staff: {
+			leader: Pick<Clash.ClanMember, "name" | "tag">;
+			coLeader: string[];
+			elder: string[];
+		} = {
+			leader: { name: "*Non trovato*", tag: "" },
+			coLeader: [],
+			elder: [],
+		};
 
-	// 	for (const member of clan.members) {
-	// 		members.push(member.trophies);
-	// 		if (member.role === "president") staff.president = member;
-	// 		else if (member.role === "vicePresident")
-	// 			staff.vicePresident.push(member.name);
-	// 		else if (member.role === "senior") staff.senior.push(member.name);
-	// 	}
-	// 	return {
-	// 		embeds: [
-	// 			{
-	// 				title: `${clan.name} (${clan.tag})`,
-	// 				thumbnail: {
-	// 					url: `https://cdn.brawlify.com/clan-badges/regular/${clan.badgeId}.png`,
-	// 				},
-	// 				color: parseInt(staff.president?.nameColor.slice(4) ?? "ffffff", 16),
-	// 				description: clan.description
-	// 					.replaceAll("|", " | ")
-	// 					.replace(
-	// 						/(?:\p{Extended_Pictographic}|\p{Regional_Indicator})+/gu,
-	// 						(s) => `${s} `,
-	// 					),
-	// 				fields: [
-	// 					{
-	// 						name: "📊 Dati generali",
-	// 						value: `**Tipo**: ${ClanType[clan.type]}\n**Membri**: ${members.length.toLocaleString(locale)}\n**Trofei totali**: ${clan.trophies.toLocaleString(locale)}\n**Trofei richiesti**: ${clan.requiredTrophies.toLocaleString(locale)}`,
-	// 						inline: true,
-	// 					},
-	// 					{
-	// 						name: "🏆 Membri",
-	// 						value: `**Trofei medi**: ${Math.round(clan.trophies / clan.members.length).toLocaleString(locale)}\n**Mediana**: ${Math.round(
-	// 							percentile(members, 0.5),
-	// 						).toLocaleString(locale)}\n**75° Percentile**: ${Math.round(
-	// 							percentile(members, 0.75),
-	// 						).toLocaleString(locale)}\n**90° Percentile**: ${Math.round(
-	// 							percentile(members, 0.9),
-	// 						).toLocaleString(locale)}`,
-	// 						inline: true,
-	// 					},
-	// 					{
-	// 						name: "👥 Staff",
-	// 						value: `**Presidente**: ${staff.president.name}\n**Vicepresidenti**: ${staff.vicePresident.join(", ") || "*Nessuno*"}\n**Anziani**: ${staff.senior.join(", ") || "*Nessuno*"}`,
-	// 						inline: true,
-	// 					},
-	// 				],
-	// 			},
-	// 		],
-	// 		components: [
-	// 			{
-	// 				type: ComponentType.ActionRow,
-	// 				components: [
-	// 					{
-	// 						type: ComponentType.StringSelect,
-	// 						custom_id: "clash-player",
-	// 						placeholder: "Visualizza un membro...",
-	// 						options: clan.members.slice(0, 25).map((m) => ({
-	// 							label: m.name,
-	// 							value: m.tag,
-	// 							emoji: { name: MemberEmoji[m.role] ?? "👤" },
-	// 						})),
-	// 					},
-	// 				],
-	// 			},
-	// 			{
-	// 				type: ComponentType.ActionRow,
-	// 				components: [
-	// 					{
-	// 						type: ComponentType.Button,
-	// 						custom_id: `clash-members--${clan.tag}---1`,
-	// 						style: ButtonStyle.Primary,
-	// 						label: "Lista Membri",
-	// 						emoji: { name: "👥" },
-	// 					},
-	// 				],
-	// 			},
-	// 		],
-	// 	};
-	// };
+		for (const member of clan.memberList) {
+			members.push(member.trophies);
+			if (member.role.toUpperCase() === "LEADER") staff.leader = member;
+			else if (member.role.toUpperCase() === "COLEADER")
+				staff.coLeader.push(escapeMarkdown(member.name));
+			else if (member.role.toUpperCase() === "ELDER")
+				staff.elder.push(escapeMarkdown(member.name));
+		}
+		return {
+			embeds: [
+				{
+					title: `${clan.name} (${clan.tag})`,
+					url: `https://link.clashroyale.com?clashroyale://clanInfo?id=${clan.tag.slice(
+						1,
+					)}`,
+					color: 0x5197ed,
+					description: clan.description
+						.replaceAll("|", " | ")
+						.replace(
+							/(?:\p{Extended_Pictographic}|\p{Regional_Indicator})+/gu,
+							(s) => `${s} `,
+						),
+					fields: [
+						{
+							name: "📊 Dati generali",
+							value: multiline`
+							🏆 **Trofei guerra**: ${clan.clanWarTrophies.toLocaleString(locale)}
+							🏆 **Punteggio**: ${clan.clanScore.toLocaleString(locale)}
+							<:friends:1442230918952648875> **Tipo**: ${
+								ClanType[
+									clan.type.toUpperCase() as Uppercase<Clash.Clan["type"]>
+								]
+							}
+							📍 **Posizione**: ${clan.location.name}
+							🏆 **Trofei richiesti**: ${clan.requiredTrophies.toLocaleString(locale)}
+							<:donations:1442140198036312258> **Donazioni settimanali**: ${clan.donationsPerWeek.toLocaleString(
+								locale,
+							)}
+							<:friends:1442230918952648875> **Membri**: ${members.length.toLocaleString(
+								locale,
+							)}
+							`,
+						},
+						{
+							name: "🏆 Membri",
+							value: multiline`
+							**Trofei medi**: ${Math.round(
+								clan.memberList.reduce((p, c) => p + c.trophies, 0) /
+									clan.memberList.length,
+							).toLocaleString(locale)}
+							**Mediana**: ${Math.round(percentile(members, 0.5)).toLocaleString(locale)}
+							**75° Percentile**: ${Math.round(percentile(members, 0.75)).toLocaleString(
+								locale,
+							)}
+							`,
+							inline: true,
+						},
+						{
+							name: "👥 Staff",
+							value: `**Presidente**: ${escapeMarkdown(
+								staff.leader.name,
+							)}\n**Vicepresidenti**: ${
+								staff.coLeader.join(", ") || "*Nessuno*"
+							}\n**Anziani**: ${staff.elder.join(", ") || "*Nessuno*"}`,
+							inline: true,
+						},
+					],
+				},
+			],
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.StringSelect,
+							custom_id: "clash-player",
+							placeholder: "Visualizza un membro...",
+							options: clan.memberList.slice(0, 25).map((m) => ({
+								label: m.name,
+								value: m.tag,
+								emoji: {
+									name:
+										MemberEmoji[
+											m.role.toUpperCase() as Uppercase<
+												Clash.ClanMember["role"]
+											>
+										] ?? "👤",
+								},
+							})),
+						},
+					],
+				},
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: `clash-members--${clan.tag}---1`,
+							style: ButtonStyle.Primary,
+							label: "Lista Membri",
+							emoji: { name: "👥" },
+						},
+					],
+				},
+			],
+		};
+	};
 	static createPlayerMessage = (
 		player: Clash.Player,
 		userId: string,
@@ -1574,32 +1603,31 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 			throw err;
 		}
 	};
-	// static getClan = async (tag: string, edit?: BaseReplies["edit"]) => {
-	// 	try {
-	// 		tag = Brawl.normalizeTag(tag);
-	// 		return await Clash.callApi<Clash.Clan>(
-	// 			`clans/${encodeURIComponent(tag)}`,
-	// 			{ 404: "Clan non trovato." },
-	// 		);
-	// 	} catch (err) {
-	// 		if (edit)
-	// 			throw await edit({
-	// 				content:
-	// 					err instanceof Error
-	// 						? err.message
-	// 						: "Non è stato possibile recuperare il clan. Riprova più tardi.",
-	// 			});
-	// 		throw err;
-	// 	}
-	// };
+	static getClan = async (tag: string, edit?: BaseReplies["edit"]) => {
+		try {
+			tag = Brawl.normalizeTag(tag);
+			return await Clash.callApi<Clash.Clan>(
+				`clans/${encodeURIComponent(tag)}`,
+				{ 404: "Clan non trovato." },
+			);
+		} catch (err) {
+			if (edit)
+				throw await edit({
+					content:
+						err instanceof Error
+							? err.message
+							: "Non è stato possibile recuperare il clan. Riprova più tardi.",
+				});
+			throw err;
+		}
+	};
 	static override async chatInput(
 		replies: ChatInputReplies,
 		args: ChatInputArgs<typeof Clash.chatInputData>,
 	) {
-		return this[`${args.subcommand.split(" ")[0] as "player"}Command`]?.(
-			replies,
-			args as never,
-		);
+		return this[
+			`${args.subcommand.split(" ")[0] as "player" | "clan"}Command`
+		]?.(replies, args as never);
 	}
 	static playerCommand = async (
 		{ reply, defer, edit }: ChatInputReplies,
@@ -1665,48 +1693,48 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 		// 		flags: MessageFlags.IsComponentsV2,
 		// 	});
 	};
-	// static clanCommand = async (
-	// 	{ defer, edit }: ChatInputReplies,
-	// 	{
-	// 		options,
-	// 		subcommand,
-	// 		user: { id },
-	// 		interaction: {
-	// 			locale,
-	// 			data: { id: commandId },
-	// 		},
-	// 	}: ChatInputArgs<typeof Clash.chatInputData, `${"clan"} ${string}`>,
-	// ) => {
-	// 	defer();
-	// 	if (!options.tag) {
-	// 		const playerTag = await env.DB.prepare(
-	// 			"SELECT clashTag FROM Users WHERE id = ?",
-	// 		)
-	// 			.bind(id)
-	// 			.first<string>("clashTag");
+	static clanCommand = async (
+		{ defer, edit }: ChatInputReplies,
+		{
+			options,
+			subcommand,
+			user: { id },
+			interaction: {
+				locale,
+				data: { id: commandId },
+			},
+		}: ChatInputArgs<typeof Clash.chatInputData, `${"clan"} ${string}`>,
+	) => {
+		defer();
+		if (!options.tag) {
+			const playerTag = await env.DB.prepare(
+				"SELECT clashTag FROM Users WHERE id = ?",
+			)
+				.bind(id)
+				.first<string>("clashTag");
 
-	// 		if (playerTag)
-	// 			options.tag = (await this.getPlayer(playerTag, edit)).clan.tag;
-	// 	}
-	// 	if (!options.tag)
-	// 		return edit({
-	// 			content: `Non hai ancora collegato un profilo Clash Royale! Specifica il tag del clan come parametro o collega un profilo con </clash profile:${commandId}>.`,
-	// 		});
-	// 	const clan = await this.getClan(options.tag, edit);
+			if (playerTag)
+				options.tag = (await this.getPlayer(playerTag, edit)).clan.tag;
+		}
+		if (!options.tag)
+			return edit({
+				content: `Non hai ancora collegato un profilo Clash Royale! Specifica il tag del clan come parametro o collega un profilo con </clash profile:${commandId}>.`,
+			});
+		const clan = await this.getClan(options.tag, edit);
 
-	// 	if (subcommand === "clan view")
-	// 		return edit(this.createClanMessage(clan, locale));
-	// 	if (subcommand === "clan members")
-	// 		return edit({
-	// 			components: this.createMembersComponents(
-	// 				clan,
-	// 				locale,
-	// 				id,
-	// 				options.order,
-	// 			),
-	// 			flags: MessageFlags.IsComponentsV2,
-	// 		});
-	// };
+		if (subcommand === "clan view")
+			return edit(this.createClanMessage(clan, locale));
+		// if (subcommand === "clan members")
+		// 	return edit({
+		// 		components: this.createMembersComponents(
+		// 			clan,
+		// 			locale,
+		// 			id,
+		// 			options.order,
+		// 		),
+		// 		flags: MessageFlags.IsComponentsV2,
+		// 	});
+	};
 	// static "notify enable" = async (
 	// 	{ reply }: ChatInputReplies,
 	// 	{
