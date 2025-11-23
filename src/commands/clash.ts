@@ -751,7 +751,7 @@ export class Clash extends Command {
 						],
 					},
 					{
-						name: "brawlers",
+						name: "cards",
 						description: "Vedi i brawler posseduti da un giocatore",
 						type: ApplicationCommandOptionType.Subcommand,
 						options: [
@@ -854,7 +854,7 @@ export class Clash extends Command {
 	// 				accessory: {
 	// 					type: ComponentType.Thumbnail,
 	// 					media: {
-	// 						url: `https://cdn.brawlify.com/brawlers/borders/${brawler.id}.png`,
+	// 						url: `https://cdn.brawlify.com/cards/borders/${brawler.id}.png`,
 	// 					},
 	// 				},
 	// 			},
@@ -872,7 +872,7 @@ export class Clash extends Command {
 	// 					},
 	// 					{
 	// 						media: {
-	// 							url: `https://cdn.brawlify.com/brawlers/emoji/${brawler.id}.png`,
+	// 							url: `https://cdn.brawlify.com/cards/emoji/${brawler.id}.png`,
 	// 						},
 	// 					},
 	// 				],
@@ -884,7 +884,7 @@ export class Clash extends Command {
 	// 						type: ComponentType.Button,
 	// 						emoji: { name: "⬅️" },
 	// 						label: "Torna alla lista",
-	// 						custom_id: `clash-brawlers-${userId}-${player.tag}-${order}-${page}`,
+	// 						custom_id: `clash-cards-${userId}-${player.tag}-${order}-${page}`,
 	// 						style: ButtonStyle.Secondary,
 	// 					},
 	// 				],
@@ -892,16 +892,16 @@ export class Clash extends Command {
 	// 		],
 	// 	},
 	// ];
-	// static createBrawlersComponents = (
+	// static createcardsComponents = (
 	// 	player: Clash.Player,
 	// 	url: string,
 	// 	id: string,
 	// 	order = BrawlerOrder.Name,
 	// 	page = 0,
 	// ): APIMessageTopLevelComponent[] => {
-	// 	const pages = Math.ceil(player.brawlers.length / 10);
+	// 	const pages = Math.ceil(player.cards.length / 10);
 
-	// 	player.brawlers.sort(
+	// 	player.cards.sort(
 	// 		order === BrawlerOrder.Name
 	// 			? (a, b) => a.name.localeCompare(b.name)
 	// 			: order === BrawlerOrder.MostTrophies
@@ -918,9 +918,9 @@ export class Clash extends Command {
 	// 			components: [
 	// 				{
 	// 					type: ComponentType.MediaGallery,
-	// 					items: [{ media: { url: new URL("/brawlers.png", url).href } }],
+	// 					items: [{ media: { url: new URL("/cards.png", url).href } }],
 	// 				},
-	// 				...player.brawlers
+	// 				...player.cards
 	// 					.slice(page * 10, (page + 1) * 10)
 	// 					.flatMap((brawler): APISectionComponent => {
 	// 						const [l1, l2, l3, l4] =
@@ -949,7 +949,7 @@ export class Clash extends Command {
 	// 						{
 	// 							type: ComponentType.Button,
 	// 							emoji: { name: "⬅️" },
-	// 							custom_id: `clash-brawlers-${id}-${player.tag}-${order}-${page - 1}`,
+	// 							custom_id: `clash-cards-${id}-${player.tag}-${order}-${page - 1}`,
 	// 							disabled: !page,
 	// 							style: ButtonStyle.Primary,
 	// 						},
@@ -963,7 +963,7 @@ export class Clash extends Command {
 	// 						{
 	// 							type: ComponentType.Button,
 	// 							emoji: { name: "➡️" },
-	// 							custom_id: `clash-brawlers-${id}-${player.tag}-${order}-${page + 1}`,
+	// 							custom_id: `clash-cards-${id}-${player.tag}-${order}-${page + 1}`,
 	// 							disabled: page >= pages - 1,
 	// 							style: ButtonStyle.Primary,
 	// 						},
@@ -996,7 +996,7 @@ export class Clash extends Command {
 	// 									default: order === BrawlerOrder.PowerLevel,
 	// 								},
 	// 							],
-	// 							custom_id: `clash-brawlers-${id}-${player.tag}--${page}`,
+	// 							custom_id: `clash-cards-${id}-${player.tag}--${page}`,
 	// 							placeholder: "Ordina per...",
 	// 						},
 	// 					],
@@ -1156,6 +1156,11 @@ export class Clash extends Command {
 <:starlevel:1441845434153697392> **Punti stella**: ${player.starPoints.toLocaleString()}
 ⭐ **Carta preferita**: ${player.currentFavouriteCard.name} 💧${
 				player.currentFavouriteCard.elixirCost
+			}${
+				playerId
+					? `
+👤 **Discord**: <@${playerId}>`
+					: ""
 			}
 Account creato <t:${Math.round(
 				(Date.now() -
@@ -1496,7 +1501,6 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 			options,
 			subcommand,
 			user: { id },
-			request: { url },
 			interaction: {
 				data: { id: commandId },
 			},
@@ -1542,16 +1546,16 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 				),
 			);
 		}
-		if (subcommand === "player brawlers")
-			return edit({
-				components: this.createBrawlersComponents(
-					await this.getPlayer(options.tag, edit),
-					url,
-					id,
-					options.order,
-				),
-				flags: MessageFlags.IsComponentsV2,
-			});
+		// if (subcommand === "player cards")
+		// 	return edit({
+		// 		components: this.createcardsComponents(
+		// 			await this.getPlayer(options.tag, edit),
+		// 			url,
+		// 			id,
+		// 			options.order,
+		// 		),
+		// 		flags: MessageFlags.IsComponentsV2,
+		// 	});
 	};
 	// static clanCommand = async (
 	// 	{ defer, edit }: ChatInputReplies,
@@ -1578,7 +1582,7 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 	// 	}
 	// 	if (!options.tag)
 	// 		return edit({
-	// 			content: `Non hai ancora collegato un profilo Clash Royale! Specifica il tag del clan come parametro o collega un profilo con </brawl profile:${commandId}>.`,
+	// 			content: `Non hai ancora collegato un profilo Clash Royale! Specifica il tag del clan come parametro o collega un profilo con </clash profile:${commandId}>.`,
 	// 		});
 	// 	const clan = await this.getClan(options.tag, edit);
 
@@ -1617,7 +1621,7 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 
 	// 	return reply({
 	// 		flags: MessageFlags.Ephemeral,
-	// 		content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.clashTag ? `\n-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
+	// 		content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.clashTag ? `\n-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
 	// 	});
 	// };
 	// static "notify disable" = async (
@@ -1641,7 +1645,7 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 
 	// 	return reply({
 	// 		flags: MessageFlags.Ephemeral,
-	// 		content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.clashTag ? `\n-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
+	// 		content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.clashTag ? `\n-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
 	// 	});
 	// };
 	// static "notify view" = async (
@@ -1661,7 +1665,7 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 
 	// 	return reply({
 	// 		flags: MessageFlags.Ephemeral,
-	// 		content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(result?.brawlNotifications)}.${!result?.clashTag ? `\n-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
+	// 		content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(result?.brawlNotifications)}.${!result?.clashTag ? `\n-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
 	// 	});
 	// };
 	static override async component(
@@ -1677,79 +1681,86 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 			content: "Questa azione non è per te!",
 		});
 	}
-	// static linkComponent = async (
-	// 	{ edit, deferUpdate }: ComponentReplies,
-	// 	{
-	// 		args: [tag, commandId],
-	// 		user: { id },
-	// 		interaction: {
-	// 			message: { components },
-	// 		},
-	// 	}: ComponentArgs,
-	// ) => {
-	// 	deferUpdate();
-	// 	const player = await this.getPlayer(tag!, edit);
+	static linkComponent = async (
+		{ edit, deferUpdate }: ComponentReplies,
+		{
+			args: [tag, commandId],
+			user: { id },
+			interaction: {
+				message: { components },
+			},
+		}: ComponentArgs,
+	) => {
+		deferUpdate();
+		const player = await this.getPlayer(tag!, edit);
 
-	// 	await env.DB.prepare(
-	// 		`INSERT INTO Users (id, clashTag, brawlTrophies, brawlers)
-	// 			VALUES (?, ?, ?, ?) ON CONFLICT(id) DO
-	// 			UPDATE
-	// 			SET clashTag = excluded.clashTag,
-	// 				brawlTrophies = excluded.brawlTrophies,
-	// 				brawlers = excluded.brawlers`,
-	// 	)
-	// 		.bind(
-	// 			id,
-	// 			tag,
-	// 			player.highestTrophies,
-	// 			JSON.stringify(
-	// 				player.brawlers.map((b) => ({ id: b.id, rank: b.rank })),
-	// 			),
-	// 		)
-	// 		.run();
-	// 	if (components?.[0]?.type === ComponentType.ActionRow)
-	// 		components[0].components[0] = {
-	// 			type: ComponentType.Button,
-	// 			custom_id: `clash-unlink-${id}-${tag}-${commandId || "0"}`,
-	// 			label: "Scollega",
-	// 			emoji: { name: "⛓️‍💥" },
-	// 			style: ButtonStyle.Danger,
-	// 		};
-	// 	return edit({
-	// 		content: `Profilo collegato con successo!\nUsa </brawl notify enable:${commandId || "0"}> per attivare le notifiche.`,
-	// 		components,
-	// 	});
-	// };
-	// static unlinkComponent = async (
-	// 	{ update }: ComponentReplies,
-	// 	{
-	// 		args: [tag, commandId],
-	// 		user: { id },
-	// 		interaction: {
-	// 			message: { components },
-	// 		},
-	// 	}: ComponentArgs,
-	// ) => {
-	// 	await env.DB.prepare(
-	// 		`UPDATE Users
-	// 			SET clashTag = NULL,
-	// 				brawlTrophies = NULL,
-	// 				brawlers = NULL
-	// 			WHERE id = ?`,
-	// 	)
-	// 		.bind(id)
-	// 		.run();
-	// 	if (components?.[0]?.type === ComponentType.ActionRow)
-	// 		components[0].components[0] = {
-	// 			type: ComponentType.Button,
-	// 			custom_id: `clash-link-${id}-${tag}-${commandId || "0"}`,
-	// 			label: "Salva",
-	// 			emoji: { name: "🔗" },
-	// 			style: ButtonStyle.Success,
-	// 		};
-	// 	return update({ content: "Profilo scollegato con successo!", components });
-	// };
-	// static brawlersComponent = async (
+		await env.DB.prepare(
+			`INSERT INTO Users (id, clashTag, clashTrophies, cards)
+				VALUES (?, ?, ?, ?) ON CONFLICT(id) DO
+				UPDATE
+				SET clashTag = excluded.clashTag,
+					clashTrophies = excluded.clashTrophies,
+					cards = excluded.cards`,
+		)
+			.bind(
+				id,
+				tag,
+				Math.max(
+					player.bestTrophies,
+					Object.entries(player.progress).find(([k]) =>
+						k.startsWith("seasonal-trophy-road-"),
+					)?.[1].bestTrophies ?? 0,
+				),
+				JSON.stringify(
+					player.cards.map((b) => ({ id: b.id, evo: b.evolutionLevel })),
+				),
+			)
+			.run();
+		if (components?.[0]?.type === ComponentType.ActionRow)
+			components[0].components[0] = {
+				type: ComponentType.Button,
+				custom_id: `clash-unlink-${id}-${tag}-${commandId || "0"}`,
+				label: "Scollega",
+				emoji: { name: "⛓️‍💥" },
+				style: ButtonStyle.Danger,
+			};
+		return edit({
+			content: `Profilo collegato con successo!\nUsa </clash notify enable:${
+				commandId || "0"
+			}> per attivare le notifiche.`,
+			components,
+		});
+	};
+	static unlinkComponent = async (
+		{ update }: ComponentReplies,
+		{
+			args: [tag, commandId],
+			user: { id },
+			interaction: {
+				message: { components },
+			},
+		}: ComponentArgs,
+	) => {
+		await env.DB.prepare(
+			`UPDATE Users
+				SET clashTag = NULL,
+					clashTrophies = NULL,
+					cards = NULL
+				WHERE id = ?`,
+		)
+			.bind(id)
+			.run();
+		if (components?.[0]?.type === ComponentType.ActionRow)
+			components[0].components[0] = {
+				type: ComponentType.Button,
+				custom_id: `clash-link-${id}-${tag}-${commandId || "0"}`,
+				label: "Salva",
+				emoji: { name: "🔗" },
+				style: ButtonStyle.Success,
+			};
+		return update({ content: "Profilo scollegato con successo!", components });
+	};
+	// static cardsComponent = async (
 	// 	{ defer, deferUpdate, edit }: ComponentReplies,
 	// 	{
 	// 		interaction: { data },
@@ -1761,7 +1772,7 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 	// 	if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
 	// 	else deferUpdate();
 	// 	return edit({
-	// 		components: this.createBrawlersComponents(
+	// 		components: this.createcardsComponents(
 	// 			await this.getPlayer(tag!, edit),
 	// 			request.url,
 	// 			id,
@@ -1812,7 +1823,7 @@ Ricevute: **${player.donationsReceived.toLocaleString()}**
 	// 		components: this.createBrawlerComponents(
 	// 			player,
 	// 			id,
-	// 			player.brawlers.find((b) => b.id === brawlerId)!,
+	// 			player.cards.find((b) => b.id === brawlerId)!,
 	// 			Number(order) || undefined,
 	// 			Number(page) || undefined,
 	// 		),
