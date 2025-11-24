@@ -1417,7 +1417,9 @@ export class Clash extends Command {
 		clan: Clash.Clan,
 		locale: Locale,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
-		const members: number[] = [];
+		const now = Date.now();
+		const memberTrophies: number[] = [];
+		const memberLevels: number[] = [];
 		const staff: {
 			leader: Pick<Clash.ClanMember, "name" | "tag">;
 			coLeader: Pick<Clash.ClanMember, "name" | "tag">[];
@@ -1429,7 +1431,8 @@ export class Clash extends Command {
 		};
 
 		for (const member of clan.memberList) {
-			members.push(member.trophies);
+			memberTrophies.push(member.trophies);
+			memberLevels.push(member.expLevel);
 			if (member.role.toUpperCase() === "LEADER") staff.leader = member;
 			else if (member.role.toUpperCase() === "COLEADER")
 				staff.coLeader.push({
@@ -1450,62 +1453,70 @@ export class Clash extends Command {
 						1,
 					)}`,
 					color: 0x5197ed,
-					description: clan.description
-						.replaceAll("|", " | ")
-						.replace(
-							/(?:\p{Extended_Pictographic}|\p{Regional_Indicator})+/gu,
-							(s) => `${s} `,
-						),
+					description: Clash.sanitizeDescription(clan),
 					fields: [
 						{
 							name: "📊 Dati generali",
 							value: template`
-							${
-								clan.clanWarTrophies
-							}🏆 **Trofei guerra**: ${clan.clanWarTrophies?.toLocaleString(
-								locale,
-							)}
-							${clan.clanScore}🏆 **Punteggio**: ${clan.clanScore?.toLocaleString(locale)}
-							${clan.type}<:friends:1442230918952648875> **Tipo**: ${
+							${clan.type}Tipo: **${
 								ClanType[
 									clan.type?.toUpperCase() as Uppercase<
 										NonNullable<Clash.Clan["type"]>
 									>
 								]
-							}
-							📍 **Posizione**: ${clan.location?.name ?? "World"}
-							🏆 **Trofei richiesti**: ${(clan.requiredTrophies ?? 0).toLocaleString(locale)}
-							<:donations:1442140198036312258> **Donazioni settimanali**: ${(
-								clan.donationsPerWeek ?? 0
-							).toLocaleString(locale)}
-							<:friends:1442230918952648875> **Membri**: ${members.length.toLocaleString(
-								locale,
-							)}
+							}**
+							Posizione: **${clan.location?.name ?? "World"}**
+							Membri: **${memberTrophies.length.toLocaleString(locale)}**
+							Inattivi: **${
+								clan.memberList.filter(
+									(m) => now - Clash.parseLastSeen(m) > TimeUnit.Week,
+								).length
+							}**
 							`,
+							inline: true,
 						},
 						{
-							name: "🏆 Membri",
+							name: "🏆 Punti",
 							value: template`
-							**Trofei medi**: ${Math.round(
+							${clan.clanWarTrophies}Trofei guerra: **${clan.clanWarTrophies?.toLocaleString(
+								locale,
+							)}**
+							${clan.clanScore}Punteggio: **${clan.clanScore?.toLocaleString(locale)}**
+							Trofei richiesti: **${(clan.requiredTrophies ?? 0).toLocaleString(locale)}**
+							Donazioni settimanali: **${(clan.donationsPerWeek ?? 0).toLocaleString(
+								locale,
+							)}**
+							`,
+							inline: true,
+						},
+						{
+							name: "<:friends:1442230918952648875> Membri",
+							value: template`
+							Trofei medi: **${Math.round(
 								clan.memberList.reduce((p, c) => p + c.trophies, 0) /
 									clan.memberList.length,
-							).toLocaleString(locale)}
-							**Mediana**: ${Math.round(percentile(members, 0.5)).toLocaleString(locale)}
-							**75° Percentile**: ${Math.round(percentile(members, 0.75)).toLocaleString(
+							).toLocaleString(locale)}**
+							Mediana: **${Math.round(percentile(memberTrophies, 0.5)).toLocaleString(
 								locale,
-							)}
+							)}**
+							75° Percentile: **${Math.round(percentile(memberTrophies, 0.75)).toLocaleString(
+								locale,
+							)}**
+							Livello medio: **${Math.round(percentile(memberLevels, 0.5)).toLocaleString(
+								locale,
+							)}**
 							`,
 							inline: true,
 						},
 						{
 							name: "👥 Staff",
 							value: template`
-							${staff.leader.tag}**Presidente**: [${escapeMarkdown(
+							${staff.leader.tag}Presidente: [${escapeMarkdown(
 								staff.leader.name,
 							)}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${staff.leader.tag.slice(
 								1,
 							)})
-							${staff.coLeader.length}**Vicepresidenti**: ${staff.coLeader
+							${staff.coLeader.length}Vicepresidenti: ${staff.coLeader
 								.map(
 									(m) =>
 										`[${
@@ -1515,7 +1526,7 @@ export class Clash extends Command {
 										)})`,
 								)
 								.join(", ")}
-							${staff.elder.length}**Anziani**: ${staff.elder
+							${staff.elder.length}Anziani: ${staff.elder
 								.map(
 									(m) =>
 										`[${
@@ -1526,7 +1537,6 @@ export class Clash extends Command {
 								)
 								.join(", ")}
 							`,
-							inline: true,
 						},
 					],
 				},
@@ -1544,17 +1554,7 @@ export class Clash extends Command {
 								value: m.tag,
 								description: `➡️${m.donations} 🏆${m.trophies.toLocaleString(
 									locale,
-								)} 🕓${formatShortTime(
-									Date.now() -
-										Date.UTC(
-											+m.lastSeen.slice(0, 4),
-											+m.lastSeen.slice(4, 6) - 1,
-											+m.lastSeen.slice(6, 8),
-											+m.lastSeen.slice(9, 11),
-											+m.lastSeen.slice(11, 13),
-											+m.lastSeen.slice(13, 15),
-										),
-								)} fa`,
+								)} 🕓${formatShortTime(now - Clash.parseLastSeen(m))} fa`,
 								emoji: {
 									name:
 										MemberEmoji[
@@ -1641,6 +1641,24 @@ export class Clash extends Command {
 			components,
 		};
 	};
+	private static parseLastSeen = (m: Clash.ClanMember) =>
+		Date.UTC(
+			+m.lastSeen.slice(0, 4),
+			+m.lastSeen.slice(4, 6) - 1,
+			+m.lastSeen.slice(6, 8),
+			+m.lastSeen.slice(9, 11),
+			+m.lastSeen.slice(11, 13),
+			+m.lastSeen.slice(13, 15),
+		);
+
+	private static sanitizeDescription = (clan: Clash.Clan) =>
+		clan.description
+			.replaceAll("|", " | ")
+			.replace(
+				/(?:\p{Extended_Pictographic}|\p{Regional_Indicator})+/gu,
+				(s) => `${s} `,
+			);
+
 	static async callApi<T>(path: string, errors: Record<number, string> = {}) {
 		Object.assign(errors, Clash.ERROR_MESSAGES);
 		const request = new Request(
