@@ -524,41 +524,43 @@ declare global {
 	namespace Clash {
 		type Player = {
 			clan: PlayerClan;
-			legacyTrophyRoadHighScore: number;
+			legacyTrophyRoadHighScore?: number;
 			currentDeck: PlayerItemLevelList;
 			currentDeckSupportCards: PlayerItemLevelList;
 			arena: Arena;
-			role: "NOT_MEMBER" | "MEMBER" | "LEADER" | "ADMIN" | "COLEADER";
-			wins: number;
-			losses: number;
-			totalDonations: number;
+			role?: Lowercase<
+				"NOT_MEMBER" | "MEMBER" | "LEADER" | "ADMIN" | "COLEADER"
+			>;
+			wins?: number;
+			losses?: number;
+			totalDonations?: number;
 			leagueStatistics: PlayerLeagueStatistics;
-			cards: PlayerItemLevelList;
-			supportCards: PlayerItemLevelList;
-			currentFavouriteCard: Item;
-			badges: PlayerAchievementBadgeList;
+			cards?: PlayerItemLevelList;
+			supportCards?: PlayerItemLevelList;
+			currentFavouriteCard?: Item;
+			badges?: PlayerAchievementBadgeList;
 			tag: string;
 			name: string;
 			expLevel: number;
 			trophies: number;
 			bestTrophies: number;
-			donations: number;
-			donationsReceived: number;
+			donations?: number;
+			donationsReceived?: number;
 			achievements: PlayerAchievementProgressList;
-			battleCount: number;
-			threeCrownWins: number;
-			challengeCardsWon: number;
-			challengeMaxWins: number;
-			tournamentCardsWon: number;
-			tournamentBattleCount: number;
+			battleCount?: number;
+			threeCrownWins?: number;
+			challengeCardsWon?: number;
+			challengeMaxWins?: number;
+			tournamentCardsWon?: number;
+			tournamentBattleCount?: number;
 			warDayWins: number;
 			clanCardsCollected: number;
-			starPoints: number;
-			expPoints: number;
+			starPoints?: number;
+			expPoints?: number;
 			totalExpPoints: number;
-			currentPathOfLegendSeasonResult: PathOfLegendSeasonResult;
-			lastPathOfLegendSeasonResult: PathOfLegendSeasonResult;
-			bestPathOfLegendSeasonResult: PathOfLegendSeasonResult;
+			currentPathOfLegendSeasonResult?: PathOfLegendSeasonResult;
+			lastPathOfLegendSeasonResult?: PathOfLegendSeasonResult;
+			bestPathOfLegendSeasonResult?: PathOfLegendSeasonResult;
 			progress: Record<
 				string,
 				{ arena: Arena; trophies: number; bestTrophies: number }
@@ -636,17 +638,17 @@ declare global {
 		type Clan = {
 			memberList: ClanMemberList;
 			tag: string;
-			donationsPerWeek: number;
+			donationsPerWeek?: number;
 			clanChestMaxLevel: number;
 			clanChestStatus: "INACTIVE" | "ACTIVE" | "COMPLETED" | "UNKNOWN";
 			clanChestLevel: number;
-			clanWarTrophies: number;
-			requiredTrophies: number;
+			clanWarTrophies?: number;
+			requiredTrophies?: number;
 			badgeId: number;
-			clanScore: number;
+			clanScore?: number;
 			name: string;
-			location: Location;
-			type: "OPEN" | "CLOSED" | "INVITE_ONLY";
+			location?: Location;
+			type?: "OPEN" | "CLOSED" | "INVITE_ONLY";
 			members: number;
 			description: string;
 			clanChestPoints: number;

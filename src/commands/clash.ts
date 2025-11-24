@@ -18,8 +18,8 @@ import capitalize from "../util/capitalize.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
 import { percentile } from "../util/maths.ts";
 import { ok } from "../util/node.ts";
-import { multiline } from "../util/strings.ts";
-import { TimeUnit } from "../util/time.ts";
+import { template } from "../util/strings.ts";
+import { formatShortTime, TimeUnit } from "../util/time.ts";
 import { Brawl } from "./brawl.ts";
 
 enum BrawlerOrder {
@@ -1135,242 +1135,283 @@ export class Clash extends Command {
 		locale: Locale,
 		playerId?: string,
 	): APIEmbed => {
-		let trophyProgress: {
-				arena: Clash.Arena;
-				trophies: number;
-				bestTrophies: number;
-			} = player,
-			mergeTactics:
-				| {
-						arena: Clash.Arena;
-						trophies: number;
-						bestTrophies: number;
-				  }
-				| undefined;
-		const daysPlayed =
-			player.badges.find((b) => b.name === "YearsPlayed")?.progress ?? 0;
+		try {
+			let trophyProgress: {
+					arena?: Clash.Arena;
+					trophies?: number;
+					bestTrophies?: number;
+				} = player,
+				mergeTactics:
+					| {
+							arena: Clash.Arena;
+							trophies: number;
+							bestTrophies: number;
+					  }
+					| undefined;
+			const daysPlayed =
+				player.badges?.find((b) => b.name === "YearsPlayed")?.progress ?? 0;
 
-		for (const [k, v] of Object.entries(player.progress))
-			if (
-				k.startsWith("seasonal-trophy-road-") &&
-				v.bestTrophies >= player.bestTrophies
-			)
-				trophyProgress = v;
-			else if (k.startsWith("AutoChess")) mergeTactics = v;
-		return {
-			title: `${escapeMarkdown(player.name)} (${player.tag})`,
-			url: `https://link.clashroyale.com?clashroyale://playerInfo?id=${player.tag.slice(
-				1,
-			)}`,
-			thumbnail: player.currentFavouriteCard.iconUrls?.medium
-				? { url: player.currentFavouriteCard.iconUrls?.medium }
-				: undefined,
-			color: 0x5197ed,
-			description: `
-🏆 **Trofei**: ${trophyProgress.trophies.toLocaleString(
-				locale,
-			)}/${trophyProgress.bestTrophies.toLocaleString(locale)}${
-				mergeTactics
-					? `
-⭐ **Tattiche Royale**: ${mergeTactics.trophies.toLocaleString(
-							locale,
-					  )}/${mergeTactics.bestTrophies.toLocaleString(locale)} (${
-							mergeTactics.arena.name
-					  })`
-					: ""
-			}
-<:arena:1442133142419935352> **Arena**: ${trophyProgress.arena.name}
-<:level:1442127173434736761> **Livello**: ${
-				player.expLevel
-			} (${player.expPoints.toLocaleString(locale)} XP)
-<:starlevel:1441845434153697392> **Punti stella**: ${player.starPoints.toLocaleString(
-				locale,
-			)}${
-				daysPlayed
-					? `
-<:battle:1441877350697668679> **Media partite**: ${(
-							player.battleCount / daysPlayed
-					  ).toLocaleString(locale, {
-							maximumFractionDigits: 1,
-					  })}/giorno`
-					: ""
-			}
-⭐ **Carta preferita**: ${player.currentFavouriteCard.name} 💧${
-				player.currentFavouriteCard.elixirCost
-			}${
-				playerId
-					? `
-👤 **Discord**: <@${playerId}>`
-					: ""
-			}
-Account creato <t:${Math.round(
-				(Date.now() - daysPlayed * TimeUnit.Day) / 1000,
-			)}:R>
-		`,
-			fields: [
-				{
-					name: "<:clan:1442125625052889128> Clan",
-					value: player.clan
-						? `[${escapeMarkdown(
+			for (const [k, v] of Object.entries(player.progress))
+				if (
+					k.startsWith("seasonal-trophy-road-") &&
+					v.bestTrophies >= player.bestTrophies
+				)
+					trophyProgress = v;
+				else if (k.startsWith("AutoChess")) mergeTactics = v;
+			return {
+				title: `${escapeMarkdown(player.name)} (${player.tag})`,
+				url: `https://link.clashroyale.com?clashroyale://playerInfo?id=${player.tag.slice(
+					1,
+				)}`,
+				thumbnail: player.currentFavouriteCard?.iconUrls?.medium
+					? { url: player.currentFavouriteCard.iconUrls.medium }
+					: undefined,
+				color: 0x5197ed,
+				description: template`
+				${
+					trophyProgress.trophies != null && trophyProgress.bestTrophies != null
+				}🏆 **Trofei**: ${trophyProgress.trophies?.toLocaleString(
+					locale,
+				)}/${trophyProgress.bestTrophies?.toLocaleString(locale)}
+				${mergeTactics}⭐ **Tattiche Royale**: ${mergeTactics?.trophies.toLocaleString(
+					locale,
+				)}/${mergeTactics?.bestTrophies.toLocaleString(locale)} (${
+					mergeTactics?.arena.name
+				})
+				${trophyProgress.arena}<:arena:1442133142419935352> **Arena**: ${
+					trophyProgress.arena?.name
+				}
+				${
+					player.expLevel && player.expPoints != null
+				}<:level:1442127173434736761> **Livello**: ${
+					player.expLevel
+				} (${player.expPoints?.toLocaleString(locale)} XP)
+				${
+					player.starPoints != null
+				}<:starlevel:1441845434153697392> **Punti stella**: ${player.starPoints?.toLocaleString(
+					locale,
+				)}
+				${daysPlayed}<:battle:1441877350697668679> **Media partite**: ${(
+					(player.battleCount ?? 0) / daysPlayed
+				).toLocaleString(locale, {
+					maximumFractionDigits: 1,
+				})}/giorno
+				${player.currentFavouriteCard}⭐ **Carta preferita**: ${
+					player.currentFavouriteCard?.name
+				} 💧${player.currentFavouriteCard?.elixirCost}
+				${playerId}👤 **Discord**: <@${playerId}>
+				${daysPlayed}Account creato <t:${Math.round(
+					(Date.now() - daysPlayed * TimeUnit.Day) / 1000,
+				)}:R>
+				`,
+				fields: [
+					{
+						name: "<:clan:1442125625052889128> Clan",
+						value: player.clan
+							? template`
+							[${escapeMarkdown(
 								player.clan.name,
-						  )}](https://link.clashroyale.com/?clashroyale://clanInfo?id=${
-								player.clan.tag
-						  }) (${player.clan.tag})\n**Ruolo**: ${capitalize(player.role)}`
-						: "*Nessun clan*",
-				},
-				{
-					name: "<:cards:1442124435162136667> Mazzo battaglia",
-					value: `${player.currentDeck
-						.map(
-							(c) =>
-								`${c.name} (<:level:1442127173434736761> ${
-									c.level +
-									(LevelOffset[
-										c.rarity.toUpperCase() as Uppercase<
-											Clash.PlayerItemLevel["rarity"]
-										>
-									] ?? 0)
-								})`,
-						)
-						.reduce(
-							(acc, cur, i, { length }) => {
-								acc[Math.floor((2 * i) / length)]?.push(cur);
-								return acc;
-							},
-							[[], []] as string[][],
-						)
-						.map((c) => c.join(", "))
-						.join("\n")}\nCosto medio: **${(
-						player.currentDeck.reduce((sum, c) => sum + c.elixirCost, 0) /
-						player.currentDeck.length
-					).toLocaleString(locale, {
-						maximumFractionDigits: 1,
-					})}**💧 - [Copia](https://link.clashroyale.com?clashroyale://copyDeck?deck=${player.currentDeck
-						.map((c) => c.id)
-						.join(";")}&l=Royals&id=${player.tag.slice(1)})`,
-				},
-				{
-					name: "<:collection:1442124435162136667> Collezione",
-					value: `
-			<:badges:1442135547115077773> Emblemi: **${player.badges.length.toLocaleString(
-				locale,
-			)}**
-			<:cards:1442124435162136667> Carte: **${player.cards.length.toLocaleString(
-				locale,
-			)}**
-			<:level:1442127173434736761> Livello medio: **${percentile(
-				player.cards
-					.map(
-						(c) =>
-							c.level +
-							(LevelOffset[
-								c.rarity.toUpperCase() as Uppercase<
-									Clash.PlayerItemLevel["rarity"]
-								>
-							] ?? 0),
-					)
-					.sort((a, b) => a - b),
-				0.5,
-			)}**
-			<:tower:1442138907410956511> Truppe torri: **${player.supportCards.length.toLocaleString(
-				locale,
-			)}**
-				`,
-					inline: true,
-				},
-				{
-					name: "<:donations:1442140198036312258> Donazioni",
-					value: `
-			Totali: **${player.totalDonations.toLocaleString(locale)}**${
-						daysPlayed
-							? `
-			Media: **${(player.totalDonations / daysPlayed).toLocaleString(locale, {
-				maximumFractionDigits: 1,
-			})}/g**`
-							: ""
-					}
-			Settimanali: **${player.donations.toLocaleString(locale)}**
-			Ricevute: **${player.donationsReceived.toLocaleString(locale)}**
-				`,
-					inline: true,
-				},
-				{
-					name: "<:tournament:1442195961496473802> Sfide",
-					value: `
-			<:blueCrown:1441876288251101367> Record vittorie: **${player.challengeMaxWins.toLocaleString(
-				locale,
-			)}**
-			<:cards:1442124435162136667> Carte vinte: **${player.challengeCardsWon.toLocaleString(
-				locale,
-			)}**
-			<:battle:1441877350697668679> Battaglie in tornei: **${player.tournamentBattleCount.toLocaleString(
-				locale,
-			)}**
-			<:cards:1442124435162136667> Carte vinte: **${player.tournamentCardsWon.toLocaleString(
-				locale,
-			)}**
-				`,
-					inline: true,
-				},
-				{
-					name: "👑 Statistiche Royale",
-					value: `
-<:blueCrown:1441876288251101367> Vittorie: **${player.wins.toLocaleString(
-						locale,
-					)}** (${((player.wins / player.battleCount) * 100).toLocaleString(
-						locale,
-						{ maximumFractionDigits: 2 },
-					)}%)
-<:blueCrown:1441876288251101367> 3 corone: **${player.threeCrownWins.toLocaleString(
-						locale,
-					)}** (${((player.threeCrownWins / player.wins) * 100).toLocaleString(
-						locale,
-						{ maximumFractionDigits: 2 },
-					)}%)
-<:redCrown:1441876632800329820> Sconfitte: **${player.losses.toLocaleString(
-						locale,
-					)}** (${((player.losses / player.battleCount) * 100).toLocaleString(
-						locale,
-						{ maximumFractionDigits: 2 },
-					)}%)
-<:battle:1441877350697668679> Battaglie totali: **${player.battleCount.toLocaleString(
-						locale,
-					)}**
-				`,
-					inline: true,
-				},
-				{
-					name: "<:ranked:1442178291699286087> Modalità Classificata",
-					value: `
-Attuale: **Lega ${player.currentPathOfLegendSeasonResult.leagueNumber}${
-						player.currentPathOfLegendSeasonResult.rank
-							? ` (${player.currentPathOfLegendSeasonResult.rank?.toLocaleString(
-									locale,
-							  )}°)`
-							: ""
-					}**
-Ultima stagione: **Lega ${player.lastPathOfLegendSeasonResult.leagueNumber}${
-						player.lastPathOfLegendSeasonResult.rank
-							? ` (${player.lastPathOfLegendSeasonResult.rank?.toLocaleString(
-									locale,
-							  )}°)`
-							: ""
-					}**
-Stagione migliore: **Lega ${player.bestPathOfLegendSeasonResult.leagueNumber}${
-						player.bestPathOfLegendSeasonResult.rank
-							? ` (${player.bestPathOfLegendSeasonResult.rank?.toLocaleString(
-									locale,
-							  )}°)`
-							: ""
-					}**
-Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
-						locale,
-					)}** 🏆
-				`,
-					inline: true,
-				},
-			],
-		};
+							)}](https://link.clashroyale.com/?clashroyale://clanInfo?id=${
+									player.clan.tag
+							  }) (${player.clan.tag})
+							${player.role}**Ruolo**: ${capitalize(player.role ?? "")}`
+							: "*Nessun clan*",
+					},
+					{
+						name: "<:cards:1442124435162136667> Mazzo battaglia",
+						value: template`${player.currentDeck
+							.map(
+								(c) =>
+									`${c.name} (<:level:1442127173434736761> ${
+										c.level +
+										(LevelOffset[
+											c.rarity.toUpperCase() as Uppercase<
+												Clash.PlayerItemLevel["rarity"]
+											>
+										] ?? 0)
+									})`,
+							)
+							.reduce(
+								(acc, cur, i, { length }) => {
+									acc[Math.floor((2 * i) / length)]?.push(cur);
+									return acc;
+								},
+								[[], []] as string[][],
+							)
+							.map((c) => c.join(", "))
+							.join("\n")}
+						Costo medio: **${(
+							player.currentDeck.reduce((sum, c) => sum + c.elixirCost, 0) /
+							player.currentDeck.length
+						).toLocaleString(locale, {
+							maximumFractionDigits: 1,
+						})}**💧 - [Copia](https://link.clashroyale.com?clashroyale://copyDeck?deck=${player.currentDeck
+							.map((c) => c.id)
+							.join(";")}&l=Royals&id=${player.tag.slice(1)})`,
+					},
+					{
+						name: "<:collection:1442124435162136667> Collezione",
+						value: template`
+						${
+							player.badges
+						}<:badges:1442135547115077773> Emblemi: **${player.badges?.length.toLocaleString(
+							locale,
+						)}**
+						${
+							player.cards
+						}<:cards:1442124435162136667> Carte: **${player.cards?.length.toLocaleString(
+							locale,
+						)}**
+						${player.cards}<:level:1442127173434736761> Livello medio: **${percentile(
+							player.cards
+								?.map(
+									(c) =>
+										c.level +
+										(LevelOffset[
+											c.rarity.toUpperCase() as Uppercase<
+												Clash.PlayerItemLevel["rarity"]
+											>
+										] ?? 0),
+								)
+								.sort((a, b) => a - b) ?? [],
+							0.5,
+						)}**
+						${
+							player.supportCards
+						}<:tower:1442138907410956511> Truppe torri: **${player.supportCards?.length.toLocaleString(
+							locale,
+						)}**
+						`,
+						inline: true,
+					},
+					{
+						name: "<:donations:1442140198036312258> Donazioni",
+						value: template`
+						${
+							player.totalDonations != null
+						}Totali: **${player.totalDonations?.toLocaleString(locale)}**
+						${daysPlayed && player.totalDonations != null}Media: **${(
+							(player.totalDonations ?? 0) / daysPlayed
+						).toLocaleString(locale, {
+							maximumFractionDigits: 1,
+						})}/g**
+						${player.donations != null}Settimanali: **${player.donations?.toLocaleString(
+							locale,
+						)}**
+						${
+							player.donationsReceived != null
+						}Ricevute: **${player.donationsReceived?.toLocaleString(locale)}**
+						`,
+						inline: true,
+					},
+					{
+						name: "<:tournament:1442195961496473802> Sfide",
+						value: template`
+						${
+							player.challengeMaxWins != null
+						}<:blueCrown:1441876288251101367> Record vittorie: **${player.challengeMaxWins?.toLocaleString(
+							locale,
+						)}**
+						${
+							player.challengeCardsWon != null
+						}<:cards:1442124435162136667> Carte vinte: **${player.challengeCardsWon?.toLocaleString(
+							locale,
+						)}**
+						${
+							player.tournamentBattleCount != null
+						}<:battle:1441877350697668679> Battaglie in tornei: **${player.tournamentBattleCount?.toLocaleString(
+							locale,
+						)}**
+						${
+							player.tournamentCardsWon != null
+						}<:cards:1442124435162136667> Carte vinte: **${player.tournamentCardsWon?.toLocaleString(
+							locale,
+						)}**
+						`,
+						inline: true,
+					},
+					{
+						name: "👑 Statistiche Royale",
+						value: template`
+						${
+							player.wins != null
+						}<:blueCrown:1441876288251101367> Vittorie: **${player.wins?.toLocaleString(
+							locale,
+						)}** (${(
+							((player.wins ?? 0) / (player.battleCount || Infinity)) *
+							100
+						).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
+						${
+							player.threeCrownWins != null
+						}<:blueCrown:1441876288251101367> 3 corone: **${player.threeCrownWins?.toLocaleString(
+							locale,
+						)}** (${(
+							((player.threeCrownWins ?? 0) / (player.wins || Infinity)) *
+							100
+						).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
+						${
+							player.losses != null
+						}<:redCrown:1441876632800329820> Sconfitte: **${player.losses?.toLocaleString(
+							locale,
+						)}** (${(
+							((player.losses ?? 0) / (player.battleCount || Infinity)) *
+							100
+						).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
+						${
+							player.battleCount != null
+						}<:battle:1441877350697668679> Battaglie totali: **${player.battleCount?.toLocaleString(
+							locale,
+						)}**
+						`,
+						inline: true,
+					},
+					{
+						name: "<:ranked:1442178291699286087> Modalità Classificata",
+						value: template`
+						${player.currentPathOfLegendSeasonResult}Attuale: **Lega ${
+							player.currentPathOfLegendSeasonResult?.leagueNumber
+						}${
+							player.currentPathOfLegendSeasonResult?.rank
+								? ` (${player.currentPathOfLegendSeasonResult?.rank?.toLocaleString(
+										locale,
+								  )}°)`
+								: ""
+						}**
+						${player.lastPathOfLegendSeasonResult}Ultima stagione: **Lega ${
+							player.lastPathOfLegendSeasonResult?.leagueNumber
+						}${
+							player.lastPathOfLegendSeasonResult?.rank
+								? ` (${player.lastPathOfLegendSeasonResult?.rank.toLocaleString(
+										locale,
+								  )}°)`
+								: ""
+						}**
+						${player.bestPathOfLegendSeasonResult}Stagione migliore: **Lega ${
+							player.bestPathOfLegendSeasonResult?.leagueNumber
+						}${
+							player.bestPathOfLegendSeasonResult?.rank
+								? ` (${player.bestPathOfLegendSeasonResult?.rank.toLocaleString(
+										locale,
+								  )}°)`
+								: ""
+						}**
+						${
+							player.legacyTrophyRoadHighScore != null
+						}Record leghe vecchie: **${player.legacyTrophyRoadHighScore?.toLocaleString(
+							locale,
+						)}** 🏆
+						`,
+						inline: true,
+					},
+				],
+			};
+		} catch (error) {
+			console.error(
+				"Errore durante la creazione dell'embed del giocatore:",
+				error,
+			);
+			throw error;
+		}
 	};
 	static createClanMessage = (
 		clan: Clash.Clan,
@@ -1379,10 +1420,10 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 		const members: number[] = [];
 		const staff: {
 			leader: Pick<Clash.ClanMember, "name" | "tag">;
-			coLeader: string[];
-			elder: string[];
+			coLeader: Pick<Clash.ClanMember, "name" | "tag">[];
+			elder: Pick<Clash.ClanMember, "name" | "tag">[];
 		} = {
-			leader: { name: "*Non trovato*", tag: "" },
+			leader: { name: "", tag: "" },
 			coLeader: [],
 			elder: [],
 		};
@@ -1391,9 +1432,15 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 			members.push(member.trophies);
 			if (member.role.toUpperCase() === "LEADER") staff.leader = member;
 			else if (member.role.toUpperCase() === "COLEADER")
-				staff.coLeader.push(escapeMarkdown(member.name));
+				staff.coLeader.push({
+					name: escapeMarkdown(member.name),
+					tag: member.tag,
+				});
 			else if (member.role.toUpperCase() === "ELDER")
-				staff.elder.push(escapeMarkdown(member.name));
+				staff.elder.push({
+					name: escapeMarkdown(member.name),
+					tag: member.tag,
+				});
 		}
 		return {
 			embeds: [
@@ -1412,19 +1459,25 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 					fields: [
 						{
 							name: "📊 Dati generali",
-							value: multiline`
-							🏆 **Trofei guerra**: ${clan.clanWarTrophies.toLocaleString(locale)}
-							🏆 **Punteggio**: ${clan.clanScore.toLocaleString(locale)}
-							<:friends:1442230918952648875> **Tipo**: ${
-								ClanType[
-									clan.type.toUpperCase() as Uppercase<Clash.Clan["type"]>
-								]
-							}
-							📍 **Posizione**: ${clan.location.name}
-							🏆 **Trofei richiesti**: ${clan.requiredTrophies.toLocaleString(locale)}
-							<:donations:1442140198036312258> **Donazioni settimanali**: ${clan.donationsPerWeek.toLocaleString(
+							value: template`
+							${
+								clan.clanWarTrophies
+							}🏆 **Trofei guerra**: ${clan.clanWarTrophies?.toLocaleString(
 								locale,
 							)}
+							${clan.clanScore}🏆 **Punteggio**: ${clan.clanScore?.toLocaleString(locale)}
+							${clan.type}<:friends:1442230918952648875> **Tipo**: ${
+								ClanType[
+									clan.type?.toUpperCase() as Uppercase<
+										NonNullable<Clash.Clan["type"]>
+									>
+								]
+							}
+							📍 **Posizione**: ${clan.location?.name ?? "World"}
+							🏆 **Trofei richiesti**: ${(clan.requiredTrophies ?? 0).toLocaleString(locale)}
+							<:donations:1442140198036312258> **Donazioni settimanali**: ${(
+								clan.donationsPerWeek ?? 0
+							).toLocaleString(locale)}
 							<:friends:1442230918952648875> **Membri**: ${members.length.toLocaleString(
 								locale,
 							)}
@@ -1432,7 +1485,7 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 						},
 						{
 							name: "🏆 Membri",
-							value: multiline`
+							value: template`
 							**Trofei medi**: ${Math.round(
 								clan.memberList.reduce((p, c) => p + c.trophies, 0) /
 									clan.memberList.length,
@@ -1446,11 +1499,33 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 						},
 						{
 							name: "👥 Staff",
-							value: `**Presidente**: ${escapeMarkdown(
+							value: template`
+							${staff.leader.tag}**Presidente**: [${escapeMarkdown(
 								staff.leader.name,
-							)}\n**Vicepresidenti**: ${
-								staff.coLeader.join(", ") || "*Nessuno*"
-							}\n**Anziani**: ${staff.elder.join(", ") || "*Nessuno*"}`,
+							)}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${staff.leader.tag.slice(
+								1,
+							)})
+							${staff.coLeader.length}**Vicepresidenti**: ${staff.coLeader
+								.map(
+									(m) =>
+										`[${
+											m.name
+										}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${m.tag.slice(
+											1,
+										)})`,
+								)
+								.join(", ")}
+							${staff.elder.length}**Anziani**: ${staff.elder
+								.map(
+									(m) =>
+										`[${
+											m.name
+										}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${m.tag.slice(
+											1,
+										)})`,
+								)
+								.join(", ")}
+							`,
 							inline: true,
 						},
 					],
@@ -1467,6 +1542,19 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 							options: clan.memberList.slice(0, 25).map((m) => ({
 								label: m.name,
 								value: m.tag,
+								description: `➡️${m.donations} 🏆${m.trophies.toLocaleString(
+									locale,
+								)} 🕓${formatShortTime(
+									Date.now() -
+										Date.UTC(
+											+m.lastSeen.slice(0, 4),
+											+m.lastSeen.slice(4, 6) - 1,
+											+m.lastSeen.slice(6, 8),
+											+m.lastSeen.slice(9, 11),
+											+m.lastSeen.slice(11, 13),
+											+m.lastSeen.slice(13, 15),
+										),
+								)} fa`,
 								emoji: {
 									name:
 										MemberEmoji[
@@ -1848,7 +1936,7 @@ Record leghe vecchie: **${player.legacyTrophyRoadHighScore.toLocaleString(
 					)?.[1].bestTrophies ?? 0,
 				),
 				JSON.stringify(
-					player.cards.map((b) => ({ id: b.id, evo: b.evolutionLevel })),
+					player.cards?.map((b) => ({ id: b.id, evo: b.evolutionLevel })) ?? [],
 				),
 			)
 			.run();
