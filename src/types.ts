@@ -34,6 +34,9 @@ import type { CommandHandler } from "./util/CommandHandler.ts";
 import type { MatchStatus } from "./util/Constants.ts";
 
 declare global {
+	interface ObjectConstructor {
+		keys<T extends object>(o: T): (keyof T)[];
+	}
 	type Awaitable<T> = Promise<T> | T;
 
 	type RecursiveReadonly<T> = {
@@ -267,6 +270,11 @@ declare global {
 		brawlNotifications: number;
 		brawlTrophies?: number | null;
 		brawlers?: string | null;
+		clashTag?: string;
+		clashNotifications: number;
+		arena?: string | null;
+		league?: number | null;
+		cards?: string | null;
 	};
 	type Reminder = {
 		id: string;
@@ -661,7 +669,9 @@ declare global {
 			lastSeen: string;
 			tag: string;
 			name: string;
-			role: "NOT_MEMBER" | "MEMBER" | "LEADER" | "ADMIN" | "COLEADER" | "ELDER";
+			role: Lowercase<
+				"NOT_MEMBER" | "MEMBER" | "LEADER" | "ADMIN" | "COLEADER" | "ELDER"
+			>;
 			expLevel: number;
 			trophies: number;
 			clanRank: number;
