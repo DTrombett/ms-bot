@@ -266,65 +266,65 @@ export class Clash extends Command {
 					.map((v) => `**${NotificationType[v]}**`)
 					.join(", ")
 			: "**nessun tipo**";
-	// static createBrawlerComponents = (
-	// 	player: Clash.Player,
-	// 	userId: string,
-	// 	brawler: Brawl.BrawlerStat,
-	// 	order = BrawlerOrder.Name,
-	// 	page = 0,
-	// ): APIMessageTopLevelComponent[] => [
-	// 	{
-	// 		type: ComponentType.Container,
-	// 		components: [
-	// 			{
-	// 				type: ComponentType.Section,
-	// 				components: [
-	// 					{
-	// 						type: ComponentType.TextDisplay,
-	// 						content: `## ${brawler.name}\n<:level:1431299161717866536> Lvl. ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}\n- <:gadget:1431298224966336639> **${brawler.gadgets.length}**${brawler.gadgets.length ? ": " : ""}${brawler.gadgets.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:gear:1431298227105300593> **${brawler.gears.length}**${brawler.gears.length ? ": " : ""}${brawler.gears.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:starpower:1431298229328150649> **${brawler.starPowers.length}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}`,
-	// 					},
-	// 				],
-	// 				accessory: {
-	// 					type: ComponentType.Thumbnail,
-	// 					media: {
-	// 						url: `https://cdn.brawlify.com/cards/borders/${brawler.id}.png`,
-	// 					},
-	// 				},
-	// 			},
-	// 			{
-	// 				type: ComponentType.Separator,
-	// 				spacing: SeparatorSpacingSize.Large,
-	// 			},
-	// 			{
-	// 				type: ComponentType.MediaGallery,
-	// 				items: [
-	// 					{
-	// 						media: {
-	// 							url: `https://cdn.brawlify.com/brawlers/model/${brawler.id}.png`,
-	// 						},
-	// 					},
-	// 					{
-	// 						media: {
-	// 							url: `https://cdn.brawlify.com/cards/emoji/${brawler.id}.png`,
-	// 						},
-	// 					},
-	// 				],
-	// 			},
-	// 			{
-	// 				type: ComponentType.ActionRow,
-	// 				components: [
-	// 					{
-	// 						type: ComponentType.Button,
-	// 						emoji: { name: "⬅️" },
-	// 						label: "Torna alla lista",
-	// 						custom_id: `clash-cards-${userId}-${player.tag}-${order}-${page}`,
-	// 						style: ButtonStyle.Secondary,
-	// 					},
-	// 				],
-	// 			},
-	// 		],
-	// 	},
-	// ];
+	static "createCardComponents" = (
+		player: Clash.Player,
+		userId: string,
+		card: Clash.PlayerItemLevel,
+		locale: Locale,
+		order: keyof (typeof Clash)["CARDS_ORDER"] = "Nome",
+		page = 0,
+	): APIMessageTopLevelComponent[] => [
+		{
+			type: ComponentType.Container,
+			components: [
+				{
+					type: ComponentType.TextDisplay,
+					content: template`
+					## ${card.name}
+					<:level:1442127173434736761> Livello: **${
+						card.level + LevelOffset[toUpperCase(card.rarity)]
+					}/${card.maxLevel + LevelOffset[toUpperCase(card.rarity)]}**
+					<:starlevel:1441845434153697392> Livello stella: **${card.starLevel ?? 0}**
+					💎 Rarità: **${ResolvedCardRarity[toUpperCase(card.rarity)]}**
+					<:cards:1442124435162136667> Carte possedute: **${card.count.toLocaleString(
+						locale,
+					)}**
+					💧 Costo elisir: **${card.elixirCost}**
+					<:evo:1442922861147979786> Evoluzione: **${
+						card.maxEvolutionLevel
+							? `${card.evolutionLevel ?? 0}/${card.maxEvolutionLevel}`
+							: "N/A"
+					}**
+					`,
+				},
+				{
+					type: ComponentType.MediaGallery,
+					items: [
+						{
+							media: {
+								url:
+									card.evolutionLevel && card.iconUrls?.evolutionMedium
+										? card.iconUrls.evolutionMedium
+										: card.iconUrls?.medium ?? "https://invalid.url/image.png",
+							},
+						},
+					],
+				},
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							emoji: { name: "⬅️" },
+							label: "Torna alla lista",
+							custom_id: `clash-cards-${userId}-${player.tag}-${order}-${page}`,
+							style: ButtonStyle.Secondary,
+						},
+					],
+				},
+			],
+		},
+	];
 	static "createCardsComponents" = (
 		player: Clash.Player,
 		url: string,
@@ -1481,24 +1481,29 @@ export class Clash extends Command {
 			flags: MessageFlags.IsComponentsV2,
 		});
 	};
-	// static brawlerComponent = async (
-	// 	{ deferUpdate, edit }: ComponentReplies,
-	// 	{ args: [tag, brawler, order, page], user: { id } }: ComponentArgs,
-	// ) => {
-	// 	deferUpdate();
-	// 	const player = await this.getPlayer(tag!, edit);
-	// 	const brawlerId = Number(brawler);
+	static "cardComponent" = async (
+		{ deferUpdate, edit }: ComponentReplies,
+		{
+			args: [tag, card, order, page],
+			user: { id },
+			interaction: { locale },
+		}: ComponentArgs,
+	) => {
+		deferUpdate();
+		const player = await this.getPlayer(tag!, edit);
+		const cardId = Number(card);
 
-	// 	return edit({
-	// 		components: this.createBrawlerComponents(
-	// 			player,
-	// 			id,
-	// 			player.cards.find((b) => b.id === brawlerId)!,
-	// 			Number(order) || undefined,
-	// 			Number(page) || undefined,
-	// 		),
-	// 	});
-	// };
+		return edit({
+			components: this.createCardComponents(
+				player,
+				id,
+				player.cards.find((b) => b.id === cardId)!,
+				locale,
+				(order as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
+				Number(page) || undefined,
+			),
+		});
+	};
 	static "playerComponent" = async (
 		{ defer, edit }: ComponentReplies,
 		{ user: { id }, interaction: { data, locale }, args: [tag] }: ComponentArgs,

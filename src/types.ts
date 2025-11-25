@@ -592,7 +592,7 @@ declare global {
 			maxLevel: number;
 			elixirCost: number;
 			maxEvolutionLevel?: number;
-			iconUrls?: unknown;
+			iconUrls?: { medium?: string; evolutionMedium?: string };
 		};
 		type JsonLocalizedName = string;
 		type Arena = {
