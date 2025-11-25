@@ -20,16 +20,10 @@ import capitalize from "../util/capitalize.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
 import { percentile } from "../util/maths.ts";
 import { ok } from "../util/node.ts";
-import { template } from "../util/strings.ts";
+import { template, toUpperCase } from "../util/strings.ts";
 import { formatShortTime, TimeUnit } from "../util/time.ts";
 import { Brawl } from "./brawl.ts";
 
-enum BrawlerOrder {
-	Name,
-	MostTrophies,
-	LeastTrophies,
-	PowerLevel,
-}
 enum LevelOffset {
 	COMMON,
 	RARE = 2,
@@ -66,6 +60,20 @@ enum ResolvedMemberRole {
 	MEMBER = "Membro",
 	NOT_MEMBER = "Non membro",
 }
+enum CardRarity {
+	COMMON,
+	RARE,
+	EPIC,
+	LEGENDARY,
+	CHAMPION,
+}
+enum ResolvedCardRarity {
+	COMMON = "Comune",
+	RARE = "Rara",
+	EPIC = "Epica",
+	LEGENDARY = "Leggendaria",
+	CHAMPION = "Campione",
+}
 
 export class Clash extends Command {
 	static "NOTIFICATION_TYPES" = [
@@ -83,13 +91,26 @@ export class Clash extends Command {
 		500: "Errore interno dell'API.",
 		503: "Manutenzione in corso!",
 	};
+	private static readonly "CARDS_ORDER" = {
+		Nome: (a, b) => a.name.localeCompare(b.name),
+		Livello: (a, b) =>
+			a.level +
+			LevelOffset[toUpperCase(a.rarity)] -
+			b.level -
+			LevelOffset[toUpperCase(b.rarity)],
+		Elisir: (a, b) => a.elixirCost - b.elixirCost,
+		Rarità: (a, b) =>
+			CardRarity[toUpperCase(a.rarity)] - CardRarity[toUpperCase(b.rarity)],
+	} satisfies Record<
+		string,
+		(a: Clash.PlayerItemLevel, b: Clash.PlayerItemLevel) => number
+	>;
 	private static readonly "MEMBERS_ORDER" = {
 		"Più trofei": (a, b) => b.trophies - a.trophies,
 		"Meno trofei": (a, b) => a.trophies - b.trophies,
 		"Nome": (a, b) => a.name.localeCompare(b.name),
 		"Ruolo": (a, b) =>
-			MemberRole[a.role.toUpperCase() as Uppercase<Clash.ClanMember["role"]>] -
-			MemberRole[b.role.toUpperCase() as Uppercase<Clash.ClanMember["role"]>],
+			MemberRole[toUpperCase(a.role)] - MemberRole[toUpperCase(b.role)],
 		"Più donazioni": (a, b) => b.donations - a.donations,
 		"Meno donazioni": (a, b) => a.donations - b.donations,
 		"Ultimo accesso": (a, b) => Clash.parseLastSeen(a) - Clash.parseLastSeen(b),
@@ -168,7 +189,7 @@ export class Clash extends Command {
 					},
 					{
 						name: "cards",
-						description: "Vedi i brawler posseduti da un giocatore",
+						description: "Vedi le carte possedute da un giocatore",
 						type: ApplicationCommandOptionType.Subcommand,
 						options: [
 							{
@@ -179,14 +200,12 @@ export class Clash extends Command {
 							},
 							{
 								name: "order",
-								description: "Come ordinare i brawler (default. Nome)",
-								type: ApplicationCommandOptionType.Number,
-								choices: [
-									{ name: "Nome", value: BrawlerOrder.Name },
-									{ name: "Più Trofei", value: BrawlerOrder.MostTrophies },
-									{ name: "Meno Trofei", value: BrawlerOrder.LeastTrophies },
-									{ name: "Livello", value: BrawlerOrder.PowerLevel },
-								],
+								description: "Come ordinare le carte (default. Nome)",
+								type: ApplicationCommandOptionType.String,
+								choices: Object.keys(this.CARDS_ORDER).map((k) => ({
+									name: k,
+									value: k,
+								})),
 							},
 						],
 					},
@@ -306,119 +325,111 @@ export class Clash extends Command {
 	// 		],
 	// 	},
 	// ];
-	// static createcardsComponents = (
-	// 	player: Clash.Player,
-	// 	url: string,
-	// 	id: string,
-	// 	order = BrawlerOrder.Name,
-	// 	page = 0,
-	// ): APIMessageTopLevelComponent[] => {
-	// 	const pages = Math.ceil(player.cards.length / 10);
+	static "createCardsComponents" = (
+		player: Clash.Player,
+		url: string,
+		id: string,
+		order: keyof (typeof Clash)["CARDS_ORDER"] = "Nome",
+		page = 0,
+	): APIMessageTopLevelComponent[] => {
+		const PAGE_SIZE = 10;
+		const pages = Math.ceil(player.cards.length / PAGE_SIZE);
 
-	// 	player.cards.sort(
-	// 		order === BrawlerOrder.Name
-	// 			? (a, b) => a.name.localeCompare(b.name)
-	// 			: order === BrawlerOrder.MostTrophies
-	// 				? (a, b) =>
-	// 						b.trophies - a.trophies || b.highestTrophies - a.highestTrophies
-	// 				: order === BrawlerOrder.LeastTrophies
-	// 					? (a, b) =>
-	// 							a.trophies - b.trophies || a.highestTrophies - b.highestTrophies
-	// 					: (a, b) => b.power - a.power,
-	// 	);
-	// 	return [
-	// 		{
-	// 			type: ComponentType.Container,
-	// 			components: [
-	// 				{
-	// 					type: ComponentType.MediaGallery,
-	// 					items: [{ media: { url: new URL("/cards.png", url).href } }],
-	// 				},
-	// 				...player.cards
-	// 					.slice(page * 10, (page + 1) * 10)
-	// 					.flatMap((brawler): APISectionComponent => {
-	// 						const [l1, l2, l3, l4] =
-	// 							this.BRAWLER_EMOJIS[String(brawler.id)] ??
-	// 							this.BRAWLER_EMOJIS["0"]!;
-
-	// 						return {
-	// 							type: ComponentType.Section,
-	// 							components: [
-	// 								{
-	// 									type: ComponentType.TextDisplay,
-	// 									content: `<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${brawler.gadgets.length ? "<:gadget:1431298224966336639>" : " \t "}${brawler.gears.length ? "<:gear:1431298227105300593>" : " \t "}${brawler.starPowers.length ? "<:starpower:1431298229328150649>" : " \t "}${brawler.gears.length >= 2 ? "<:gear:1431298227105300593>" : ""}\n<:l3:${l3}><:l4:${l4}>\t<:level:1431299161717866536> ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}`,
-	// 								},
-	// 							],
-	// 							accessory: {
-	// 								type: ComponentType.Button,
-	// 								style: ButtonStyle.Secondary,
-	// 								custom_id: `clash-brawler-${id}-${player.tag}-${brawler.id}-${order}-${page}`,
-	// 								label: "Dettagli",
-	// 							},
-	// 						};
-	// 					}),
-	// 				{
-	// 					type: ComponentType.ActionRow,
-	// 					components: [
-	// 						{
-	// 							type: ComponentType.Button,
-	// 							emoji: { name: "⬅️" },
-	// 							custom_id: `clash-cards-${id}-${player.tag}-${order}-${page - 1}`,
-	// 							disabled: !page,
-	// 							style: ButtonStyle.Primary,
-	// 						},
-	// 						{
-	// 							type: ComponentType.Button,
-	// 							label: `Pagina ${page + 1} di ${pages}`,
-	// 							custom_id: "brawl",
-	// 							disabled: true,
-	// 							style: ButtonStyle.Secondary,
-	// 						},
-	// 						{
-	// 							type: ComponentType.Button,
-	// 							emoji: { name: "➡️" },
-	// 							custom_id: `clash-cards-${id}-${player.tag}-${order}-${page + 1}`,
-	// 							disabled: page >= pages - 1,
-	// 							style: ButtonStyle.Primary,
-	// 						},
-	// 					],
-	// 				},
-	// 				{
-	// 					type: ComponentType.ActionRow,
-	// 					components: [
-	// 						{
-	// 							type: ComponentType.StringSelect,
-	// 							options: [
-	// 								{
-	// 									label: "Nome",
-	// 									value: String(BrawlerOrder.Name),
-	// 									default: order === BrawlerOrder.Name,
-	// 								},
-	// 								{
-	// 									label: "Più trofei",
-	// 									value: String(BrawlerOrder.MostTrophies),
-	// 									default: order === BrawlerOrder.MostTrophies,
-	// 								},
-	// 								{
-	// 									label: "Meno trofei",
-	// 									value: String(BrawlerOrder.LeastTrophies),
-	// 									default: order === BrawlerOrder.LeastTrophies,
-	// 								},
-	// 								{
-	// 									label: "Livello",
-	// 									value: String(BrawlerOrder.PowerLevel),
-	// 									default: order === BrawlerOrder.PowerLevel,
-	// 								},
-	// 							],
-	// 							custom_id: `clash-cards-${id}-${player.tag}--${page}`,
-	// 							placeholder: "Ordina per...",
-	// 						},
-	// 					],
-	// 				},
-	// 			],
-	// 		},
-	// 	];
-	// };
+		player.cards.sort(Clash.CARDS_ORDER[order]);
+		return [
+			{
+				type: ComponentType.Container,
+				components: [
+					{
+						type: ComponentType.MediaGallery,
+						items: [{ media: { url: new URL("/bg.png", url).href } }],
+					},
+					...player.cards
+						.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+						.flatMap(
+							(card): APISectionComponent => ({
+								type: ComponentType.Section,
+								components: [
+									{
+										type: ComponentType.TextDisplay,
+										content: `[**${
+											card.name
+										}**](https://link.clashroyale.com/?clashroyale://cardInfo?id=${
+											card.id
+										}) 💧${card.elixirCost}${
+											card.maxEvolutionLevel
+												? `  <:evo:1442922861147979786> ${
+														card.evolutionLevel ?? 0
+												  }/${card.maxEvolutionLevel}`
+												: ""
+										}${
+											card.starLevel
+												? `  <:starlevel:1441845434153697392> ${card.starLevel}`
+												: ""
+										}\n${
+											ResolvedCardRarity[toUpperCase(card.rarity)]
+										}  <:level:1442127173434736761> ${
+											card.level + (LevelOffset[toUpperCase(card.rarity)] ?? 0)
+										}  <:cards:1442124435162136667> ${card.count}`,
+									},
+								],
+								accessory: {
+									type: ComponentType.Button,
+									style: ButtonStyle.Secondary,
+									custom_id: `clash-card-${id}-${player.tag}-${card.id}-${order}-${page}`,
+									label: "Dettagli",
+								},
+							}),
+						),
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								emoji: { name: "⬅️" },
+								custom_id: `clash-cards-${id}-${player.tag}-${order}-${
+									page - 1
+								}`,
+								disabled: !page,
+								style: ButtonStyle.Primary,
+							},
+							{
+								type: ComponentType.Button,
+								label: `Pagina ${page + 1} di ${pages}`,
+								custom_id: "clash",
+								disabled: true,
+								style: ButtonStyle.Secondary,
+							},
+							{
+								type: ComponentType.Button,
+								emoji: { name: "➡️" },
+								custom_id: `clash-cards-${id}-${player.tag}-${order}-${
+									page + 1
+								}`,
+								disabled: page >= pages - 1,
+								style: ButtonStyle.Primary,
+							},
+						],
+					},
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.StringSelect,
+								options: Object.keys(Clash.CARDS_ORDER).map((k) => ({
+									label: k,
+									value: k,
+									default: order === k,
+								})),
+								custom_id: `clash-cards-${id}-${player.tag}--${page}`,
+								placeholder: "Ordina per...",
+							},
+						],
+					},
+				],
+			},
+		];
+	};
 	static "createMembersComponents" = (
 		clan: Clash.Clan,
 		locale: string,
@@ -475,17 +486,9 @@ export class Clash extends Command {
 									)}**  <:donations:1442140198036312258> ${member.donations.toLocaleString(
 										locale,
 									)}  🏆 ${member.trophies.toLocaleString(locale)}\n${
-										MemberEmoji[
-											member.role.toUpperCase() as Uppercase<
-												Clash.ClanMember["role"]
-											>
-										]
+										MemberEmoji[toUpperCase(member.role)]
 									} ${
-										ResolvedMemberRole[
-											member.role.toUpperCase() as Uppercase<
-												Clash.ClanMember["role"]
-											>
-										]
+										ResolvedMemberRole[toUpperCase(member.role)]
 									}  🕓 <t:${Math.round(
 										Clash.parseLastSeen(member) / 1000,
 									)}:R>`,
@@ -514,7 +517,7 @@ export class Clash extends Command {
 							{
 								type: ComponentType.Button,
 								label: `Pagina ${page + 1} di ${pages}`,
-								custom_id: "brawl",
+								custom_id: "clash",
 								disabled: true,
 								style: ButtonStyle.Secondary,
 							},
@@ -640,12 +643,7 @@ export class Clash extends Command {
 						.map(
 							(c) =>
 								`${c.name} (<:level:1442127173434736761> ${
-									c.level +
-									(LevelOffset[
-										c.rarity.toUpperCase() as Uppercase<
-											Clash.PlayerItemLevel["rarity"]
-										>
-									] ?? 0)
+									c.level + (LevelOffset[toUpperCase(c.rarity)] ?? 0)
 								})`,
 						)
 						.reduce(
@@ -683,13 +681,7 @@ export class Clash extends Command {
 						percentile(
 							player.cards
 								?.map(
-									(c) =>
-										c.level +
-										(LevelOffset[
-											c.rarity.toUpperCase() as Uppercase<
-												Clash.PlayerItemLevel["rarity"]
-											>
-										] ?? 0),
+									(c) => c.level + (LevelOffset[toUpperCase(c.rarity)] ?? 0),
 								)
 								.sort((a, b) => b - a) ?? [],
 							0.5,
@@ -843,15 +835,17 @@ export class Clash extends Command {
 		};
 
 		for (const member of clan.memberList) {
+			const role = toUpperCase(member.role);
+
 			memberTrophies.push(member.trophies);
 			memberLevels.push(member.expLevel);
-			if (member.role.toUpperCase() === "LEADER") staff.leader = member;
-			else if (member.role.toUpperCase() === "COLEADER")
+			if (role === "LEADER") staff.leader = member;
+			else if (role === "COLEADER")
 				staff.coLeader.push({
 					name: escapeMarkdown(member.name),
 					tag: member.tag,
 				});
-			else if (member.role.toUpperCase() === "ELDER")
+			else if (role === "ELDER")
 				staff.elder.push({
 					name: escapeMarkdown(member.name),
 					tag: member.tag,
@@ -872,13 +866,7 @@ export class Clash extends Command {
 						{
 							name: "📊 Dati generali",
 							value: template`
-							${clan.type}Tipo: **${
-								ClanType[
-									clan.type?.toUpperCase() as Uppercase<
-										NonNullable<Clash.Clan["type"]>
-									>
-								]
-							}**
+							${clan.type}Tipo: **${ClanType[toUpperCase(clan.type)!]}**
 							Posizione: **${clan.location?.name ?? "World"}**
 							Membri: **${memberTrophies.length.toLocaleString(locale)}**
 							Inattivi: **${
@@ -970,12 +958,7 @@ export class Clash extends Command {
 									locale,
 								)} 🕓${formatShortTime(now - Clash.parseLastSeen(m))} fa`,
 								emoji: {
-									name:
-										MemberEmoji[
-											m.role.toUpperCase() as Uppercase<
-												Clash.ClanMember["role"]
-											>
-										] ?? "👤",
+									name: MemberEmoji[toUpperCase(m.role)] ?? "👤",
 								},
 							})),
 						},
@@ -1167,6 +1150,7 @@ export class Clash extends Command {
 			options,
 			subcommand,
 			user: { id },
+			request: { url },
 			interaction: {
 				data: { id: commandId },
 				locale,
@@ -1214,16 +1198,16 @@ export class Clash extends Command {
 				),
 			);
 		}
-		// if (subcommand === "player cards")
-		// 	return edit({
-		// 		components: this.createcardsComponents(
-		// 			await this.getPlayer(options.tag, edit),
-		// 			url,
-		// 			id,
-		// 			options.order,
-		// 		),
-		// 		flags: MessageFlags.IsComponentsV2,
-		// 	});
+		if (subcommand === "player cards")
+			return edit({
+				components: this.createCardsComponents(
+					await this.getPlayer(options.tag, edit),
+					url,
+					id,
+					options.order,
+				),
+				flags: MessageFlags.IsComponentsV2,
+			});
 	};
 	static "clanCommand" = async (
 		{ defer, edit }: ChatInputReplies,
@@ -1450,32 +1434,30 @@ export class Clash extends Command {
 			};
 		return update({ content: "Profilo scollegato con successo!", components });
 	};
-	// static cardsComponent = async (
-	// 	{ defer, deferUpdate, edit }: ComponentReplies,
-	// 	{
-	// 		interaction: { data },
-	// 		request,
-	// 		args: [tag, order, page, replyFlag],
-	// 		user: { id },
-	// 	}: ComponentArgs,
-	// ) => {
-	// 	if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
-	// 	else deferUpdate();
-	// 	return edit({
-	// 		components: this.createcardsComponents(
-	// 			await this.getPlayer(tag!, edit),
-	// 			request.url,
-	// 			id,
-	// 			Number(
-	// 				data.component_type === ComponentType.StringSelect
-	// 					? data.values[0]
-	// 					: order,
-	// 			) || undefined,
-	// 			Number(page) || undefined,
-	// 		),
-	// 		flags: MessageFlags.IsComponentsV2,
-	// 	});
-	// };
+	static "cardsComponent" = async (
+		{ defer, deferUpdate, edit }: ComponentReplies,
+		{
+			interaction: { data },
+			request,
+			args: [tag, order, page, replyFlag],
+			user: { id },
+		}: ComponentArgs,
+	) => {
+		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
+		else deferUpdate();
+		return edit({
+			components: this.createCardsComponents(
+				await this.getPlayer(tag!, edit),
+				request.url,
+				id,
+				((data.component_type === ComponentType.StringSelect
+					? data.values[0]
+					: order) as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
+				Number(page) || undefined,
+			),
+			flags: MessageFlags.IsComponentsV2,
+		});
+	};
 	static "membersComponent" = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{

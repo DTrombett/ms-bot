@@ -26,3 +26,8 @@ export const template = (strings: TemplateStringsArray, ...values: any[]) => {
 	}
 	return result;
 };
+
+export const toUpperCase = <T extends string | undefined>(string: T) =>
+	string?.toUpperCase() as undefined extends T
+		? Uppercase<NonNullable<T>> | undefined
+		: Uppercase<NonNullable<T>>;

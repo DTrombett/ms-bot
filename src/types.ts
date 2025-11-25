@@ -543,7 +543,7 @@ declare global {
 			losses?: number;
 			totalDonations?: number;
 			leagueStatistics: PlayerLeagueStatistics;
-			cards?: PlayerItemLevelList;
+			cards: PlayerItemLevelList;
 			supportCards?: PlayerItemLevelList;
 			currentFavouriteCard?: Item;
 			badges?: PlayerAchievementBadgeList;
@@ -582,16 +582,16 @@ declare global {
 		type PlayerItemLevelList = PlayerItemLevel[];
 		type PlayerItemLevel = {
 			id: number;
-			rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "CHAMPION";
+			rarity: Lowercase<"COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "CHAMPION">;
 			count: number;
 			level: number;
-			starLevel: number;
-			evolutionLevel: number;
+			starLevel?: number;
+			evolutionLevel?: number;
 			used: boolean;
 			name: JsonLocalizedName;
 			maxLevel: number;
 			elixirCost: number;
-			maxEvolutionLevel: number;
+			maxEvolutionLevel?: number;
 			iconUrls?: unknown;
 		};
 		type JsonLocalizedName = string;
