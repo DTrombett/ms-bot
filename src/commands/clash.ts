@@ -709,6 +709,24 @@ export class Clash extends Command {
 				| undefined;
 		const daysPlayed =
 			player.badges?.find((b) => b.name === "YearsPlayed")?.progress ?? 0;
+		const ranked = (
+			[
+				"currentPathOfLegendSeasonResult",
+				"lastPathOfLegendSeasonResult",
+				"bestPathOfLegendSeasonResult",
+			] as const
+		).map(
+			(k) =>
+				player[k] &&
+				[
+					player[k].trophies
+						? `<:medal:1442178291699286087>${player[k].trophies}`
+						: `Lega ${player[k].leagueNumber}`,
+					player[k].rank && `#${player[k].rank}`,
+				]
+					.filter(Boolean)
+					.join(", "),
+		);
 
 		for (const [k, v] of Object.entries(player.progress))
 			if (
@@ -727,39 +745,44 @@ export class Clash extends Command {
 				: undefined,
 			color: 0x5197ed,
 			description: template`
-				${
-					trophyProgress.trophies != null && trophyProgress.bestTrophies != null
-				}🏆 **Trofei**: ${trophyProgress.trophies?.toLocaleString(
+			${
+				trophyProgress.trophies != null && trophyProgress.bestTrophies != null
+			}🏆 **Trofei**: ${trophyProgress.trophies?.toLocaleString(
 				locale,
 			)}/${trophyProgress.bestTrophies?.toLocaleString(locale)}
-				${mergeTactics}⭐ **Tattiche Royale**: ${mergeTactics?.trophies.toLocaleString(
+			${
+				player.currentPathOfLegendSeasonResult?.trophies
+			}<:ranked:1442178291699286087> **Classificata**: ${
+				player.currentPathOfLegendSeasonResult?.trophies
+			}
+			${mergeTactics}⭐ **Tattiche Royale**: ${mergeTactics?.trophies.toLocaleString(
 				locale,
 			)}/${mergeTactics?.bestTrophies.toLocaleString(locale)} (${
 				mergeTactics?.arena.name
 			})
-				${trophyProgress.arena}<:arena:1442133142419935352> **Arena**: ${
+			${trophyProgress.arena}<:arena:1442133142419935352> **Arena**: ${
 				trophyProgress.arena?.name
 			}
-				${
-					player.expLevel && player.expPoints != null
-				}<:level:1442127173434736761> **Livello**: ${
+			${
+				player.expLevel && player.expPoints != null
+			}<:level:1442127173434736761> **Livello**: ${
 				player.expLevel
 			} (${player.expPoints?.toLocaleString(locale)} XP)
-				${
-					player.starPoints != null
-				}<:starlevel:1441845434153697392> **Punti stella**: ${player.starPoints?.toLocaleString(
+			${
+				player.starPoints != null
+			}<:starlevel:1441845434153697392> **Punti stella**: ${player.starPoints?.toLocaleString(
 				locale,
 			)}
-				${daysPlayed}<:battle:1441877350697668679> **Media partite**: ${(
+			${daysPlayed}<:battle:1441877350697668679> **Media partite**: ${(
 				(player.battleCount ?? 0) / daysPlayed
 			).toLocaleString(locale, {
 				maximumFractionDigits: 1,
 			})}/giorno
-				${player.currentFavouriteCard}⭐ **Carta preferita**: ${
+			${player.currentFavouriteCard}⭐ **Carta preferita**: ${
 				player.currentFavouriteCard?.name
 			} 💧${player.currentFavouriteCard?.elixirCost}
-				${playerId}👤 **Discord**: <@${playerId}>
-				${daysPlayed}Account creato <t:${Math.round(
+			${playerId}👤 **Discord**: <@${playerId}>
+			${daysPlayed}Account creato <t:${Math.round(
 				(Date.now() - daysPlayed * TimeUnit.Day) / 1000,
 			)}:R>
 				`,
@@ -920,36 +943,12 @@ export class Clash extends Command {
 				{
 					name: "<:ranked:1442178291699286087> Modalità Classificata",
 					value: template`
-						${player.currentPathOfLegendSeasonResult}Attuale: **Lega ${
-						player.currentPathOfLegendSeasonResult?.leagueNumber
-					}${
-						player.currentPathOfLegendSeasonResult?.rank
-							? ` (${player.currentPathOfLegendSeasonResult?.rank?.toLocaleString(
-									locale,
-							  )}°)`
-							: ""
-					}**
-						${player.lastPathOfLegendSeasonResult}Ultima stagione: **Lega ${
-						player.lastPathOfLegendSeasonResult?.leagueNumber
-					}${
-						player.lastPathOfLegendSeasonResult?.rank
-							? ` (${player.lastPathOfLegendSeasonResult?.rank.toLocaleString(
-									locale,
-							  )}°)`
-							: ""
-					}**
-						${player.bestPathOfLegendSeasonResult}Stagione migliore: **Lega ${
-						player.bestPathOfLegendSeasonResult?.leagueNumber
-					}${
-						player.bestPathOfLegendSeasonResult?.rank
-							? ` (${player.bestPathOfLegendSeasonResult?.rank.toLocaleString(
-									locale,
-							  )}°)`
-							: ""
-					}**
-						${
-							player.legacyTrophyRoadHighScore != null
-						}Record leghe vecchie: **${player.legacyTrophyRoadHighScore?.toLocaleString(
+					${ranked[0]}Attuale: **${ranked[0]}**
+					${ranked[1]}Ultima stagione: **${ranked[1]}**
+					${ranked[2]}Stagione migliore: **${ranked[2]}**
+					${
+						player.legacyTrophyRoadHighScore != null
+					}Record leghe vecchie: **${player.legacyTrophyRoadHighScore?.toLocaleString(
 						locale,
 					)}** 🏆
 						`,
