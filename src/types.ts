@@ -624,9 +624,9 @@ declare global {
 		type PlayerAchievementBadgeList = PlayerAchievementBadge[];
 		type PlayerAchievementBadge = {
 			iconUrls: { large?: string };
-			maxLevel: number;
+			maxLevel?: number;
 			progress?: number;
-			level: number;
+			level?: number;
 			target?: number;
 			name: string;
 		};

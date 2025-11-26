@@ -503,7 +503,7 @@ export class Clash extends Command {
 												? `/${(badge.target ?? 1).toLocaleString(locale)}`
 												: ""
 										}**
-										⭐ Livello: **${badge.level}/${badge.maxLevel}**
+										⭐ Livello: **${badge.level ? `${badge.level}/${badge.maxLevel}` : "N/A"}**
 										`,
 									},
 								],
