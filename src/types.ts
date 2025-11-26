@@ -623,11 +623,11 @@ declare global {
 		};
 		type PlayerAchievementBadgeList = PlayerAchievementBadge[];
 		type PlayerAchievementBadge = {
-			iconUrls: unknown;
+			iconUrls: { large?: string };
 			maxLevel: number;
-			progress: number;
+			progress?: number;
 			level: number;
-			target: number;
+			target?: number;
 			name: string;
 		};
 		type PlayerAchievementProgressList = PlayerAchievementProgress[];

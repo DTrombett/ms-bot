@@ -337,7 +337,7 @@ export class Clash extends Command {
 		page = 0,
 		supportCards = false,
 	): APIMessageTopLevelComponent[] => {
-		const PAGE_SIZE = 8;
+		const PAGE_SIZE = 9;
 		const pages = Math.ceil(player.cards.length / PAGE_SIZE);
 
 		player.cards.sort(Clash.CARDS_ORDER[order]);
@@ -453,8 +453,108 @@ export class Clash extends Command {
 								custom_id: `clash-badges-${id}-${player.tag}`,
 								style: ButtonStyle.Primary,
 								type: ComponentType.Button,
-								emoji: { id: "1442135547115077773" },
+								emoji: { id: "1443279126134788289" },
 								label: "Emblemi",
+							},
+							{
+								custom_id: `clash-achievements-${id}-${player.tag}`,
+								style: ButtonStyle.Primary,
+								type: ComponentType.Button,
+								emoji: { name: "🏅" },
+								label: "Obiettivi",
+							},
+						],
+					},
+				],
+			},
+		];
+	};
+	static "createBadgesComponents" = (
+		player: Clash.Player,
+		url: string,
+		id: string,
+		locale: string,
+		page = 0,
+	): APIMessageTopLevelComponent[] => {
+		player.badges ??= [];
+		const PAGE_SIZE = 9;
+		const pages = Math.ceil(player.badges.length / PAGE_SIZE);
+
+		return [
+			{
+				type: ComponentType.Container,
+				components: [
+					{
+						type: ComponentType.MediaGallery,
+						items: [{ media: { url: new URL("/bg.png", url).href } }],
+					},
+					...player.badges
+						.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+						.flatMap(
+							(badge): APISectionComponent => ({
+								type: ComponentType.Section,
+								components: [
+									{
+										type: ComponentType.TextDisplay,
+										content: template`
+										### ${badge.name}
+										📈 Progresso: **${(badge.progress ?? 1).toLocaleString(locale)}${
+											badge.target
+												? `/${(badge.target ?? 1).toLocaleString(locale)}`
+												: ""
+										}**
+										⭐ Livello: **${badge.level}/${badge.maxLevel}**
+										`,
+									},
+								],
+								accessory: {
+									type: ComponentType.Thumbnail,
+									media: { url: badge.iconUrls?.large ?? "" },
+								},
+							}),
+						),
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								emoji: { name: "⬅️" },
+								custom_id: `clash-badges-${id}-${player.tag}-${page - 1}`,
+								disabled: !page,
+								style: ButtonStyle.Primary,
+							},
+							{
+								type: ComponentType.Button,
+								label: `Pagina ${page + 1} di ${pages}`,
+								custom_id: "clash",
+								disabled: true,
+								style: ButtonStyle.Secondary,
+							},
+							{
+								type: ComponentType.Button,
+								emoji: { name: "➡️" },
+								custom_id: `clash-badges-${id}-${player.tag}-${page + 1}`,
+								disabled: page >= pages - 1,
+								style: ButtonStyle.Primary,
+							},
+						],
+					},
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								custom_id: `clash-cards-${id}-${player.tag}`,
+								style: ButtonStyle.Primary,
+								type: ComponentType.Button,
+								emoji: { id: "1442124435162136667" },
+								label: "Carte",
+							},
+							{
+								custom_id: `clash-supportCards-${id}-${player.tag}`,
+								style: ButtonStyle.Primary,
+								type: ComponentType.Button,
+								emoji: { id: "1442138907410956511" },
+								label: "Truppe delle torri",
 							},
 							{
 								custom_id: `clash-achievements-${id}-${player.tag}`,
@@ -710,7 +810,7 @@ export class Clash extends Command {
 					value: template`
 					${
 						player.badges
-					}<:badges:1442135547115077773> Emblemi: **${player.badges?.length.toLocaleString(
+					}<:badges:1443279126134788289> Emblemi: **${player.badges?.length.toLocaleString(
 						locale,
 					)}**
 					${
@@ -1495,6 +1595,28 @@ export class Clash extends Command {
 				((data.component_type === ComponentType.StringSelect
 					? data.values[0]
 					: order) as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
+				Number(page) || undefined,
+			),
+			flags: MessageFlags.IsComponentsV2,
+		});
+	};
+	static "badgesComponent" = async (
+		{ defer, deferUpdate, edit }: ComponentReplies,
+		{
+			interaction: { locale },
+			request,
+			args: [tag, page, replyFlag],
+			user: { id },
+		}: ComponentArgs,
+	) => {
+		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
+		else deferUpdate();
+		return edit({
+			components: this.createBadgesComponents(
+				await this.getPlayer(tag!, edit),
+				request.url,
+				id,
+				locale,
 				Number(page) || undefined,
 			),
 			flags: MessageFlags.IsComponentsV2,
