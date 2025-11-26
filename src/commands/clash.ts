@@ -98,7 +98,7 @@ export class Clash extends Command {
 			LevelOffset[toUpperCase(a.rarity)] -
 			b.level -
 			LevelOffset[toUpperCase(b.rarity)],
-		Elisir: (a, b) => a.elixirCost - b.elixirCost,
+		Elisir: (a, b) => (a.elixirCost ?? 0) - (b.elixirCost ?? 0),
 		Rarità: (a, b) =>
 			CardRarity[toUpperCase(a.rarity)] - CardRarity[toUpperCase(b.rarity)],
 	} satisfies Record<
@@ -188,8 +188,9 @@ export class Clash extends Command {
 						],
 					},
 					{
-						name: "cards",
-						description: "Vedi le carte possedute da un giocatore",
+						name: "collection",
+						description:
+							"Vedi le carte e gli emblemi posseduti da un giocatore",
 						type: ApplicationCommandOptionType.Subcommand,
 						options: [
 							{
@@ -273,6 +274,7 @@ export class Clash extends Command {
 		locale: Locale,
 		order: keyof (typeof Clash)["CARDS_ORDER"] = "Nome",
 		page = 0,
+		supportCard = false,
 	): APIMessageTopLevelComponent[] => [
 		{
 			type: ComponentType.Container,
@@ -289,7 +291,7 @@ export class Clash extends Command {
 					<:cards:1442124435162136667> Carte possedute: **${card.count.toLocaleString(
 						locale,
 					)}**
-					💧 Costo elisir: **${card.elixirCost}**
+					💧 Costo elisir: **${card.elixirCost ?? "N/A"}**
 					<:evo:1442922861147979786> Evoluzione: **${
 						card.maxEvolutionLevel
 							? `${card.evolutionLevel ?? 0}/${card.maxEvolutionLevel}`
@@ -317,7 +319,9 @@ export class Clash extends Command {
 							type: ComponentType.Button,
 							emoji: { name: "⬅️" },
 							label: "Torna alla lista",
-							custom_id: `clash-cards-${userId}-${player.tag}-${order}-${page}`,
+							custom_id: `clash-${
+								supportCard ? "supportCards" : "cards"
+							}-${userId}-${player.tag}-${order}-${page}`,
 							style: ButtonStyle.Secondary,
 						},
 					],
@@ -331,8 +335,9 @@ export class Clash extends Command {
 		id: string,
 		order: keyof (typeof Clash)["CARDS_ORDER"] = "Nome",
 		page = 0,
+		supportCards = false,
 	): APIMessageTopLevelComponent[] => {
-		const PAGE_SIZE = 10;
+		const PAGE_SIZE = 8;
 		const pages = Math.ceil(player.cards.length / PAGE_SIZE);
 
 		player.cards.sort(Clash.CARDS_ORDER[order]);
@@ -356,7 +361,7 @@ export class Clash extends Command {
 											card.name
 										}**](https://link.clashroyale.com/?clashroyale://cardInfo?id=${
 											card.id
-										}) 💧${card.elixirCost}${
+										})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
 											card.maxEvolutionLevel
 												? `  <:evo:1442922861147979786> ${
 														card.evolutionLevel ?? 0
@@ -387,9 +392,9 @@ export class Clash extends Command {
 							{
 								type: ComponentType.Button,
 								emoji: { name: "⬅️" },
-								custom_id: `clash-cards-${id}-${player.tag}-${order}-${
-									page - 1
-								}`,
+								custom_id: `clash-${
+									supportCards ? "supportCards" : "cards"
+								}-${id}-${player.tag}-${order}-${page - 1}`,
 								disabled: !page,
 								style: ButtonStyle.Primary,
 							},
@@ -403,9 +408,9 @@ export class Clash extends Command {
 							{
 								type: ComponentType.Button,
 								emoji: { name: "➡️" },
-								custom_id: `clash-cards-${id}-${player.tag}-${order}-${
-									page + 1
-								}`,
+								custom_id: `clash-${
+									supportCards ? "supportCards" : "cards"
+								}-${id}-${player.tag}-${order}-${page + 1}`,
 								disabled: page >= pages - 1,
 								style: ButtonStyle.Primary,
 							},
@@ -421,8 +426,42 @@ export class Clash extends Command {
 									value: k,
 									default: order === k,
 								})),
-								custom_id: `clash-cards-${id}-${player.tag}--${page}`,
+								custom_id: `clash-${
+									supportCards ? "supportCards" : "cards"
+								}-${id}-${player.tag}--${page}`,
 								placeholder: "Ordina per...",
+							},
+						],
+					},
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								custom_id: `clash-${
+									supportCards ? "cards" : "supportCards"
+								}-${id}-${player.tag}`,
+								style: ButtonStyle.Primary,
+								type: ComponentType.Button,
+								emoji: {
+									id: supportCards
+										? "1442124435162136667"
+										: "1442138907410956511",
+								},
+								label: supportCards ? "Carte" : "Truppe delle torri",
+							},
+							{
+								custom_id: `clash-badges-${id}-${player.tag}`,
+								style: ButtonStyle.Primary,
+								type: ComponentType.Button,
+								emoji: { id: "1442135547115077773" },
+								label: "Emblemi",
+							},
+							{
+								custom_id: `clash-achievements-${id}-${player.tag}`,
+								style: ButtonStyle.Primary,
+								type: ComponentType.Button,
+								emoji: { name: "🏅" },
+								label: "Obiettivi",
 							},
 						],
 					},
@@ -656,8 +695,10 @@ export class Clash extends Command {
 						.map((c) => c.join(", "))
 						.join("\n")}
 						Costo medio: **${(
-							player.currentDeck.reduce((sum, c) => sum + c.elixirCost, 0) /
-							player.currentDeck.length
+							player.currentDeck.reduce(
+								(sum, c) => sum + (c.elixirCost ?? 0),
+								0,
+							) / player.currentDeck.length
 						).toLocaleString(locale, {
 							maximumFractionDigits: 1,
 						})}**💧 - [Copia](https://link.clashroyale.com?clashroyale://copyDeck?deck=${player.currentDeck
@@ -1198,7 +1239,7 @@ export class Clash extends Command {
 				),
 			);
 		}
-		if (subcommand === "player cards")
+		if (subcommand === "player collection")
 			return edit({
 				components: this.createCardsComponents(
 					await this.getPlayer(options.tag, edit),
@@ -1208,6 +1249,7 @@ export class Clash extends Command {
 				),
 				flags: MessageFlags.IsComponentsV2,
 			});
+		throw new Error("Unknown command");
 	};
 	static "clanCommand" = async (
 		{ defer, edit }: ChatInputReplies,
@@ -1458,6 +1500,34 @@ export class Clash extends Command {
 			flags: MessageFlags.IsComponentsV2,
 		});
 	};
+	static "supportCardsComponent" = async (
+		{ defer, deferUpdate, edit }: ComponentReplies,
+		{
+			interaction: { data },
+			request,
+			args: [tag, order, page, replyFlag],
+			user: { id },
+		}: ComponentArgs,
+	) => {
+		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
+		else deferUpdate();
+		const player = await this.getPlayer(tag!, edit);
+
+		player.cards = player.supportCards ?? [];
+		return edit({
+			components: this.createCardsComponents(
+				player,
+				request.url,
+				id,
+				((data.component_type === ComponentType.StringSelect
+					? data.values[0]
+					: order) as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
+				Number(page) || undefined,
+				true,
+			),
+			flags: MessageFlags.IsComponentsV2,
+		});
+	};
 	static "membersComponent" = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
@@ -1492,17 +1562,25 @@ export class Clash extends Command {
 		deferUpdate();
 		const player = await this.getPlayer(tag!, edit);
 		const cardId = Number(card);
+		let item = player.cards.find((b) => b.id === cardId);
+		let supportCard = false;
 
-		return edit({
-			components: this.createCardComponents(
-				player,
-				id,
-				player.cards.find((b) => b.id === cardId)!,
-				locale,
-				(order as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
-				Number(page) || undefined,
-			),
-		});
+		if (!item) {
+			item = player.supportCards?.find((b) => b.id === cardId);
+			supportCard = true;
+		}
+		if (item)
+			return edit({
+				components: this.createCardComponents(
+					player,
+					id,
+					item,
+					locale,
+					(order as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
+					Number(page) || undefined,
+					supportCard,
+				),
+			});
 	};
 	static "playerComponent" = async (
 		{ defer, edit }: ComponentReplies,

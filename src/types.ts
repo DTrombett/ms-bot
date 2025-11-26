@@ -296,7 +296,8 @@ declare global {
 		choices: { value: infer V }[];
 	}
 		? V
-		: (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
+		: // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+		  (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
 				type: T["type"];
 		  })["value"];
 	type ResolvedOptions<
@@ -590,7 +591,7 @@ declare global {
 			used: boolean;
 			name: JsonLocalizedName;
 			maxLevel: number;
-			elixirCost: number;
+			elixirCost?: number;
 			maxEvolutionLevel?: number;
 			iconUrls?: { medium?: string; evolutionMedium?: string };
 		};
