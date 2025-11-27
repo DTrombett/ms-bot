@@ -555,7 +555,7 @@ declare global {
 			bestTrophies: number;
 			donations?: number;
 			donationsReceived?: number;
-			achievements: PlayerAchievementProgressList;
+			achievements?: PlayerAchievementProgressList;
 			battleCount?: number;
 			threeCrownWins?: number;
 			challengeCardsWon?: number;

@@ -10,6 +10,7 @@ import {
 	type APIEmbed,
 	type APIMessageTopLevelComponent,
 	type APISectionComponent,
+	type APITextDisplayComponent,
 	type Locale,
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
@@ -267,6 +268,45 @@ export class Clash extends Command {
 					.map((v) => `**${NotificationType[v]}**`)
 					.join(", ")
 			: "**nessun tipo**";
+	private static "collectionRow" = (
+		id: string,
+		player: Clash.Player,
+		type: "cards" | "supportCards" | "badges" | "achievements",
+	): APIActionRowComponent<APIButtonComponent> => ({
+		type: ComponentType.ActionRow,
+		components: (
+			[
+				{
+					custom_id: `clash-cards-${id}-${player.tag}`,
+					style: ButtonStyle.Primary,
+					type: ComponentType.Button,
+					emoji: { id: "1442124435162136667" },
+					label: "Carte",
+				},
+				{
+					custom_id: `clash-supportCards-${id}-${player.tag}`,
+					style: ButtonStyle.Primary,
+					type: ComponentType.Button,
+					emoji: { id: "1442138907410956511" },
+					label: "Truppe delle torri",
+				},
+				{
+					custom_id: `clash-badges-${id}-${player.tag}`,
+					style: ButtonStyle.Primary,
+					type: ComponentType.Button,
+					emoji: { id: "1443279126134788289" },
+					label: "Emblemi",
+				},
+				{
+					custom_id: `clash-achievements-${id}-${player.tag}`,
+					style: ButtonStyle.Primary,
+					type: ComponentType.Button,
+					emoji: { name: "🏅" },
+					label: "Obiettivi",
+				},
+			] as const
+		).filter((b) => !b.custom_id.startsWith(`clash-${type}-`)),
+	});
 	static "createCardComponents" = (
 		player: Clash.Player,
 		userId: string,
@@ -433,38 +473,11 @@ export class Clash extends Command {
 							},
 						],
 					},
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								custom_id: `clash-${
-									supportCards ? "cards" : "supportCards"
-								}-${id}-${player.tag}`,
-								style: ButtonStyle.Primary,
-								type: ComponentType.Button,
-								emoji: {
-									id: supportCards
-										? "1442124435162136667"
-										: "1442138907410956511",
-								},
-								label: supportCards ? "Carte" : "Truppe delle torri",
-							},
-							{
-								custom_id: `clash-badges-${id}-${player.tag}`,
-								style: ButtonStyle.Primary,
-								type: ComponentType.Button,
-								emoji: { id: "1443279126134788289" },
-								label: "Emblemi",
-							},
-							{
-								custom_id: `clash-achievements-${id}-${player.tag}`,
-								style: ButtonStyle.Primary,
-								type: ComponentType.Button,
-								emoji: { name: "🏅" },
-								label: "Obiettivi",
-							},
-						],
-					},
+					this.collectionRow(
+						id,
+						player,
+						supportCards ? "supportCards" : "cards",
+					),
 				],
 			},
 		];
@@ -539,32 +552,74 @@ export class Clash extends Command {
 							},
 						],
 					},
+					this.collectionRow(id, player, "badges"),
+				],
+			},
+		];
+	};
+	static "createAchievementsComponents" = (
+		player: Clash.Player,
+		url: string,
+		id: string,
+		locale: string,
+		page = 0,
+	): APIMessageTopLevelComponent[] => {
+		player.achievements ??= [];
+		const PAGE_SIZE = 6;
+		const pages = Math.ceil(player.achievements.length / PAGE_SIZE);
+
+		return [
+			{
+				type: ComponentType.Container,
+				components: [
+					{
+						type: ComponentType.MediaGallery,
+						items: [{ media: { url: new URL("/bg.png", url).href } }],
+					},
+					...player.achievements
+						.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+						.flatMap(
+							(ach): APITextDisplayComponent => ({
+								type: ComponentType.TextDisplay,
+								content: template`
+								**__${ach.name}__** ${"⭐".repeat(ach.stars ?? 0)}
+								${ach.info}**${ach.info}**
+								Progresso: **${(ach.value ?? 1).toLocaleString(locale)}${
+									ach.target
+										? `/${(ach.target ?? 1).toLocaleString(locale)}`
+										: ""
+								}**
+								${ach.completionInfo}${ach.completionInfo}
+								`,
+							}),
+						),
 					{
 						type: ComponentType.ActionRow,
 						components: [
 							{
-								custom_id: `clash-cards-${id}-${player.tag}`,
-								style: ButtonStyle.Primary,
 								type: ComponentType.Button,
-								emoji: { id: "1442124435162136667" },
-								label: "Carte",
+								emoji: { name: "⬅️" },
+								custom_id: `clash-achievements-${id}-${player.tag}-${page - 1}`,
+								disabled: !page,
+								style: ButtonStyle.Primary,
 							},
 							{
-								custom_id: `clash-supportCards-${id}-${player.tag}`,
-								style: ButtonStyle.Primary,
 								type: ComponentType.Button,
-								emoji: { id: "1442138907410956511" },
-								label: "Truppe delle torri",
+								label: `Pagina ${page + 1} di ${pages}`,
+								custom_id: "clash",
+								disabled: true,
+								style: ButtonStyle.Secondary,
 							},
 							{
-								custom_id: `clash-achievements-${id}-${player.tag}`,
-								style: ButtonStyle.Primary,
 								type: ComponentType.Button,
-								emoji: { name: "🏅" },
-								label: "Obiettivi",
+								emoji: { name: "➡️" },
+								custom_id: `clash-achievements-${id}-${player.tag}-${page + 1}`,
+								disabled: page >= pages - 1,
+								style: ButtonStyle.Primary,
 							},
 						],
 					},
+					this.collectionRow(id, player, "achievements"),
 				],
 			},
 		];
@@ -1612,6 +1667,28 @@ export class Clash extends Command {
 		else deferUpdate();
 		return edit({
 			components: this.createBadgesComponents(
+				await this.getPlayer(tag!, edit),
+				request.url,
+				id,
+				locale,
+				Number(page) || undefined,
+			),
+			flags: MessageFlags.IsComponentsV2,
+		});
+	};
+	static "achievementsComponent" = async (
+		{ defer, deferUpdate, edit }: ComponentReplies,
+		{
+			interaction: { locale },
+			request,
+			args: [tag, page, replyFlag],
+			user: { id },
+		}: ComponentArgs,
+	) => {
+		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
+		else deferUpdate();
+		return edit({
+			components: this.createAchievementsComponents(
 				await this.getPlayer(tag!, edit),
 				request.url,
 				id,

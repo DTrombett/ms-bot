@@ -11,7 +11,8 @@ export const template = (strings: TemplateStringsArray, ...values: any[]) => {
 	for (let i = 0; i < templateStringsArray.length; i++) {
 		result += templateStringsArray[i]!.replace(/\n\s+/g, "\n");
 		if (i < values.length)
-			if (!result.endsWith("\n")) result += values[i];
+			if (!result.endsWith("\n") || !templateStringsArray[i])
+				result += values[i];
 			else if (!values[i]) {
 				do i++;
 				while (
