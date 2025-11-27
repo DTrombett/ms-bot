@@ -537,9 +537,7 @@ declare global {
 			currentDeck: PlayerItemLevelList;
 			currentDeckSupportCards: PlayerItemLevelList;
 			arena: Arena;
-			role?: Lowercase<
-				"NOT_MEMBER" | "MEMBER" | "LEADER" | "ADMIN" | "COLEADER"
-			>;
+			role?: "notMember" | "member" | "leader" | "admin" | "coleader";
 			wins?: number;
 			losses?: number;
 			totalDonations?: number;
@@ -583,7 +581,7 @@ declare global {
 		type PlayerItemLevelList = PlayerItemLevel[];
 		type PlayerItemLevel = {
 			id: number;
-			rarity: Lowercase<"COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "CHAMPION">;
+			rarity: "common" | "rare" | "epic" | "legendary" | "champion";
 			count: number;
 			level: number;
 			starLevel?: number;
@@ -616,7 +614,7 @@ declare global {
 			iconUrls?: { medium?: string; evolutionMedium?: string };
 			name: JsonLocalizedName;
 			id: number;
-			rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "CHAMPION";
+			rarity: "common" | "rare" | "epic" | "legendary" | "champion";
 			maxLevel: number;
 			elixirCost: number;
 			maxEvolutionLevel: number;
@@ -649,7 +647,7 @@ declare global {
 			tag: string;
 			donationsPerWeek?: number;
 			clanChestMaxLevel: number;
-			clanChestStatus: "INACTIVE" | "ACTIVE" | "COMPLETED" | "UNKNOWN";
+			clanChestStatus: "inactive" | "active" | "completed" | "unknown";
 			clanChestLevel: number;
 			clanWarTrophies?: number;
 			requiredTrophies?: number;
@@ -657,7 +655,7 @@ declare global {
 			clanScore?: number;
 			name: string;
 			location?: Location;
-			type?: "OPEN" | "CLOSED" | "INVITE_ONLY";
+			type?: "open" | "closed" | "inviteOnly";
 			members: number;
 			description: string;
 			clanChestPoints: number;
@@ -670,9 +668,7 @@ declare global {
 			lastSeen: string;
 			tag: string;
 			name: string;
-			role: Lowercase<
-				"NOT_MEMBER" | "MEMBER" | "LEADER" | "ADMIN" | "COLEADER" | "ELDER"
-			>;
+			role: "notMember" | "member" | "leader" | "admin" | "coleader" | "elder";
 			expLevel: number;
 			trophies: number;
 			clanRank: number;

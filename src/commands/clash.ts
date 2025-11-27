@@ -34,7 +34,7 @@ enum LevelOffset {
 }
 enum ClanType {
 	OPEN = "Aperto",
-	INVITE_ONLY = "Su invito",
+	INVITEONLY = "Su invito",
 	CLOSED = "Chiuso",
 }
 enum MemberEmoji {
@@ -43,7 +43,7 @@ enum MemberEmoji {
 	COLEADER = "⭐",
 	ELDER = "🔰",
 	MEMBER = "👤",
-	NOT_MEMBER = "❌",
+	NOTMEMBER = "❌",
 }
 enum MemberRole {
 	LEADER,
@@ -51,7 +51,7 @@ enum MemberRole {
 	COLEADER,
 	ELDER,
 	MEMBER,
-	NOT_MEMBER,
+	NOTMEMBER,
 }
 enum ResolvedMemberRole {
 	LEADER = "Presidente",
@@ -59,7 +59,7 @@ enum ResolvedMemberRole {
 	COLEADER = "Vicepresidente",
 	ELDER = "Anziano",
 	MEMBER = "Membro",
-	NOT_MEMBER = "Non membro",
+	NOTMEMBER = "Non membro",
 }
 enum CardRarity {
 	COMMON,
@@ -268,6 +268,47 @@ export class Clash extends Command {
 					.map((v) => `**${NotificationType[v]}**`)
 					.join(", ")
 			: "**nessun tipo**";
+	private static "pagination" = <T>(
+		array: T[],
+		pageLength: number,
+		customId: string,
+		currentPage: number,
+	): { page: T[]; component: APIActionRowComponent<APIButtonComponent> } => {
+		const pages = Math.ceil(array.length / pageLength);
+
+		return {
+			page: array.slice(
+				currentPage * pageLength,
+				(currentPage + 1) * pageLength,
+			),
+			component: {
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						emoji: { name: "⬅️" },
+						custom_id: `${customId}-${currentPage - 1}`,
+						disabled: !currentPage,
+						style: ButtonStyle.Primary,
+					},
+					{
+						type: ComponentType.Button,
+						label: `Pagina ${currentPage + 1} di ${pages}`,
+						custom_id: "-",
+						disabled: true,
+						style: ButtonStyle.Secondary,
+					},
+					{
+						type: ComponentType.Button,
+						emoji: { name: "➡️" },
+						custom_id: `${customId}-${currentPage + 1}`,
+						disabled: currentPage >= pages - 1,
+						style: ButtonStyle.Primary,
+					},
+				],
+			},
+		};
+	};
 	private static "collectionRow" = (
 		id: string,
 		player: Clash.Player,
@@ -374,13 +415,18 @@ export class Clash extends Command {
 		url: string,
 		id: string,
 		order: keyof (typeof Clash)["CARDS_ORDER"] = "Nome",
-		page = 0,
+		currentPage = 0,
 		supportCards = false,
 	): APIMessageTopLevelComponent[] => {
-		const PAGE_SIZE = 9;
-		const pages = Math.ceil(player.cards.length / PAGE_SIZE);
+		const { component, page } = this.pagination(
+			player.cards.sort(Clash.CARDS_ORDER[order]),
+			8,
+			`clash-${supportCards ? "supportCards" : "cards"}-${id}-${
+				player.tag
+			}-${order}`,
+			currentPage,
+		);
 
-		player.cards.sort(Clash.CARDS_ORDER[order]);
 		return [
 			{
 				type: ComponentType.Container,
@@ -389,73 +435,42 @@ export class Clash extends Command {
 						type: ComponentType.MediaGallery,
 						items: [{ media: { url: new URL("/bg.png", url).href } }],
 					},
-					...player.cards
-						.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-						.flatMap(
-							(card): APISectionComponent => ({
-								type: ComponentType.Section,
-								components: [
-									{
-										type: ComponentType.TextDisplay,
-										content: `[**${
-											card.name
-										}**](https://link.clashroyale.com/?clashroyale://cardInfo?id=${
-											card.id
-										})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
-											card.maxEvolutionLevel
-												? `  <:evo:1442922861147979786> ${
-														card.evolutionLevel ?? 0
-												  }/${card.maxEvolutionLevel}`
-												: ""
-										}${
-											card.starLevel
-												? `  <:starlevel:1441845434153697392> ${card.starLevel}`
-												: ""
-										}\n${
-											ResolvedCardRarity[toUpperCase(card.rarity)]
-										}  <:level:1442127173434736761> ${
-											card.level + (LevelOffset[toUpperCase(card.rarity)] ?? 0)
-										}  <:cards:1442124435162136667> ${card.count}`,
-									},
-								],
-								accessory: {
-									type: ComponentType.Button,
-									style: ButtonStyle.Secondary,
-									custom_id: `clash-card-${id}-${player.tag}-${card.id}-${order}-${page}`,
-									label: "Dettagli",
+					...page.map(
+						(card): APISectionComponent => ({
+							type: ComponentType.Section,
+							components: [
+								{
+									type: ComponentType.TextDisplay,
+									content: `[**${
+										card.name
+									}**](https://link.clashroyale.com/?clashroyale://cardInfo?id=${
+										card.id
+									})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
+										card.maxEvolutionLevel
+											? `  <:evo:1442922861147979786> ${
+													card.evolutionLevel ?? 0
+											  }/${card.maxEvolutionLevel}`
+											: ""
+									}${
+										card.starLevel
+											? `  <:starlevel:1441845434153697392> ${card.starLevel}`
+											: ""
+									}\n${
+										ResolvedCardRarity[toUpperCase(card.rarity)]
+									}  <:level:1442127173434736761> ${
+										card.level + (LevelOffset[toUpperCase(card.rarity)] ?? 0)
+									}  <:cards:1442124435162136667> ${card.count}`,
 								},
-							}),
-						),
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
+							],
+							accessory: {
 								type: ComponentType.Button,
-								emoji: { name: "⬅️" },
-								custom_id: `clash-${
-									supportCards ? "supportCards" : "cards"
-								}-${id}-${player.tag}-${order}-${page - 1}`,
-								disabled: !page,
-								style: ButtonStyle.Primary,
-							},
-							{
-								type: ComponentType.Button,
-								label: `Pagina ${page + 1} di ${pages}`,
-								custom_id: "clash",
-								disabled: true,
 								style: ButtonStyle.Secondary,
+								custom_id: `clash-card-${id}-${player.tag}-${card.id}-${order}-${currentPage}`,
+								label: "Dettagli",
 							},
-							{
-								type: ComponentType.Button,
-								emoji: { name: "➡️" },
-								custom_id: `clash-${
-									supportCards ? "supportCards" : "cards"
-								}-${id}-${player.tag}-${order}-${page + 1}`,
-								disabled: page >= pages - 1,
-								style: ButtonStyle.Primary,
-							},
-						],
-					},
+						}),
+					),
+					component,
 					{
 						type: ComponentType.ActionRow,
 						components: [
@@ -468,7 +483,7 @@ export class Clash extends Command {
 								})),
 								custom_id: `clash-${
 									supportCards ? "supportCards" : "cards"
-								}-${id}-${player.tag}--${page}`,
+								}-${id}-${player.tag}--${currentPage}`,
 								placeholder: "Ordina per...",
 							},
 						],
@@ -487,11 +502,14 @@ export class Clash extends Command {
 		url: string,
 		id: string,
 		locale: string,
-		page = 0,
+		currentPage = 0,
 	): APIMessageTopLevelComponent[] => {
-		player.badges ??= [];
-		const PAGE_SIZE = 9;
-		const pages = Math.ceil(player.badges.length / PAGE_SIZE);
+		const { page, component } = this.pagination(
+			player.badges ?? [],
+			6,
+			`clash-badges-${id}-${player.tag}`,
+			currentPage,
+		);
 
 		return [
 			{
@@ -501,57 +519,30 @@ export class Clash extends Command {
 						type: ComponentType.MediaGallery,
 						items: [{ media: { url: new URL("/bg.png", url).href } }],
 					},
-					...player.badges
-						.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-						.flatMap(
-							(badge): APISectionComponent => ({
-								type: ComponentType.Section,
-								components: [
-									{
-										type: ComponentType.TextDisplay,
-										content: template`
+					...page.map(
+						(badge): APISectionComponent => ({
+							type: ComponentType.Section,
+							components: [
+								{
+									type: ComponentType.TextDisplay,
+									content: template`
 										### ${badge.name}
 										📈 Progresso: **${(badge.progress ?? 1).toLocaleString(locale)}${
-											badge.target
-												? `/${(badge.target ?? 1).toLocaleString(locale)}`
-												: ""
-										}**
+										badge.target
+											? `/${(badge.target ?? 1).toLocaleString(locale)}`
+											: ""
+									}**
 										⭐ Livello: **${badge.level ? `${badge.level}/${badge.maxLevel}` : "N/A"}**
 										`,
-									},
-								],
-								accessory: {
-									type: ComponentType.Thumbnail,
-									media: { url: badge.iconUrls?.large ?? "" },
 								},
-							}),
-						),
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								emoji: { name: "⬅️" },
-								custom_id: `clash-badges-${id}-${player.tag}-${page - 1}`,
-								disabled: !page,
-								style: ButtonStyle.Primary,
+							],
+							accessory: {
+								type: ComponentType.Thumbnail,
+								media: { url: badge.iconUrls?.large ?? "" },
 							},
-							{
-								type: ComponentType.Button,
-								label: `Pagina ${page + 1} di ${pages}`,
-								custom_id: "clash",
-								disabled: true,
-								style: ButtonStyle.Secondary,
-							},
-							{
-								type: ComponentType.Button,
-								emoji: { name: "➡️" },
-								custom_id: `clash-badges-${id}-${player.tag}-${page + 1}`,
-								disabled: page >= pages - 1,
-								style: ButtonStyle.Primary,
-							},
-						],
-					},
+						}),
+					),
+					component,
 					this.collectionRow(id, player, "badges"),
 				],
 			},
@@ -562,11 +553,14 @@ export class Clash extends Command {
 		url: string,
 		id: string,
 		locale: string,
-		page = 0,
+		currentPage = 0,
 	): APIMessageTopLevelComponent[] => {
-		player.achievements ??= [];
-		const PAGE_SIZE = 6;
-		const pages = Math.ceil(player.achievements.length / PAGE_SIZE);
+		const { page, component } = this.pagination(
+			player.achievements ?? [],
+			6,
+			`clash-achievements-${id}-${player.tag}`,
+			currentPage,
+		);
 
 		return [
 			{
@@ -576,49 +570,20 @@ export class Clash extends Command {
 						type: ComponentType.MediaGallery,
 						items: [{ media: { url: new URL("/bg.png", url).href } }],
 					},
-					...player.achievements
-						.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-						.flatMap(
-							(ach): APITextDisplayComponent => ({
-								type: ComponentType.TextDisplay,
-								content: template`
+					...page.map(
+						(ach): APITextDisplayComponent => ({
+							type: ComponentType.TextDisplay,
+							content: template`
 								**__${ach.name}__** ${"⭐".repeat(ach.stars ?? 0)}
 								${ach.info}**${ach.info}**
 								Progresso: **${(ach.value ?? 1).toLocaleString(locale)}${
-									ach.target
-										? `/${(ach.target ?? 1).toLocaleString(locale)}`
-										: ""
-								}**
+								ach.target ? `/${(ach.target ?? 1).toLocaleString(locale)}` : ""
+							}**
 								${ach.completionInfo}${ach.completionInfo}
 								`,
-							}),
-						),
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								emoji: { name: "⬅️" },
-								custom_id: `clash-achievements-${id}-${player.tag}-${page - 1}`,
-								disabled: !page,
-								style: ButtonStyle.Primary,
-							},
-							{
-								type: ComponentType.Button,
-								label: `Pagina ${page + 1} di ${pages}`,
-								custom_id: "clash",
-								disabled: true,
-								style: ButtonStyle.Secondary,
-							},
-							{
-								type: ComponentType.Button,
-								emoji: { name: "➡️" },
-								custom_id: `clash-achievements-${id}-${player.tag}-${page + 1}`,
-								disabled: page >= pages - 1,
-								style: ButtonStyle.Primary,
-							},
-						],
-					},
+						}),
+					),
+					component,
 					this.collectionRow(id, player, "achievements"),
 				],
 			},
@@ -629,9 +594,14 @@ export class Clash extends Command {
 		locale: string,
 		id: string,
 		order: keyof (typeof Clash)["MEMBERS_ORDER"] = "Più trofei",
-		page = 0,
+		currentPage = 0,
 	): APIMessageTopLevelComponent[] => {
-		const pages = Math.ceil(clan.memberList.length / 10);
+		const { page, component } = this.pagination(
+			clan.memberList.sort(Clash.MEMBERS_ORDER[order]),
+			6,
+			`clash-members-${id}-${clan.tag}-${order}`,
+			currentPage,
+		);
 		const memberTrophies: number[] = [];
 		const memberLevels: number[] = [];
 
@@ -641,7 +611,6 @@ export class Clash extends Command {
 		}
 		memberLevels.sort((a, b) => b - a);
 		memberTrophies.sort((a, b) => b - a);
-		clan.memberList.sort(Clash.MEMBERS_ORDER[order]);
 		return [
 			{
 				type: ComponentType.Container,
@@ -669,13 +638,13 @@ export class Clash extends Command {
 						)}**
 						`,
 					},
-					...clan.memberList.slice(page * 10, (page + 1) * 10).flatMap(
+					...page.map(
 						(member, i): APISectionComponent => ({
 							type: ComponentType.Section,
 							components: [
 								{
 									type: ComponentType.TextDisplay,
-									content: `${i + page * 10 + 1}. **${escapeMarkdown(
+									content: `${i + currentPage * 10 + 1}. **${escapeMarkdown(
 										member.name,
 									)}**  <:donations:1442140198036312258> ${member.donations.toLocaleString(
 										locale,
@@ -696,36 +665,7 @@ export class Clash extends Command {
 							},
 						}),
 					),
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								emoji: { name: "⬅️" },
-								custom_id: `clash-members-${id}-${clan.tag}-${order}-${
-									page - 1
-								}`,
-								disabled: !page,
-								style: ButtonStyle.Primary,
-							},
-							{
-								type: ComponentType.Button,
-								label: `Pagina ${page + 1} di ${pages}`,
-								custom_id: "clash",
-								disabled: true,
-								style: ButtonStyle.Secondary,
-							},
-							{
-								type: ComponentType.Button,
-								emoji: { name: "➡️" },
-								custom_id: `clash-members-${id}-${clan.tag}-${order}-${
-									page + 1
-								}`,
-								disabled: page >= pages - 1,
-								style: ButtonStyle.Primary,
-							},
-						],
-					},
+					component,
 					{
 						type: ComponentType.ActionRow,
 						components: [
@@ -736,7 +676,7 @@ export class Clash extends Command {
 									value: k,
 									default: order === k,
 								})),
-								custom_id: `clash-members-${id}-${clan.tag}--${page}`,
+								custom_id: `clash-members-${id}-${clan.tag}--${currentPage}`,
 								placeholder: "Ordina per...",
 							},
 						],
@@ -846,9 +786,7 @@ export class Clash extends Command {
 					name: "<:clan:1442125625052889128> Clan",
 					value: player.clan
 						? template`
-							[${escapeMarkdown(
-								player.clan.name,
-							)}](https://link.clashroyale.com/?clashroyale://clanInfo?id=${
+							[${player.clan.name}](https://link.clashroyale.com/?clashroyale://clanInfo?id=${
 								player.clan.tag
 						  }) (${player.clan.tag})
 							${player.role}**Ruolo**: ${capitalize(player.role ?? "")}`
@@ -1037,12 +975,12 @@ export class Clash extends Command {
 			if (role === "LEADER") staff.leader = member;
 			else if (role === "COLEADER")
 				staff.coLeader.push({
-					name: escapeMarkdown(member.name),
+					name: member.name,
 					tag: member.tag,
 				});
 			else if (role === "ELDER")
 				staff.elder.push({
-					name: escapeMarkdown(member.name),
+					name: member.name,
 					tag: member.tag,
 				});
 		}
@@ -1108,12 +1046,13 @@ export class Clash extends Command {
 						{
 							name: "👥 Staff",
 							value: template`
-							${staff.leader.tag}Presidente: [${escapeMarkdown(
-								staff.leader.name,
-							)}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${staff.leader.tag.slice(
+							${staff.leader.tag}Presidente: [${
+								staff.leader.name
+							}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${staff.leader.tag.slice(
 								1,
 							)})
 							${staff.coLeader.length}Vicepresidenti: ${staff.coLeader
+								.slice(0, 4)
 								.map(
 									(m) =>
 										`[${
@@ -1124,6 +1063,7 @@ export class Clash extends Command {
 								)
 								.join(", ")}
 							${staff.elder.length}Anziani: ${staff.elder
+								.slice(0, 4)
 								.map(
 									(m) =>
 										`[${
@@ -1133,7 +1073,7 @@ export class Clash extends Command {
 										)})`,
 								)
 								.join(", ")}
-							`,
+							`.slice(0, 1024),
 						},
 					],
 				},

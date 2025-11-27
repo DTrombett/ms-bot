@@ -25,7 +25,7 @@ export const template = (strings: TemplateStringsArray, ...values: any[]) => {
 				result = result.trimEnd();
 			}
 	}
-	return result;
+	return result.trim();
 };
 
 export const toUpperCase = <T extends string | undefined>(string: T) =>

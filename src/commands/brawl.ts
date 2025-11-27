@@ -65,13 +65,13 @@ enum ResolvedMemberRole {
 }
 
 export class Brawl extends Command {
-	static NOTIFICATION_TYPES = [
+	static "NOTIFICATION_TYPES" = [
 		"Brawler Tier Max",
 		"New Brawler",
 		"Trophy Road Advancement",
 		"All",
 	] as const;
-	static readonly BRAWLER_EMOJIS: RecursiveReadonly<
+	static readonly "BRAWLER_EMOJIS": RecursiveReadonly<
 		Record<string, [string, string, string, string]>
 	> = {
 		"0": [
@@ -645,7 +645,7 @@ export class Brawl extends Command {
 			"1431299150921732158",
 		],
 	};
-	static readonly ROBO_RUMBLE_LEVELS = [
+	static readonly "ROBO_RUMBLE_LEVELS" = [
 		"*None*",
 		"Normale",
 		"Difficile",
@@ -668,7 +668,7 @@ export class Brawl extends Command {
 		"Smodata XV",
 		"Smodata XVI",
 	];
-	private static readonly ERROR_MESSAGES = {
+	private static readonly "ERROR_MESSAGES" = {
 		400: "Parametri non validi forniti.",
 		403: "Accesso all'API negato.",
 		404: "Dati non trovati.",
@@ -676,7 +676,7 @@ export class Brawl extends Command {
 		500: "Errore interno dell'API.",
 		503: "Manutenzione in corso!",
 	};
-	static override chatInputData = {
+	static override "chatInputData" = {
 		name: "brawl",
 		description: "Interagisci con Brawl Stars!",
 		type: ApplicationCommandType.ChatInput,
@@ -817,18 +817,18 @@ export class Brawl extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	static calculateFlags = (flags = 0) =>
+	static "calculateFlags" = (flags = 0) =>
 		flags & NotificationType.All
 			? "**tutti i tipi**"
 			: flags
-				? Object.values(NotificationType)
-						.filter(
-							(v): v is number => typeof v === "number" && (flags & v) !== 0,
-						)
-						.map((v) => `**${NotificationType[v]}**`)
-						.join(", ")
-				: "**nessun tipo**";
-	static createBrawlerComponents = (
+			? Object.values(NotificationType)
+					.filter(
+						(v): v is number => typeof v === "number" && (flags & v) !== 0,
+					)
+					.map((v) => `**${NotificationType[v]}**`)
+					.join(", ")
+			: "**nessun tipo**";
+	static "createBrawlerComponents" = (
 		player: Brawl.Player,
 		userId: string,
 		brawler: Brawl.BrawlerStat,
@@ -843,7 +843,29 @@ export class Brawl extends Command {
 					components: [
 						{
 							type: ComponentType.TextDisplay,
-							content: `## ${brawler.name}\n<:level:1431299161717866536> Lvl. ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}\n- <:gadget:1431298224966336639> **${brawler.gadgets.length}**${brawler.gadgets.length ? ": " : ""}${brawler.gadgets.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:gear:1431298227105300593> **${brawler.gears.length}**${brawler.gears.length ? ": " : ""}${brawler.gears.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}\n- <:starpower:1431298229328150649> **${brawler.starPowers.length}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers.map((g) => g.name.toLowerCase().split(" ").map(capitalize).join(" ")).join(", ")}`,
+							content: `## ${brawler.name}\n<:level:1431299161717866536> Lvl. ${
+								brawler.power
+							}\t🏆 ${brawler.trophies}  🔝 ${
+								brawler.highestTrophies
+							}\n- <:gadget:1431298224966336639> **${brawler.gadgets.length}**${
+								brawler.gadgets.length ? ": " : ""
+							}${brawler.gadgets
+								.map((g) =>
+									g.name.toLowerCase().split(" ").map(capitalize).join(" "),
+								)
+								.join(", ")}\n- <:gear:1431298227105300593> **${
+								brawler.gears.length
+							}**${brawler.gears.length ? ": " : ""}${brawler.gears
+								.map((g) =>
+									g.name.toLowerCase().split(" ").map(capitalize).join(" "),
+								)
+								.join(", ")}\n- <:starpower:1431298229328150649> **${
+								brawler.starPowers.length
+							}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers
+								.map((g) =>
+									g.name.toLowerCase().split(" ").map(capitalize).join(" "),
+								)
+								.join(", ")}`,
 						},
 					],
 					accessory: {
@@ -887,7 +909,7 @@ export class Brawl extends Command {
 			],
 		},
 	];
-	static createBrawlersComponents = (
+	static "createBrawlersComponents" = (
 		player: Brawl.Player,
 		url: string,
 		id: string,
@@ -900,12 +922,12 @@ export class Brawl extends Command {
 			order === BrawlerOrder.Name
 				? (a, b) => a.name.localeCompare(b.name)
 				: order === BrawlerOrder.MostTrophies
-					? (a, b) =>
-							b.trophies - a.trophies || b.highestTrophies - a.highestTrophies
-					: order === BrawlerOrder.LeastTrophies
-						? (a, b) =>
-								a.trophies - b.trophies || a.highestTrophies - b.highestTrophies
-						: (a, b) => b.power - a.power,
+				? (a, b) =>
+						b.trophies - a.trophies || b.highestTrophies - a.highestTrophies
+				: order === BrawlerOrder.LeastTrophies
+				? (a, b) =>
+						a.trophies - b.trophies || a.highestTrophies - b.highestTrophies
+				: (a, b) => b.power - a.power,
 		);
 		return [
 			{
@@ -927,7 +949,25 @@ export class Brawl extends Command {
 								components: [
 									{
 										type: ComponentType.TextDisplay,
-										content: `<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${brawler.gadgets.length ? "<:gadget:1431298224966336639>" : " \t "}${brawler.gears.length ? "<:gear:1431298227105300593>" : " \t "}${brawler.starPowers.length ? "<:starpower:1431298229328150649>" : " \t "}${brawler.gears.length >= 2 ? "<:gear:1431298227105300593>" : ""}\n<:l3:${l3}><:l4:${l4}>\t<:level:1431299161717866536> ${brawler.power}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}`,
+										content: `<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${
+											brawler.gadgets.length
+												? "<:gadget:1431298224966336639>"
+												: " \t "
+										}${
+											brawler.gears.length
+												? "<:gear:1431298227105300593>"
+												: " \t "
+										}${
+											brawler.starPowers.length
+												? "<:starpower:1431298229328150649>"
+												: " \t "
+										}${
+											brawler.gears.length >= 2
+												? "<:gear:1431298227105300593>"
+												: ""
+										}\n<:l3:${l3}><:l4:${l4}>\t<:level:1431299161717866536> ${
+											brawler.power
+										}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}`,
 									},
 								],
 								accessory: {
@@ -944,7 +984,9 @@ export class Brawl extends Command {
 							{
 								type: ComponentType.Button,
 								emoji: { name: "⬅️" },
-								custom_id: `brawl-brawlers-${id}-${player.tag}-${order}-${page - 1}`,
+								custom_id: `brawl-brawlers-${id}-${player.tag}-${order}-${
+									page - 1
+								}`,
 								disabled: !page,
 								style: ButtonStyle.Primary,
 							},
@@ -958,7 +1000,9 @@ export class Brawl extends Command {
 							{
 								type: ComponentType.Button,
 								emoji: { name: "➡️" },
-								custom_id: `brawl-brawlers-${id}-${player.tag}-${order}-${page + 1}`,
+								custom_id: `brawl-brawlers-${id}-${player.tag}-${order}-${
+									page + 1
+								}`,
 								disabled: page >= pages - 1,
 								style: ButtonStyle.Primary,
 							},
@@ -1000,7 +1044,7 @@ export class Brawl extends Command {
 			},
 		];
 	};
-	static createMembersComponents = (
+	static "createMembersComponents" = (
 		club: Brawl.Club,
 		locale: string,
 		id: string,
@@ -1014,10 +1058,10 @@ export class Brawl extends Command {
 			order === MembersOrder.Name
 				? (a, b) => a.name.localeCompare(b.name)
 				: order === MembersOrder.MostTrophies
-					? (a, b) => b.trophies - a.trophies
-					: order === MembersOrder.LeastTrophies
-						? (a, b) => a.trophies - b.trophies
-						: (a, b) => MemberRole[a.role] - MemberRole[b.role],
+				? (a, b) => b.trophies - a.trophies
+				: order === MembersOrder.LeastTrophies
+				? (a, b) => a.trophies - b.trophies
+				: (a, b) => MemberRole[a.role] - MemberRole[b.role],
 		);
 		return [
 			{
@@ -1028,7 +1072,11 @@ export class Brawl extends Command {
 						components: [
 							{
 								type: ComponentType.TextDisplay,
-								content: `## ${club.name} (${club.tag})\n- Trofei medi: 🏆 ${Math.round(club.trophies / club.members.length).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
+								content: `## ${club.name} (${
+									club.tag
+								})\n- Trofei medi: 🏆 ${Math.round(
+									club.trophies / club.members.length,
+								).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
 									percentile(members, 0.5),
 								).toLocaleString(locale)}\n- 75° Percentile: 🏆 ${Math.round(
 									percentile(members, 0.75),
@@ -1050,7 +1098,9 @@ export class Brawl extends Command {
 							components: [
 								{
 									type: ComponentType.TextDisplay,
-									content: `${i + page * 10 + 1}.\t**${member.name}**\n${MemberEmoji[member.role]} ${ResolvedMemberRole[member.role]}\t🏆 ${member.trophies}`,
+									content: `${i + page * 10 + 1}.\t**${member.name}**\n${
+										MemberEmoji[member.role]
+									} ${ResolvedMemberRole[member.role]}\t🏆 ${member.trophies}`,
 								},
 							],
 							accessory: {
@@ -1067,7 +1117,9 @@ export class Brawl extends Command {
 							{
 								type: ComponentType.Button,
 								emoji: { name: "⬅️" },
-								custom_id: `brawl-members-${id}-${club.tag}-${order}-${page - 1}`,
+								custom_id: `brawl-members-${id}-${club.tag}-${order}-${
+									page - 1
+								}`,
 								disabled: !page,
 								style: ButtonStyle.Primary,
 							},
@@ -1081,7 +1133,9 @@ export class Brawl extends Command {
 							{
 								type: ComponentType.Button,
 								emoji: { name: "➡️" },
-								custom_id: `brawl-members-${id}-${club.tag}-${order}-${page + 1}`,
+								custom_id: `brawl-members-${id}-${club.tag}-${order}-${
+									page + 1
+								}`,
 								disabled: page >= pages - 1,
 								style: ButtonStyle.Primary,
 							},
@@ -1123,7 +1177,7 @@ export class Brawl extends Command {
 			},
 		];
 	};
-	static createPlayerEmbed = (
+	static "createPlayerEmbed" = (
 		player: Brawl.Player,
 		playerId?: string,
 	): APIEmbed => ({
@@ -1142,7 +1196,9 @@ export class Brawl extends Command {
 		fields: [
 			{
 				name: "🏆 Trofei",
-				value: `**Attuali**: ${player.trophies}\n**Record**: ${player.highestTrophies}\n**Media**: ${Math.round(player.trophies / player.brawlers.length)}`,
+				value: `**Attuali**: ${player.trophies}\n**Record**: ${
+					player.highestTrophies
+				}\n**Media**: ${Math.round(player.trophies / player.brawlers.length)}`,
 				inline: true,
 			},
 			{
@@ -1152,12 +1208,16 @@ export class Brawl extends Command {
 			},
 			{
 				name: "📊 Altre statistiche",
-				value: `**Robo Rumble**: ${this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]}\n**Big Game**: ${this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]}\n**Brawlers**: ${player.brawlers.length}`,
+				value: `**Robo Rumble**: ${
+					this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]
+				}\n**Big Game**: ${
+					this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]
+				}\n**Brawlers**: ${player.brawlers.length}`,
 				inline: true,
 			},
 		],
 	});
-	static createClubMessage = (
+	static "createClubMessage" = (
 		club: Brawl.Club,
 		locale: Locale,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
@@ -1197,12 +1257,22 @@ export class Brawl extends Command {
 					fields: [
 						{
 							name: "📊 Dati generali",
-							value: `**Tipo**: ${ClubType[club.type]}\n**Membri**: ${members.length.toLocaleString(locale)}\n**Trofei totali**: ${club.trophies.toLocaleString(locale)}\n**Trofei richiesti**: ${club.requiredTrophies.toLocaleString(locale)}`,
+							value: `**Tipo**: ${
+								ClubType[club.type]
+							}\n**Membri**: ${members.length.toLocaleString(
+								locale,
+							)}\n**Trofei totali**: ${club.trophies.toLocaleString(
+								locale,
+							)}\n**Trofei richiesti**: ${club.requiredTrophies.toLocaleString(
+								locale,
+							)}`,
 							inline: true,
 						},
 						{
 							name: "🏆 Membri",
-							value: `**Trofei medi**: ${Math.round(club.trophies / club.members.length).toLocaleString(locale)}\n**Mediana**: ${Math.round(
+							value: `**Trofei medi**: ${Math.round(
+								club.trophies / club.members.length,
+							).toLocaleString(locale)}\n**Mediana**: ${Math.round(
 								percentile(members, 0.5),
 							).toLocaleString(locale)}\n**75° Percentile**: ${Math.round(
 								percentile(members, 0.75),
@@ -1213,7 +1283,11 @@ export class Brawl extends Command {
 						},
 						{
 							name: "👥 Staff",
-							value: `**Presidente**: ${staff.president.name}\n**Vicepresidenti**: ${staff.vicePresident.join(", ") || "*Nessuno*"}\n**Anziani**: ${staff.senior.join(", ") || "*Nessuno*"}`,
+							value: `**Presidente**: ${
+								staff.president.name
+							}\n**Vicepresidenti**: ${
+								staff.vicePresident.join(", ") || "*Nessuno*"
+							}\n**Anziani**: ${staff.senior.join(", ") || "*Nessuno*"}`,
 							inline: true,
 						},
 					],
@@ -1250,7 +1324,7 @@ export class Brawl extends Command {
 			],
 		};
 	};
-	static createPlayerMessage = (
+	static "createPlayerMessage" = (
 		player: Brawl.Player,
 		userId: string,
 		playerId?: string,
@@ -1301,7 +1375,7 @@ export class Brawl extends Command {
 			components,
 		};
 	};
-	static async callApi<T>(path: string, errors: Record<number, string> = {}) {
+	static async "callApi"<T>(path: string, errors: Record<number, string> = {}) {
 		Object.assign(errors, Brawl.ERROR_MESSAGES);
 		const request = new Request(
 			new URL(path, "https://api.brawlstars.com/v1/"),
@@ -1328,7 +1402,7 @@ export class Brawl extends Command {
 				`Errore interno: \`${json?.message ?? "Unknown error"}\``,
 		);
 	}
-	static getPlayer = async (tag: string, edit?: BaseReplies["edit"]) => {
+	static "getPlayer" = async (tag: string, edit?: BaseReplies["edit"]) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Brawl.callApi<Brawl.Player>(
@@ -1348,7 +1422,7 @@ export class Brawl extends Command {
 			throw err;
 		}
 	};
-	static getClub = async (tag: string, edit?: BaseReplies["edit"]) => {
+	static "getClub" = async (tag: string, edit?: BaseReplies["edit"]) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Brawl.callApi<Brawl.Club>(
@@ -1366,14 +1440,14 @@ export class Brawl extends Command {
 			throw err;
 		}
 	};
-	static normalizeTag = (tag: string) => {
+	static "normalizeTag" = (tag: string) => {
 		tag = tag.toUpperCase().replace(/O/g, "0");
 		if (!tag.startsWith("#")) tag = `#${tag}`;
 		if (!/^#[0289PYLQGRJCUV]{3,15}$/.test(tag))
-			throw new TypeError("Tag giocatore non valido.");
+			throw new TypeError("Tag non valido.");
 		return tag;
 	};
-	static override async chatInput(
+	static override async "chatInput"(
 		replies: ChatInputReplies,
 		args: ChatInputArgs<typeof Brawl.chatInputData>,
 	) {
@@ -1381,7 +1455,7 @@ export class Brawl extends Command {
 			`${args.subcommand.split(" ")[0] as "player" | "club"}Command`
 		]?.(replies, args as never);
 	}
-	static playerCommand = async (
+	static "playerCommand" = async (
 		{ reply, defer, edit }: ChatInputReplies,
 		{
 			options,
@@ -1444,7 +1518,7 @@ export class Brawl extends Command {
 				flags: MessageFlags.IsComponentsV2,
 			});
 	};
-	static clubCommand = async (
+	static "clubCommand" = async (
 		{ defer, edit }: ChatInputReplies,
 		{
 			options,
@@ -1508,7 +1582,13 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(
+				result?.brawlNotifications,
+			)}.${
+				!result?.brawlTag
+					? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
+					: ""
+			}`,
 		});
 	};
 	static "notify disable" = async (
@@ -1532,7 +1612,13 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(
+				result?.brawlNotifications,
+			)}.${
+				!result?.brawlTag
+					? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
+					: ""
+			}`,
 		});
 	};
 	static "notify view" = async (
@@ -1552,10 +1638,16 @@ export class Brawl extends Command {
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(result?.brawlNotifications)}.${!result?.brawlTag ? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.` : ""}`,
+			content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(
+				result?.brawlNotifications,
+			)}.${
+				!result?.brawlTag
+					? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
+					: ""
+			}`,
 		});
 	};
-	static override async component(
+	static override async "component"(
 		replies: ComponentReplies,
 		args: ComponentArgs,
 	) {
@@ -1570,7 +1662,7 @@ export class Brawl extends Command {
 			content: "Questa azione non è per te!",
 		});
 	}
-	static linkComponent = async (
+	static "linkComponent" = async (
 		{ edit, deferUpdate }: ComponentReplies,
 		{
 			args: [tag, commandId],
@@ -1609,11 +1701,13 @@ export class Brawl extends Command {
 				style: ButtonStyle.Danger,
 			};
 		return edit({
-			content: `Profilo collegato con successo!\nUsa </brawl notify enable:${commandId || "0"}> per attivare le notifiche.`,
+			content: `Profilo collegato con successo!\nUsa </brawl notify enable:${
+				commandId || "0"
+			}> per attivare le notifiche.`,
 			components,
 		});
 	};
-	static unlinkComponent = async (
+	static "unlinkComponent" = async (
 		{ update }: ComponentReplies,
 		{
 			args: [tag, commandId],
@@ -1642,7 +1736,7 @@ export class Brawl extends Command {
 			};
 		return update({ content: "Profilo scollegato con successo!", components });
 	};
-	static brawlersComponent = async (
+	static "brawlersComponent" = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
 			interaction: { data },
@@ -1668,7 +1762,7 @@ export class Brawl extends Command {
 			flags: MessageFlags.IsComponentsV2,
 		});
 	};
-	static membersComponent = async (
+	static "membersComponent" = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
 			interaction: { data, locale },
@@ -1693,7 +1787,7 @@ export class Brawl extends Command {
 			flags: MessageFlags.IsComponentsV2,
 		});
 	};
-	static brawlerComponent = async (
+	static "brawlerComponent" = async (
 		{ deferUpdate, edit }: ComponentReplies,
 		{ args: [tag, brawler, order, page], user: { id } }: ComponentArgs,
 	) => {
@@ -1711,7 +1805,7 @@ export class Brawl extends Command {
 			),
 		});
 	};
-	static playerComponent = async (
+	static "playerComponent" = async (
 		{ defer, edit }: ComponentReplies,
 		{ user: { id }, interaction: { data }, args: [tag] }: ComponentArgs,
 	) => {
@@ -1735,7 +1829,7 @@ export class Brawl extends Command {
 			),
 		);
 	};
-	static clubComponent = async (
+	static "clubComponent" = async (
 		{ defer, edit }: ComponentReplies,
 		{ args: [tag], interaction: { locale } }: ComponentArgs,
 	) => {
