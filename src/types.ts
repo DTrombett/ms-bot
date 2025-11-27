@@ -683,5 +683,86 @@ declare global {
 			isCountry: boolean;
 			countryCode: string;
 		};
+		type BattleList = Battle[];
+		type Battle = {
+			gameMode?: GameMode;
+			arena?: Arena;
+			type:
+				| "pvp"
+				| "pve"
+				| "clanmate"
+				| "tournament"
+				| "friendly"
+				| "survival"
+				| "pvp2v2"
+				| "clanmate2v2"
+				| "challenge2v2"
+				| "clanwarCollectionDay"
+				| "clanwarWarDay"
+				| "casual1v1"
+				| "casual2v2"
+				| "boatBattle"
+				| "boatBattlePractice"
+				| "riverRacePvp"
+				| "riverRaceDuel"
+				| "riverRaceDuelColosseum"
+				| "tutorial"
+				| "pathOfLegend"
+				| "seasonalBattle"
+				| "practice"
+				| "trail"
+				| "unknown";
+			deckSelection:
+				| "collection"
+				| "draft"
+				| "draftCompetitive"
+				| "predefined"
+				| "eventDeck"
+				| "pick"
+				| "wardeckPick"
+				| "quaddeckPick"
+				| "unknown";
+			team: PlayerBattleDataList;
+			opponent: PlayerBattleDataList;
+			challengeWinCountBefore: number;
+			boatBattleSide: string;
+			boatBattleWon: boolean;
+			newTowersDestroyed: number;
+			prevTowersDestroyed: number;
+			remainingTowers: number;
+			leagueNumber: number;
+			battleTime: string;
+			challengeId: number;
+			tournamentTag: string;
+			challengeTitle: string;
+			isLadderTournament: boolean;
+			isHostedMatch: boolean;
+			eventTag: string;
+		};
+		type GameMode = { id: number; name: string };
+		type PlayerBattleDataList = PlayerBattleData[];
+		type PlayerBattleData = {
+			clan?: PlayerClan;
+			cards: PlayerItemLevelList;
+			supportCards?: PlayerItemLevelList;
+			rounds: PlayerBattleRoundList;
+			crowns: number;
+			princessTowersHitPoints?: number[];
+			elixirLeaked: number;
+			globalRank: number;
+			tag: string;
+			name: string;
+			startingTrophies?: number;
+			trophyChange: number;
+			kingTowerHitPoints: number;
+		};
+		type PlayerBattleRoundList = PlayerBattleRound[];
+		type PlayerBattleRound = {
+			cards: PlayerItemLevelList;
+			elixirLeaked: number;
+			crowns: number;
+			kingTowerHitPoints: number;
+			princessTowersHitPoints: number[];
+		};
 	}
 }

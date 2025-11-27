@@ -75,6 +75,32 @@ enum ResolvedCardRarity {
 	LEGENDARY = "Leggendaria",
 	CHAMPION = "Campione",
 }
+enum BattleType {
+	"pvp" = "PvP",
+	"pve" = "PvE",
+	"clanmate" = "Amichevole nel clan",
+	"tournament" = "Torneo",
+	"friendly" = "Amichevole",
+	"survival" = "Sopravvivenza",
+	"pvp2v2" = "PvP 2v2",
+	"clanmate2v2" = "Amichevole 2v2 nel clan",
+	"challenge2v2" = "Challenge 2v2",
+	"clanwarCollectionDay" = "clanwarCollectionDay",
+	"clanwarWarDay" = "Guerra tra clan",
+	"casual1v1" = "1v1 casual",
+	"casual2v2" = "2v2 casual",
+	"boatBattle" = "Attacco alla nave",
+	"boatBattlePractice" = "Allenamento attacco alla nave",
+	"riverRacePvp" = "1v1 guerra tra clan",
+	"riverRaceDuel" = "Duello",
+	"riverRaceDuelColosseum" = "Duello nell'arena",
+	"tutorial" = "Tutorial",
+	"pathOfLegend" = "Classificata",
+	"seasonalBattle" = "Battaglia stagionale",
+	"practice" = "Allenamento",
+	"trail" = "Classica",
+	"unknown" = "Sconosciuto",
+}
 
 export class Clash extends Command {
 	static "NOTIFICATION_TYPES" = [
@@ -91,6 +117,29 @@ export class Clash extends Command {
 		429: "Limite di richieste API raggiunto.",
 		500: "Errore interno dell'API.",
 		503: "Manutenzione in corso!",
+	};
+	private static readonly "EMOJIS" = {
+		starLevel: "1441845434153697392",
+		blueCrown: "1441876288251101367",
+		redCrown: "1441876632800329820",
+		battle: "1441877350697668679",
+		cards: "1442124435162136667",
+		clan: "1442125625052889128",
+		experienceIcon: "1442127173434736761",
+		arena: "1442133142419935352",
+		tower: "1442138907410956511",
+		trader: "1442140198036312258",
+		pathOfLegends: "1442178291699286087",
+		tournament: "1442195961496473802",
+		friends: "1442230918952648875",
+		wildShard: "1442922861147979786",
+		badges: "1443279126134788289",
+		blueKingCry: "1443671305269412104",
+		redKingCry: "1443671303365066823",
+		blueKingHappy: "1443671301393748019",
+		redKingHappy: "1443671298944401519",
+		princessTower: "1443674549290926131",
+		princessTowerGray: "1443676355773337690",
 	};
 	private static readonly "CARDS_ORDER" = {
 		Nome: (a, b) => a.name.localeCompare(b.name),
@@ -114,7 +163,8 @@ export class Clash extends Command {
 			MemberRole[toUpperCase(a.role)] - MemberRole[toUpperCase(b.role)],
 		"Più donazioni": (a, b) => b.donations - a.donations,
 		"Meno donazioni": (a, b) => a.donations - b.donations,
-		"Ultimo accesso": (a, b) => Clash.parseLastSeen(a) - Clash.parseLastSeen(b),
+		"Ultimo accesso": (a, b) =>
+			Clash.parseAPIDate(a.lastSeen) - Clash.parseAPIDate(b.lastSeen),
 	} satisfies Record<
 		string,
 		(a: Clash.ClanMember, b: Clash.ClanMember) => number
@@ -364,16 +414,16 @@ export class Clash extends Command {
 					type: ComponentType.TextDisplay,
 					content: template`
 					## ${card.name}
-					<:level:1442127173434736761> Livello: **${
+					<:level:${this.EMOJIS.experienceIcon}> Livello: **${
 						card.level + LevelOffset[toUpperCase(card.rarity)]
 					}/${card.maxLevel + LevelOffset[toUpperCase(card.rarity)]}**
-					<:starlevel:1441845434153697392> Livello stella: **${card.starLevel ?? 0}**
+					<:starlevel:${this.EMOJIS.starLevel}> Livello stella: **${card.starLevel ?? 0}**
 					💎 Rarità: **${ResolvedCardRarity[toUpperCase(card.rarity)]}**
-					<:cards:1442124435162136667> Carte possedute: **${card.count.toLocaleString(
+					<:cards:${this.EMOJIS.cards}> Carte possedute: **${card.count.toLocaleString(
 						locale,
 					)}**
 					💧 Costo elisir: **${card.elixirCost ?? "N/A"}**
-					<:evo:1442922861147979786> Evoluzione: **${
+					<:evo:${this.EMOJIS.wildShard}> Evoluzione: **${
 						card.maxEvolutionLevel
 							? `${card.evolutionLevel ?? 0}/${card.maxEvolutionLevel}`
 							: "N/A"
@@ -388,7 +438,7 @@ export class Clash extends Command {
 								url:
 									card.evolutionLevel && card.iconUrls?.evolutionMedium
 										? card.iconUrls.evolutionMedium
-										: card.iconUrls?.medium ?? "https://invalid.url/image.png",
+										: card.iconUrls?.medium ?? "",
 							},
 						},
 					],
@@ -447,19 +497,19 @@ export class Clash extends Command {
 										card.id
 									})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
 										card.maxEvolutionLevel
-											? `  <:evo:1442922861147979786> ${
+											? `  <:evo:${this.EMOJIS.wildShard}> ${
 													card.evolutionLevel ?? 0
 											  }/${card.maxEvolutionLevel}`
 											: ""
 									}${
 										card.starLevel
-											? `  <:starlevel:1441845434153697392> ${card.starLevel}`
+											? `  <:starlevel:${this.EMOJIS.starLevel}> ${card.starLevel}`
 											: ""
-									}\n${
-										ResolvedCardRarity[toUpperCase(card.rarity)]
-									}  <:level:1442127173434736761> ${
+									}\n${ResolvedCardRarity[toUpperCase(card.rarity)]}  <:level:${
+										this.EMOJIS.experienceIcon
+									}> ${
 										card.level + (LevelOffset[toUpperCase(card.rarity)] ?? 0)
-									}  <:cards:1442124435162136667> ${card.count}`,
+									}  <:cards:${this.EMOJIS.cards}> ${card.count}`,
 								},
 							],
 							accessory: {
@@ -598,7 +648,7 @@ export class Clash extends Command {
 	): APIMessageTopLevelComponent[] => {
 		const { page, component } = this.pagination(
 			clan.memberList.sort(Clash.MEMBERS_ORDER[order]),
-			6,
+			5,
 			`clash-members-${id}-${clan.tag}-${order}`,
 			currentPage,
 		);
@@ -644,16 +694,18 @@ export class Clash extends Command {
 							components: [
 								{
 									type: ComponentType.TextDisplay,
-									content: `${i + currentPage * 10 + 1}. **${escapeMarkdown(
+									content: `${i + currentPage * 5 + 1}. **${escapeMarkdown(
 										member.name,
-									)}**  <:donations:1442140198036312258> ${member.donations.toLocaleString(
+									)}**  <:donations:${
+										this.EMOJIS.trader
+									}> ${member.donations.toLocaleString(
 										locale,
 									)}  🏆 ${member.trophies.toLocaleString(locale)}\n${
 										MemberEmoji[toUpperCase(member.role)]
 									} ${
 										ResolvedMemberRole[toUpperCase(member.role)]
 									}  🕓 <t:${Math.round(
-										Clash.parseLastSeen(member) / 1000,
+										Clash.parseAPIDate(member.lastSeen) / 1000,
 									)}:R>`,
 								},
 							],
@@ -715,7 +767,7 @@ export class Clash extends Command {
 				player[k] &&
 				[
 					player[k].trophies
-						? `<:medal:1442178291699286087>${player[k].trophies}`
+						? `<:medal:${this.EMOJIS.pathOfLegends}>${player[k].trophies}`
 						: `Lega ${player[k].leagueNumber}`,
 					player[k].rank && `#${player[k].rank}`,
 				]
@@ -745,30 +797,26 @@ export class Clash extends Command {
 			}🏆 **Trofei**: ${trophyProgress.trophies?.toLocaleString(
 				locale,
 			)}/${trophyProgress.bestTrophies?.toLocaleString(locale)}
-			${
-				player.currentPathOfLegendSeasonResult?.trophies
-			}<:ranked:1442178291699286087> **Classificata**: ${
-				player.currentPathOfLegendSeasonResult?.trophies
-			}
+			${player.currentPathOfLegendSeasonResult?.trophies}<:ranked:${
+				this.EMOJIS.pathOfLegends
+			}> **Classificata**: ${player.currentPathOfLegendSeasonResult?.trophies}
 			${mergeTactics}⭐ **Tattiche Royale**: ${mergeTactics?.trophies.toLocaleString(
 				locale,
 			)}/${mergeTactics?.bestTrophies.toLocaleString(locale)} (${
 				mergeTactics?.arena.name
 			})
-			${trophyProgress.arena}<:arena:1442133142419935352> **Arena**: ${
+			${trophyProgress.arena}<:arena:${this.EMOJIS.arena}> **Arena**: ${
 				trophyProgress.arena?.name
 			}
-			${
-				player.expLevel && player.expPoints != null
-			}<:level:1442127173434736761> **Livello**: ${
-				player.expLevel
-			} (${player.expPoints?.toLocaleString(locale)} XP)
-			${
-				player.starPoints != null
-			}<:starlevel:1441845434153697392> **Punti stella**: ${player.starPoints?.toLocaleString(
+			${player.expLevel && player.expPoints != null}<:level:${
+				this.EMOJIS.experienceIcon
+			}> **Livello**: ${player.expLevel} (${player.expPoints?.toLocaleString(
 				locale,
-			)}
-			${daysPlayed}<:battle:1441877350697668679> **Media partite**: ${(
+			)} XP)
+			${player.starPoints != null}<:starlevel:${
+				this.EMOJIS.starLevel
+			}> **Punti stella**: ${player.starPoints?.toLocaleString(locale)}
+			${daysPlayed}<:battle:${this.EMOJIS.battle}> **Media partite**: ${(
 				(player.battleCount ?? 0) / daysPlayed
 			).toLocaleString(locale, {
 				maximumFractionDigits: 1,
@@ -783,7 +831,7 @@ export class Clash extends Command {
 				`,
 			fields: [
 				{
-					name: "<:clan:1442125625052889128> Clan",
+					name: `<:clan:${this.EMOJIS.clan}> Clan`,
 					value: player.clan
 						? template`
 							[${player.clan.name}](https://link.clashroyale.com/?clashroyale://clanInfo?id=${
@@ -793,11 +841,11 @@ export class Clash extends Command {
 						: "*Nessun clan*",
 				},
 				{
-					name: "<:cards:1442124435162136667> Mazzo battaglia",
+					name: `<:cards:${this.EMOJIS.cards}> Mazzo battaglia`,
 					value: template`${player.currentDeck
 						.map(
 							(c) =>
-								`${c.name} (<:level:1442127173434736761> ${
+								`${c.name} (<:level:${this.EMOJIS.experienceIcon}> ${
 									c.level + (LevelOffset[toUpperCase(c.rarity)] ?? 0)
 								})`,
 						)
@@ -822,19 +870,17 @@ export class Clash extends Command {
 						.join(";")}&l=Royals&id=${player.tag.slice(1)})`,
 				},
 				{
-					name: "<:collection:1442124435162136667> Collezione",
+					name: `<:collection:${this.EMOJIS.cards}> Collezione`,
 					value: template`
-					${
-						player.badges
-					}<:badges:1443279126134788289> Emblemi: **${player.badges?.length.toLocaleString(
-						locale,
-					)}**
-					${
-						player.cards
-					}<:cards:1442124435162136667> Carte: **${player.cards?.length.toLocaleString(
-						locale,
-					)}**
-					${player.cards}<:level:1442127173434736761> Liv. medio: **${Math.floor(
+					${player.badges}<:badges:${
+						this.EMOJIS.badges
+					}> Emblemi: **${player.badges?.length.toLocaleString(locale)}**
+					${player.cards}<:cards:${
+						this.EMOJIS.cards
+					}> Carte: **${player.cards?.length.toLocaleString(locale)}**
+					${player.cards}<:level:${
+						this.EMOJIS.experienceIcon
+					}> Liv. medio: **${Math.floor(
 						percentile(
 							player.cards
 								?.map(
@@ -844,16 +890,16 @@ export class Clash extends Command {
 							0.5,
 						),
 					)}**
-					${
-						player.supportCards
-					}<:tower:1442138907410956511> Truppe torri: **${player.supportCards?.length.toLocaleString(
+					${player.supportCards}<:tower:${
+						this.EMOJIS.tower
+					}> Truppe torri: **${player.supportCards?.length.toLocaleString(
 						locale,
 					)}**
 					`,
 					inline: true,
 				},
 				{
-					name: "<:donations:1442140198036312258> Donazioni",
+					name: `<:donations:${this.EMOJIS.trader}> Donazioni`,
 					value: template`
 					${
 						player.totalDonations != null
@@ -873,26 +919,26 @@ export class Clash extends Command {
 					inline: true,
 				},
 				{
-					name: "<:tournament:1442195961496473802> Sfide",
+					name: `<:tournament:${this.EMOJIS.tournament}> Sfide`,
 					value: template`
-						${
-							player.challengeMaxWins != null
-						}<:blueCrown:1441876288251101367> Record vittorie: **${player.challengeMaxWins?.toLocaleString(
+						${player.challengeMaxWins != null}<:blueCrown:${
+						this.EMOJIS.blueCrown
+					}> Record vittorie: **${player.challengeMaxWins?.toLocaleString(
 						locale,
 					)}**
-						${
-							player.challengeCardsWon != null
-						}<:cards:1442124435162136667> Carte vinte: **${player.challengeCardsWon?.toLocaleString(
+						${player.challengeCardsWon != null}<:cards:${
+						this.EMOJIS.cards
+					}> Carte vinte: **${player.challengeCardsWon?.toLocaleString(
 						locale,
 					)}**
-						${
-							player.tournamentBattleCount != null
-						}<:battle:1441877350697668679> Batt. in tornei: **${player.tournamentBattleCount?.toLocaleString(
+						${player.tournamentBattleCount != null}<:battle:${
+						this.EMOJIS.battle
+					}> Batt. in tornei: **${player.tournamentBattleCount?.toLocaleString(
 						locale,
 					)}**
-						${
-							player.tournamentCardsWon != null
-						}<:cards:1442124435162136667> Carte vinte: **${player.tournamentCardsWon?.toLocaleString(
+						${player.tournamentCardsWon != null}<:cards:${
+						this.EMOJIS.cards
+					}> Carte vinte: **${player.tournamentCardsWon?.toLocaleString(
 						locale,
 					)}**
 						`,
@@ -901,40 +947,32 @@ export class Clash extends Command {
 				{
 					name: "👑 Statistiche Royale",
 					value: template`
-						${
-							player.wins != null
-						}<:blueCrown:1441876288251101367> Vittorie: **${player.wins?.toLocaleString(
-						locale,
-					)}** (${(
+						${player.wins != null}<:blueCrown:${
+						this.EMOJIS.blueCrown
+					}> Vittorie: **${player.wins?.toLocaleString(locale)}** (${(
 						((player.wins ?? 0) / (player.battleCount || Infinity)) *
 						100
 					).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
-						${
-							player.threeCrownWins != null
-						}<:blueCrown:1441876288251101367> 3 corone: **${player.threeCrownWins?.toLocaleString(
-						locale,
-					)}** (${(
+						${player.threeCrownWins != null}<:blueCrown:${
+						this.EMOJIS.blueCrown
+					}> 3 corone: **${player.threeCrownWins?.toLocaleString(locale)}** (${(
 						((player.threeCrownWins ?? 0) / (player.wins || Infinity)) *
 						100
 					).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
-						${
-							player.losses != null
-						}<:redCrown:1441876632800329820> Sconfitte: **${player.losses?.toLocaleString(
-						locale,
-					)}** (${(
+						${player.losses != null}<:redCrown:${
+						this.EMOJIS.redCrown
+					}> Sconfitte: **${player.losses?.toLocaleString(locale)}** (${(
 						((player.losses ?? 0) / (player.battleCount || Infinity)) *
 						100
 					).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
-						${
-							player.battleCount != null
-						}<:battle:1441877350697668679> Battaglie totali: **${player.battleCount?.toLocaleString(
-						locale,
-					)}**
+						${player.battleCount != null}<:battle:${
+						this.EMOJIS.battle
+					}> Battaglie totali: **${player.battleCount?.toLocaleString(locale)}**
 						`,
 					inline: true,
 				},
 				{
-					name: "<:ranked:1442178291699286087> Modalità Classificata",
+					name: `<:ranked:${this.EMOJIS.pathOfLegends}> Modalità Classificata`,
 					value: template`
 					${ranked[0]}Attuale: **${ranked[0]}**
 					${ranked[1]}Ultima stagione: **${ranked[1]}**
@@ -1004,7 +1042,7 @@ export class Clash extends Command {
 							Membri: **${memberTrophies.length.toLocaleString(locale)}**
 							Inattivi: **${
 								clan.memberList.filter(
-									(m) => now - Clash.parseLastSeen(m) > TimeUnit.Week,
+									(m) => now - Clash.parseAPIDate(m.lastSeen) > TimeUnit.Week,
 								).length
 							}**
 							`,
@@ -1025,7 +1063,7 @@ export class Clash extends Command {
 							inline: true,
 						},
 						{
-							name: "<:friends:1442230918952648875> Membri",
+							name: `<:friends:${this.EMOJIS.friends}> Membri`,
 							value: template`
 							Trofei medi: **${Math.round(
 								clan.memberList.reduce((p, c) => p + c.trophies, 0) /
@@ -1091,7 +1129,9 @@ export class Clash extends Command {
 								value: m.tag,
 								description: `➡️${m.donations} 🏆${m.trophies.toLocaleString(
 									locale,
-								)} 🕓${formatShortTime(now - Clash.parseLastSeen(m))} fa`,
+								)} 🕓${formatShortTime(
+									now - Clash.parseAPIDate(m.lastSeen),
+								)} fa`,
 								emoji: {
 									name: MemberEmoji[toUpperCase(m.role)] ?? "👤",
 								},
@@ -1187,14 +1227,14 @@ export class Clash extends Command {
 			components,
 		};
 	};
-	private static "parseLastSeen" = (m: Clash.ClanMember) =>
+	private static "parseAPIDate" = (d: string) =>
 		Date.UTC(
-			+m.lastSeen.slice(0, 4),
-			+m.lastSeen.slice(4, 6) - 1,
-			+m.lastSeen.slice(6, 8),
-			+m.lastSeen.slice(9, 11),
-			+m.lastSeen.slice(11, 13),
-			+m.lastSeen.slice(13, 15),
+			+d.slice(0, 4),
+			+d.slice(4, 6) - 1,
+			+d.slice(6, 8),
+			+d.slice(9, 11),
+			+d.slice(11, 13),
+			+d.slice(13, 15),
 		);
 	private static "sanitizeDescription" = (clan: Clash.Clan) =>
 		clan.description
@@ -1249,6 +1289,26 @@ export class Clash extends Command {
 						err instanceof Error
 							? err.message
 							: "Non è stato possibile recuperare il profilo. Riprova più tardi.",
+				});
+			throw err;
+		}
+	};
+	static "getBattleLog" = async (tag: string, edit?: BaseReplies["edit"]) => {
+		try {
+			tag = Brawl.normalizeTag(tag);
+			return await Clash.callApi<Clash.BattleList>(
+				`players/${encodeURIComponent(tag)}/battlelog`,
+				{
+					404: "Giocatore non trovato.",
+				},
+			);
+		} catch (err) {
+			if (edit)
+				throw await edit({
+					content:
+						err instanceof Error
+							? err.message
+							: "Non è stato possibile recuperare il registro battaglie. Riprova più tardi.",
 				});
 			throw err;
 		}
@@ -1751,5 +1811,156 @@ export class Clash extends Command {
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
 		return edit(this.createClanMessage(await this.getClan(tag!, edit), locale));
+	};
+	static "logComponent" = async (
+		{ defer, deferUpdate, edit }: ComponentReplies,
+		{
+			interaction: { locale },
+			args: [tag, currentPage, replyFlag],
+			user: { id },
+		}: ComponentArgs,
+	) => {
+		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
+		else deferUpdate();
+		const battleLog = await this.getBattleLog(tag!, edit);
+
+		const { page, component } = this.pagination(
+			battleLog,
+			1,
+			`clash-log-${id}-${tag}`,
+			Number(currentPage) || 0,
+		);
+		return edit({
+			embeds: page.map((battle) => ({
+				color:
+					battle.team[0]!.crowns > battle.opponent[0]!.crowns
+						? 0x2fceff
+						: 0xff0063,
+				description: template`
+				### <:blueCrown:${this.EMOJIS.blueCrown}> ${battle.team[0]!.crowns} - ${
+					battle.opponent[0]!.crowns
+				} <:redCrown:${this.EMOJIS.redCrown}>
+				**Tipo di battaglia**: ${
+					BattleType[battle.type] ?? battle.type ?? "Sconosciuto"
+				}
+				${battle.gameMode?.name}**Modalità**: ${battle.gameMode?.name.replace("_", " ")}
+				${battle.arena?.name}**Arena**: ${battle.arena?.name}
+				`,
+				fields: [
+					...battle.team.slice(0, 2).map((player) => ({
+						name: `${player.name} (${player.tag})`,
+						value: template`
+						Clan: ${
+							player.clan
+								? `[${
+										player.clan?.name ?? "*Nessun Clan*"
+								  }](https://link.clashroyale.com?clashroyale://clanInfo?id=${player.clan?.tag?.slice(
+										1,
+								  )})`
+								: "*Nessun Clan*"
+						}
+						Trofei: 🏆 **${player.startingTrophies?.toLocaleString(locale) ?? 0}**
+						Elisir perso: 💧 **${player.elixirLeaked.toLocaleString(locale)}**
+						<:tower:${
+							player.princessTowersHitPoints?.[0]
+								? this.EMOJIS.princessTower
+								: this.EMOJIS.princessTowerGray
+						}> **${
+							player.princessTowersHitPoints?.[0]?.toLocaleString(locale) ?? 0
+						}**  <:king:${
+							player.kingTowerHitPoints
+								? this.EMOJIS.blueKingHappy
+								: this.EMOJIS.blueKingCry
+						}> **${
+							player.kingTowerHitPoints?.toLocaleString(locale) ?? 0
+						}**  <:tower:${
+							player.princessTowersHitPoints?.[1]
+								? this.EMOJIS.princessTower
+								: this.EMOJIS.princessTowerGray
+						}> **${
+							player.princessTowersHitPoints?.[1]?.toLocaleString(locale) ?? 0
+						}**
+						${1}${player.cards
+							.map(
+								(c) =>
+									`${c.name} (<:level:${this.EMOJIS.experienceIcon}> ${
+										c.level + (LevelOffset[toUpperCase(c.rarity)] ?? 0)
+									})`,
+							)
+							.reduce(
+								(acc, cur, i, { length }) => {
+									acc[Math.floor((2 * i) / length)]?.push(cur);
+									return acc;
+								},
+								[[], []] as string[][],
+							)
+							.map((c) => c.join(", "))
+							.join("\n")}
+						`,
+					})),
+					...battle.opponent.slice(0, 2).map((player) => ({
+						name: `${player.name} (${player.tag})`,
+						value: template`
+						Clan: ${
+							player.clan
+								? `[${
+										player.clan?.name ?? "*Nessun Clan*"
+								  }](https://link.clashroyale.com?clashroyale://clanInfo?id=${player.clan?.tag?.slice(
+										1,
+								  )})`
+								: "*Nessun Clan*"
+						}
+						Trofei: 🏆 **${player.startingTrophies?.toLocaleString(locale) ?? 0}**
+						Elisir perso: 💧 **${player.elixirLeaked.toLocaleString(locale)}**
+						<:tower:${
+							player.princessTowersHitPoints?.[0]
+								? this.EMOJIS.princessTower
+								: this.EMOJIS.princessTowerGray
+						}> **${
+							player.princessTowersHitPoints?.[0]?.toLocaleString(locale) ?? 0
+						}**  <:king:${
+							player.kingTowerHitPoints
+								? this.EMOJIS.redKingHappy
+								: this.EMOJIS.redKingCry
+						}> **${
+							player.kingTowerHitPoints?.toLocaleString(locale) ?? 0
+						}**  <:tower:${
+							player.princessTowersHitPoints?.[1]
+								? this.EMOJIS.princessTower
+								: this.EMOJIS.princessTowerGray
+						}> **${
+							player.princessTowersHitPoints?.[1]?.toLocaleString(locale) ?? 0
+						}**
+						${1}${player.cards
+							.map(
+								(c) =>
+									`${c.name} (<:level:${this.EMOJIS.experienceIcon}> ${
+										c.level + (LevelOffset[toUpperCase(c.rarity)] ?? 0)
+									})`,
+							)
+							.reduce(
+								(acc, cur, i, { length }) => {
+									acc[Math.floor((2 * i) / length)]?.push(cur);
+									return acc;
+								},
+								[[], []] as string[][],
+							)
+							.map((c) => c.join(", "))
+							.join("\n")}
+						Costo medio: **${(
+							player.cards.reduce((sum, c) => sum + (c.elixirCost ?? 0), 0) /
+							player.cards.length
+						).toLocaleString(locale, {
+							maximumFractionDigits: 1,
+						})}**💧 - [Copia](https://link.clashroyale.com?clashroyale://copyDeck?deck=${player.cards
+							.map((c) => c.id)
+							.join(";")}&l=Royals&id=${player.tag.slice(1)})
+						`,
+					})),
+				],
+				timestamp: new Date(this.parseAPIDate(battle.battleTime)).toISOString(),
+			})),
+			components: [component],
+		});
 	};
 }
