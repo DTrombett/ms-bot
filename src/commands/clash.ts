@@ -491,11 +491,9 @@ export class Clash extends Command {
 							components: [
 								{
 									type: ComponentType.TextDisplay,
-									content: `[**${
-										card.name
-									}**](https://link.clashroyale.com/?clashroyale://cardInfo?id=${
-										card.id
-									})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
+									content: `[**${card.name}**](${this.buildURL(
+										`cardInfo?id=${card.id}`,
+									)})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
 										card.maxEvolutionLevel
 											? `  <:evo:${this.EMOJIS.wildShard}> ${
 													card.evolutionLevel ?? 0
@@ -648,7 +646,7 @@ export class Clash extends Command {
 	): APIMessageTopLevelComponent[] => {
 		const { page, component } = this.pagination(
 			clan.memberList.sort(Clash.MEMBERS_ORDER[order]),
-			5,
+			10,
 			`clash-members-${id}-${clan.tag}-${order}`,
 			currentPage,
 		);
@@ -668,10 +666,8 @@ export class Clash extends Command {
 					{
 						type: ComponentType.TextDisplay,
 						content: template`
-						## [${clan.name} (${
-							clan.tag
-						})](https://link.clashroyale.com/?clashroyale://clanInfo?id=${clan.tag.slice(
-							1,
+						### [${clan.name} (${clan.tag})](${this.buildURL(
+							`clanInfo?id=${clan.tag.slice(1)}`,
 						)})
 						Trofei medi: **${Math.round(
 							clan.memberList.reduce((p, c) => p + c.trophies, 0) /
@@ -784,9 +780,7 @@ export class Clash extends Command {
 			else if (k.startsWith("AutoChess")) mergeTactics = v;
 		return {
 			title: `${escapeMarkdown(player.name)} (${player.tag})`,
-			url: `https://link.clashroyale.com?clashroyale://playerInfo?id=${player.tag.slice(
-				1,
-			)}`,
+			url: this.buildURL(`playerInfo?id=${player.tag.slice(1)}`),
 			thumbnail: player.currentFavouriteCard?.iconUrls?.medium
 				? { url: player.currentFavouriteCard.iconUrls.medium }
 				: undefined,
@@ -834,9 +828,9 @@ export class Clash extends Command {
 					name: `<:clan:${this.EMOJIS.clan}> Clan`,
 					value: player.clan
 						? template`
-							[${player.clan.name}](https://link.clashroyale.com/?clashroyale://clanInfo?id=${
+							[${player.clan.name}](${this.buildURL(`clanInfo?id=${player.clan.tag}`)}) (${
 								player.clan.tag
-						  }) (${player.clan.tag})
+						  })
 							${player.role}**Ruolo**: ${capitalize(player.role ?? "")}`
 						: "*Nessun clan*",
 				},
@@ -865,9 +859,11 @@ export class Clash extends Command {
 							) / player.currentDeck.length
 						).toLocaleString(locale, {
 							maximumFractionDigits: 1,
-						})}**💧 - [Copia](https://link.clashroyale.com?clashroyale://copyDeck?deck=${player.currentDeck
-						.map((c) => c.id)
-						.join(";")}&l=Royals&id=${player.tag.slice(1)})`,
+						})}**💧 - [Copia](${this.buildURL(
+						`copyDeck?deck=${player.currentDeck
+							.map((c) => c.id)
+							.join(";")}&l=Royals&id=${player.tag.slice(1)}`,
+					)})`,
 				},
 				{
 					name: `<:collection:${this.EMOJIS.cards}> Collezione`,
@@ -1028,9 +1024,7 @@ export class Clash extends Command {
 			embeds: [
 				{
 					title: `${clan.name} (${clan.tag})`,
-					url: `https://link.clashroyale.com?clashroyale://clanInfo?id=${clan.tag.slice(
-						1,
-					)}`,
+					url: this.buildURL(`clanInfo?id=${clan.tag.slice(1)}`),
 					color: 0x5197ed,
 					description: Clash.sanitizeDescription(clan),
 					fields: [
@@ -1084,19 +1078,15 @@ export class Clash extends Command {
 						{
 							name: "👥 Staff",
 							value: template`
-							${staff.leader.tag}Presidente: [${
-								staff.leader.name
-							}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${staff.leader.tag.slice(
-								1,
+							${staff.leader.tag}Presidente: [${staff.leader.name}](${this.buildURL(
+								`playerInfo?id=${staff.leader.tag.slice(1)}`,
 							)})
 							${staff.coLeader.length}Vicepresidenti: ${staff.coLeader
 								.slice(0, 4)
 								.map(
 									(m) =>
-										`[${
-											m.name
-										}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${m.tag.slice(
-											1,
+										`[${m.name}](${this.buildURL(
+											`playerInfo?id=${m.tag.slice(1)}`,
 										)})`,
 								)
 								.join(", ")}
@@ -1104,10 +1094,8 @@ export class Clash extends Command {
 								.slice(0, 4)
 								.map(
 									(m) =>
-										`[${
-											m.name
-										}](https://link.clashroyale.com/?clashroyale://playerInfo?id=${m.tag.slice(
-											1,
+										`[${m.name}](${this.buildURL(
+											`playerInfo?id=${m.tag.slice(1)}`,
 										)})`,
 								)
 								.join(", ")}
@@ -1852,10 +1840,8 @@ export class Clash extends Command {
 						value: template`
 						Clan: ${
 							player.clan
-								? `[${
-										player.clan?.name ?? "*Nessun Clan*"
-								  }](https://link.clashroyale.com?clashroyale://clanInfo?id=${player.clan?.tag?.slice(
-										1,
+								? `[${player.clan?.name ?? "*Nessun Clan*"}](${this.buildURL(
+										`clanInfo?id=${player.clan?.tag?.slice(1)}`,
 								  )})`
 								: "*Nessun Clan*"
 						}
@@ -1896,6 +1882,16 @@ export class Clash extends Command {
 							)
 							.map((c) => c.join(", "))
 							.join("\n")}
+						Costo medio: **${(
+							player.cards.reduce((sum, c) => sum + (c.elixirCost ?? 0), 0) /
+							player.cards.length
+						).toLocaleString(locale, {
+							maximumFractionDigits: 1,
+						})}**💧 - [Copia](${this.buildURL(
+							`copyDeck?deck=${player.cards
+								.map((c) => c.id)
+								.join(";")}&l=Royals&id=${player.tag.slice(1)}`,
+						)})
 						`,
 					})),
 					...battle.opponent.slice(0, 2).map((player) => ({
@@ -1903,10 +1899,8 @@ export class Clash extends Command {
 						value: template`
 						Clan: ${
 							player.clan
-								? `[${
-										player.clan?.name ?? "*Nessun Clan*"
-								  }](https://link.clashroyale.com?clashroyale://clanInfo?id=${player.clan?.tag?.slice(
-										1,
+								? `[${player.clan?.name ?? "*Nessun Clan*"}](${this.buildURL(
+										`clanInfo?id=${player.clan?.tag?.slice(1)}`,
 								  )})`
 								: "*Nessun Clan*"
 						}
@@ -1952,9 +1946,11 @@ export class Clash extends Command {
 							player.cards.length
 						).toLocaleString(locale, {
 							maximumFractionDigits: 1,
-						})}**💧 - [Copia](https://link.clashroyale.com?clashroyale://copyDeck?deck=${player.cards
-							.map((c) => c.id)
-							.join(";")}&l=Royals&id=${player.tag.slice(1)})
+						})}**💧 - [Copia](${this.buildURL(
+							`copyDeck?deck=${player.cards
+								.map((c) => c.id)
+								.join(";")}&l=Royals&id=${player.tag.slice(1)}`,
+						)})
 						`,
 					})),
 				],
@@ -1963,4 +1959,6 @@ export class Clash extends Command {
 			components: [component],
 		});
 	};
+	private static "buildURL" = (action: string) =>
+		`https://link.clashroyale.com?clashroyale://${action}`;
 }
