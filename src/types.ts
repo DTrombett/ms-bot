@@ -764,5 +764,61 @@ declare global {
 			kingTowerHitPoints: number;
 			princessTowersHitPoints: number[];
 		};
+		type CurrentRiverRace = {
+			state:
+				| "clanNotFound"
+				| "accessDenied"
+				| "matchmaking"
+				| "matched"
+				| "full"
+				| "ended";
+			clan: RiverRaceClan;
+			clans: RiverRaceClanList;
+			collectionEndTime: string;
+			warEndTime: string;
+			sectionIndex: number;
+			periodIndex: number;
+			periodType: "training" | "warDay" | "colosseum";
+			periodLogs: PeriodLogList;
+		};
+		type RiverRaceClan = {
+			tag: string;
+			clanScore: number;
+			badgeId: number;
+			name: string;
+			fame: number;
+			repairPoints: number;
+			finishTime: string;
+			participants: RiverRaceParticipantList;
+			periodPoints: number;
+		};
+		type RiverRaceParticipantList = RiverRaceParticipant[];
+		type RiverRaceParticipant = {
+			tag: string;
+			name: string;
+			fame: number;
+			repairPoints: number;
+			boatAttacks: number;
+			decksUsed: number;
+			decksUsedToday: number;
+		};
+		type RiverRaceClanList = RiverRaceClan[];
+		type PeriodLogList = PeriodLog[];
+		type PeriodLog = {
+			periodIndex: number;
+			items: PeriodLogEntryList;
+		};
+		type PeriodLogEntryList = PeriodLogEntry[];
+		type PeriodLogEntry = {
+			clan: PeriodLogEntryClan;
+			pointsEarned: number;
+			progressStartOfDay: number;
+			progressEndOfDay: number;
+			endOfDayRank: number;
+			progressEarned: number;
+			numOfDefensesRemaining: number;
+			progressEarnedFromDefenses: number;
+		};
+		type PeriodLogEntryClan = { tag: string };
 	}
 }
