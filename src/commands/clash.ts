@@ -673,13 +673,13 @@ export class Clash extends Command {
 							clan.memberList.reduce((p, c) => p + c.trophies, 0) /
 								clan.memberList.length,
 						).toLocaleString(locale)}**
-						Mediana: **${Math.floor(percentile(memberTrophies, 0.5)).toLocaleString(
+						Mediana: **${Math.round(percentile(memberTrophies, 0.5)).toLocaleString(
 							locale,
 						)}**
 						75° Percentile: **${Math.round(percentile(memberTrophies, 0.75)).toLocaleString(
 							locale,
 						)}**
-						Livello medio: **${Math.floor(percentile(memberLevels, 0.5)).toLocaleString(
+						Livello medio: **${Math.round(percentile(memberLevels, 0.5)).toLocaleString(
 							locale,
 						)}**
 						`,
@@ -876,7 +876,7 @@ export class Clash extends Command {
 					}> Carte: **${player.cards?.length.toLocaleString(locale)}**
 					${player.cards}<:level:${
 						this.EMOJIS.experienceIcon
-					}> Liv. medio: **${Math.floor(
+					}> Liv. medio: **${Math.round(
 						percentile(
 							player.cards
 								?.map(
@@ -1063,13 +1063,13 @@ export class Clash extends Command {
 								clan.memberList.reduce((p, c) => p + c.trophies, 0) /
 									clan.memberList.length,
 							).toLocaleString(locale)}**
-							Mediana: **${Math.floor(percentile(memberTrophies, 0.5)).toLocaleString(
+							Mediana: **${Math.round(percentile(memberTrophies, 0.5)).toLocaleString(
 								locale,
 							)}**
 							75° Percentile: **${Math.round(percentile(memberTrophies, 0.75)).toLocaleString(
 								locale,
 							)}**
-							Livello medio: **${Math.floor(percentile(memberLevels, 0.5)).toLocaleString(
+							Livello medio: **${Math.round(percentile(memberLevels, 0.5)).toLocaleString(
 								locale,
 							)}**
 							`,
@@ -1205,7 +1205,7 @@ export class Clash extends Command {
 			});
 		components[0]!.components.push({
 			type: ComponentType.Button,
-			custom_id: `clash-log--${player.tag}`,
+			custom_id: `clash-log-${userId}-${player.tag}`,
 			label: "Battaglie",
 			emoji: { name: "📜" },
 			style: ButtonStyle.Primary,
@@ -1769,12 +1769,17 @@ export class Clash extends Command {
 			});
 	};
 	static "playerComponent" = async (
-		{ defer, edit }: ComponentReplies,
-		{ user: { id }, interaction: { data, locale }, args: [tag] }: ComponentArgs,
+		{ defer, edit, deferUpdate }: ComponentReplies,
+		{
+			user: { id },
+			interaction: { data, locale },
+			args: [tag, updateFlag],
+		}: ComponentArgs,
 	) => {
 		if (data.component_type === ComponentType.StringSelect) [tag] = data.values;
 		ok(tag);
-		defer({ flags: MessageFlags.Ephemeral });
+		if (updateFlag) deferUpdate();
+		else defer({ flags: MessageFlags.Ephemeral });
 		const [player, playerId] = await Promise.all([
 			this.getPlayer(tag, edit),
 			env.DB.prepare("SELECT id FROM Users WHERE clashTag = ?")
@@ -1956,7 +1961,21 @@ export class Clash extends Command {
 				],
 				timestamp: new Date(this.parseAPIDate(battle.battleTime)).toISOString(),
 			})),
-			components: [component],
+			components: [
+				component,
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: `clash-player-${id}-${tag}-1`,
+							style: ButtonStyle.Primary,
+							label: "Profilo",
+							emoji: { name: "👤" },
+						},
+					],
+				},
+			],
 		});
 	};
 	private static "buildURL" = (action: string) =>

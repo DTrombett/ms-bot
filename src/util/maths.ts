@@ -8,7 +8,7 @@ export const percentile = (
 
 	return (
 		values[lower]! +
-		Math.abs(values[Math.ceil(rank)]! - values[lower]!) *
+		(values[Math.ceil(rank)]! - values[lower]!) *
 			(int ? Math.round(rank - lower) : rank - lower)
 	);
 };
