@@ -17,6 +17,7 @@ import {
 } from "discord-api-types/v10";
 import { NotificationType } from "../ClashNotifications.ts";
 import Command from "../Command.ts";
+import { bitSetMap } from "../util/bitSets.ts";
 import capitalize from "../util/capitalize.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
 import { percentile } from "../util/maths.ts";
@@ -140,6 +141,9 @@ export class Clash extends Command {
 		redKingHappy: "1443671298944401519",
 		princessTower: "1443674549290926131",
 		princessTowerGray: "1443676355773337690",
+		heroBox: "1445138667273195663",
+		wildShardGray: "1445144897739952168",
+		heroBoxGray: "1445144557724504176",
 	};
 	private static readonly "CARDS_ORDER" = {
 		Nome: (a, b) => a.name.localeCompare(b.name),
@@ -423,11 +427,17 @@ export class Clash extends Command {
 						locale,
 					)}**
 					💧 Costo elisir: **${card.elixirCost ?? "N/A"}**
-					<:evo:${this.EMOJIS.wildShard}> Evoluzione: **${
-						card.maxEvolutionLevel
-							? `${card.evolutionLevel ?? 0}/${card.maxEvolutionLevel}`
-							: "N/A"
-					}**
+					${1}${bitSetMap(
+						card.maxEvolutionLevel ?? 0,
+						(evo) =>
+							`<:evo:${this.EMOJIS.wildShard}> Evoluzione: **${
+								evo ? ((card.evolutionLevel ?? 0) & 1 ? "Sì" : "No") : "N/A"
+							}**`,
+						(hero) =>
+							`<:hero:${this.EMOJIS.heroBox}> Eroe: **${
+								hero ? ((card.evolutionLevel ?? 0) & 2 ? "Sì" : "No") : "N/A"
+							}**`,
+					).join("\n")}
 					`,
 				},
 				{
@@ -493,19 +503,29 @@ export class Clash extends Command {
 									type: ComponentType.TextDisplay,
 									content: `[**${card.name}**](${this.buildURL(
 										`cardInfo?id=${card.id}`,
-									)})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
-										card.maxEvolutionLevel
-											? `  <:evo:${this.EMOJIS.wildShard}> ${
-													card.evolutionLevel ?? 0
-											  }/${card.maxEvolutionLevel}`
-											: ""
-									}${
+									)})${card.elixirCost ? ` 💧${card.elixirCost}` : ""} ${
 										card.starLevel
 											? `  <:starlevel:${this.EMOJIS.starLevel}> ${card.starLevel}`
 											: ""
-									}\n${ResolvedCardRarity[toUpperCase(card.rarity)]}  <:level:${
-										this.EMOJIS.experienceIcon
-									}> ${
+									} ${bitSetMap(
+										card.maxEvolutionLevel ?? 0,
+										(evo) =>
+											evo
+												? (card.evolutionLevel ?? 0) & 1
+													? `<:evo:${this.EMOJIS.wildShard}>`
+													: `<:evo:${this.EMOJIS.wildShardGray}>`
+												: "",
+										(hero) =>
+											hero
+												? (card.evolutionLevel ?? 0) & 2
+													? `<:hero:${this.EMOJIS.heroBox}>`
+													: `<:hero:${this.EMOJIS.heroBoxGray}>`
+												: "",
+									)
+										.filter(Boolean)
+										.join(" ")}\n${
+										ResolvedCardRarity[toUpperCase(card.rarity)]
+									}  <:level:${this.EMOJIS.experienceIcon}> ${
 										card.level + (LevelOffset[toUpperCase(card.rarity)] ?? 0)
 									}  <:cards:${this.EMOJIS.cards}> ${card.count}`,
 								},
