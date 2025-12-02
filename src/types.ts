@@ -37,6 +37,10 @@ declare global {
 	interface ObjectConstructor {
 		keys<T extends object>(o: T): (keyof T)[];
 	}
+	type Falsy = false | "" | 0 | 0n | null | undefined;
+
+	type Booleaned<T> = Exclude<T, Falsy>;
+
 	type Awaitable<T> = Promise<T> | T;
 
 	type RecursiveReadonly<T> = {

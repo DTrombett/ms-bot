@@ -526,16 +526,14 @@ export class Clash extends Command {
 												? (card.evolutionLevel ?? 0) & 1
 													? `<:evo:${this.EMOJIS.wildShard}>`
 													: `<:evo:${this.EMOJIS.wildShardGray}>`
-												: "",
+												: null,
 										(hero) =>
 											hero
 												? (card.evolutionLevel ?? 0) & 2
 													? `<:hero:${this.EMOJIS.heroBox}>`
 													: `<:hero:${this.EMOJIS.heroBoxGray}>`
-												: "",
-									)
-										.filter(Boolean)
-										.join(" ")}\n${
+												: null,
+									).join(" ")}\n${
 										ResolvedCardRarity[toUpperCase(card.rarity)]
 									}  <:level:${this.EMOJIS.experienceIcon}> ${
 										card.level + (LevelOffset[toUpperCase(card.rarity)] ?? 0)
