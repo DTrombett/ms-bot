@@ -240,6 +240,12 @@ export class Clash extends Command {
 									"Il tag giocatore (es. #22RJCYLUY). Di default viene usato quello salvato",
 								type: ApplicationCommandOptionType.String,
 							},
+							{
+								name: "user",
+								description:
+									"L'utente Discord se non si sa il tag (deve aver salvato il tag).",
+								type: ApplicationCommandOptionType.User,
+							},
 						],
 					},
 					{
@@ -253,6 +259,12 @@ export class Clash extends Command {
 								description:
 									"Il tag giocatore (es. #22RJCYLUY). Di default viene usato quello salvato",
 								type: ApplicationCommandOptionType.String,
+							},
+							{
+								name: "user",
+								description:
+									"L'utente Discord se non si sa il tag (deve aver salvato il tag).",
+								type: ApplicationCommandOptionType.User,
 							},
 							{
 								name: "order",
@@ -503,11 +515,11 @@ export class Clash extends Command {
 									type: ComponentType.TextDisplay,
 									content: `[**${card.name}**](${this.buildURL(
 										`cardInfo?id=${card.id}`,
-									)})${card.elixirCost ? ` 💧${card.elixirCost}` : ""} ${
+									)})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
 										card.starLevel
-											? `  <:starlevel:${this.EMOJIS.starLevel}> ${card.starLevel}`
+											? ` <:starlevel:${this.EMOJIS.starLevel}> ${card.starLevel}`
 											: ""
-									} ${bitSetMap(
+									}  ${bitSetMap(
 										card.maxEvolutionLevel ?? 0,
 										(evo) =>
 											evo
@@ -1360,10 +1372,11 @@ export class Clash extends Command {
 			},
 		}: ChatInputArgs<typeof Clash.chatInputData, `${"player"} ${string}`>,
 	) => {
-		const userId = options.tag ? undefined : id;
+		const userId = options.tag ? undefined : options.user ?? id;
+
 		options.tag ??=
 			(await env.DB.prepare("SELECT clashTag FROM Users WHERE id = ?")
-				.bind(id)
+				.bind(userId)
 				.first("clashTag")) ?? undefined;
 		if (!options.tag)
 			return reply({
@@ -1380,7 +1393,6 @@ export class Clash extends Command {
 			});
 		}
 		defer();
-
 		if (subcommand === "player view") {
 			const [player, playerId] = await Promise.all([
 				this.getPlayer(options.tag, edit),
@@ -1397,7 +1409,7 @@ export class Clash extends Command {
 					locale,
 					playerId ?? undefined,
 					commandId,
-					userId ? false : playerId !== id,
+					userId ? (playerId === id ? false : undefined) : playerId !== id,
 				),
 			);
 		}
