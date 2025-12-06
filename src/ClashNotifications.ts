@@ -251,7 +251,7 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 		components: APIMessageTopLevelComponent[],
 		player: Pick<Clash.Player, "name">,
 	) {
-		await rest.post(Routes.channelMessages(this.env.BRAWL_STARS_CHANNEL), {
+		await rest.post(Routes.channelMessages(this.env.CLASH_ROYALE_CHANNEL), {
 			body: {
 				flags: MessageFlags.IsComponentsV2,
 				components: [
