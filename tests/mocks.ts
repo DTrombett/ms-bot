@@ -74,7 +74,7 @@ export const KV: KVNamespace & { data: NodeJS.Dict<string> } = {
 	list: async (options) => ({
 		cacheStatus: null,
 		cursor: "",
-		keys: Object.keys(KV.data)
+		keys: Object.keys<Record<string, string | undefined>>(KV.data)
 			.filter((k) => !options?.prefix || k.startsWith(options.prefix))
 			.slice(0, options?.limit ?? 100)
 			.map((k) => ({ name: k })),
@@ -102,6 +102,12 @@ const additionalEnv: Omit<Filter<Env, object>, keyof Filter<Env, Workflow>> = {
 			throw new Error("Not implemented");
 		},
 	},
+	CLASH_ROYALE: {
+		fetch: fetch as unknown as Fetcher["fetch"],
+		connect: () => {
+			throw new Error("Not implemented");
+		},
+	},
 };
 export const env = { ...parsedEnv, ...additionalEnv } as Env;
 export const agent = new MockAgent().enableCallHistory();
@@ -123,6 +129,7 @@ class WorkflowBase implements Workflow {
 				waitUntil: () => {},
 				passThroughOnException: () => {},
 				props: {},
+				exports: {},
 			},
 			env,
 		);
@@ -176,17 +183,14 @@ registerHooks({
 			? {
 					url: pathToFileURL("./tests/empty.js").href,
 					shortCircuit: true,
-				}
+			  }
 			: nextResolve(specifier, context),
 });
 mock.module("cloudflare:workers", {
 	namedExports: {
 		env,
 		WorkflowEntrypoint: class {
-			constructor(
-				protected ctx: ExecutionContext,
-				protected env: Env,
-			) {}
+			constructor(protected ctx: ExecutionContext, protected env: Env) {}
 		},
 		waitUntil: () => {},
 	},
@@ -205,6 +209,9 @@ setGlobalDispatcher(agent);
 export const brawlNotificationsWorkflow = new WorkflowBase(
 	(await import("../src/BrawlNotifications.ts")).BrawlNotifications,
 );
+export const clashNotificationsWorkflow = new WorkflowBase(
+	(await import("../src/ClashNotifications.ts")).ClashNotifications,
+);
 export const predictionsWorkflow = new WorkflowBase(
 	(await import("../src/PredictionsReminders.ts")).PredictionsReminders,
 );
@@ -218,6 +225,7 @@ const shortenWorkflow = new WorkflowBase(
 	(await import("../src/Shorten.ts")).Shorten,
 );
 env.BRAWL_NOTIFICATIONS = brawlNotificationsWorkflow;
+env.CLASH_NOTIFICATIONS = clashNotificationsWorkflow;
 env.PREDICTIONS_REMINDERS = predictionsWorkflow;
 env.LIVE_SCORE = liveScoreWorkflow;
 env.REMINDER = reminderWorkflow;

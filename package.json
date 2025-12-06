@@ -16,7 +16,7 @@
 		"url": "https://github.com/DTrombett/ms-bot/issues"
 	},
 	"scripts": {
-		"dev": "concurrently \"wrangler dev --test-scheduled\" \"cloudflared tunnel --url localhost:8787\"",
+		"dev": "wrangler dev --test-scheduled",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
 		"publish": "wrangler deploy",
 		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src && node --test --experimental-transform-types --experimental-test-module-mocks"
@@ -24,7 +24,7 @@
 	"dependencies": {
 		"@discordjs/rest": "^2.6.0",
 		"cloudflare": "^5.2.0",
-		"discord-api-types": "^0.38.34",
+		"discord-api-types": "^0.38.36",
 		"socket.io-client": "^4.8.1"
 	},
 	"devDependencies": {
@@ -32,12 +32,10 @@
 		"@tsconfig/recommended": "^1.0.13",
 		"@tsconfig/strictest": "^2.0.8",
 		"@types/node": "^24.10.1",
-		"cloudflared": "^0.7.1",
-		"concurrently": "^9.2.1",
 		"eslint": "^9.39.1",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.47.0",
+		"typescript-eslint": "^8.48.1",
 		"undici": "^7.16.0",
-		"wrangler": "^4.49.1"
+		"wrangler": "^4.53.0"
 	}
 }

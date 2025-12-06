@@ -46,7 +46,12 @@ await suite("Scheduled tests", async () => {
 			await server.scheduled!(
 				{ cron: "*/5 * * * *", scheduledTime: Date.now(), noRetry: noop },
 				env,
-				{ props: null, passThroughOnException: noop, waitUntil: noop },
+				{
+					props: null,
+					passThroughOnException: noop,
+					waitUntil: noop,
+					exports: {},
+				},
 			);
 			await brawlNotificationsWorkflow.instances.at(-1)?.promise;
 			strictEqual(agent.getCallHistory()?.calls().length, 1);
@@ -77,7 +82,12 @@ await suite("Scheduled tests", async () => {
 			await server.scheduled!(
 				{ cron: "*/5 * * * *", scheduledTime: Date.now(), noRetry: noop },
 				env,
-				{ props: null, passThroughOnException: noop, waitUntil: noop },
+				{
+					props: null,
+					passThroughOnException: noop,
+					waitUntil: noop,
+					exports: {},
+				},
 			);
 			await brawlNotificationsWorkflow.instances.at(-1)?.promise;
 			const calls = agent.getCallHistory()?.calls();

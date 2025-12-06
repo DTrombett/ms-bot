@@ -17,7 +17,9 @@ export const formatTime = (ms: number): string => {
 		.toString()
 		.padStart(2, "0")}.${(ms % TimeUnit.Second).toString().padStart(3, "0")}`;
 
-	return `${sign}${hours > 0 ? `${hours.toString().padStart(2, "0")}:` : ""}${last}`;
+	return `${sign}${
+		hours > 0 ? `${hours.toString().padStart(2, "0")}:` : ""
+	}${last}`;
 };
 
 const formatTimeString = (
@@ -56,6 +58,14 @@ export const formatLongTime = (ms: number): string =>
 	]
 		.filter(Boolean)
 		.join(", ") || "0 secondi";
+export const formatShortTime = (ms: number): string =>
+	formatTimeString(Math.floor(ms / TimeUnit.Year), "anno", "anni") ||
+	formatTimeString(Math.floor(ms / TimeUnit.Month), "mese", "mesi") ||
+	formatTimeString(Math.floor(ms / TimeUnit.Day), "giorno", "giorni") ||
+	formatTimeString(Math.floor(ms / TimeUnit.Hour), "ora", "ore") ||
+	formatTimeString(Math.floor(ms / TimeUnit.Minute), "minuto", "minuti") ||
+	formatTimeString(Math.floor(ms / TimeUnit.Second), "secondo", "secondi") ||
+	"0 secondi";
 
 export const idDiff = (id1: string, id2: string): number =>
 	Number((BigInt(id1) >> 22n) - (BigInt(id2) >> 22n));

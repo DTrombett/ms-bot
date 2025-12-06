@@ -3,6 +3,7 @@ export * from "./bann.ts";
 export * from "./banner.ts";
 export * from "./brawl.ts";
 export * from "./cat.ts";
+export * from "./clash.ts";
 export * from "./color.ts";
 export * from "./dev.ts";
 export * from "./dice.ts";

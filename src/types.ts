@@ -34,6 +34,13 @@ import type { CommandHandler } from "./util/CommandHandler.ts";
 import type { MatchStatus } from "./util/Constants.ts";
 
 declare global {
+	interface ObjectConstructor {
+		keys<T extends object>(o: T): (keyof T)[];
+	}
+	type Falsy = false | "" | 0 | 0n | null | undefined;
+
+	type Booleaned<T> = Exclude<T, Falsy>;
+
 	type Awaitable<T> = Promise<T> | T;
 
 	type RecursiveReadonly<T> = {
@@ -50,8 +57,7 @@ declare global {
 	> = I extends APIInteraction & { type: T } ? I : never;
 	type CommandInteractionByType<
 		T extends ApplicationCommandType,
-		I extends
-			InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>,
+		I extends InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>,
 	> = I extends InteractionByType<InteractionType.ApplicationCommand> & {
 		data: { type: T };
 	}
@@ -268,6 +274,11 @@ declare global {
 		brawlNotifications: number;
 		brawlTrophies?: number | null;
 		brawlers?: string | null;
+		clashTag?: string;
+		clashNotifications: number;
+		arena?: number | null;
+		league?: number | null;
+		cards?: string | null;
 	};
 	type Reminder = {
 		id: string;
@@ -284,15 +295,14 @@ declare global {
 	};
 
 	type ExtractOptionType<
-		T extends
-			RecursiveReadonly<APIApplicationCommandOption> = APIApplicationCommandOption,
+		T extends RecursiveReadonly<APIApplicationCommandOption> = APIApplicationCommandOption,
 	> = T extends {
 		choices: { value: infer V }[];
 	}
 		? V
 		: (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
 				type: T["type"];
-			})["value"];
+		  })["value"];
 	type ResolvedOptions<
 		T extends RecursiveReadonly<
 			| APIApplicationCommandSubcommandGroupOption
@@ -303,30 +313,29 @@ declare global {
 		? CreateObject<
 				NonNullable<T["options"]>,
 				undefined extends S ? T["name"] : `${S} ${T["name"]}`
-			>
+		  >
 		: never;
 	type CreateObject<
 		T extends RecursiveReadonly<APIApplicationCommandOption[]>,
 		S extends string | undefined = undefined,
 		R extends boolean = true,
-	> =
-		T extends RecursiveReadonly<
-			(
-				| APIApplicationCommandSubcommandGroupOption
-				| APIApplicationCommandSubcommandOption
-			)[]
-		>
-			? ResolvedOptions<T[number], S>
-			: {
-					subcommand: S;
-					options: {
-						[P in T[number] as P["name"]]: R extends true
-							? P["required"] extends true
-								? ExtractOptionType<P>
-								: ExtractOptionType<P> | undefined
-							: ExtractOptionType<P> | undefined;
-					};
+	> = T extends RecursiveReadonly<
+		(
+			| APIApplicationCommandSubcommandGroupOption
+			| APIApplicationCommandSubcommandOption
+		)[]
+	>
+		? ResolvedOptions<T[number], S>
+		: {
+				subcommand: S;
+				options: {
+					[P in T[number] as P["name"]]: R extends true
+						? P["required"] extends true
+							? ExtractOptionType<P>
+							: ExtractOptionType<P> | undefined
+						: ExtractOptionType<P> | undefined;
 				};
+		  };
 	type ParseOptions<
 		T extends
 			| RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody>
@@ -336,7 +345,7 @@ declare global {
 		? {
 				subcommand?: string;
 				options: Record<string, ExtractOptionType | undefined>;
-			}
+		  }
 		: CreateObject<NonNullable<NonNullable<T>["options"]>, undefined, R>;
 
 	type Reply<T extends InteractionResponseType> = (
@@ -370,8 +379,7 @@ declare global {
 		BaseReplies;
 
 	type ChatInputArgs<
-		A extends
-			RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
+		A extends RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
 		B extends string | undefined = string | undefined,
 	> = BaseArgs<APIChatInputApplicationCommandInteraction> &
 		ParseOptions<A> & {
@@ -381,8 +389,7 @@ declare global {
 	type AutoCompleteReplies = Pick<Replies, "autocomplete">;
 
 	type AutoCompleteArgs<
-		A extends
-			RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
+		A extends RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
 	> = BaseArgs<APIApplicationCommandAutocompleteInteraction> & ParseOptions<A>;
 
 	type ComponentReplies = Pick<
@@ -451,22 +458,22 @@ declare global {
 
 	namespace Brawl {
 		type Player = {
-			club: PlayerClub;
-			isQualifiedFromChampionshipChallenge: boolean;
+			"club": PlayerClub;
+			"isQualifiedFromChampionshipChallenge": boolean;
 			"3vs3Victories": number;
-			icon: PlayerIcon;
-			tag: string;
-			name: string;
-			trophies: number;
-			expLevel: number;
-			expPoints: number;
-			highestTrophies: number;
-			soloVictories: number;
-			duoVictories: number;
-			bestRoboRumbleTime: number;
-			bestTimeAsBigBrawler: number;
-			brawlers: BrawlerStatList;
-			nameColor: string;
+			"icon": PlayerIcon;
+			"tag": string;
+			"name": string;
+			"trophies": number;
+			"expLevel": number;
+			"expPoints": number;
+			"highestTrophies": number;
+			"soloVictories": number;
+			"duoVictories": number;
+			"bestRoboRumbleTime": number;
+			"bestTimeAsBigBrawler": number;
+			"brawlers": BrawlerStatList;
+			"nameColor": string;
 		};
 		type PlayerClub = { tag: string; name: string };
 		type PlayerIcon = { id: number };
@@ -525,5 +532,300 @@ declare global {
 				| "senior";
 			nameColor: string;
 		};
+	}
+	namespace Clash {
+		type Player = {
+			clan: PlayerClan;
+			legacyTrophyRoadHighScore?: number;
+			currentDeck: PlayerItemLevelList;
+			currentDeckSupportCards: PlayerItemLevelList;
+			arena: Arena;
+			role?: "notMember" | "member" | "leader" | "admin" | "coleader";
+			wins?: number;
+			losses?: number;
+			totalDonations?: number;
+			leagueStatistics: PlayerLeagueStatistics;
+			cards: PlayerItemLevelList;
+			supportCards?: PlayerItemLevelList;
+			currentFavouriteCard?: Item;
+			badges?: PlayerAchievementBadgeList;
+			tag: string;
+			name: string;
+			expLevel: number;
+			trophies: number;
+			bestTrophies: number;
+			donations?: number;
+			donationsReceived?: number;
+			achievements?: PlayerAchievementProgressList;
+			battleCount?: number;
+			threeCrownWins?: number;
+			challengeCardsWon?: number;
+			challengeMaxWins?: number;
+			tournamentCardsWon?: number;
+			tournamentBattleCount?: number;
+			warDayWins: number;
+			clanCardsCollected: number;
+			starPoints?: number;
+			expPoints?: number;
+			totalExpPoints: number;
+			currentPathOfLegendSeasonResult?: PathOfLegendSeasonResult;
+			lastPathOfLegendSeasonResult?: PathOfLegendSeasonResult;
+			bestPathOfLegendSeasonResult?: PathOfLegendSeasonResult;
+			progress: Record<
+				string,
+				{ arena: Arena; trophies: number; bestTrophies: number }
+			>;
+		};
+		type PlayerClan = {
+			badgeId: number;
+			tag: string;
+			name: string;
+		};
+		type PlayerItemLevelList = PlayerItemLevel[];
+		type PlayerItemLevel = {
+			id: number;
+			rarity: "common" | "rare" | "epic" | "legendary" | "champion";
+			count: number;
+			level: number;
+			starLevel?: number;
+			evolutionLevel?: number;
+			used: boolean;
+			name: JsonLocalizedName;
+			maxLevel: number;
+			elixirCost?: number;
+			maxEvolutionLevel?: number;
+			iconUrls?: {
+				medium?: string;
+				evolutionMedium?: string;
+				heroMedium?: string;
+			};
+		};
+		type JsonLocalizedName = string;
+		type Arena = {
+			name: JsonLocalizedName;
+			id: number;
+			iconUrls?: unknown;
+		};
+		type PlayerLeagueStatistics = {
+			previousSeason: LeagueSeasonResult;
+			bestSeason: LeagueSeasonResult;
+			currentSeason: LeagueSeasonResult;
+		};
+		type LeagueSeasonResult = {
+			trophies: number;
+			rank: number;
+			bestTrophies: number;
+			id: string;
+		};
+		type Item = {
+			iconUrls?: { medium?: string; evolutionMedium?: string };
+			name: JsonLocalizedName;
+			id: number;
+			rarity: "common" | "rare" | "epic" | "legendary" | "champion";
+			maxLevel: number;
+			elixirCost: number;
+			maxEvolutionLevel: number;
+		};
+		type PlayerAchievementBadgeList = PlayerAchievementBadge[];
+		type PlayerAchievementBadge = {
+			iconUrls: { large?: string };
+			maxLevel?: number;
+			progress?: number;
+			level?: number;
+			target?: number;
+			name: string;
+		};
+		type PlayerAchievementProgressList = PlayerAchievementProgress[];
+		type PlayerAchievementProgress = {
+			stars: number;
+			value: number;
+			name: JsonLocalizedName;
+			target: number;
+			info: JsonLocalizedName;
+			completionInfo: JsonLocalizedName;
+		};
+		type PathOfLegendSeasonResult = {
+			trophies: number;
+			rank?: number;
+			leagueNumber: number;
+		};
+		type Clan = {
+			memberList: ClanMemberList;
+			tag: string;
+			donationsPerWeek?: number;
+			clanChestMaxLevel: number;
+			clanChestStatus: "inactive" | "active" | "completed" | "unknown";
+			clanChestLevel: number;
+			clanWarTrophies?: number;
+			requiredTrophies?: number;
+			badgeId: number;
+			clanScore?: number;
+			name: string;
+			location?: Location;
+			type?: "open" | "closed" | "inviteOnly";
+			members: number;
+			description: string;
+			clanChestPoints: number;
+			badgeUrls?: unknown;
+		};
+		type ClanMemberList = ClanMember[];
+		type ClanMember = {
+			clanChestPoints: number;
+			arena: Arena;
+			lastSeen: string;
+			tag: string;
+			name: string;
+			role: "notMember" | "member" | "leader" | "admin" | "coleader" | "elder";
+			expLevel: number;
+			trophies: number;
+			clanRank: number;
+			previousClanRank: number;
+			donations: number;
+			donationsReceived: number;
+		};
+		type Location = {
+			localizedName?: string;
+			id: number;
+			name: string;
+			isCountry: boolean;
+			countryCode: string;
+		};
+		type BattleList = Battle[];
+		type Battle = {
+			gameMode?: GameMode;
+			arena?: Arena;
+			type:
+				| "pvp"
+				| "pve"
+				| "clanmate"
+				| "tournament"
+				| "friendly"
+				| "survival"
+				| "pvp2v2"
+				| "clanmate2v2"
+				| "challenge2v2"
+				| "clanwarCollectionDay"
+				| "clanwarWarDay"
+				| "casual1v1"
+				| "casual2v2"
+				| "boatBattle"
+				| "boatBattlePractice"
+				| "riverRacePvp"
+				| "riverRaceDuel"
+				| "riverRaceDuelColosseum"
+				| "tutorial"
+				| "pathOfLegend"
+				| "seasonalBattle"
+				| "practice"
+				| "trail"
+				| "unknown";
+			deckSelection:
+				| "collection"
+				| "draft"
+				| "draftCompetitive"
+				| "predefined"
+				| "eventDeck"
+				| "pick"
+				| "wardeckPick"
+				| "quaddeckPick"
+				| "unknown";
+			team: PlayerBattleDataList;
+			opponent: PlayerBattleDataList;
+			challengeWinCountBefore: number;
+			boatBattleSide: string;
+			boatBattleWon: boolean;
+			newTowersDestroyed: number;
+			prevTowersDestroyed: number;
+			remainingTowers: number;
+			leagueNumber: number;
+			battleTime: string;
+			challengeId: number;
+			tournamentTag: string;
+			challengeTitle: string;
+			isLadderTournament: boolean;
+			isHostedMatch: boolean;
+			eventTag: string;
+		};
+		type GameMode = { id: number; name: string };
+		type PlayerBattleDataList = PlayerBattleData[];
+		type PlayerBattleData = {
+			clan?: PlayerClan;
+			cards: PlayerItemLevelList;
+			supportCards?: PlayerItemLevelList;
+			rounds: PlayerBattleRoundList;
+			crowns: number;
+			princessTowersHitPoints?: number[];
+			elixirLeaked: number;
+			globalRank: number;
+			tag: string;
+			name: string;
+			startingTrophies?: number;
+			trophyChange: number;
+			kingTowerHitPoints: number;
+		};
+		type PlayerBattleRoundList = PlayerBattleRound[];
+		type PlayerBattleRound = {
+			cards: PlayerItemLevelList;
+			elixirLeaked: number;
+			crowns: number;
+			kingTowerHitPoints: number;
+			princessTowersHitPoints: number[];
+		};
+		type CurrentRiverRace = {
+			state:
+				| "clanNotFound"
+				| "accessDenied"
+				| "matchmaking"
+				| "matched"
+				| "full"
+				| "ended";
+			clan: RiverRaceClan;
+			clans: RiverRaceClanList;
+			collectionEndTime: string;
+			warEndTime: string;
+			sectionIndex: number;
+			periodIndex: number;
+			periodType: "training" | "warDay" | "colosseum";
+			periodLogs: PeriodLogList;
+		};
+		type RiverRaceClan = {
+			tag: string;
+			clanScore: number;
+			badgeId: number;
+			name: string;
+			fame: number;
+			repairPoints: number;
+			finishTime: string;
+			participants: RiverRaceParticipantList;
+			periodPoints: number;
+		};
+		type RiverRaceParticipantList = RiverRaceParticipant[];
+		type RiverRaceParticipant = {
+			tag: string;
+			name: string;
+			fame: number;
+			repairPoints: number;
+			boatAttacks: number;
+			decksUsed: number;
+			decksUsedToday: number;
+		};
+		type RiverRaceClanList = RiverRaceClan[];
+		type PeriodLogList = PeriodLog[];
+		type PeriodLog = {
+			periodIndex: number;
+			items: PeriodLogEntryList;
+		};
+		type PeriodLogEntryList = PeriodLogEntry[];
+		type PeriodLogEntry = {
+			clan: PeriodLogEntryClan;
+			pointsEarned: number;
+			progressStartOfDay: number;
+			progressEndOfDay: number;
+			endOfDayRank: number;
+			progressEarned: number;
+			numOfDefensesRemaining: number;
+			progressEarnedFromDefenses: number;
+		};
+		type PeriodLogEntryClan = { tag: string };
 	}
 }

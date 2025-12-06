@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
-import type { UserResult } from "./BrawlNotifications.ts";
+import type { UserResult as BrawlUserResult } from "./BrawlNotifications.ts";
+import type { UserResult as ClashUserResult } from "./ClashNotifications.ts";
 import * as commands from "./commands/index.ts";
 import { CommandHandler } from "./util/CommandHandler.ts";
 import { createSolidPng } from "./util/createSolidPng.ts";
@@ -52,25 +53,51 @@ const server: ExportedHandler<Env> = {
 					brawlTag,
 					brawlNotifications,
 					brawlTrophies,
-					brawlers
+					brawlers,
+					clashTag,
+					clashNotifications,
+					cards,
+					arena,
+					league
 				FROM Users
-				WHERE brawlTag IS NOT NULL
-					AND brawlNotifications != 0`,
-			).all<UserResult>();
-			const usersChunks = results.reduce((arr, v, i) => {
-				if (i % 16 === 0) arr.push([]);
-				arr.at(-1)!.push(v);
-				return arr;
-			}, [] as UserResult[][]);
+				WHERE (
+						brawlTag IS NOT NULL
+						AND brawlNotifications != 0
+					)
+					OR (
+						clashTag IS NOT NULL
+						AND clashNotifications != 0
+					)`,
+			).all<BrawlUserResult & ClashUserResult>();
 
-			await env.BRAWL_NOTIFICATIONS.createBatch(
-				usersChunks.map((users) => ({ params: { users } })),
-			);
+			await Promise.all([
+				env.BRAWL_NOTIFICATIONS.createBatch(
+					results
+						.reduce((arr, v) => {
+							if (!v.brawlTag || !v.brawlNotifications) return arr;
+							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+							arr.at(-1)!.push(v);
+							return arr;
+						}, [] as BrawlUserResult[][])
+						.map((users) => ({ params: { users } })),
+				),
+				env.CLASH_NOTIFICATIONS.createBatch(
+					results
+						.reduce((arr, v) => {
+							if (!v.clashTag || !v.clashNotifications) return arr;
+							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+							arr.at(-1)!.push(v);
+							return arr;
+						}, [] as ClashUserResult[][])
+						.map((users) => ({ params: { users } })),
+				),
+			]);
 		}
 	},
 };
 
 export { BrawlNotifications } from "./BrawlNotifications.ts";
+export { ClashNotifications } from "./ClashNotifications.ts";
 export { LiveScore } from "./LiveScore.ts";
 export { PredictionsReminders } from "./PredictionsReminders.ts";
 export { Reminder } from "./Reminder.ts";

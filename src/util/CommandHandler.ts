@@ -55,8 +55,8 @@ export class CommandHandler {
 				interaction.data.type === ApplicationCommandType.ChatInput
 					? "chatInput"
 					: interaction.data.type === ApplicationCommandType.User
-						? "user"
-						: "message",
+					? "user"
+					: "message",
 		},
 		[InteractionType.MessageComponent]: {
 			findCommand: (interaction) => {
@@ -95,9 +95,13 @@ export class CommandHandler {
 		if (
 			!signature ||
 			!timestamp ||
-			Date.now() - +timestamp * TimeUnit.Second > 10 * TimeUnit.Second
-		)
+			Date.now() - +timestamp * TimeUnit.Second > 20 * TimeUnit.Second
+		) {
+			console.log(
+				`Timestamp too old: ${Date.now() - +timestamp! * TimeUnit.Second}`,
+			);
 			throw new Response(null, { status: 401 });
+		}
 		const body = await request.text();
 
 		if (
@@ -109,6 +113,7 @@ export class CommandHandler {
 			)
 		)
 			return JSON.parse(body) as APIInteraction;
+		console.log("Invalid signature");
 		throw new Response(null, { status: 401 });
 	}
 
@@ -127,7 +132,13 @@ export class CommandHandler {
 		if (Command.private && !env.OWNER_ID.includes(user.id))
 			return new Response(null, { status: 403 });
 		console.log(
-			`Interaction type: ${InteractionType[interaction.type]}, command: ${"name" in interaction.data ? interaction.data.name : interaction.data.custom_id}, user: ${user.username} (${user.id}), channel: ${interaction.channel?.name} (${interaction.channel?.id})`,
+			`Interaction type: ${InteractionType[interaction.type]}, command: ${
+				"name" in interaction.data
+					? interaction.data.name
+					: interaction.data.custom_id
+			}, user: ${user.username} (${user.id}), channel: ${
+				interaction.channel?.name
+			} (${interaction.channel?.id})`,
 		);
 		const { promise, resolve } =
 			Promise.withResolvers<APIInteractionResponse>();
@@ -201,28 +212,30 @@ export class CommandHandler {
 					) as never
 				];
 		waitUntil(
-			runner.call(
-				Command,
-				{
-					...Object.fromEntries<Reply<InteractionResponseType>>(
-						CommandHandler.replies.map(([key, type]) => [
-							key,
-							(data) => resolve({ type, data } as never),
-						]),
-					),
-					edit: (body) =>
-						rest.patch(args.fullRoute, { body }).catch(console.error),
-					delete: () => rest.delete(args.fullRoute).catch(console.error),
-					followup: (body) =>
-						rest
-							.post(
-								Routes.webhook(interaction.application_id, interaction.token),
-								{ body },
-							)
-							.catch(console.error),
-				} as Replies,
-				args,
-			),
+			runner
+				.call(
+					Command,
+					{
+						...Object.fromEntries<Reply<InteractionResponseType>>(
+							CommandHandler.replies.map(([key, type]) => [
+								key,
+								(data) => resolve({ type, data } as never),
+							]),
+						),
+						edit: (body) =>
+							rest.patch(args.fullRoute, { body }).catch(console.error),
+						delete: () => rest.delete(args.fullRoute).catch(console.error),
+						followup: (body) =>
+							rest
+								.post(
+									Routes.webhook(interaction.application_id, interaction.token),
+									{ body },
+								)
+								.catch(console.error),
+					} as Replies,
+					args,
+				)
+				?.catch(console.error),
 		);
 		return new Response(JSON.stringify(await promise), {
 			headers: { "Content-Type": "application/json" },
