@@ -1,6 +1,6 @@
 name = "ms-bot"
 main = "./src/index.ts"
-compatibility_date = "2025-12-01"
+compatibility_date = "2025-12-03"
 compatibility_flags = []
 workers_dev = false
 upload_source_maps = true
@@ -55,6 +55,11 @@ class_name = "LiveScore"
 name = "brawl-notifications"
 binding = "BRAWL_NOTIFICATIONS"
 class_name = "BrawlNotifications"
+
+[[workflows]]
+name = "clash-notifications"
+binding = "CLASH_NOTIFICATIONS"
+class_name = "ClashNotifications"
 
 [[workflows]]
 name = "reminder"

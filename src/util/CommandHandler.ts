@@ -95,9 +95,13 @@ export class CommandHandler {
 		if (
 			!signature ||
 			!timestamp ||
-			Date.now() - +timestamp * TimeUnit.Second > 10 * TimeUnit.Second
-		)
+			Date.now() - +timestamp * TimeUnit.Second > 20 * TimeUnit.Second
+		) {
+			console.log(
+				`Timestamp too old: ${Date.now() - +timestamp! * TimeUnit.Second}`,
+			);
 			throw new Response(null, { status: 401 });
+		}
 		const body = await request.text();
 
 		if (
@@ -109,6 +113,7 @@ export class CommandHandler {
 			)
 		)
 			return JSON.parse(body) as APIInteraction;
+		console.log("Invalid signature");
 		throw new Response(null, { status: 401 });
 	}
 
@@ -230,7 +235,7 @@ export class CommandHandler {
 					} as Replies,
 					args,
 				)
-				.catch(console.error),
+				?.catch(console.error),
 		);
 		return new Response(JSON.stringify(await promise), {
 			headers: { "Content-Type": "application/json" },

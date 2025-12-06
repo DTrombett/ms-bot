@@ -9,21 +9,20 @@ import {
 	ComponentType,
 	MessageFlags,
 	Routes,
-	type APIContainerComponent,
+	type APIMessageTopLevelComponent,
 	type RESTPostAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
 import { Clash } from "./commands/clash.ts";
-import { escapeMarkdown } from "./util/formatters.ts";
+import { bitSetMap } from "./util/bitSets.ts";
 import { rest } from "./util/rest.ts";
 
 export type UserResult = Pick<
 	User,
 	"id" | "clashNotifications" | "arena" | "cards" | "league"
 > &
-	Required<Pick<User, "clashTag">> & { arenaNumber?: number };
-export type PartialPlayer = Pick<Clash.Player, "name" | "bestTrophies"> & {
-	cards?: Pick<Clash.PlayerItemLevel, "id" | "evolutionLevel">[];
-};
+	Required<Pick<User, "clashTag">>;
+export type PartialPlayer = Pick<User, "arena" | "cards" | "league"> &
+	Pick<Clash.Player, "name">;
 export enum NotificationType {
 	"All" = 1 << 0,
 	"New Arena" = 1 << 1,
@@ -79,71 +78,69 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 			);
 	}
 
-	private async processUser(
-		user: UserResult,
-	): Promise<{ components: APIContainerComponent[]; player: PartialPlayer }> {
-		const player: PartialPlayer = await Clash.getPlayer(user.clashTag);
-		const components: APIContainerComponent[] = [];
+	private async processUser(user: UserResult): Promise<{
+		components: APIMessageTopLevelComponent[];
+		player: PartialPlayer;
+	}> {
+		const player = await Clash.getPlayer(user.clashTag);
+		const components: APIMessageTopLevelComponent[] = [];
 
 		if (
 			(user.clashNotifications & NotificationType["New Arena"] ||
 				user.clashNotifications & NotificationType["All"]) &&
-			user.arena != null
-		) {
-			const tier =
-				ClashNotifications.trophyRoadTiers.findLast(
-					(tier) => tier <= player.highestTrophies,
-				) ?? 0;
-
-			if (
-				tier >
-				(ClashNotifications.trophyRoadTiers.findLast(
-					(tier) => tier <= user.clashTrophies!,
-				) ?? 0)
-			)
-				components.push({
-					type: ComponentType.Container,
-					accent_color: player.nameColor
-						? parseInt(player.nameColor.slice(4), 16)
-						: 0xffffff,
-					components: [
-						{
-							type: ComponentType.Section,
-							components: [
-								{
-									type: ComponentType.TextDisplay,
-									content: `## Avanzamento Cammino dei Trofei!\nHai raggiunto il traguardo di **${tier.toLocaleString(
-										"it-IT",
-									)}** trofei!`,
-								},
-							],
-							accessory: {
-								type: ComponentType.Thumbnail,
-								media: {
-									url: `https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png`,
-								},
-							},
-						},
-					],
-				});
-		}
+			user.arena != null &&
+			player.arena.id > user.arena
+		)
+			components.push({
+				type: ComponentType.Container,
+				accent_color: 0x5197ed,
+				components: [
+					{
+						type: ComponentType.TextDisplay,
+						content: `## Nuova arena raggiunta!\nHai raggiunto **${
+							player.arena.name
+						}** (Arena ${
+							player.achievements?.find((a) => a.name === "Road to Glory")
+								?.value ?? "sconosciuta"
+						})!`,
+					},
+				],
+			});
 		if (
-			user.clashNotifications & NotificationType["New Brawler"] ||
-			user.clashNotifications & NotificationType["Brawler Tier Max"] ||
+			(user.clashNotifications & NotificationType["New League"] ||
+				user.clashNotifications & NotificationType["All"]) &&
+			user.league != null &&
+			player.currentPathOfLegendSeasonResult &&
+			player.currentPathOfLegendSeasonResult.leagueNumber > user.league
+		)
+			components.push({
+				type: ComponentType.Container,
+				accent_color: 0xee82ee,
+				components: [
+					{
+						type: ComponentType.TextDisplay,
+						content: `## Nuova lega raggiunta!\nHai raggiunto la **Lega ${player.currentPathOfLegendSeasonResult.leagueNumber}** in modalità classificata!`,
+					},
+				],
+			});
+		if (
+			user.clashNotifications & NotificationType["New Card"] ||
+			user.clashNotifications & NotificationType["New Evo"] ||
 			user.clashNotifications & NotificationType["All"]
 		) {
-			const oldBrawlers = await Promise.try<
-				Pick<Brawl.BrawlerStat, "id" | "rank">[],
+			const oldCards = await Promise.try<
+				Pick<Clash.PlayerItemLevel, "id" | "evolutionLevel">[],
 				Parameters<typeof JSON.parse>
 			>(JSON.parse, user.cards ?? "[]").catch(() => {});
 
-			if (oldBrawlers)
-				for (const brawler of player.cards) {
-					const rank = oldBrawlers.find((b) => b.id === brawler.id)?.rank;
+			if (oldCards)
+				for (const card of player.cards) {
+					const oldCard = oldCards.find((b) => b.id === card.id);
 
 					if (
-						rank == null &&
-						(user.clashNotifications & NotificationType["New Brawler"] ||
+						!oldCard &&
+						(card.rarity === "champion" || card.rarity === "legendary") &&
+						(user.clashNotifications & NotificationType["New Card"] ||
 							user.clashNotifications & NotificationType["All"])
 					)
 						components.push({
@@ -154,66 +151,104 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 									components: [
 										{
 											type: ComponentType.TextDisplay,
-											content: `## Nuovo Brawler sbloccato!\nHai sbloccato **${brawler.name}**!`,
+											content: `## Hai trovato ${
+												card.rarity === "champion"
+													? "un nuovo campione"
+													: "una nuova leggendaria"
+											}!\nHai sbloccato **${card.name}**!`,
 										},
 									],
 									accessory: {
 										type: ComponentType.Thumbnail,
-										media: {
-											url: `https://cdn.brawlify.com/cards/borderless/${brawler.id}.png`,
-										},
+										media: { url: card.iconUrls?.medium ?? "" },
 									},
 								},
 							],
 						});
 					if (
-						rank !== 51 &&
-						brawler.rank === 51 &&
-						(user.clashNotifications & NotificationType["Brawler Tier Max"] ||
-							user.clashNotifications & NotificationType["All"])
+						user.clashNotifications & NotificationType["New Evo"] ||
+						user.clashNotifications & NotificationType["All"]
 					)
-						components.push({
-							type: ComponentType.Container,
-							accent_color: 0xd7faff,
-							components: [
-								{
-									type: ComponentType.Section,
-									components: [
-										{
-											type: ComponentType.TextDisplay,
-											content: `## Nuovo Brawler al Rank Massimo!\nHai portato **${brawler.name}** a 1.000 trofei!`,
-										},
-									],
-									accessory: {
-										type: ComponentType.Thumbnail,
-										media: {
-											url: `https://cdn.brawlify.com/cards/borderless/${brawler.id}.png`,
-										},
-									},
-								},
-							],
-						});
+						components.push(
+							...bitSetMap<APIMessageTopLevelComponent | null>(
+								(card.evolutionLevel ?? 0) ^ (oldCard?.evolutionLevel ?? 0),
+								(evo) =>
+									evo
+										? {
+												type: ComponentType.Container,
+												accent_color: 0xa312ef,
+												components: [
+													{
+														type: ComponentType.Section,
+														components: [
+															{
+																type: ComponentType.TextDisplay,
+																content: `## Nuova evoluzione sbloccata!\nHai sbloccato l'evoluzione per **${card.name}**!`,
+															},
+														],
+														accessory: {
+															type: ComponentType.Thumbnail,
+															media: {
+																url:
+																	card.iconUrls?.evolutionMedium ??
+																	card.iconUrls?.medium ??
+																	"",
+															},
+														},
+													},
+												],
+										  }
+										: null,
+								(hero) =>
+									hero
+										? {
+												type: ComponentType.Container,
+												accent_color: 0xffd700,
+												components: [
+													{
+														type: ComponentType.Section,
+														components: [
+															{
+																type: ComponentType.TextDisplay,
+																content: `## Nuovo eroe sbloccato!\nHai sbloccato **${card.name}** eroe!`,
+															},
+														],
+														accessory: {
+															type: ComponentType.Thumbnail,
+															media: {
+																url:
+																	card.iconUrls?.heroMedium ??
+																	card.iconUrls?.medium ??
+																	"",
+															},
+														},
+													},
+												],
+										  }
+										: null,
+							),
+						);
 				}
 		}
 		return {
 			components,
 			player: {
 				name: player.name,
-				cards: player.cards.map(({ id, rank, name }) => ({
-					id,
-					rank,
-					name,
-				})),
-				highestTrophies: player.highestTrophies,
-				icon: player.icon,
-				nameColor: player.nameColor,
+				arena: player.arena.id,
+				league: player.currentPathOfLegendSeasonResult?.leagueNumber,
+				cards: JSON.stringify(
+					player.cards?.map((b) => ({
+						id: b.id,
+						evolutionLevel: b.evolutionLevel,
+					})) ?? [],
+				),
 			},
 		};
 	}
 
 	private async sendMessage(
 		user: UserResult,
-		components: APIContainerComponent[],
+		components: APIMessageTopLevelComponent[],
 		player: Pick<Clash.Player, "name">,
 	) {
 		await rest.post(Routes.channelMessages(this.env.BRAWL_STARS_CHANNEL), {
@@ -222,10 +257,8 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 				components: [
 					{
 						type: ComponentType.TextDisplay,
-						content: `[**${escapeMarkdown(
-							player.name,
-						)}**](https://link.clashroyale.com?clashroyale://playerInfo?id=${user.clashTag.slice(
-							1,
+						content: `[**${player.name}**](${Clash.buildURL(
+							`playerInfo?id=${user.clashTag.slice(1)}`,
 						)}) ha raggiunto nuovi traguardi!`,
 					},
 					...components.slice(0, 9),
@@ -254,15 +287,12 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 	private async updateUser(user: UserResult, player: PartialPlayer) {
 		await this.env.DB.prepare(
 			`UPDATE Users
-				SET clashTrophies = ?1,
-					cards = ?2
-				WHERE id = ?3`,
+				SET arena = ?1,
+					league = ?2,
+					cards = ?3
+				WHERE id = ?4`,
 		)
-			.bind(
-				player.highestTrophies,
-				JSON.stringify(player.cards.map(({ id, rank }) => ({ id, rank }))),
-				user.id,
-			)
+			.bind(player.arena, player.league, player.cards, user.id)
 			.run();
 	}
 }

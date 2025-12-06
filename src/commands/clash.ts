@@ -456,12 +456,7 @@ export class Clash extends Command {
 					type: ComponentType.MediaGallery,
 					items: [
 						{
-							media: {
-								url:
-									card.evolutionLevel && card.iconUrls?.evolutionMedium
-										? card.iconUrls.evolutionMedium
-										: card.iconUrls?.medium ?? "",
-							},
+							media: { url: card.iconUrls?.medium ?? "" },
 						},
 					],
 				},
@@ -768,18 +763,13 @@ export class Clash extends Command {
 		locale: Locale,
 		playerId?: string,
 	): APIEmbed => {
-		let trophyProgress: {
-				arena?: Clash.Arena;
-				trophies?: number;
-				bestTrophies?: number;
-			} = player,
-			mergeTactics:
-				| {
-						arena: Clash.Arena;
-						trophies: number;
-						bestTrophies: number;
-				  }
-				| undefined;
+		let mergeTactics:
+			| {
+					arena: Clash.Arena;
+					trophies: number;
+					bestTrophies: number;
+			  }
+			| undefined;
 		const daysPlayed =
 			player.badges?.find((b) => b.name === "YearsPlayed")?.progress ?? 0;
 		const ranked = (
@@ -802,12 +792,7 @@ export class Clash extends Command {
 		);
 
 		for (const [k, v] of Object.entries(player.progress))
-			if (
-				k.startsWith("seasonal-trophy-road-") &&
-				v.bestTrophies >= player.bestTrophies
-			)
-				trophyProgress = v;
-			else if (k.startsWith("AutoChess")) mergeTactics = v;
+			if (k.startsWith("AutoChess")) mergeTactics = v;
 		return {
 			title: `${escapeMarkdown(player.name)} (${player.tag})`,
 			url: this.buildURL(`playerInfo?id=${player.tag.slice(1)}`),
@@ -817,10 +802,10 @@ export class Clash extends Command {
 			color: 0x5197ed,
 			description: template`
 			${
-				trophyProgress.trophies != null && trophyProgress.bestTrophies != null
-			}🏆 **Trofei**: ${trophyProgress.trophies?.toLocaleString(
+				player.trophies != null && player.bestTrophies != null
+			}🏆 **Trofei**: ${player.trophies?.toLocaleString(
 				locale,
-			)}/${trophyProgress.bestTrophies?.toLocaleString(locale)}
+			)}/${player.bestTrophies?.toLocaleString(locale)}
 			${player.currentPathOfLegendSeasonResult?.trophies}<:ranked:${
 				this.EMOJIS.pathOfLegends
 			}> **Classificata**: ${player.currentPathOfLegendSeasonResult?.trophies}
@@ -829,9 +814,7 @@ export class Clash extends Command {
 			)}/${mergeTactics?.bestTrophies.toLocaleString(locale)} (${
 				mergeTactics?.arena.name
 			})
-			${trophyProgress.arena}<:arena:${this.EMOJIS.arena}> **Arena**: ${
-				trophyProgress.arena?.name
-			}
+			${player.arena}<:arena:${this.EMOJIS.arena}> **Arena**: ${player.arena?.name}
 			${player.expLevel && player.expPoints != null}<:level:${
 				this.EMOJIS.experienceIcon
 			}> **Livello**: ${player.expLevel} (${player.expPoints?.toLocaleString(
@@ -1565,7 +1548,7 @@ export class Clash extends Command {
 		});
 	}
 	static "linkComponent" = async (
-		{ edit, deferUpdate }: ComponentReplies,
+		{ update }: ComponentReplies,
 		{
 			args: [tag, commandId],
 			user: { id },
@@ -1574,35 +1557,13 @@ export class Clash extends Command {
 			},
 		}: ComponentArgs,
 	) => {
-		deferUpdate();
-		const player = await this.getPlayer(tag!, edit);
-		let progress = Object.entries(player.progress).find(([k]) =>
-			k.startsWith("seasonal-trophy-road-"),
-		)?.[1];
-
-		if (!progress || progress.bestTrophies < player.bestTrophies)
-			progress = player;
 		await env.DB.prepare(
-			`INSERT INTO Users (id, clashTag, arena, league, cards)
-				VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO
+			`INSERT INTO Users (id, clashTag)
+				VALUES (?, ?) ON CONFLICT(id) DO
 				UPDATE
-				SET clashTag = excluded.clashTag,
-					arena = excluded.arena,
-					league = excluded.league,
-					cards = excluded.cards`,
+				SET clashTag = excluded.clashTag`,
 		)
-			.bind(
-				id,
-				tag,
-				progress.arena.id,
-				player.currentPathOfLegendSeasonResult?.leagueNumber,
-				JSON.stringify(
-					player.cards?.map((b) => ({
-						id: b.id,
-						evolutionLevel: b.evolutionLevel,
-					})) ?? [],
-				),
-			)
+			.bind(id, tag)
 			.run();
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
@@ -1612,7 +1573,7 @@ export class Clash extends Command {
 				emoji: { name: "⛓️‍💥" },
 				style: ButtonStyle.Danger,
 			};
-		return edit({
+		return update({
 			content: `Profilo collegato con successo!\nUsa </clash notify enable:${
 				commandId || "0"
 			}> per attivare le notifiche.`,
@@ -1632,8 +1593,9 @@ export class Clash extends Command {
 		await env.DB.prepare(
 			`UPDATE Users
 				SET clashTag = NULL,
-					clashTrophies = NULL,
-					cards = NULL
+					arena = NULL,
+					cards = NULL,
+					league = NULL
 				WHERE id = ?`,
 		)
 			.bind(id)
@@ -2008,6 +1970,6 @@ export class Clash extends Command {
 			],
 		});
 	};
-	private static "buildURL" = (action: string) =>
+	static "buildURL" = (action: string) =>
 		`https://link.clashroyale.com?clashroyale://${action}`;
 }

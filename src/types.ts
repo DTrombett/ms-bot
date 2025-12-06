@@ -276,7 +276,7 @@ declare global {
 		brawlers?: string | null;
 		clashTag?: string;
 		clashNotifications: number;
-		arena?: string | null;
+		arena?: number | null;
 		league?: number | null;
 		cards?: string | null;
 	};
@@ -300,8 +300,7 @@ declare global {
 		choices: { value: infer V }[];
 	}
 		? V
-		: // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-		  (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
+		: (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
 				type: T["type"];
 		  })["value"];
 	type ResolvedOptions<
@@ -595,7 +594,11 @@ declare global {
 			maxLevel: number;
 			elixirCost?: number;
 			maxEvolutionLevel?: number;
-			iconUrls?: { medium?: string; evolutionMedium?: string };
+			iconUrls?: {
+				medium?: string;
+				evolutionMedium?: string;
+				heroMedium?: string;
+			};
 		};
 		type JsonLocalizedName = string;
 		type Arena = {
