@@ -76,7 +76,13 @@ const server: ExportedHandler<Env> = {
 						.reduce((arr, v) => {
 							if (!v.brawlTag || !v.brawlNotifications) return arr;
 							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-							arr.at(-1)!.push(v);
+							arr.at(-1)!.push({
+								brawlNotifications: v.brawlNotifications,
+								brawlTag: v.brawlTag,
+								brawlTrophies: v.brawlTrophies,
+								id: v.id,
+								brawlers: v.brawlers,
+							});
 							return arr;
 						}, [] as BrawlUserResult[][])
 						.map((users) => ({ params: { users } })),
@@ -86,7 +92,14 @@ const server: ExportedHandler<Env> = {
 						.reduce((arr, v) => {
 							if (!v.clashTag || !v.clashNotifications) return arr;
 							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-							arr.at(-1)!.push(v);
+							arr.at(-1)!.push({
+								clashNotifications: v.clashNotifications,
+								clashTag: v.clashTag,
+								arena: v.arena,
+								cards: v.cards,
+								id: v.id,
+								league: v.league,
+							});
 							return arr;
 						}, [] as ClashUserResult[][])
 						.map((users) => ({ params: { users } })),
