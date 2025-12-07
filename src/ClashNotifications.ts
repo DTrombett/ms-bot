@@ -7,9 +7,8 @@ import {
 import {
 	ButtonStyle,
 	ComponentType,
-	MessageFlags,
 	Routes,
-	type APIMessageTopLevelComponent,
+	type APIEmbed,
 	type RESTPostAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
 import { Clash } from "./commands/clash.ts";
@@ -44,18 +43,18 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 		console.log(`Processing Clash Notifications for ${users.length} users`);
 		const results = await Promise.allSettled(
 			users.map(async (user) => {
-				const { components, player } = await step.do(
+				const { embeds, player } = await step.do(
 					`Process user ${user.id}`,
 					ClashNotifications.config,
 					this.processUser.bind(this, user),
 				);
 
-				console.log(`User ${user.id} has ${components.length} notification(s)`);
-				if (components.length)
+				console.log(`User ${user.id} has ${embeds.length} notification(s)`);
+				if (embeds.length)
 					await step.do(
 						`Send message for user ${user.id}`,
 						ClashNotifications.config,
-						this.sendMessage.bind(this, user, components, player),
+						this.sendMessage.bind(this, user, embeds, player),
 					);
 				return step.do(
 					`Update user ${user.id} data`,
@@ -79,11 +78,11 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 	}
 
 	private async processUser(user: UserResult): Promise<{
-		components: APIMessageTopLevelComponent[];
+		embeds: APIEmbed[];
 		player: PartialPlayer;
 	}> {
 		const player = await Clash.getPlayer(user.clashTag);
-		const components: APIMessageTopLevelComponent[] = [];
+		const embeds: APIEmbed[] = [];
 
 		if (
 			(user.clashNotifications & NotificationType["New Arena"] ||
@@ -91,20 +90,13 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 			user.arena != null &&
 			player.arena.id > user.arena
 		)
-			components.push({
-				type: ComponentType.Container,
-				accent_color: 0x5197ed,
-				components: [
-					{
-						type: ComponentType.TextDisplay,
-						content: `## Nuova arena raggiunta!\nHai raggiunto **${
-							player.arena.name
-						}** (Arena ${
-							player.achievements?.find((a) => a.name === "Road to Glory")
-								?.value ?? "sconosciuta"
-						})!`,
-					},
-				],
+			embeds.push({
+				color: 0x5197ed,
+				title: "Nuova arena raggiunta!",
+				description: `Hai raggiunto **${player.arena.name}** (Arena ${
+					player.achievements?.find((a) => a.name === "Road to Glory")?.value ??
+					"sconosciuta"
+				})!`,
 			});
 		if (
 			(user.clashNotifications & NotificationType["New League"] ||
@@ -113,15 +105,10 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 			player.currentPathOfLegendSeasonResult &&
 			player.currentPathOfLegendSeasonResult.leagueNumber > user.league
 		)
-			components.push({
-				type: ComponentType.Container,
-				accent_color: 0xee82ee,
-				components: [
-					{
-						type: ComponentType.TextDisplay,
-						content: `## Nuova lega raggiunta!\nHai raggiunto la **Lega ${player.currentPathOfLegendSeasonResult.leagueNumber}** in modalità classificata!`,
-					},
-				],
+			embeds.push({
+				color: 0xee82ee,
+				title: "Nuova lega raggiunta!",
+				description: `Hai raggiunto la **Lega ${player.currentPathOfLegendSeasonResult.leagueNumber}** in Modalità Classificata!`,
 			});
 		if (
 			user.clashNotifications & NotificationType["New Card"] ||
@@ -143,87 +130,48 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 						(user.clashNotifications & NotificationType["New Card"] ||
 							user.clashNotifications & NotificationType["All"])
 					)
-						components.push({
-							type: ComponentType.Container,
-							components: [
-								{
-									type: ComponentType.Section,
-									components: [
-										{
-											type: ComponentType.TextDisplay,
-											content: `## Hai trovato ${
-												card.rarity === "champion"
-													? "un nuovo campione"
-													: "una nuova leggendaria"
-											}!\nHai sbloccato **${card.name}**!`,
-										},
-									],
-									accessory: {
-										type: ComponentType.Thumbnail,
-										media: { url: card.iconUrls?.medium ?? "" },
-									},
-								},
-							],
+						embeds.push({
+							title: `Hai trovato ${
+								card.rarity === "champion"
+									? "un nuovo campione"
+									: "una nuova leggendaria"
+							}!`,
+							description: `Hai sbloccato **${card.name}**!`,
+							thumbnail: { url: card.iconUrls?.medium ?? "" },
 						});
 					if (
 						user.clashNotifications & NotificationType["New Evo"] ||
 						user.clashNotifications & NotificationType["All"]
 					)
-						components.push(
-							...bitSetMap<APIMessageTopLevelComponent | null>(
+						embeds.push(
+							...bitSetMap<APIEmbed | null>(
 								(card.evolutionLevel ?? 0) ^ (oldCard?.evolutionLevel ?? 0),
 								(evo) =>
 									evo
 										? {
-												type: ComponentType.Container,
-												accent_color: 0xa312ef,
-												components: [
-													{
-														type: ComponentType.Section,
-														components: [
-															{
-																type: ComponentType.TextDisplay,
-																content: `## Nuova evoluzione sbloccata!\nHai sbloccato l'evoluzione per **${card.name}**!`,
-															},
-														],
-														accessory: {
-															type: ComponentType.Thumbnail,
-															media: {
-																url:
-																	card.iconUrls?.evolutionMedium ??
-																	card.iconUrls?.medium ??
-																	"",
-															},
-														},
-													},
-												],
+												color: 0xa312ef,
+												title: "Nuova evoluzione sbloccata!",
+												description: `Hai sbloccato l'evoluzione per **${card.name}**!`,
+												thumbnail: {
+													url:
+														card.iconUrls?.evolutionMedium ??
+														card.iconUrls?.medium ??
+														"",
+												},
 										  }
 										: null,
 								(hero) =>
 									hero
 										? {
-												type: ComponentType.Container,
-												accent_color: 0xffd700,
-												components: [
-													{
-														type: ComponentType.Section,
-														components: [
-															{
-																type: ComponentType.TextDisplay,
-																content: `## Nuovo eroe sbloccato!\nHai sbloccato **${card.name}** eroe!`,
-															},
-														],
-														accessory: {
-															type: ComponentType.Thumbnail,
-															media: {
-																url:
-																	card.iconUrls?.heroMedium ??
-																	card.iconUrls?.medium ??
-																	"",
-															},
-														},
-													},
-												],
+												color: 0xffd700,
+												title: "Nuovo eroe sbloccato!",
+												description: `Hai sbloccato **${card.name}** eroe!`,
+												thumbnail: {
+													url:
+														card.iconUrls?.heroMedium ??
+														card.iconUrls?.medium ??
+														"",
+												},
 										  }
 										: null,
 							),
@@ -231,7 +179,7 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 				}
 		}
 		return {
-			components,
+			embeds,
 			player: {
 				name: player.name,
 				arena: player.arena.id,
@@ -248,20 +196,17 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 
 	private async sendMessage(
 		user: UserResult,
-		components: APIMessageTopLevelComponent[],
+		embeds: APIEmbed[],
 		player: Pick<Clash.Player, "name">,
 	) {
 		await rest.post(Routes.channelMessages(this.env.CLASH_ROYALE_CHANNEL), {
 			body: {
-				flags: MessageFlags.IsComponentsV2,
+				content: `[**${player.name}**](${Clash.buildURL(
+					`playerInfo?id=${user.clashTag.slice(1)}`,
+				)}) (<@${
+					user.id
+				}>) ha raggiunto nuovi traguardi!\n-# Usa il comando \`/clash notify\` per gestire le notifiche`,
 				components: [
-					{
-						type: ComponentType.TextDisplay,
-						content: `[**${player.name}**](${Clash.buildURL(
-							`playerInfo?id=${user.clashTag.slice(1)}`,
-						)}) ha raggiunto nuovi traguardi!`,
-					},
-					...components.slice(0, 9),
 					{
 						type: ComponentType.ActionRow,
 						components: [
@@ -274,11 +219,8 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 							},
 						],
 					},
-					{
-						type: ComponentType.TextDisplay,
-						content: `-# <@${user.id}> usa il comando \`/clash notify\` per gestire le tue notifiche`,
-					},
 				],
+				embeds: embeds.slice(0, 10),
 				allowed_mentions: { parse: [] },
 			} satisfies RESTPostAPIChannelMessageJSONBody,
 		});
