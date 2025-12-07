@@ -29,7 +29,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 		do {
 			await step.sleepUntil(
 				`sleep until ${time}`,
-				Math.max(time, Date.now() + 1_000),
+				Math.max(time, Date.now() + 20_000),
 			);
 			time = await step.do(
 				`run live scores ${time}`,
@@ -87,13 +87,13 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 									status === true
 										? resolve
 										: status === undefined
-											? reject.bind(
-													null,
-													new Error("Some matches were postponed"),
-												)
-											: status
-												? resolve.bind(null, status)
-												: undefined,
+										? reject.bind(
+												null,
+												new Error("Some matches were postponed"),
+										  )
+										: status
+										? resolve.bind(null, status)
+										: undefined,
 								);
 						});
 						socket.on("connect_error", (error) => {
