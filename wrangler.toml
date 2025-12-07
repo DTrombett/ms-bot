@@ -21,6 +21,10 @@ crons = ["0 0 * * *", "*/5 * * * *"]
 directory = "./public"
 binding = "ASSETS"
 
+[[routes]]
+pattern = "ms-bot-interactions.trombett.org"
+custom_domain = true
+
 [[vpc_services]]
 binding = "BRAWL_STARS"
 service_id = "019a5526-d448-7030-8492-1e4572309bc6"

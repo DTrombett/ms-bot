@@ -1,6 +1,12 @@
 import { env } from "cloudflare:workers";
-import type { UserResult as BrawlUserResult } from "./BrawlNotifications.ts";
-import type { UserResult as ClashUserResult } from "./ClashNotifications.ts";
+import type {
+	Params as BrawlParams,
+	UserResult as BrawlUserResult,
+} from "./BrawlNotifications.ts";
+import type {
+	Params as ClashParams,
+	UserResult as ClashUserResult,
+} from "./ClashNotifications.ts";
 import * as commands from "./commands/index.ts";
 import { CommandHandler } from "./util/CommandHandler.ts";
 import { createSolidPng } from "./util/createSolidPng.ts";
@@ -69,42 +75,50 @@ const server: ExportedHandler<Env> = {
 						AND clashNotifications != 0
 					)`,
 			).all<BrawlUserResult & ClashUserResult>();
+			const brawlBatch: WorkflowInstanceCreateOptions<BrawlParams>[] = results
+				.reduce((arr, v) => {
+					if (!v.brawlTag || !v.brawlNotifications) return arr;
+					if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+					arr.at(-1)!.push({
+						brawlNotifications: v.brawlNotifications,
+						brawlTag: v.brawlTag,
+						brawlTrophies: v.brawlTrophies,
+						id: v.id,
+						brawlers: v.brawlers,
+					});
+					return arr;
+				}, [] as BrawlUserResult[][])
+				.map((users) => ({ params: { users } }));
+			const clashBatch: WorkflowInstanceCreateOptions<ClashParams>[] = results
+				.reduce((arr, v) => {
+					if (!v.clashTag || !v.clashNotifications) return arr;
+					if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+					arr.at(-1)!.push({
+						clashNotifications: v.clashNotifications,
+						clashTag: v.clashTag,
+						arena: v.arena,
+						cards: v.cards,
+						id: v.id,
+						league: v.league,
+					});
+					return arr;
+				}, [] as ClashUserResult[][])
+				.map((users) => ({ params: { users } }));
 
-			await Promise.all([
-				env.BRAWL_NOTIFICATIONS.createBatch(
-					results
-						.reduce((arr, v) => {
-							if (!v.brawlTag || !v.brawlNotifications) return arr;
-							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-							arr.at(-1)!.push({
-								brawlNotifications: v.brawlNotifications,
-								brawlTag: v.brawlTag,
-								brawlTrophies: v.brawlTrophies,
-								id: v.id,
-								brawlers: v.brawlers,
-							});
-							return arr;
-						}, [] as BrawlUserResult[][])
-						.map((users) => ({ params: { users } })),
-				),
-				env.CLASH_NOTIFICATIONS.createBatch(
-					results
-						.reduce((arr, v) => {
-							if (!v.clashTag || !v.clashNotifications) return arr;
-							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-							arr.at(-1)!.push({
-								clashNotifications: v.clashNotifications,
-								clashTag: v.clashTag,
-								arena: v.arena,
-								cards: v.cards,
-								id: v.id,
-								league: v.league,
-							});
-							return arr;
-						}, [] as ClashUserResult[][])
-						.map((users) => ({ params: { users } })),
-				),
-			]);
+			for (const result of await Promise.allSettled([
+				brawlBatch.length
+					? env.BRAWL_NOTIFICATIONS.createBatch(brawlBatch)
+					: null,
+				clashBatch.length
+					? env.CLASH_NOTIFICATIONS.createBatch(clashBatch)
+					: null,
+			]))
+				if (result.status === "rejected") console.error(result.reason);
+				else
+					console.log(
+						"Started workflow(s) with IDs",
+						...(result.value ?? []).map((r) => r.id),
+					);
 		}
 	},
 };

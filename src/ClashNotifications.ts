@@ -133,7 +133,7 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 				Parameters<typeof JSON.parse>
 			>(JSON.parse, user.cards ?? "[]").catch(() => {});
 
-			if (oldCards)
+			if (oldCards?.length)
 				for (const card of player.cards) {
 					const oldCard = oldCards.find((b) => b.id === card.id);
 
