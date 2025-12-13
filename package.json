@@ -18,24 +18,24 @@
 	"scripts": {
 		"dev": "wrangler dev --test-scheduled",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
-		"publish": "wrangler deploy",
+		"deploy": "wrangler deploy",
 		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src && node --test --experimental-transform-types --experimental-test-module-mocks"
 	},
 	"dependencies": {
 		"@discordjs/rest": "^2.6.0",
 		"cloudflare": "^5.2.0",
-		"discord-api-types": "^0.38.36",
+		"discord-api-types": "^0.38.37",
 		"socket.io-client": "^4.8.1"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.39.1",
+		"@eslint/js": "^9.39.2",
 		"@tsconfig/recommended": "^1.0.13",
 		"@tsconfig/strictest": "^2.0.8",
-		"@types/node": "^24.10.1",
-		"eslint": "^9.39.1",
+		"@types/node": "^24.10.3",
+		"eslint": "^9.39.2",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.48.1",
+		"typescript-eslint": "^8.49.0",
 		"undici": "^7.16.0",
-		"wrangler": "^4.53.0"
+		"wrangler": "^4.54.0"
 	}
 }
