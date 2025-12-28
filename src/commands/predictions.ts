@@ -13,9 +13,9 @@ import {
 import Command from "../Command.ts";
 import { calculateWins } from "../util/calculateWins.ts";
 import { resolveStats } from "../util/getLiveEmbed.ts";
-import { getSeasonData } from "../util/getSeasonData.ts";
 import { getMatchDayNumber } from "../util/getMatchDayNumber.ts";
-import normalizeTeamName from "../util/normalizeTeamName.ts";
+import { getSeasonData } from "../util/getSeasonData.ts";
+import { createMatchName } from "../util/normalizeTeamName.ts";
 import { rest } from "../util/rest.ts";
 import { sortLeaderboard } from "../util/sortLeaderboard.ts";
 
@@ -222,7 +222,7 @@ export class Predictions extends Command {
 				flags: MessageFlags.Ephemeral,
 				content: "Non c'è nessuna giornata disponibile al momento!",
 			});
-		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5;
+		const startTime = Date.parse(matches[0]!.matchDateUtc) - 1_000 * 60 * 5;
 		if (subcommand === "view") {
 			if (!existingPredictions.length)
 				return reply({
@@ -248,15 +248,13 @@ export class Predictions extends Command {
 						},
 						color: 0x3498db,
 						fields: matches.map((m) => ({
-							name: `${[m.home_team_name, m.away_team_name]
-								.map(normalizeTeamName)
-								.join(" - ")} (<t:${Math.round(
-								new Date(m.date_time).getTime() / 1_000,
+							name: `${createMatchName(m)} (<t:${Math.round(
+								Date.parse(m.matchDateUtc) / 1_000,
 							)}:F>)`,
 							value:
-								(existingPredictions[0]?.match === m.match_id ? "⭐ " : "") +
+								(existingPredictions[0]?.match === m.matchId ? "⭐ " : "") +
 								(existingPredictions.find(
-									(predict) => predict.matchId === m.match_id,
+									(predict) => predict.matchId === m.matchId,
 								)?.prediction ?? "*Non presente*"),
 						})),
 						thumbnail: {
@@ -322,7 +320,7 @@ export class Predictions extends Command {
 		} of interaction.data.components as ModalSubmitActionRowComponent[]) {
 			const value = field!.value.trim();
 			const match = value.toLowerCase().match(Predictions.predictionRegex);
-			const matchId = parseInt(field!.custom_id);
+			const matchId = field!.custom_id;
 
 			if (
 				!match?.groups ||
@@ -336,9 +334,11 @@ export class Predictions extends Command {
 					match.groups.first >= match.groups.second!) ||
 				(match.groups.first && Number(match.groups.first) > 999) ||
 				(match.groups.second && Number(match.groups.second) > 999)
-			)
-				invalid.push(matches.find((m) => m.match_id === matchId)!.match_name);
-			else if (
+			) {
+				const invalidMatch = matches.find((m) => m.matchId === matchId);
+
+				if (invalidMatch) invalid.push(createMatchName(invalidMatch));
+			} else if (
 				existingPredictions.find((p) => p.matchId === matchId)?.prediction !==
 				(resolved[field!.value] ??= match.groups.prediction
 					? `${match.groups.prediction.toUpperCase()} (${
@@ -407,20 +407,18 @@ export class Predictions extends Command {
 								custom_id: `predictions-match-${day}-${timestamp}-${userId}`,
 								placeholder: "Seleziona il Match of the Match",
 								options: matches.map((m) => ({
-									label: [m.home_team_name, m.away_team_name]
-										.map(normalizeTeamName)
-										.join(" - "),
+									label: createMatchName(m),
 									description:
 										(
 											newPredictions.find(
-												({ matchId }) => matchId === m.match_id,
+												({ matchId }) => matchId === m.matchId,
 											) ??
 											existingPredictions.find(
-												({ matchId }) => matchId === m.match_id,
+												({ matchId }) => matchId === m.matchId,
 											)
 										)?.prediction ?? "",
-									value: m.match_id.toString(),
-									default: m.match_id === existingPredictions[0]?.match,
+									value: m.matchId,
+									default: m.matchId === existingPredictions[0]?.match,
 								})),
 							},
 						],
@@ -546,7 +544,7 @@ export class Predictions extends Command {
 		part: number,
 		userId: string,
 		predictions?: Pick<Prediction, "matchId" | "prediction">[],
-		timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5,
+		timestamp = Date.parse(matches[0]!.matchDateUtc) - 1_000 * 60 * 5,
 	): APIModalInteractionResponseCallbackData => ({
 		title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${
 			matches.length / 5
@@ -559,10 +557,8 @@ export class Predictions extends Command {
 			components: [
 				{
 					type: ComponentType.TextInput,
-					custom_id: m.match_id.toString(),
-					label: [m.home_team_name, m.away_team_name]
-						.map(normalizeTeamName)
-						.join(" - "),
+					custom_id: m.matchId,
+					label: createMatchName(m),
 					style: TextInputStyle.Short,
 					required: true,
 					placeholder: `es. ${
@@ -571,7 +567,7 @@ export class Predictions extends Command {
 						]
 					}`,
 					value: predictions?.find(
-						(prediction) => prediction.matchId === m.match_id,
+						(prediction) => prediction.matchId === m.matchId,
 					)?.prediction,
 				},
 			],

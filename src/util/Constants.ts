@@ -5,8 +5,9 @@ export const Emojis = {
 };
 
 export enum MatchStatus {
-	ToBePlayed,
-	Live,
-	Finished,
-	Postponed,
+	ToBePlayed = "Upcoming",
+	Live = "Live",
+	Finished = "Finished",
+	// TODO: check when we actually find a postponed match
+	Postponed = "Postponed",
 }

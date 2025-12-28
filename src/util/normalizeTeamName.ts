@@ -7,4 +7,9 @@ export const normalizeTeamName = (team: string) =>
 		.map((word) => capitalize(word))
 		.join(" ");
 
+export const createMatchName = (match: Match) =>
+	[match.home.officialName, match.away.officialName]
+		.map(normalizeTeamName)
+		.join(" - ");
+
 export default normalizeTeamName;

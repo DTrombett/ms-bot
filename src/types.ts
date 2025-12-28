@@ -220,13 +220,13 @@ declare global {
 		matchDateUtc: string;
 		matchDateLocal: string;
 		localTimeUtcOffset: string;
-		homeScorePush: number;
-		awayScorePush: number;
+		homeScorePush: null | number;
+		awayScorePush: null | number;
 		providerPenaltyScoreHome: number | null;
 		providerPenaltyScoreAway: number | null;
 		aggregate: string;
 		winReason: string;
-		winTeamId: string;
+		winTeamId: string | null;
 		previousLegsResult: null;
 		home: Team;
 		away: Team;
@@ -254,8 +254,8 @@ declare global {
 			matchdayStatus: string;
 		};
 		scheduleStatus: string;
-		providerHomeScore: number;
-		providerAwayScore: number;
+		providerHomeScore: null | number;
+		providerAwayScore: null | number;
 		groupId: string;
 		subLeague: string;
 		time: string;
@@ -354,7 +354,7 @@ declare global {
 	][];
 
 	type Prediction = {
-		matchId: number;
+		matchId: string;
 		userId: string;
 		prediction: string;
 	};
@@ -362,7 +362,7 @@ declare global {
 		id: string;
 		dayPoints?: number | null;
 		matchPointsHistory?: string | null;
-		match?: number | null;
+		match?: string | null;
 		remindMinutes?: number | null;
 		brawlTag?: string;
 		brawlNotifications: number;

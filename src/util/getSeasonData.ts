@@ -3,18 +3,20 @@ import { getMatchDayNumber } from "./getMatchDayNumber.ts";
 import { loadMatches } from "./loadMatches.ts";
 import { TimeUnit } from "./time.ts";
 
-export const getSeasonData = async (userId: string, day?: number) => {
-	const { matchdays } = await fetch(
+export const fetchMatchDays = async (): Promise<MatchDay[]> => {
+	const res = await fetch(
 		`https://api-sdp.legaseriea.it/v1/serie-a/football/seasons/${env.SEASON_ID}/matchdays`,
-	).then((res) =>
-		res.ok
-			? res.json<SeasonResponse>()
-			: Promise.reject(
-					new Error(
-						`Couldn't load season data: ${res.status} ${res.statusText}`,
-					),
-			  ),
 	);
+	if (!res.ok)
+		throw new Error(
+			`Couldn't load season data: ${res.status} ${res.statusText}`,
+		);
+	const { matchdays } = await res.json<SeasonResponse>();
+
+	return matchdays;
+};
+export const getSeasonData = async (userId: string, day?: number) => {
+	const matchdays = await fetchMatchDays();
 	let matchDayData: MatchDay | undefined;
 	let matches: Match[] | undefined;
 	if (day) matchDayData = matchdays.find((d) => getMatchDayNumber(d) === day);
@@ -32,8 +34,8 @@ export const getSeasonData = async (userId: string, day?: number) => {
 
 			// If the first match hasn't started yet (more than 5 minutes from now), use LIVE day
 			if (
-				liveMatches.length &&
-				Date.parse(liveMatches[0]!.matchDateUtc) >
+				liveMatches[0] &&
+				Date.parse(liveMatches[0].matchDateUtc) >
 					Date.now() + TimeUnit.Minute * 5
 			) {
 				matchDayData = liveMatchDay;
