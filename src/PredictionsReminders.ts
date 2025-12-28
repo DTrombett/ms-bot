@@ -162,7 +162,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	private async getMatchDay(started: number[] = []) {
 		const matchDays = await fetch(
 			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
-		).then<MatchDayResponse>((res) => res.json());
+		).then<SeasonResponse>((res) => res.json());
 
 		if (!matchDays.success) throw new Error(matchDays.message);
 		const md = matchDays.data.find(
@@ -189,9 +189,10 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 
 		return results
 			.sort((a, b) => b.remindMinutes! - a.remindMinutes!)
-			.map<
-				[recipient_id: string, date: number]
-			>((u) => [u.id, startTime - u.remindMinutes! * 60 * 1000]);
+			.map<[recipient_id: string, date: number]>((u) => [
+				u.id,
+				startTime - u.remindMinutes! * 60 * 1000,
+			]);
 	}
 
 	private async notExists(userId: string, matchId: number) {
@@ -223,7 +224,9 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 							type: ComponentType.ActionRow,
 							components: [
 								{
-									custom_id: `predictions-${Number(matchDay.day)}-1-${startTime}-${userId}`,
+									custom_id: `predictions-${Number(
+										matchDay.day,
+									)}-1-${startTime}-${userId}`,
 									emoji: { name: "⚽" },
 									label: "Invia pronostici",
 									style: ButtonStyle.Primary,
@@ -299,11 +302,11 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 												user.discriminator === "0"
 													? Number(BigInt(user.id) >> 22n) % 6
 													: Number(user.discriminator) % 5,
-											)
+										  )
 										: rest.cdn.avatar(user.id, user.avatar, {
 												size: 4096,
 												extension: "png",
-											})),
+										  })),
 							},
 							color: user?.accent_color ?? 0x3498db,
 							fields: matches.map((match) => ({
@@ -369,7 +372,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	private async loadNewMatchDay(lastId: number, started: number[] = []) {
 		const matchDays = (await fetch(
 			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
-		).then((res) => res.json())) as MatchDayResponse;
+		).then((res) => res.json())) as SeasonResponse;
 
 		if (!matchDays.success)
 			throw new Error(matchDays.message, {

@@ -31,7 +31,6 @@ import type {
 } from "discord-api-types/v10";
 import type Command from "./Command.ts";
 import type { CommandHandler } from "./util/CommandHandler.ts";
-import type { MatchStatus } from "./util/Constants.ts";
 
 declare global {
 	interface ObjectConstructor {
@@ -195,39 +194,134 @@ declare global {
 	}[];
 
 	type Match = {
-		home_goal: number | null;
-		away_goal: number | null;
-		home_team_name: Uppercase<string>;
-		away_team_name: Uppercase<string>;
-		date_time: string;
-		match_status: MatchStatus;
-		slug: string;
-		match_id: number;
-		match_name: string;
-		match_day_id_category: number;
-		match_day_order: `${number}`;
+		providerId: string;
+		seasonId: string;
+		editorial: {
+			broadcasters: {
+				broadcasterNational1: string;
+				broadcasterNational2: string;
+				broadcasterNational3: string;
+				broadcasterInternational1: string;
+				broadcasterInternational2: string;
+				broadcasterInternational3: string;
+			};
+			highlightsUrl: string;
+			highlightsNationalUrl: string;
+			highlightsInternationalUrl: string;
+			ticketsUrl: string;
+			sponsorImage: string;
+			themeNight: string;
+			editorials: [];
+		};
+		matchId: string;
+		status: string;
+		providerStatus: string;
+		phase: string;
+		matchDateUtc: string;
+		matchDateLocal: string;
+		localTimeUtcOffset: string;
+		homeScorePush: number;
+		awayScorePush: number;
+		providerPenaltyScoreHome: number | null;
+		providerPenaltyScoreAway: number | null;
+		aggregate: string;
+		winReason: string;
+		winTeamId: string;
+		previousLegsResult: null;
+		home: Team;
+		away: Team;
+		stadiumId: string;
+		stadiumName: string;
+		cityName: string;
+		group: string;
+		groupName: string;
+		roundId: string;
+		roundName: string;
+		matchSet: {
+			matchSetId: string;
+			providerId: string;
+			name: string;
+			seasonId: string;
+			competitionId: string;
+			roundId: string | null;
+			stageId: string;
+			index: number | null;
+			shortName: string;
+			matchSetFormatId: string | null;
+			type: string | null;
+			startDateUtc: string;
+			endDateUtc: string;
+			matchdayStatus: string;
+		};
+		scheduleStatus: string;
+		providerHomeScore: number;
+		providerAwayScore: number;
+		groupId: string;
+		subLeague: string;
+		time: string;
+		additionalTime: string;
 	};
-	type MatchesData =
-		| {
-				success: true;
-				data: Match[];
-		  }
-		| { success: false; message: string; errors: unknown[] };
+	type Team = {
+		teamId: string;
+		providerId: string;
+		shortName: string;
+		officialName: string;
+		acronymName: string;
+		acronymNameLocalized: string;
+		isTeamFake: boolean;
+		mediaName: string;
+		mediaShortName: string;
+		countryCode: string;
+		teamType: string;
+		stadium: null;
+		imagery: {
+			stadiumImage: string;
+			teamImage: string;
+			teamLogo: string;
+			teamLogoLight: string;
+		};
+		allSeasonImagery: [];
+	};
+	type Competition = {
+		seasonId: string;
+		startDateUtc: string | null;
+		endDateUtc: string | null;
+		seasonName: string;
+		imagery: { seasonLogo: string };
+		competitionId: string;
+		providerId: string;
+		name: string;
+		officialName: string;
+		shortName: string;
+		acronymName: string;
+	};
+
+	type MatchesData = {
+		competition: Competition;
+		matches: Match[];
+		apiCallRequestTime: string;
+	};
 	type MatchDay = {
-		category_status: "LIVE" | "PLAYED" | "TO BE PLAYED";
-		title: `Matchday ${number}`;
-		id_category: number;
+		matchSetId: string;
+		providerId: string;
+		name: string;
+		seasonId: string;
+		competitionId: string;
+		roundId: string | null;
+		stageId: string;
+		index: number | null;
+		shortName: string;
+		matchSetFormatId: string | null;
+		type: string | null;
+		startDateUtc: string;
+		endDateUtc: string;
+		matchdayStatus: "Played" | "Playing" | "Fixture";
 	};
-	type MatchDayResponse =
-		| {
-				success: false;
-				message: string;
-				errors: Rpc.Serializable<unknown>[];
-		  }
-		| {
-				success: true;
-				data: MatchDay[];
-		  };
+	type SeasonResponse = {
+		competition: Competition;
+		matchdays: MatchDay[];
+		apiCallRequestTime: string;
+	};
 
 	type CommentaryResponse = {
 		success: boolean;

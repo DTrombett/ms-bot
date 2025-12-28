@@ -13,7 +13,7 @@ import {
 import Command from "../Command.ts";
 import { calculateWins } from "../util/calculateWins.ts";
 import { resolveStats } from "../util/getLiveEmbed.ts";
-import { getMatchDayData } from "../util/getMatchDayData.ts";
+import { getSeasonData } from "../util/getSeasonData.ts";
 import { getMatchDayNumber } from "../util/getMatchDayNumber.ts";
 import normalizeTeamName from "../util/normalizeTeamName.ts";
 import { rest } from "../util/rest.ts";
@@ -212,7 +212,7 @@ export class Predictions extends Command {
 				});
 		if (options.user)
 			user = interaction.data.resolved?.users?.[options.user] ?? user;
-		const [matchDay, matches, existingPredictions] = await getMatchDayData(
+		const [matchDay, matches, existingPredictions] = await getSeasonData(
 			user.id,
 			options.day,
 		);
@@ -240,11 +240,11 @@ export class Predictions extends Command {
 											user.discriminator === "0"
 												? Number(BigInt(user.id) >> 22n) % 6
 												: Number(user.discriminator) % 5,
-										)
+									  )
 									: rest.cdn.avatar(user.id, user.avatar, {
 											size: 4096,
 											extension: "png",
-										}),
+									  }),
 						},
 						color: 0x3498db,
 						fields: matches.map((m) => ({
@@ -304,7 +304,7 @@ export class Predictions extends Command {
 					"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 				flags: MessageFlags.Ephemeral,
 			});
-		const [matchDay, matches, existingPredictions] = await getMatchDayData(
+		const [matchDay, matches, existingPredictions] = await getSeasonData(
 			userId,
 			day,
 		);
@@ -343,7 +343,7 @@ export class Predictions extends Command {
 				(resolved[field!.value] ??= match.groups.prediction
 					? `${match.groups.prediction.toUpperCase()} (${
 							match.groups.first
-						} - ${match.groups.second})`
+					  } - ${match.groups.second})`
 					: value.toUpperCase())
 			)
 				newPredictions.push({
@@ -383,7 +383,9 @@ export class Predictions extends Command {
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
+								custom_id: `predictions-${getMatchDayNumber(
+									matchDay,
+								)}-${part}-${timestamp}-${userId}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
 								style: ButtonStyle.Danger,
@@ -428,7 +430,9 @@ export class Predictions extends Command {
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
+								custom_id: `predictions-${getMatchDayNumber(
+									matchDay,
+								)}-1-${timestamp}-${userId}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
 								style: ButtonStyle.Success,
@@ -446,7 +450,9 @@ export class Predictions extends Command {
 					components: [
 						{
 							type: ComponentType.Button,
-							custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part! + 1}-${timestamp}-${userId}`,
+							custom_id: `predictions-${getMatchDayNumber(matchDay)}-${
+								part! + 1
+							}-${timestamp}-${userId}`,
 							emoji: { name: "⏩" },
 							label: "Continua",
 							style: ButtonStyle.Primary,
@@ -472,7 +478,7 @@ export class Predictions extends Command {
 					"Puoi modificare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 				flags: MessageFlags.Ephemeral,
 			});
-		const [matchDay, matches, existingPredictions] = await getMatchDayData(
+		const [matchDay, matches, existingPredictions] = await getSeasonData(
 			userId,
 			Number(actionOrDay) || Number(part) || undefined,
 		);
@@ -506,7 +512,9 @@ export class Predictions extends Command {
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
+								custom_id: `predictions-${getMatchDayNumber(
+									matchDay,
+								)}-1-${timestamp}-${userId}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
 								style: ButtonStyle.Success,
@@ -540,8 +548,12 @@ export class Predictions extends Command {
 		predictions?: Pick<Prediction, "matchId" | "prediction">[],
 		timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5,
 	): APIModalInteractionResponseCallbackData => ({
-		title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${matches.length / 5})`,
-		custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
+		title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${
+			matches.length / 5
+		})`,
+		custom_id: `predictions-${getMatchDayNumber(
+			matchDay,
+		)}-${part}-${timestamp}-${userId}`,
 		components: matches.slice((part - 1) * 5, part * 5).map((m) => ({
 			type: ComponentType.ActionRow,
 			components: [
@@ -553,7 +565,11 @@ export class Predictions extends Command {
 						.join(" - "),
 					style: TextInputStyle.Short,
 					required: true,
-					placeholder: `es. ${Predictions.predictionExamples[Math.floor(Math.random() * Predictions.predictionExamples.length)]}`,
+					placeholder: `es. ${
+						Predictions.predictionExamples[
+							Math.floor(Math.random() * Predictions.predictionExamples.length)
+						]
+					}`,
 					value: predictions?.find(
 						(prediction) => prediction.matchId === m.match_id,
 					)?.prediction,
