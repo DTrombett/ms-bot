@@ -25,16 +25,16 @@
 		"@discordjs/rest": "^2.6.0",
 		"cloudflare": "^5.2.0",
 		"discord-api-types": "^0.38.37",
-		"socket.io-client": "^4.8.1"
+		"socket.io-client": "^4.8.3"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.2",
 		"@tsconfig/recommended": "^1.0.13",
 		"@tsconfig/strictest": "^2.0.8",
-		"@types/node": "^24.10.3",
+		"@types/node": "^24.10.4",
 		"eslint": "^9.39.2",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.49.0",
+		"typescript-eslint": "^8.50.1",
 		"undici": "^7.16.0",
 		"wrangler": "^4.54.0"
 	}

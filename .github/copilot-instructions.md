@@ -59,7 +59,6 @@ src/
 ├── util/                   # Shared utilities and types
 │   ├── types.ts            # TypeScript type definitions
 │   └── ...                 # Helper functions
-├── LiveMatch.ts            # Workflow for live match updates
 ├── LiveScore.ts            # Workflow for live score updates
 ├── PredictionsReminders.ts # Workflow for prediction reminders
 ├── Reminder.ts             # Workflow for user reminders
@@ -93,6 +92,7 @@ The bot uses three main tables:
 
 - Commands need to satisfy `CommandOptions<ApplicationCommandType.ChatInput>`, where `ChatInput` is used for slash commands, `Message` for message context menu commands, etc...
 - The `CommandOptions` object has the following properties:
+
   - `data`: An array of command data, following the Discord API structure `APIApplicationCommand`. Normally, the data array should include only one command.
   - `run`: The function to execute when the command is invoked. It takes two arguments:
     - `reply`: A function to send a reply to the interaction of type `APIInteractionResponseChannelMessageWithSource | APIInteractionResponseDeferredChannelMessageWithSource | APIModalInteractionResponse`
@@ -102,6 +102,7 @@ The bot uses three main tables:
       - `env`: Environment variables
 
   The following properties are optional and should be added only if needed:
+
   - `isPrivate`: `true` if the command can be executed only by the bot owner.
   - `autocomplete`: A function to handle `APIApplicationCommandAutocompleteInteraction` (to autocomplete options with `autocomplete: true`). It takes the same arguments as `run`, except for the `reply` function which accepts `APIApplicationCommandAutocompleteResponse` as argument.
   - `component`: A function to handle `APIMessageComponentInteraction`. It takes the same arguments as `run`, except for the `reply` function which accepts `APIInteractionResponseChannelMessageWithSource | APIInteractionResponseDeferredChannelMessageWithSource | APIInteractionResponseDeferredMessageUpdate | APIInteractionResponseUpdateMessage | APIModalInteractionResponse`.

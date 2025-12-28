@@ -15,7 +15,7 @@ import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
 import { rest } from "./util/rest.ts";
 
 export type Params = {
-	matchDay: { day: number; id: number };
+	matchDay: { day: number; id: string };
 	messageId: string;
 };
 
@@ -60,13 +60,13 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 								away_goal: number;
 								home_goal: number;
 								match_day_id: number;
-								match_status: MatchStatus;
+								providerStatus: MatchStatus;
 							}[] = JSON.parse(data);
 							let changed = false;
 
 							for (const update of updates) {
 								const found = matches.find(
-									(m) => m.match_id === update.match_id,
+									(m) => m.matchId === update.match_id,
 								);
 
 								if (found) {
@@ -158,19 +158,20 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 	}
 
 	private isFinished(matches: Match[]) {
-		if (matches.every((m) => m.match_status === MatchStatus.Finished))
+		if (matches.every((m) => m.providerStatus === MatchStatus.Finished))
 			return true;
-		if (matches.some((m) => m.match_status === MatchStatus.Live)) return false;
+		if (matches.some((m) => m.providerStatus === MatchStatus.Live))
+			return false;
 		const nextMatch = matches.find(
-			(m) => m.match_status === MatchStatus.ToBePlayed,
+			(m) => m.providerStatus === MatchStatus.ToBePlayed,
 		);
 
-		if (nextMatch) return Date.parse(nextMatch.date_time);
+		if (nextMatch) return Date.parse(nextMatch.matchDateUtc);
 		return undefined;
 	}
 
 	private async loadPredictions(
-		matches: Pick<Match, "match_id">[],
+		matches: Pick<Match, "matchId">[],
 	): Promise<ResolvedUser[]> {
 		const [{ results: predictions }, { results: rawUsers }] =
 			(await this.env.DB.batch([
@@ -178,7 +179,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 					`SELECT *
 					FROM Predictions
 					WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
-				).bind(...matches.map((m) => m.match_id)),
+				).bind(...matches.map((m) => m.matchId)),
 				this.env.DB.prepare(`SELECT id, dayPoints, matchPointsHistory, match
 					FROM Users`),
 			])) as [
@@ -255,7 +256,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 			this.env.DB.prepare(
 				`DELETE FROM Predictions
 				WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
-			).bind(...matches.map((m) => m.match_id)),
+			).bind(...matches.map((m) => m.matchId)),
 		]);
 		return newUsers;
 	}
