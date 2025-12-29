@@ -25,7 +25,8 @@ export const getSeasonData = async (userId: string, day?: number) => {
 		const today = new Date().getUTCDate();
 		const liveMatchDay = matchdays.findLast(
 			(d) =>
-				d.matchdayStatus === "Playing" &&
+				(d.matchdayStatus === "Playing" ||
+					d.matchdayStatus === "Partially Played") &&
 				new Date(d.startDateUtc).getUTCDate() === today,
 		);
 

@@ -300,7 +300,7 @@ declare global {
 		type: string | null;
 		startDateUtc: string;
 		endDateUtc: string;
-		matchdayStatus: "Played" | "Playing" | "Fixture";
+		matchdayStatus: "Played" | "Playing" | "Fixture" | "Partially Played";
 	};
 	type SeasonResponse = {
 		competition: Competition;
