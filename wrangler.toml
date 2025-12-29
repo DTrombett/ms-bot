@@ -51,11 +51,6 @@ binding = "PREDICTIONS_REMINDERS"
 class_name = "PredictionsReminders"
 
 [[workflows]]
-name = "live-score"
-binding = "LIVE_SCORE"
-class_name = "LiveScore"
-
-[[workflows]]
 name = "brawl-notifications"
 binding = "BRAWL_NOTIFICATIONS"
 class_name = "BrawlNotifications"

@@ -13,7 +13,10 @@ import {
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
 import { calculateWins } from "../util/calculateWins.ts";
-import { MatchStatus } from "../util/Constants.ts";
+import {
+	createLiveComponents,
+	getNextMatch,
+} from "../util/createLiveComponents.ts";
 import { getLiveEmbed, resolveStats } from "../util/getLiveEmbed.ts";
 import { getMatchDayNumber } from "../util/getMatchDayNumber.ts";
 import { getSeasonData } from "../util/getSeasonData.ts";
@@ -472,29 +475,31 @@ export class Predictions extends Command {
 		{
 			interaction,
 			user: { id },
-			args: [actionOrDay, arg1, arg2, arg3 = id],
+			args: [actionOrDay, arg1, arg2, arg3],
 		}: ComponentArgs,
 	) {
 		if (actionOrDay === "r") {
 			const nextUpdate =
-				Number(arg3) ||
 				Date.parse(
 					interaction.message.edited_timestamp ?? interaction.message.timestamp,
-				) +
-					TimeUnit.Minute * 5;
-			const now = Date.now();
-			if (nextUpdate > now)
+				) + (Number(arg3) * TimeUnit.Second || TimeUnit.Minute);
+			if (nextUpdate > Date.now())
 				return reply({
 					flags: MessageFlags.Ephemeral,
 					content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
 						nextUpdate / 1000,
 					)}:R>!`,
 				});
+			arg1 = decodeURIComponent(arg1!);
 			deferUpdate();
-			const matches = await loadMatches(arg1!);
+			const matches = await loadMatches(arg1);
 			const hash = hashMatches(matches);
+			const nextMatch = getNextMatch(matches);
 
-			if (hash === arg2) return;
+			if (hash === arg2 && nextMatch)
+				return edit({
+					components: createLiveComponents(arg1, hash, nextMatch),
+				});
 			const [{ results: predictions }, { results: rawUsers }] =
 				(await env.DB.batch([
 					env.DB.prepare(
@@ -516,19 +521,6 @@ export class Predictions extends Command {
 					predictions: predictions.filter((p) => p.userId === user.id),
 				}))
 				.filter((u) => u.predictions.length || u.dayPoints != null);
-			const nextMatch = matches.some(
-				(m) => m.providerStatus === MatchStatus.Live,
-			)
-				? now + TimeUnit.Minute
-				: matches.every((m) => m.providerStatus === MatchStatus.Finished)
-				? 0
-				: Math.max(
-						now + TimeUnit.Minute,
-						Date.parse(
-							matches.find((m) => m.providerStatus === MatchStatus.ToBePlayed)
-								?.matchDateUtc ?? "",
-						) || now + TimeUnit.Day,
-				  );
 			const leaderboard = resolveLeaderboard(users, matches);
 			const day = getMatchDayNumber(matches[0]!.matchSet);
 			if (!nextMatch) {
@@ -562,22 +554,7 @@ export class Predictions extends Command {
 			}
 			await edit({
 				embeds: getLiveEmbed(users, matches, leaderboard, day, !nextMatch),
-				components: nextMatch
-					? [
-							{
-								type: ComponentType.ActionRow,
-								components: [
-									{
-										type: ComponentType.Button,
-										custom_id: `predictions-r-${arg1}-${hash}-${nextMatch}`,
-										emoji: { name: "🔁" },
-										label: "Aggiorna",
-										style: ButtonStyle.Primary,
-									},
-								],
-							},
-					  ]
-					: [],
+				components: createLiveComponents(arg1, hash, nextMatch),
 			});
 			if (!nextMatch)
 				await rest.delete(
@@ -588,6 +565,7 @@ export class Predictions extends Command {
 				);
 			return;
 		}
+		arg3 ??= id;
 		const time = parseInt(arg2!);
 		if (Date.now() >= time)
 			return reply({

@@ -11,6 +11,10 @@ import {
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
+import {
+	createLiveComponents,
+	getNextMatch,
+} from "./util/createLiveComponents.ts";
 import { getLiveEmbed } from "./util/getLiveEmbed.ts";
 import { getMatchDayNumber } from "./util/getMatchDayNumber.ts";
 import { fetchMatchDays } from "./util/getSeasonData.ts";
@@ -334,22 +338,11 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 						resolveLeaderboard(users, matches),
 						matchDay.day,
 					),
-					components: [
-						{
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									custom_id: `predictions-r-${matchDay.id}-${hashMatches(
-										matches,
-									)}`,
-									emoji: { name: "🔁" },
-									label: "Aggiorna",
-									style: ButtonStyle.Primary,
-								},
-							],
-						},
-					],
+					components: createLiveComponents(
+						matchDay.id,
+						hashMatches(matches),
+						getNextMatch(matches) || Date.now(),
+					),
 				} satisfies RESTPostAPIChannelMessageJSONBody,
 			},
 		)) as RESTPostAPIChannelMessageResult;

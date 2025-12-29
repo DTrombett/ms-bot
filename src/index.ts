@@ -125,7 +125,6 @@ const server: ExportedHandler<Env> = {
 
 export { BrawlNotifications } from "./BrawlNotifications.ts";
 export { ClashNotifications } from "./ClashNotifications.ts";
-export { LiveScore } from "./LiveScore.ts";
 export { PredictionsReminders } from "./PredictionsReminders.ts";
 export { Reminder } from "./Reminder.ts";
 export { Shorten } from "./Shorten.ts";
