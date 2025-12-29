@@ -492,7 +492,7 @@ export class Predictions extends Command {
 				});
 			deferUpdate();
 			const matches = await loadMatches(arg1!);
-			const hash = await hashMatches(matches);
+			const hash = hashMatches(matches);
 
 			if (hash === arg2) return;
 			const [{ results: predictions }, { results: rawUsers }] =

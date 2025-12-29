@@ -340,7 +340,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 							components: [
 								{
 									type: ComponentType.Button,
-									custom_id: `predictions-r-${matchDay.id}-${await hashMatches(
+									custom_id: `predictions-r-${matchDay.id}-${hashMatches(
 										matches,
 									)}`,
 									emoji: { name: "🔁" },
