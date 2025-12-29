@@ -13,16 +13,19 @@ import {
 } from "discord-api-types/v10";
 import { getLiveEmbed } from "./util/getLiveEmbed.ts";
 import { getMatchDayNumber } from "./util/getMatchDayNumber.ts";
+import { fetchMatchDays } from "./util/getSeasonData.ts";
+import { hashMatches } from "./util/hashMatches.ts";
 import { loadMatches } from "./util/loadMatches.ts";
-import normalizeTeamName from "./util/normalizeTeamName.ts";
+import { createMatchName } from "./util/normalizeTeamName.ts";
 import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
 import { rest } from "./util/rest.ts";
-import { formatLongTime } from "./util/time.ts";
+import { formatLongTime, TimeUnit } from "./util/time.ts";
 
 const KV_KEY = "started-matchdays";
+const timeout = 20 * TimeUnit.Second;
 
 export type Params = {
-	matchDay?: { day: number; id: number };
+	matchDay?: { day: number; id: string };
 };
 
 export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
@@ -32,36 +35,35 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	) {
 		const started = await step.do(
 			"load started matchdays",
-			{ timeout: 10_000 },
+			{ timeout },
 			this.loadStartedMatchdays.bind(this),
 		);
 		const matchDay =
 			event.payload.matchDay ??
 			(await step.do(
 				"get match day",
-				{ timeout: 10_000 },
+				{ timeout },
 				this.getMatchDay.bind(this, started),
 			));
-
 		if (!matchDay) {
 			console.log("No match day available");
 			return;
 		}
 		const startTime = await step.do(
 			"get start time",
-			{ timeout: 20_000 },
+			{ timeout },
 			this.getStartTime.bind(this, matchDay),
 		);
 		const diff = startTime - event.timestamp.getTime();
 
-		if (diff > 24 * 60 * 60 * 1_000) {
+		if (diff > TimeUnit.Day) {
 			console.log(`Next match day is in ${formatLongTime(diff)}`);
 			return;
 		}
-		if (diff > 1_000) {
+		if (diff > TimeUnit.Second) {
 			const reminders = await step.do(
 				"get prediction reminders",
-				{ timeout: 10_000 },
+				{ timeout },
 				this.getReminders.bind(this, startTime),
 			);
 
@@ -70,13 +72,13 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					if (
 						await step.do(
 							`check if ${userId} remind already set`,
-							{ timeout: 10_000 },
+							{ timeout },
 							this.notExists.bind(this, userId, matchDay.id),
 						)
 					)
 						await step.do<void>(
 							`create ${userId} reminder`,
-							{ timeout: 10_000 },
+							{ timeout },
 							this.createReminder.bind(this, userId, date, startTime, matchDay),
 						);
 				}),
@@ -88,21 +90,20 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		);
 		const matches = await step.do(
 			"load matches",
-			{ timeout: 10_000 },
+			{ timeout },
 			loadMatches.bind(null, matchDay.id),
 		);
 		const users = await step.do(
 			"load predictions",
-			{ timeout: 10_000 },
+			{ timeout },
 			this.loadPredictions.bind(this, matches),
 		);
 		const promises: Promise<void>[] = [];
-
 		for (let i = 0; i < users.length; )
 			promises.push(
 				step.do<void>(
 					`send chunk ${i / 5}`,
-					{ timeout: 40_000 },
+					{ timeout },
 					this.sendEmbeds.bind(
 						this,
 						matchDay.day,
@@ -114,69 +115,56 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		await Promise.all(promises);
 		const messageId = await step.do(
 			"send message",
-			{ timeout: 20_000 },
-			this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
+			{ timeout },
+			this.sendMatchDayMessage.bind(this, users, matches, matchDay),
 		);
 		started.push(matchDay.id);
 		await Promise.all([
 			step.do<void>(
 				"pin message",
-				{ timeout: 20_000 },
+				{ timeout },
 				this.pinMessage.bind(this, messageId),
 			),
 			step.do<void>(
-				"start live score",
-				{ timeout: 10_000 },
-				this.startLiveScore.bind(this, matchDay, messageId),
-			),
-			step.do<void>(
 				"update started matchday",
-				{ timeout: 10_000 },
+				{ timeout },
 				this.updateStartedMatchday.bind(this, started),
 			),
 		]);
 		const newMatchDay = await step.do(
 			"Load new match day",
-			this.loadNewMatchDay.bind(this, matchDay.id, started),
+			{ timeout },
+			this.getMatchDay.bind(this, started),
 		);
-
 		if (!newMatchDay) {
-			console.error("No match to be played!");
+			console.log("No match to be played!");
 			return;
 		}
 		const newStartTime = await step.do(
 			"Get new start time",
-			{ timeout: 10_000 },
+			{ timeout },
 			this.getStartTime.bind(this, newMatchDay),
 		);
 		const date = Math.round(newStartTime / 1_000);
-
 		if (date - Date.now() / 1_000 > 1)
 			await step.do(
 				"Send new match day message",
-				{ timeout: 20_000 },
+				{ timeout },
 				this.sendNewMatchDayMessage.bind(this, date, newStartTime, newMatchDay),
 			);
 	}
 
-	private async getMatchDay(started: number[] = []) {
-		const matchDays = await fetch(
-			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
-		).then<MatchDayResponse>((res) => res.json());
+	private async getMatchDay(started: string[] = []) {
+		const matchDays = await fetchMatchDays();
+		const md = matchDays.find((d) => !started.includes(d.matchSetId));
 
-		if (!matchDays.success) throw new Error(matchDays.message);
-		const md = matchDays.data.find(
-			(d) =>
-				d.category_status === "TO BE PLAYED" &&
-				!started.includes(d.id_category),
-		);
-		return md && { day: getMatchDayNumber(md), id: md.id_category };
+		return md && { day: getMatchDayNumber(md), id: md.matchSetId };
 	}
 
-	private async getStartTime(day: { day: number; id: number }) {
-		const matches = await loadMatches(day.id, 1);
+	private async getStartTime(day: { day: number; id: string }) {
+		const matches = await loadMatches(day.id);
 
-		return Date.parse(matches[0]!.date_time) - 5 * 60 * 1000;
+		return Date.parse(matches[0]!.matchDateUtc) - 5 * TimeUnit.Minute;
 	}
 
 	private async getReminders(startTime: number) {
@@ -189,12 +177,13 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 
 		return results
 			.sort((a, b) => b.remindMinutes! - a.remindMinutes!)
-			.map<
-				[recipient_id: string, date: number]
-			>((u) => [u.id, startTime - u.remindMinutes! * 60 * 1000]);
+			.map<[recipient_id: string, date: number]>((u) => [
+				u.id,
+				startTime - u.remindMinutes! * 60 * 1000,
+			]);
 	}
 
-	private async notExists(userId: string, matchId: number) {
+	private async notExists(userId: string, matchId: string) {
 		return (
 			(await this.env.REMINDER.get(`${userId}-predictions-${matchId}`).catch(
 				() => {},
@@ -208,7 +197,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		startTime: number,
 		matchDay: {
 			day: number;
-			id: number;
+			id: string;
 		},
 	) {
 		await this.env.REMINDER.create({
@@ -223,7 +212,9 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 							type: ComponentType.ActionRow,
 							components: [
 								{
-									custom_id: `predictions-${Number(matchDay.day)}-1-${startTime}-${userId}`,
+									custom_id: `predictions-${Number(
+										matchDay.day,
+									)}-1-${startTime}-${userId}`,
 									emoji: { name: "⚽" },
 									label: "Invia pronostici",
 									style: ButtonStyle.Primary,
@@ -253,7 +244,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 					`SELECT *
 					FROM Predictions
 					WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
-				).bind(...matches.map((m) => m.match_id)),
+				).bind(...matches.map((m) => m.matchId)),
 				this.env.DB.prepare(`SELECT id, dayPoints, matchPointsHistory, match
 					FROM Users`),
 			])) as [
@@ -299,21 +290,19 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 												user.discriminator === "0"
 													? Number(BigInt(user.id) >> 22n) % 6
 													: Number(user.discriminator) % 5,
-											)
+										  )
 										: rest.cdn.avatar(user.id, user.avatar, {
 												size: 4096,
 												extension: "png",
-											})),
+										  })),
 							},
 							color: user?.accent_color ?? 0x3498db,
 							fields: matches.map((match) => ({
-								name: [match.home_team_name, match.away_team_name]
-									.map(normalizeTeamName)
-									.join(" - "),
+								name: createMatchName(match),
 								value:
-									(data.match === match.match_id ? "⭐ " : "") +
+									(data.match === match.matchId ? "⭐ " : "") +
 									(data.predictions.find(
-										(predict) => predict.matchId === match.match_id,
+										(predict) => predict.matchId === match.matchId,
 									)?.prediction ?? "*Non presente*"),
 							})),
 							thumbnail: {
@@ -330,7 +319,10 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	private async sendMatchDayMessage(
 		users: ResolvedUser[],
 		matches: Match[],
-		day: number,
+		matchDay: {
+			day: number;
+			id: string;
+		},
 	) {
 		const { id } = (await rest.post(
 			Routes.channelMessages(this.env.PREDICTIONS_CHANNEL),
@@ -340,8 +332,24 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 						users,
 						matches,
 						resolveLeaderboard(users, matches),
-						day,
+						matchDay.day,
 					),
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `predictions-r-${matchDay.id}-${hashMatches(
+										matches,
+									)}`,
+									emoji: { name: "🔁" },
+									label: "Aggiorna",
+									style: ButtonStyle.Primary,
+								},
+							],
+						},
+					],
 				} satisfies RESTPostAPIChannelMessageJSONBody,
 			},
 		)) as RESTPostAPIChannelMessageResult;
@@ -355,46 +363,22 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		);
 	}
 
-	private async startLiveScore(
-		matchDay: { day: number; id: number },
-		messageId: string,
-	) {
-		await this.env.LIVE_SCORE.create({ params: { matchDay, messageId } });
-	}
-
-	private async updateStartedMatchday(started: number[]) {
+	private async updateStartedMatchday(started: string[]) {
 		await this.env.KV.put(KV_KEY, started.join(","));
 	}
 
-	private async loadNewMatchDay(lastId: number, started: number[] = []) {
-		const matchDays = (await fetch(
-			`https://legaseriea.it/api/season/${this.env.SEASON_ID}/championship/A/matchday`,
-		).then((res) => res.json())) as MatchDayResponse;
-
-		if (!matchDays.success)
-			throw new Error(matchDays.message, {
-				cause: matchDays.errors,
-			});
-		const md = matchDays.data.find(
-			(d) =>
-				d.id_category !== lastId &&
-				d.category_status === "TO BE PLAYED" &&
-				!started.includes(d.id_category),
-		);
-		return md && { day: getMatchDayNumber(md), id: md.id_category };
-	}
-
 	private async loadStartedMatchdays() {
-		return ((await this.env.KV.get(KV_KEY).catch(() => undefined)) ?? "")
-			.split(",")
-			.filter(Boolean)
-			.map(Number);
+		return (
+			(await this.env.KV.get(KV_KEY).catch(() => undefined))
+				?.split(",")
+				.filter(Boolean) ?? []
+		);
 	}
 
 	private async sendNewMatchDayMessage(
 		date: number,
 		startTime: number,
-		day: { day: number; id: number },
+		day: { day: number; id: string },
 	) {
 		await rest.post(Routes.channelMessages(this.env.PREDICTIONS_CHANNEL), {
 			body: {

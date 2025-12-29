@@ -2,7 +2,7 @@ import type { APIEmbed } from "discord-api-types/v10";
 import { calculateAveragePoints } from "./calculateAveragePoints.ts";
 import { calculateWins } from "./calculateWins.ts";
 import { MatchStatus } from "./Constants.ts";
-import normalizeTeamName from "./normalizeTeamName.ts";
+import { createMatchName } from "./normalizeTeamName.ts";
 
 const finalEmojis: Record<number, string | undefined> = {
 	[-2]: "⏬",
@@ -43,34 +43,34 @@ export const createLeaderboardDescription = (
 					? `avg. ${(
 							(matchPointsHistory.reduce((a, b) => a + b, 0) + points) /
 							(matchPointsHistory.length + 1)
-						).toFixed(2)}`
+					  ).toFixed(2)}`
 					: `max. ${maxPoints}`
 			}) (${dayPoints > 0 ? "+" : ""}${dayPoints})${
 				position === 1 && points > highestMatchPoints
 					? " ✨"
 					: !matchPointsHistory.some((p) => p >= points)
-						? " 🔥"
-						: ""
+					? " 🔥"
+					: ""
 			}`;
 		})
 		.join("\n");
 };
-const resolveMatches = (
-	matches: Extract<MatchesData, { success: true }>["data"],
-) =>
+const resolveMatches = (matches: Match[]) =>
 	matches
 		.map(
 			(match) =>
-				`- ${match.match_status === MatchStatus.Live ? "🔴 " : ""}[${normalizeTeamName(
-					match.home_team_name,
-				)} - ${normalizeTeamName(match.away_team_name)}](https://legaseriea.it${
-					match.slug
-				}): ${
-					match.match_status === MatchStatus.ToBePlayed
-						? `<t:${Math.round(new Date(match.date_time).getTime() / 1_000)}:F>`
-						: match.match_status === MatchStatus.Postponed
-							? "*Posticipata*"
-							: `**${match.home_goal ?? 0} - ${match.away_goal ?? 0}**`
+				`- ${
+					match.providerStatus === MatchStatus.Live ? "🔴 " : ""
+				}[${createMatchName(match)}](https://en.legaseriea.it/serie-a/match/${
+					match.matchId.split(":")[4]
+				}/${match.home.shortName.toLowerCase()}-vs-${match.away.shortName.toLowerCase()}): ${
+					match.providerStatus === MatchStatus.ToBePlayed
+						? `<t:${Math.round(Date.parse(match.matchDateUtc) / 1_000)}:F>`
+						: match.providerStatus === MatchStatus.Postponed
+						? "*Posticipata*"
+						: `**${match.providerHomeScore ?? 0} - ${
+								match.providerAwayScore ?? 0
+						  }**`
 				}`,
 		)
 		.join("\n");
@@ -232,7 +232,7 @@ export const resolveStats = (
 			highestPoints.users.size
 				? `${[...highestPoints.users].map((id) => `<@${id}>`).join(", ")} • **${
 						highestPoints.points
-					}** Punti Partita`
+				  }** Punti Partita`
 				: "**N/A**"
 		}\n- Media più alta: ${
 			highestAvg.users.size
@@ -244,13 +244,13 @@ export const resolveStats = (
 			highestDiff.users.size
 				? `${[...highestDiff.users].map((id) => `<@${id}>`).join(", ")} • **${
 						highestDiff.points
-					}** Punti Partita`
+				  }** Punti Partita`
 				: "**N/A**"
 		}\n- Combo vittorie più lunga: ${
 			highestStreak.users.size
 				? `${[...highestStreak.users].map((id) => `<@${id}>`).join(", ")} • **${
 						highestStreak.days
-					}** Giornate`
+				  }** Giornate`
 				: "**N/A**"
 		}\n- Maggior numero di punti in una giornata: ${
 			bestDay ? `**${bestDay.totalPoints}** Punti Partita` : "**N/A**"
@@ -258,7 +258,7 @@ export const resolveStats = (
 			days.length
 				? `**${totalPoints}** Punti Partita • Avg. **${(
 						totalPoints / days.length
-					).toFixed(2)}**/day`
+				  ).toFixed(2)}**/day`
 				: "**N/A**"
 		}`,
 	};
@@ -266,7 +266,7 @@ export const resolveStats = (
 
 export const getLiveEmbed = (
 	users: ResolvedUser[],
-	matches: Extract<MatchesData, { success: true }>["data"],
+	matches: Match[],
 	leaderboard: Leaderboard,
 	day: number,
 	finished = false,

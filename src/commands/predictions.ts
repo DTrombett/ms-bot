@@ -5,6 +5,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	Routes,
 	TextInputStyle,
 	type APIModalInteractionResponseCallbackData,
 	type ModalSubmitActionRowComponent,
@@ -12,12 +13,17 @@ import {
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
 import { calculateWins } from "../util/calculateWins.ts";
-import { resolveStats } from "../util/getLiveEmbed.ts";
-import { getMatchDayData } from "../util/getMatchDayData.ts";
+import { MatchStatus } from "../util/Constants.ts";
+import { getLiveEmbed, resolveStats } from "../util/getLiveEmbed.ts";
 import { getMatchDayNumber } from "../util/getMatchDayNumber.ts";
-import normalizeTeamName from "../util/normalizeTeamName.ts";
+import { getSeasonData } from "../util/getSeasonData.ts";
+import { hashMatches } from "../util/hashMatches.ts";
+import { loadMatches } from "../util/loadMatches.ts";
+import { createMatchName } from "../util/normalizeTeamName.ts";
+import { resolveLeaderboard } from "../util/resolveLeaderboard.ts";
 import { rest } from "../util/rest.ts";
 import { sortLeaderboard } from "../util/sortLeaderboard.ts";
+import { TimeUnit } from "../util/time.ts";
 
 export class Predictions extends Command {
 	static override chatInputData = {
@@ -212,7 +218,7 @@ export class Predictions extends Command {
 				});
 		if (options.user)
 			user = interaction.data.resolved?.users?.[options.user] ?? user;
-		const [matchDay, matches, existingPredictions] = await getMatchDayData(
+		const [matchDay, matches, existingPredictions] = await getSeasonData(
 			user.id,
 			options.day,
 		);
@@ -222,7 +228,7 @@ export class Predictions extends Command {
 				flags: MessageFlags.Ephemeral,
 				content: "Non c'è nessuna giornata disponibile al momento!",
 			});
-		const startTime = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5;
+		const startTime = Date.parse(matches[0]!.matchDateUtc) - 1_000 * 60 * 5;
 		if (subcommand === "view") {
 			if (!existingPredictions.length)
 				return reply({
@@ -240,23 +246,21 @@ export class Predictions extends Command {
 											user.discriminator === "0"
 												? Number(BigInt(user.id) >> 22n) % 6
 												: Number(user.discriminator) % 5,
-										)
+									  )
 									: rest.cdn.avatar(user.id, user.avatar, {
 											size: 4096,
 											extension: "png",
-										}),
+									  }),
 						},
 						color: 0x3498db,
 						fields: matches.map((m) => ({
-							name: `${[m.home_team_name, m.away_team_name]
-								.map(normalizeTeamName)
-								.join(" - ")} (<t:${Math.round(
-								new Date(m.date_time).getTime() / 1_000,
+							name: `${createMatchName(m)} (<t:${Math.round(
+								Date.parse(m.matchDateUtc) / 1_000,
 							)}:F>)`,
 							value:
-								(existingPredictions[0]?.match === m.match_id ? "⭐ " : "") +
+								(existingPredictions[0]?.match === m.matchId ? "⭐ " : "") +
 								(existingPredictions.find(
-									(predict) => predict.matchId === m.match_id,
+									(predict) => predict.matchId === m.matchId,
 								)?.prediction ?? "*Non presente*"),
 						})),
 						thumbnail: {
@@ -304,7 +308,7 @@ export class Predictions extends Command {
 					"Puoi inviare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 				flags: MessageFlags.Ephemeral,
 			});
-		const [matchDay, matches, existingPredictions] = await getMatchDayData(
+		const [matchDay, matches, existingPredictions] = await getSeasonData(
 			userId,
 			day,
 		);
@@ -322,7 +326,7 @@ export class Predictions extends Command {
 		} of interaction.data.components as ModalSubmitActionRowComponent[]) {
 			const value = field!.value.trim();
 			const match = value.toLowerCase().match(Predictions.predictionRegex);
-			const matchId = parseInt(field!.custom_id);
+			const matchId = field!.custom_id;
 
 			if (
 				!match?.groups ||
@@ -336,14 +340,16 @@ export class Predictions extends Command {
 					match.groups.first >= match.groups.second!) ||
 				(match.groups.first && Number(match.groups.first) > 999) ||
 				(match.groups.second && Number(match.groups.second) > 999)
-			)
-				invalid.push(matches.find((m) => m.match_id === matchId)!.match_name);
-			else if (
+			) {
+				const invalidMatch = matches.find((m) => m.matchId === matchId);
+
+				if (invalidMatch) invalid.push(createMatchName(invalidMatch));
+			} else if (
 				existingPredictions.find((p) => p.matchId === matchId)?.prediction !==
 				(resolved[field!.value] ??= match.groups.prediction
 					? `${match.groups.prediction.toUpperCase()} (${
 							match.groups.first
-						} - ${match.groups.second})`
+					  } - ${match.groups.second})`
 					: value.toUpperCase())
 			)
 				newPredictions.push({
@@ -383,7 +389,9 @@ export class Predictions extends Command {
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
+								custom_id: `predictions-${getMatchDayNumber(
+									matchDay,
+								)}-${part}-${timestamp}-${userId}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
 								style: ButtonStyle.Danger,
@@ -405,20 +413,18 @@ export class Predictions extends Command {
 								custom_id: `predictions-match-${day}-${timestamp}-${userId}`,
 								placeholder: "Seleziona il Match of the Match",
 								options: matches.map((m) => ({
-									label: [m.home_team_name, m.away_team_name]
-										.map(normalizeTeamName)
-										.join(" - "),
+									label: createMatchName(m),
 									description:
 										(
 											newPredictions.find(
-												({ matchId }) => matchId === m.match_id,
+												({ matchId }) => matchId === m.matchId,
 											) ??
 											existingPredictions.find(
-												({ matchId }) => matchId === m.match_id,
+												({ matchId }) => matchId === m.matchId,
 											)
 										)?.prediction ?? "",
-									value: m.match_id.toString(),
-									default: m.match_id === existingPredictions[0]?.match,
+									value: m.matchId,
+									default: m.matchId === existingPredictions[0]?.match,
 								})),
 							},
 						],
@@ -428,7 +434,9 @@ export class Predictions extends Command {
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
+								custom_id: `predictions-${getMatchDayNumber(
+									matchDay,
+								)}-1-${timestamp}-${userId}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
 								style: ButtonStyle.Success,
@@ -446,7 +454,9 @@ export class Predictions extends Command {
 					components: [
 						{
 							type: ComponentType.Button,
-							custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part! + 1}-${timestamp}-${userId}`,
+							custom_id: `predictions-${getMatchDayNumber(matchDay)}-${
+								part! + 1
+							}-${timestamp}-${userId}`,
 							emoji: { name: "⏩" },
 							label: "Continua",
 							style: ButtonStyle.Primary,
@@ -458,23 +468,133 @@ export class Predictions extends Command {
 		});
 	}
 	static override async component(
-		{ reply, modal }: ComponentReplies,
+		{ reply, modal, deferUpdate, edit }: ComponentReplies,
 		{
 			interaction,
 			user: { id },
-			args: [actionOrDay, part, timestamp, userId = id],
+			args: [actionOrDay, arg1, arg2, arg3 = id],
 		}: ComponentArgs,
 	) {
-		const time = parseInt(timestamp!);
+		if (actionOrDay === "r") {
+			const nextUpdate =
+				Number(arg3) ||
+				Date.parse(
+					interaction.message.edited_timestamp ?? interaction.message.timestamp,
+				) +
+					TimeUnit.Minute * 5;
+			const now = Date.now();
+			if (nextUpdate > now)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
+						nextUpdate / 1000,
+					)}:R>!`,
+				});
+			deferUpdate();
+			const matches = await loadMatches(arg1!);
+			const hash = hashMatches(matches);
+
+			if (hash === arg2) return;
+			const [{ results: predictions }, { results: rawUsers }] =
+				(await env.DB.batch([
+					env.DB.prepare(
+						`SELECT *
+					FROM Predictions
+					WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+					).bind(...matches.map((m) => m.matchId)),
+					env.DB.prepare(`SELECT id, dayPoints, matchPointsHistory, match
+					FROM Users`),
+				])) as [
+					D1Result<Prediction>,
+					D1Result<
+						Pick<User, "dayPoints" | "id" | "match" | "matchPointsHistory">
+					>,
+				];
+			let users: ResolvedUser[] = rawUsers
+				.map((user) => ({
+					...user,
+					predictions: predictions.filter((p) => p.userId === user.id),
+				}))
+				.filter((u) => u.predictions.length || u.dayPoints != null);
+			const nextMatch = matches.some(
+				(m) => m.providerStatus === MatchStatus.Live,
+			)
+				? now + TimeUnit.Minute
+				: matches.every((m) => m.providerStatus === MatchStatus.Finished)
+				? 0
+				: Date.parse(
+						matches.find((m) => m.providerStatus === MatchStatus.ToBePlayed)
+							?.matchDateUtc ?? "",
+				  ) || TimeUnit.Day;
+			const leaderboard = resolveLeaderboard(users, matches);
+			const day = getMatchDayNumber(matches[0]!.matchSet);
+			if (!nextMatch) {
+				const query = env.DB.prepare(`UPDATE Users
+				SET dayPoints = COALESCE(dayPoints, 0) + ?1,
+					matchPointsHistory = COALESCE(matchPointsHistory, "${",".repeat(
+						Math.max(day - 2, 0),
+					)}") || ?2,
+					reminded = 0,
+					match = NULL
+				WHERE id = ?3`);
+
+				users = [];
+				await env.DB.batch([
+					...leaderboard.map(([user, matchPoints, dayPoints]) => {
+						users.push({
+							...user,
+							dayPoints: (user.dayPoints ?? 0) + dayPoints,
+							matchPointsHistory: `${
+								user.matchPointsHistory ?? ",".repeat(Math.max(day - 2, 0))
+							},${matchPoints}`,
+							match: null,
+						});
+						return query.bind(dayPoints, `,${matchPoints}`, user.id);
+					}),
+					env.DB.prepare(
+						`DELETE FROM Predictions
+					WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+					).bind(...matches.map((m) => m.matchId)),
+				]);
+			}
+			await edit({
+				embeds: getLiveEmbed(users, matches, leaderboard, day, !nextMatch),
+				components: nextMatch
+					? [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										custom_id: `predictions-r-${arg1}-${hash}-${nextMatch}`,
+										emoji: { name: "🔁" },
+										label: "Aggiorna",
+										style: ButtonStyle.Primary,
+									},
+								],
+							},
+					  ]
+					: [],
+			});
+			if (!nextMatch)
+				await rest.delete(
+					Routes.channelMessagesPin(
+						env.PREDICTIONS_CHANNEL,
+						interaction.message.id,
+					),
+				);
+			return;
+		}
+		const time = parseInt(arg2!);
 		if (Date.now() >= time)
 			return reply({
 				content:
 					"Puoi modificare i pronostici solo fino a 5 minuti dall'inizio del primo match della giornata!",
 				flags: MessageFlags.Ephemeral,
 			});
-		const [matchDay, matches, existingPredictions] = await getMatchDayData(
-			userId,
-			Number(actionOrDay) || Number(part) || undefined,
+		const [matchDay, matches, existingPredictions] = await getSeasonData(
+			arg3,
+			Number(actionOrDay) || Number(arg1) || undefined,
 		);
 
 		if (!(matchDay as MatchDay | null))
@@ -495,7 +615,7 @@ export class Predictions extends Command {
 				SET match = ?1
 				WHERE id = ?2;`,
 			)
-				.bind(interaction.data.values[0], userId)
+				.bind(interaction.data.values[0], arg3)
 				.run();
 			return reply({
 				content: "Pronostici inviati correttamente!",
@@ -506,7 +626,9 @@ export class Predictions extends Command {
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `predictions-${getMatchDayNumber(matchDay)}-1-${timestamp}-${userId}`,
+								custom_id: `predictions-${getMatchDayNumber(
+									matchDay,
+								)}-1-${arg2}-${arg3}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
 								style: ButtonStyle.Success,
@@ -525,8 +647,8 @@ export class Predictions extends Command {
 			this.buildModal(
 				matches,
 				matchDay,
-				parseInt(part!),
-				userId,
+				parseInt(arg1!),
+				arg3,
 				existingPredictions,
 				time,
 			),
@@ -538,24 +660,30 @@ export class Predictions extends Command {
 		part: number,
 		userId: string,
 		predictions?: Pick<Prediction, "matchId" | "prediction">[],
-		timestamp = Date.parse(matches[0]!.date_time) - 1_000 * 60 * 5,
+		timestamp = Date.parse(matches[0]!.matchDateUtc) - 1_000 * 60 * 5,
 	): APIModalInteractionResponseCallbackData => ({
-		title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${matches.length / 5})`,
-		custom_id: `predictions-${getMatchDayNumber(matchDay)}-${part}-${timestamp}-${userId}`,
+		title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${
+			matches.length / 5
+		})`,
+		custom_id: `predictions-${getMatchDayNumber(
+			matchDay,
+		)}-${part}-${timestamp}-${userId}`,
 		components: matches.slice((part - 1) * 5, part * 5).map((m) => ({
 			type: ComponentType.ActionRow,
 			components: [
 				{
 					type: ComponentType.TextInput,
-					custom_id: m.match_id.toString(),
-					label: [m.home_team_name, m.away_team_name]
-						.map(normalizeTeamName)
-						.join(" - "),
+					custom_id: m.matchId,
+					label: createMatchName(m),
 					style: TextInputStyle.Short,
 					required: true,
-					placeholder: `es. ${Predictions.predictionExamples[Math.floor(Math.random() * Predictions.predictionExamples.length)]}`,
+					placeholder: `es. ${
+						Predictions.predictionExamples[
+							Math.floor(Math.random() * Predictions.predictionExamples.length)
+						]
+					}`,
 					value: predictions?.find(
-						(prediction) => prediction.matchId === m.match_id,
+						(prediction) => prediction.matchId === m.matchId,
 					)?.prediction,
 				},
 			],

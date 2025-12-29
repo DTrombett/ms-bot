@@ -19,7 +19,7 @@ CREATE TABLE Users (
 	matchPointsHistory VARCHAR(255)
 );
 CREATE TABLE Predictions (
-	matchId INTEGER NOT NULL,
+	matchId VARCHAR(255) NOT NULL,
 	userId VARCHAR(31) NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
 	prediction VARCHAR(255) NOT NULL,
 	PRIMARY KEY (userId, matchId)

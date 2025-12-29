@@ -1,9 +1,6 @@
 import { MatchStatus } from "./Constants.ts";
 
-export const resolveLeaderboard = (
-	users: ResolvedUser[],
-	matches: Extract<MatchesData, { success: true }>["data"],
-) => {
+export const resolveLeaderboard = (users: ResolvedUser[], matches: Match[]) => {
 	const leaderboard = users
 		.map<Leaderboard[number]>((user) => {
 			let maxPoints = 0;
@@ -12,7 +9,7 @@ export const resolveLeaderboard = (
 				user,
 				matches.reduce((points, match) => {
 					const matched = user.predictions
-						.find((p) => match.match_id === p.matchId)
+						.find((p) => match.matchId === p.matchId)
 						?.prediction.match(
 							/(?<type>(X|1|2){1,2})( \((?<home>(?<=\()\d+) - (?<away>\d+(?=\))))?/,
 						)?.groups;
@@ -21,44 +18,44 @@ export const resolveLeaderboard = (
 						maxPoints--;
 						return points - 1;
 					}
-					match.home_goal ??= 0;
-					match.away_goal ??= 0;
+					match.providerHomeScore ??= 0;
+					match.providerAwayScore ??= 0;
 					const { type, home, away } = matched as {
 						type: "1" | "1X" | "2" | "12" | "X" | "X2";
 						home?: `${number}`;
 						away?: `${number}`;
 					};
 					const result =
-						match.home_goal > match.away_goal
+						match.providerHomeScore > match.providerAwayScore
 							? "1"
-							: match.home_goal < match.away_goal
-								? "2"
-								: "X";
+							: match.providerHomeScore < match.providerAwayScore
+							? "2"
+							: "X";
 					let diffPoints = 0;
 					const toBePlayed =
-						match.match_status === MatchStatus.ToBePlayed ||
-						match.match_status === MatchStatus.Postponed;
-					const isStarred = match.match_id === user.match;
+						match.providerStatus === MatchStatus.ToBePlayed ||
+						match.providerStatus === MatchStatus.Postponed;
+					const isStarred = match.matchId === user.match;
 
 					if (!toBePlayed)
 						if (type === result)
 							if (
 								home != null &&
-								Number(home) === match.home_goal &&
-								Number(away) === match.away_goal
+								Number(home) === match.providerHomeScore &&
+								Number(away) === match.providerAwayScore
 							)
 								diffPoints = 3;
 							else diffPoints = 2;
 						else if (type.includes(result)) diffPoints = 1;
 						else if (type.length === 2) diffPoints = -1;
 					if (isStarred) diffPoints *= 2;
-					if (match.match_status === MatchStatus.Finished)
+					if (match.providerStatus === MatchStatus.Finished)
 						maxPoints += diffPoints;
 					else if (home != null)
 						if (
 							toBePlayed ||
-							(match.home_goal <= Number(home) &&
-								match.away_goal <= Number(away))
+							(match.providerHomeScore <= Number(home) &&
+								match.providerAwayScore <= Number(away))
 						)
 							maxPoints += isStarred ? 6 : 3;
 						else maxPoints += isStarred ? 4 : 2;
