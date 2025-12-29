@@ -1,7 +1,7 @@
 export const hashMatches = (matches: Match[]) => {
 	const str = JSON.stringify(
 		matches
-			.sort((a, b) => a.matchId.localeCompare(b.matchId))
+			.toSorted((a, b) => a.matchId.localeCompare(b.matchId))
 			.map((m) => [
 				m.matchId,
 				m.providerStatus,
