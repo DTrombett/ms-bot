@@ -24,8 +24,7 @@
 	"dependencies": {
 		"@discordjs/rest": "^2.6.0",
 		"cloudflare": "^5.2.0",
-		"discord-api-types": "^0.38.37",
-		"socket.io-client": "^4.8.3"
+		"discord-api-types": "^0.38.37"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.2",
