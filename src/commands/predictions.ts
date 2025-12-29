@@ -522,10 +522,13 @@ export class Predictions extends Command {
 				? now + TimeUnit.Minute
 				: matches.every((m) => m.providerStatus === MatchStatus.Finished)
 				? 0
-				: Date.parse(
-						matches.find((m) => m.providerStatus === MatchStatus.ToBePlayed)
-							?.matchDateUtc ?? "",
-				  ) || TimeUnit.Day;
+				: Math.max(
+						now + TimeUnit.Minute,
+						Date.parse(
+							matches.find((m) => m.providerStatus === MatchStatus.ToBePlayed)
+								?.matchDateUtc ?? "",
+						),
+				  ) || now + TimeUnit.Day;
 			const leaderboard = resolveLeaderboard(users, matches);
 			const day = getMatchDayNumber(matches[0]!.matchSet);
 			if (!nextMatch) {
