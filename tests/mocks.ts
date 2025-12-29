@@ -215,9 +215,6 @@ export const clashNotificationsWorkflow = new WorkflowBase(
 export const predictionsWorkflow = new WorkflowBase(
 	(await import("../src/PredictionsReminders.ts")).PredictionsReminders,
 );
-export const liveScoreWorkflow = new WorkflowBase(
-	(await import("../src/LiveScore.ts")).LiveScore,
-);
 export const reminderWorkflow = new WorkflowBase(
 	(await import("../src/Reminder.ts")).Reminder,
 );
@@ -227,6 +224,5 @@ const shortenWorkflow = new WorkflowBase(
 env.BRAWL_NOTIFICATIONS = brawlNotificationsWorkflow;
 env.CLASH_NOTIFICATIONS = clashNotificationsWorkflow;
 env.PREDICTIONS_REMINDERS = predictionsWorkflow;
-env.LIVE_SCORE = liveScoreWorkflow;
 env.REMINDER = reminderWorkflow;
 env.SHORTEN = shortenWorkflow;
