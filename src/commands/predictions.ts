@@ -583,6 +583,7 @@ export class Predictions extends Command {
 						interaction.message.id,
 					),
 				);
+			return;
 		}
 		const time = parseInt(arg2!);
 		if (Date.now() >= time)
