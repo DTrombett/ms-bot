@@ -527,8 +527,8 @@ export class Predictions extends Command {
 						Date.parse(
 							matches.find((m) => m.providerStatus === MatchStatus.ToBePlayed)
 								?.matchDateUtc ?? "",
-						),
-				  ) || now + TimeUnit.Day;
+						) || now + TimeUnit.Day,
+				  );
 			const leaderboard = resolveLeaderboard(users, matches);
 			const day = getMatchDayNumber(matches[0]!.matchSet);
 			if (!nextMatch) {
