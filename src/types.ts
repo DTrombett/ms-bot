@@ -237,22 +237,7 @@ declare global {
 		groupName: string;
 		roundId: string;
 		roundName: string;
-		matchSet: {
-			matchSetId: string;
-			providerId: string;
-			name: string;
-			seasonId: string;
-			competitionId: string;
-			roundId: string | null;
-			stageId: string;
-			index: number | null;
-			shortName: string;
-			matchSetFormatId: string | null;
-			type: string | null;
-			startDateUtc: string;
-			endDateUtc: string;
-			matchdayStatus: string;
-		};
+		matchSet: MatchDay;
 		scheduleStatus: string;
 		providerHomeScore: null | number;
 		providerAwayScore: null | number;

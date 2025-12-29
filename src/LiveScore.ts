@@ -56,7 +56,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 						socket.on("callApi", (data: string) => {
 							const updates: {
 								ora: string;
-								match_id: number;
+								matchId: string;
 								away_goal: number;
 								home_goal: number;
 								match_day_id: number;
@@ -65,9 +65,7 @@ export class LiveScore extends WorkflowEntrypoint<Env, Params> {
 							let changed = false;
 
 							for (const update of updates) {
-								const found = matches.find(
-									(m) => m.matchId === update.match_id,
-								);
+								const found = matches.find((m) => m.matchId === update.matchId);
 
 								if (found) {
 									Object.assign(found, update);

@@ -14,6 +14,7 @@ import {
 import { getLiveEmbed } from "./util/getLiveEmbed.ts";
 import { getMatchDayNumber } from "./util/getMatchDayNumber.ts";
 import { fetchMatchDays } from "./util/getSeasonData.ts";
+import { hashMatches } from "./util/hashMatches.ts";
 import { loadMatches } from "./util/loadMatches.ts";
 import { createMatchName } from "./util/normalizeTeamName.ts";
 import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
@@ -115,7 +116,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		const messageId = await step.do(
 			"send message",
 			{ timeout },
-			this.sendMatchDayMessage.bind(this, users, matches, matchDay.day),
+			this.sendMatchDayMessage.bind(this, users, matches, matchDay),
 		);
 		started.push(matchDay.id);
 		await Promise.all([
@@ -123,11 +124,6 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				"pin message",
 				{ timeout },
 				this.pinMessage.bind(this, messageId),
-			),
-			step.do<void>(
-				"start live score",
-				{ timeout },
-				this.startLiveScore.bind(this, matchDay, messageId),
 			),
 			step.do<void>(
 				"update started matchday",
@@ -323,7 +319,10 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	private async sendMatchDayMessage(
 		users: ResolvedUser[],
 		matches: Match[],
-		day: number,
+		matchDay: {
+			day: number;
+			id: string;
+		},
 	) {
 		const { id } = (await rest.post(
 			Routes.channelMessages(this.env.PREDICTIONS_CHANNEL),
@@ -333,8 +332,24 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 						users,
 						matches,
 						resolveLeaderboard(users, matches),
-						day,
+						matchDay.day,
 					),
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `predictions-r-${matchDay.id}-${await hashMatches(
+										matches,
+									)}`,
+									emoji: { name: "🔁" },
+									label: "Aggiorna",
+									style: ButtonStyle.Primary,
+								},
+							],
+						},
+					],
 				} satisfies RESTPostAPIChannelMessageJSONBody,
 			},
 		)) as RESTPostAPIChannelMessageResult;
@@ -346,13 +361,6 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		await rest.put(
 			Routes.channelMessagesPin(this.env.PREDICTIONS_CHANNEL, messageId),
 		);
-	}
-
-	private async startLiveScore(
-		matchDay: { day: number; id: string },
-		messageId: string,
-	) {
-		await this.env.LIVE_SCORE.create({ params: { matchDay, messageId } });
 	}
 
 	private async updateStartedMatchday(started: string[]) {

@@ -5,6 +5,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	Routes,
 	TextInputStyle,
 	type APIModalInteractionResponseCallbackData,
 	type ModalSubmitActionRowComponent,
@@ -12,12 +13,17 @@ import {
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
 import { calculateWins } from "../util/calculateWins.ts";
-import { resolveStats } from "../util/getLiveEmbed.ts";
+import { MatchStatus } from "../util/Constants.ts";
+import { getLiveEmbed, resolveStats } from "../util/getLiveEmbed.ts";
 import { getMatchDayNumber } from "../util/getMatchDayNumber.ts";
 import { getSeasonData } from "../util/getSeasonData.ts";
+import { hashMatches } from "../util/hashMatches.ts";
+import { loadMatches } from "../util/loadMatches.ts";
 import { createMatchName } from "../util/normalizeTeamName.ts";
+import { resolveLeaderboard } from "../util/resolveLeaderboard.ts";
 import { rest } from "../util/rest.ts";
 import { sortLeaderboard } from "../util/sortLeaderboard.ts";
+import { TimeUnit } from "../util/time.ts";
 
 export class Predictions extends Command {
 	static override chatInputData = {
@@ -462,14 +468,123 @@ export class Predictions extends Command {
 		});
 	}
 	static override async component(
-		{ reply, modal }: ComponentReplies,
+		{ reply, modal, deferUpdate, edit }: ComponentReplies,
 		{
 			interaction,
 			user: { id },
-			args: [actionOrDay, part, timestamp, userId = id],
+			args: [actionOrDay, arg1, arg2, arg3 = id],
 		}: ComponentArgs,
 	) {
-		const time = parseInt(timestamp!);
+		if (actionOrDay === "r") {
+			const nextUpdate =
+				Number(arg3) ||
+				Date.parse(
+					interaction.message.edited_timestamp ?? interaction.message.timestamp,
+				) +
+					TimeUnit.Minute * 5;
+			const now = Date.now();
+			if (nextUpdate > now)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: `Puoi aggiornare nuovamente i dati <t:${Math.round(
+						nextUpdate / 1000,
+					)}:R>!`,
+				});
+			deferUpdate();
+			const matches = await loadMatches(arg1!);
+			const hash = await hashMatches(matches);
+
+			if (hash === arg2) return;
+			const [{ results: predictions }, { results: rawUsers }] =
+				(await env.DB.batch([
+					env.DB.prepare(
+						`SELECT *
+					FROM Predictions
+					WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+					).bind(...matches.map((m) => m.matchId)),
+					env.DB.prepare(`SELECT id, dayPoints, matchPointsHistory, match
+					FROM Users`),
+				])) as [
+					D1Result<Prediction>,
+					D1Result<
+						Pick<User, "dayPoints" | "id" | "match" | "matchPointsHistory">
+					>,
+				];
+			let users: ResolvedUser[] = rawUsers
+				.map((user) => ({
+					...user,
+					predictions: predictions.filter((p) => p.userId === user.id),
+				}))
+				.filter((u) => u.predictions.length || u.dayPoints != null);
+			const nextMatch = matches.some(
+				(m) => m.providerStatus === MatchStatus.Live,
+			)
+				? now + TimeUnit.Minute
+				: matches.every((m) => m.providerStatus === MatchStatus.Finished)
+				? 0
+				: Date.parse(
+						matches.find((m) => m.providerStatus === MatchStatus.ToBePlayed)
+							?.matchDateUtc ?? "",
+				  ) || TimeUnit.Day;
+			const leaderboard = resolveLeaderboard(users, matches);
+			const day = getMatchDayNumber(matches[0]!.matchSet);
+			if (!nextMatch) {
+				const query = env.DB.prepare(`UPDATE Users
+				SET dayPoints = COALESCE(dayPoints, 0) + ?1,
+					matchPointsHistory = COALESCE(matchPointsHistory, "${",".repeat(
+						Math.max(day - 2, 0),
+					)}") || ?2,
+					reminded = 0,
+					match = NULL
+				WHERE id = ?3`);
+
+				users = [];
+				await env.DB.batch([
+					...leaderboard.map(([user, matchPoints, dayPoints]) => {
+						users.push({
+							...user,
+							dayPoints: (user.dayPoints ?? 0) + dayPoints,
+							matchPointsHistory: `${
+								user.matchPointsHistory ?? ",".repeat(Math.max(day - 2, 0))
+							},${matchPoints}`,
+							match: null,
+						});
+						return query.bind(dayPoints, `,${matchPoints}`, user.id);
+					}),
+					env.DB.prepare(
+						`DELETE FROM Predictions
+					WHERE matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+					).bind(...matches.map((m) => m.matchId)),
+				]);
+			}
+			await edit({
+				embeds: getLiveEmbed(users, matches, leaderboard, day, !nextMatch),
+				components: nextMatch
+					? [
+							{
+								type: ComponentType.ActionRow,
+								components: [
+									{
+										type: ComponentType.Button,
+										custom_id: `predictions-r-${arg1}-${hash}-${nextMatch}`,
+										emoji: { name: "🔁" },
+										label: "Aggiorna",
+										style: ButtonStyle.Primary,
+									},
+								],
+							},
+					  ]
+					: [],
+			});
+			if (!nextMatch)
+				await rest.delete(
+					Routes.channelMessagesPin(
+						env.PREDICTIONS_CHANNEL,
+						interaction.message.id,
+					),
+				);
+		}
+		const time = parseInt(arg2!);
 		if (Date.now() >= time)
 			return reply({
 				content:
@@ -477,8 +592,8 @@ export class Predictions extends Command {
 				flags: MessageFlags.Ephemeral,
 			});
 		const [matchDay, matches, existingPredictions] = await getSeasonData(
-			userId,
-			Number(actionOrDay) || Number(part) || undefined,
+			arg3,
+			Number(actionOrDay) || Number(arg1) || undefined,
 		);
 
 		if (!(matchDay as MatchDay | null))
@@ -499,7 +614,7 @@ export class Predictions extends Command {
 				SET match = ?1
 				WHERE id = ?2;`,
 			)
-				.bind(interaction.data.values[0], userId)
+				.bind(interaction.data.values[0], arg3)
 				.run();
 			return reply({
 				content: "Pronostici inviati correttamente!",
@@ -512,7 +627,7 @@ export class Predictions extends Command {
 								type: ComponentType.Button,
 								custom_id: `predictions-${getMatchDayNumber(
 									matchDay,
-								)}-1-${timestamp}-${userId}`,
+								)}-1-${arg2}-${arg3}`,
 								emoji: { name: "✏️" },
 								label: "Modifica",
 								style: ButtonStyle.Success,
@@ -531,8 +646,8 @@ export class Predictions extends Command {
 			this.buildModal(
 				matches,
 				matchDay,
-				parseInt(part!),
-				userId,
+				parseInt(arg1!),
+				arg3,
 				existingPredictions,
 				time,
 			),
