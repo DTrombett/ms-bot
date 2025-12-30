@@ -471,7 +471,7 @@ export class Predictions extends Command {
 		});
 	}
 	static override async component(
-		{ reply, modal, deferUpdate, edit }: ComponentReplies,
+		{ reply, modal, update, edit }: ComponentReplies,
 		{
 			interaction,
 			user: { id },
@@ -491,15 +491,12 @@ export class Predictions extends Command {
 					)}:R>!`,
 				});
 			arg1 = decodeURIComponent(arg1!);
-			deferUpdate();
 			const matches = await loadMatches(arg1);
 			const hash = hashMatches(matches);
 			const nextMatch = getNextMatch(matches);
 
-			if (hash === arg2 && nextMatch)
-				return edit({
-					components: createLiveComponents(arg1, hash, nextMatch),
-				});
+			update({ components: createLiveComponents(arg1, hash, nextMatch) });
+			if (hash === arg2 && nextMatch) return;
 			const [{ results: predictions }, { results: rawUsers }] =
 				(await env.DB.batch([
 					env.DB.prepare(
