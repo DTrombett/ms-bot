@@ -205,7 +205,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		},
 	) {
 		await this.env.REMINDER.create({
-			id: `${userId}-predictions-${matchDay.id}`,
+			id: `${userId}-predictions-${matchDay.day}`,
 			params: {
 				duration: Math.max(date - Date.now(), 0),
 				message: {
