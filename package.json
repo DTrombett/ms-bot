@@ -33,8 +33,8 @@
 		"@types/node": "^24.10.4",
 		"eslint": "^9.39.2",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.50.1",
-		"undici": "^7.16.0",
-		"wrangler": "^4.54.0"
+		"typescript-eslint": "^8.52.0",
+		"undici": "^7.18.2",
+		"wrangler": "^4.58.0"
 	}
 }
