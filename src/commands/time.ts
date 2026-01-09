@@ -119,7 +119,7 @@ export class Time extends Command {
 				content: "Timestamp non validi!",
 				flags: MessageFlags.Ephemeral,
 			});
-		return reply({
+		reply({
 			content: `Differenza di tempo tra i due timestamp: **${long ? formatLongTime(diff) : formatTime(diff)}**`,
 		});
 	};
