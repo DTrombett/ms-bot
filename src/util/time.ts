@@ -81,7 +81,7 @@ export const idToTimestamp = (id: string): number =>
  * - Larger values: Treated as Discord Snowflake IDs and converted to timestamps
  *
  * @param value - The time value to parse (as a string)
- * @returns The timestamp in milliseconds, or -1 if the value is invalid/negative
+ * @returns The timestamp in milliseconds
  */
 export const parseTimeValue = (value: string): number => {
 	const num = Number(value);
