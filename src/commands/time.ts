@@ -109,6 +109,12 @@ export class Time extends Command {
 	) => {
 		const timestamp1 = parseTimeValue(time1);
 		const timestamp2 = parseTimeValue(time2);
+
+		if (timestamp1 === -1 || timestamp2 === -1)
+			return reply({
+				content: "Uno o entrambi i timestamp forniti non sono validi!",
+				flags: MessageFlags.Ephemeral,
+			});
 		const diff = Math.abs(timestamp2 - timestamp1);
 
 		return reply({

@@ -76,8 +76,8 @@ export const idToTimestamp = (id: string): number =>
 export const parseTimeValue = (value: string): number => {
 	const num = Number(value);
 
-	// Check if it's a valid number
-	if (Number.isNaN(num)) return 0;
+	// Check if it's a valid number or if it's negative
+	if (Number.isNaN(num) || num < 0) return -1;
 	// If the number is less than 10^10, treat it as seconds (UNIX timestamp in seconds)
 	if (num < 1e10) return num * 1000;
 	// If the number is less than 10^13, treat it as milliseconds (UNIX timestamp in milliseconds)
