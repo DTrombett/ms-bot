@@ -10,7 +10,7 @@ import {
 import Command from "../Command.ts";
 import { timeout } from "../util/node.ts";
 import { rest } from "../util/rest.ts";
-import { formatTime, idDiff } from "../util/time.ts";
+import { formatLongTime, formatTime, idDiff, parseTimeValue } from "../util/time.ts";
 
 export class Time extends Command {
 	static override chatInputData = {
@@ -37,6 +37,25 @@ export class Time extends Command {
 					{
 						name: "id2",
 						description: "Secondo ID",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+					},
+				],
+			},
+			{
+				name: "compare",
+				description: "Calcola la differenza tra due timestamp",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "time1",
+						description: "Primo timestamp (UNIX secondi/millisecondi/Snowflake)",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+					},
+					{
+						name: "time2",
+						description: "Secondo timestamp (UNIX secondi/millisecondi/Snowflake)",
 						type: ApplicationCommandOptionType.String,
 						required: true,
 					},
@@ -82,6 +101,20 @@ export class Time extends Command {
 		reply({
 			content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(id2, id1))}**`,
 		});
+	static compare = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { time1, time2 },
+		}: ChatInputArgs<typeof Time.chatInputData, "compare">,
+	) => {
+		const timestamp1 = parseTimeValue(time1);
+		const timestamp2 = parseTimeValue(time2);
+		const diff = Math.abs(timestamp2 - timestamp1);
+
+		return reply({
+			content: `Differenza di tempo tra i due timestamp: **${formatLongTime(diff)}**`,
+		});
+	};
 	static stop = (
 		{ reply, update }: ComponentReplies,
 		{ interaction, user: { id } }: ComponentArgs,

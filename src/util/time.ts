@@ -73,6 +73,19 @@ export const idDiff = (id1: string, id2: string): number =>
 export const idToTimestamp = (id: string): number =>
 	Number((BigInt(id) >> 22n) + 1420070400000n);
 
+export const parseTimeValue = (value: string): number => {
+	const num = Number(value);
+
+	// Check if it's a valid number
+	if (Number.isNaN(num)) return 0;
+	// If the number is less than 10^10, treat it as seconds (UNIX timestamp in seconds)
+	if (num < 1e10) return num * 1000;
+	// If the number is less than 10^13, treat it as milliseconds (UNIX timestamp in milliseconds)
+	if (num < 1e13) return num;
+	// Otherwise, treat it as a Discord Snowflake and convert to milliseconds
+	return idToTimestamp(value);
+};
+
 const parseNumber = (string?: string) => Number(string) || 0;
 
 export const parseTime = (str: string): number => {
