@@ -79,7 +79,6 @@ export const idToTimestamp = (id: string): number =>
  * - Values < 10^10: Treated as UNIX timestamp in seconds, converted to milliseconds
  * - Values < 10^13: Treated as UNIX timestamp in milliseconds
  * - Larger values: Treated as Discord Snowflake IDs and converted to timestamps
- *
  * @param value - The time value to parse (as a string)
  * @returns The timestamp in milliseconds
  */
