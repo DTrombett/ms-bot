@@ -112,9 +112,7 @@ export class Time extends Command {
 			options: { time1, time2, long },
 		}: ChatInputArgs<typeof Time.chatInputData, "compare">,
 	) => {
-		const timestamp1 = parseTimeValue(time1);
-		const timestamp2 = parseTimeValue(time2);
-		const diff = Math.abs(timestamp2 - timestamp1);
+		const diff = Math.abs(parseTimeValue(time1) - parseTimeValue(time2));
 
 		if (Number.isNaN(diff))
 			return reply({
