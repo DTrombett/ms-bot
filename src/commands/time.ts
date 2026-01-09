@@ -49,19 +49,19 @@ export class Time extends Command {
 				options: [
 					{
 						name: "time1",
-						description: "Primo timestamp (UNIX secondi/millisecondi/Snowflake)",
+						description: "Primo timestamp",
 						type: ApplicationCommandOptionType.String,
 						required: true,
 					},
 					{
 						name: "time2",
-						description: "Secondo timestamp (UNIX secondi/millisecondi/Snowflake)",
+						description: "Secondo timestamp",
 						type: ApplicationCommandOptionType.String,
 						required: true,
 					},
 					{
 						name: "long",
-						description: "Mostra il formato lungo",
+						description: "Usa un formato più lungo",
 						type: ApplicationCommandOptionType.Boolean,
 					},
 				],
