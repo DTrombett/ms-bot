@@ -86,18 +86,14 @@ export const idToTimestamp = (id: string): number =>
 export const parseTimeValue = (value: string): number => {
 	const num = Number(value);
 
-	// Check if it's a valid number or if it's negative
-	if (Number.isNaN(num) || num < 0) return -1;
+	// If the number is invalid, return NaN
+	if (Number.isNaN(num)) return NaN;
 	// If the number is less than 10^10, treat it as seconds (UNIX timestamp in seconds)
-	if (num < 1e10) return num * 1000;
+	if (Math.abs(num) < 1e10) return num * 1000;
 	// If the number is less than 10^13, treat it as milliseconds (UNIX timestamp in milliseconds)
-	if (num < 1e13) return num;
+	if (Math.abs(num) < 1e13) return num;
 	// Otherwise, treat it as a Discord Snowflake and convert to milliseconds
-	try {
-		return idToTimestamp(value);
-	} catch {
-		return -1;
-	}
+	return idToTimestamp(value);
 };
 
 const parseNumber = (string?: string) => Number(string) || 0;
