@@ -114,14 +114,15 @@ export class Time extends Command {
 	) => {
 		const timestamp1 = parseTimeValue(time1);
 		const timestamp2 = parseTimeValue(time2);
+		const diff = Math.abs(timestamp2 - timestamp1);
 
-		if (timestamp1 === -1 || timestamp2 === -1)
+		if (Number.isNaN(diff))
 			return reply({
-				content: "Uno o entrambi i timestamp forniti non sono validi!",
+				content: "Timestamp non valide!",
 				flags: MessageFlags.Ephemeral,
 			});
 		return reply({
-			content: `Differenza di tempo tra i due timestamp: **${long ? formatLongTime(Math.abs(timestamp2 - timestamp1)) : formatTime(Math.abs(timestamp2 - timestamp1))}**`,
+			content: `Differenza di tempo tra i due timestamp: **${long ? formatLongTime(diff) : formatTime(diff)}**`,
 		});
 	};
 	static stop = (
