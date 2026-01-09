@@ -83,7 +83,11 @@ export const parseTimeValue = (value: string): number => {
 	// If the number is less than 10^13, treat it as milliseconds (UNIX timestamp in milliseconds)
 	if (num < 1e13) return num;
 	// Otherwise, treat it as a Discord Snowflake and convert to milliseconds
-	return idToTimestamp(value);
+	try {
+		return idToTimestamp(value);
+	} catch {
+		return -1;
+	}
 };
 
 const parseNumber = (string?: string) => Number(string) || 0;
