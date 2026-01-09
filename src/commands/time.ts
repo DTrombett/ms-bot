@@ -59,6 +59,11 @@ export class Time extends Command {
 						type: ApplicationCommandOptionType.String,
 						required: true,
 					},
+					{
+						name: "long",
+						description: "Mostra il formato lungo",
+						type: ApplicationCommandOptionType.Boolean,
+					},
 				],
 			},
 		],
@@ -104,7 +109,7 @@ export class Time extends Command {
 	static compare = (
 		{ reply }: ChatInputReplies,
 		{
-			options: { time1, time2 },
+			options: { time1, time2, long },
 		}: ChatInputArgs<typeof Time.chatInputData, "compare">,
 	) => {
 		const timestamp1 = parseTimeValue(time1);
@@ -115,10 +120,8 @@ export class Time extends Command {
 				content: "Uno o entrambi i timestamp forniti non sono validi!",
 				flags: MessageFlags.Ephemeral,
 			});
-		const diff = Math.abs(timestamp2 - timestamp1);
-
 		return reply({
-			content: `Differenza di tempo tra i due timestamp: **${formatLongTime(diff)}**`,
+			content: `Differenza di tempo tra i due timestamp: **${long ? formatLongTime(Math.abs(timestamp2 - timestamp1)) : formatTime(Math.abs(timestamp2 - timestamp1))}**`,
 		});
 	};
 	static stop = (
