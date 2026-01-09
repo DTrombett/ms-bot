@@ -116,7 +116,7 @@ export class Time extends Command {
 
 		if (Number.isNaN(diff))
 			return reply({
-				content: "Timestamp non valide!",
+				content: "Timestamp non validi!",
 				flags: MessageFlags.Ephemeral,
 			});
 		return reply({
