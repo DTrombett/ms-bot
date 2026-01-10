@@ -10,7 +10,7 @@ import {
 import Command from "../Command.ts";
 import { timeout } from "../util/node.ts";
 import { rest } from "../util/rest.ts";
-import { formatLongTime, formatTime, idDiff, parseTimeValue } from "../util/time.ts";
+import { formatLongTime, formatTime, idDiff, idToTimestamp, parseTimeValue } from "../util/time.ts";
 
 export class Time extends Command {
 	static override chatInputData = {
@@ -24,19 +24,13 @@ export class Time extends Command {
 				type: ApplicationCommandOptionType.Subcommand,
 			},
 			{
-				name: "compare-ids",
-				description: "Calcola la differenza di tempo tra due ID",
+				name: "resolve-id",
+				description: "Risolvi un ID Discord in un timestamp",
 				type: ApplicationCommandOptionType.Subcommand,
 				options: [
 					{
-						name: "id1",
-						description: "Primo ID",
-						type: ApplicationCommandOptionType.String,
-						required: true,
-					},
-					{
-						name: "id2",
-						description: "Secondo ID",
+						name: "id",
+						description: "ID Discord",
 						type: ApplicationCommandOptionType.String,
 						required: true,
 					},
@@ -97,15 +91,26 @@ export class Time extends Command {
 			content: `Cronometro avviato <t:${Math.round(Date.parse(((await rest.get(fullRoute)) as APIMessage).timestamp) / 1000)}:R>`,
 		});
 	};
-	static "compare-ids" = (
+	static "resolve-id" = (
 		{ reply }: ChatInputReplies,
 		{
-			options: { id1, id2 },
-		}: ChatInputArgs<typeof Time.chatInputData, "compare-ids">,
-	) =>
-		reply({
-			content: `Differenza di tempo tra i due ID: **${formatTime(idDiff(id2, id1))}**`,
-		});
+			options: { id },
+		}: ChatInputArgs<typeof Time.chatInputData, "resolve-id">,
+	) => {
+		try {
+			const timestamp = idToTimestamp(id);
+			const timestampSeconds = Math.floor(timestamp / 1000);
+
+			return reply({
+				content: `<t:${timestampSeconds}:F>\n<t:${timestampSeconds}:R>\n\`${timestamp}\``,
+			});
+		} catch {
+			return reply({
+				content: "ID non valido!",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
+	};
 	static compare = (
 		{ reply }: ChatInputReplies,
 		{
