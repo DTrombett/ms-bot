@@ -52,7 +52,11 @@ const server: ExportedHandler<Env> = {
 		return new JsonResponse({ error: "Not Found" }, { status: 404 });
 	},
 	scheduled: async ({ cron }) => {
-		if (cron === "0 0 * * *") await env.PREDICTIONS_REMINDERS.create();
+		if (cron === "0 0 * * *")
+			await Promise.allSettled([
+				env.PREDICTIONS_REMINDERS.create(),
+				env.WEBSOCKET.create(),
+			]);
 		else if (cron === "*/5 * * * *") {
 			const { results } = await env.DB.prepare(
 				`SELECT id,
@@ -128,5 +132,6 @@ export { ClashNotifications } from "./ClashNotifications.ts";
 export { PredictionsReminders } from "./PredictionsReminders.ts";
 export { Reminder } from "./Reminder.ts";
 export { Shorten } from "./Shorten.ts";
+export { WebSocket } from "./WebSocket.ts";
 
 export default server;
