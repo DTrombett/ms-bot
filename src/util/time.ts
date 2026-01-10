@@ -73,6 +73,28 @@ export const idDiff = (id1: string, id2: string): number =>
 export const idToTimestamp = (id: string): number =>
 	Number((BigInt(id) >> 22n) + 1420070400000n);
 
+/**
+ * Parses a time value string and converts it to a UNIX timestamp in milliseconds.
+ * Automatically detects the format based on the numeric value:
+ * - Values < 10^10: Treated as UNIX timestamp in seconds, converted to milliseconds
+ * - Values < 10^13: Treated as UNIX timestamp in milliseconds
+ * - Larger values: Treated as Discord Snowflake IDs and converted to timestamps
+ * @param value - The time value to parse (as a string)
+ * @returns The timestamp in milliseconds, or NaN if the value is invalid or cannot be parsed
+ */
+export const parseTimeValue = (value: string): number => {
+	const num = Number(value);
+
+	if (Number.isNaN(num)) return NaN;
+	if (Math.abs(num) < 1e10) return num * 1000;
+	if (Math.abs(num) < 1e13) return num;
+	try {
+		return idToTimestamp(value);
+	} catch {
+		return NaN;
+	}
+};
+
 const parseNumber = (string?: string) => Number(string) || 0;
 
 export const parseTime = (str: string): number => {
