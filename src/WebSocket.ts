@@ -96,8 +96,8 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 								} satisfies RESTPostAPIChannelMessageJSONBody,
 							}),
 							this.env.KV.put(
-								JSON.stringify(wordleStatus),
 								`wordle&${match[1]}`,
+								JSON.stringify(wordleStatus),
 							),
 						]);
 						for (const result of results)
