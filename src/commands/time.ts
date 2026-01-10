@@ -101,11 +101,11 @@ export class Time extends Command {
 			const timestamp = idToTimestamp(id);
 			const timestampSeconds = Math.round(timestamp / 1000);
 
-			return reply({
+			reply({
 				content: `Timestamp: \`${timestamp}\`, <t:${timestampSeconds}:f>, <t:${timestampSeconds}:R>\n`,
 			});
 		} catch {
-			return reply({
+			reply({
 				content: "ID non valido!",
 				flags: MessageFlags.Ephemeral,
 			});
