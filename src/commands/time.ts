@@ -99,10 +99,10 @@ export class Time extends Command {
 	) => {
 		try {
 			const timestamp = idToTimestamp(id);
-			const timestampSeconds = Math.floor(timestamp / 1000);
+			const timestampSeconds = Math.round(timestamp / 1000);
 
 			return reply({
-				content: `<t:${timestampSeconds}:F>\n<t:${timestampSeconds}:R>\n\`${timestamp}\``,
+				content: `Timestamp: \`${timestamp}\`, <t:${timestampSeconds}:f>, <t:${timestampSeconds}:R>\n`,
 			});
 		} catch {
 			return reply({
