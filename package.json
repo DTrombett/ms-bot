@@ -16,15 +16,17 @@
 		"url": "https://github.com/DTrombett/ms-bot/issues"
 	},
 	"scripts": {
-		"dev": "wrangler dev --test-scheduled",
+		"dev": "node build.ts && wrangler dev --test-scheduled",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
-		"deploy": "wrangler deploy",
-		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src && node --test --experimental-transform-types --experimental-test-module-mocks"
+		"deploy": "node build.ts && wrangler deploy",
+		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src"
 	},
 	"dependencies": {
 		"@discordjs/rest": "^2.6.0",
+		"@discordjs/ws": "^2.0.4",
 		"cloudflare": "^5.2.0",
-		"discord-api-types": "^0.38.37"
+		"discord-api-types": "^0.38.37",
+		"temporal-polyfill": "^0.3.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.2",

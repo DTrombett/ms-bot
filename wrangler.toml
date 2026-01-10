@@ -1,7 +1,7 @@
 name = "ms-bot"
 main = "./src/index.ts"
-compatibility_date = "2025-12-10"
-compatibility_flags = []
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 upload_source_maps = true
 send_metrics = false
@@ -69,3 +69,8 @@ class_name = "Reminder"
 name = "shorten"
 binding = "SHORTEN"
 class_name = "Shorten"
+
+[[workflows]]
+name = "websocket"
+binding = "WEBSOCKET"
+class_name = "WebSocket"
