@@ -6,11 +6,14 @@ const data = await readFile(path, { encoding: "utf-8" });
 await writeFile(
 	path,
 	data
+		// Don't resolve dirname as Workers do not have fs access
 		.replace(/\b(?:var|let|const)\s+__dirname\s*=[^;]+;/, "")
+		// Use built-in WebSocket
 		.replace(
 			/\b(var|let|const)\s+WebSocketConstructor\s*=[^;]+;/,
 			"$1 WebSocketConstructor = globalThis.WebSocket;",
 		)
+		// cloudflare/workerd#5822
 		.replace(
 			/\bnew WebSocketConstructor\s*\(([^,]+),\s*\[\]/,
 			"new WebSocketConstructor($1, undefined",

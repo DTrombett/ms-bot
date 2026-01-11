@@ -24,6 +24,7 @@ binding = "ASSETS"
 [[routes]]
 pattern = "ms-bot-interactions.trombett.org"
 custom_domain = true
+zone_name = "trombett.org"
 
 [[vpc_services]]
 binding = "BRAWL_STARS"
@@ -46,11 +47,6 @@ id = "aa87b0da6cf14778b6ae760075fa327f"
 preview_id = "b6201e9445474c9fb9293f6ba6a10ffc"
 
 [[workflows]]
-name = "predictions-reminders"
-binding = "PREDICTIONS_REMINDERS"
-class_name = "PredictionsReminders"
-
-[[workflows]]
 name = "brawl-notifications"
 binding = "BRAWL_NOTIFICATIONS"
 class_name = "BrawlNotifications"
@@ -59,6 +55,11 @@ class_name = "BrawlNotifications"
 name = "clash-notifications"
 binding = "CLASH_NOTIFICATIONS"
 class_name = "ClashNotifications"
+
+[[workflows]]
+name = "predictions-reminders"
+binding = "PREDICTIONS_REMINDERS"
+class_name = "PredictionsReminders"
 
 [[workflows]]
 name = "reminder"

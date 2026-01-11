@@ -19,9 +19,10 @@ export const template = (strings: TemplateStringsArray, ...values: any[]) => {
 					i < templateStringsArray.length &&
 					!templateStringsArray[i]!.includes("\n")
 				);
-				templateStringsArray[i] = templateStringsArray[i]!.slice(
-					templateStringsArray[i--]!.indexOf("\n"),
-				);
+				if (templateStringsArray[i])
+					templateStringsArray[i] = templateStringsArray[i]!.slice(
+						templateStringsArray[i--]!.indexOf("\n"),
+					);
 				result = result.trimEnd();
 			}
 	}

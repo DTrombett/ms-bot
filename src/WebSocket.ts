@@ -13,14 +13,19 @@ import {
 	GatewayDispatchEvents,
 	GatewayIntentBits,
 	Routes,
+	type GatewayDispatchPayload,
 	type RESTPostAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
-import { once } from "node:events";
+import { on } from "node:events";
 import { Temporal } from "temporal-polyfill";
 import { rest } from "./util/rest.ts";
+import { template } from "./util/strings.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type Params = {};
+type CustomWSManager = WebSocketManager & {
+	ping?: number;
+};
 
 export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 	private readonly INSTANCE_KEY = "wsInstance";
@@ -39,7 +44,7 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 				timeout: "1 day",
 			},
 			async () => {
-				const webSocketManager = new WebSocketManager({
+				const emitter: CustomWSManager = new WebSocketManager({
 					compression: CompressionMethod.ZlibNative,
 					handshakeTimeout: 5000,
 					helloTimeout: 5000,
@@ -60,61 +65,101 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 					retrieveSessionInfo: (shardId) =>
 						this.env.KV.get<SessionInfo>(`session&${shardId}`, "json"),
 				})
-					.on(WebSocketShardEvents.Dispatch, async (payload) => {
-						if (
-							(payload.t !== GatewayDispatchEvents.MessageCreate &&
-								payload.t !== GatewayDispatchEvents.MessageUpdate) ||
-							payload.d.channel_id !== this.env.WORDLE_CHANNEL ||
-							payload.d.author.id !== "1211781489931452447"
-						)
-							return;
-						const match = payload.d.content.match(
-							/^(.+) (?:is|and .+ are) playing/,
-						);
-
-						if (!match?.[1]) return;
-						let wordleStatus = await this.env.KV.get<{
-							startTimestamp?: number;
-							words?: number /* Infinity for X */;
-							endTimestamp?: number;
-						}>(`wordle&${match[1]}`, "json");
-						if (
-							wordleStatus?.startTimestamp &&
-							wordleStatus.startTimestamp >= this.getTodayTimestamp()
-						)
-							return;
-						wordleStatus = {
-							startTimestamp: Date.parse(
-								payload.d.edited_timestamp ?? payload.d.timestamp,
-							),
-						};
-						const results = await Promise.allSettled([
-							rest.post(Routes.channelMessages(payload.d.channel_id), {
-								body: {
-									content: `**${match[1]}** ha appena iniziato il Wordle (\`${wordleStatus.startTimestamp}\`)!`,
-									allowed_mentions: { parse: [] },
-								} satisfies RESTPostAPIChannelMessageJSONBody,
-							}),
-							this.env.KV.put(
-								`wordle&${match[1]}`,
-								JSON.stringify(wordleStatus),
-							),
-						]);
-						for (const result of results)
-							if (result.status === "rejected") console.error(result.reason);
-					})
 					.on(WebSocketShardEvents.Error, (error) => console.error(error))
-					.on(WebSocketShardEvents.SocketError, (error) =>
-						console.error(error),
+					.on(WebSocketShardEvents.SocketError, (error) => console.error(error))
+					.on(
+						WebSocketShardEvents.HeartbeatComplete,
+						({ latency }) => (emitter.ping = latency),
 					);
 
 				try {
 					console.log("Connecting websocket");
-					await webSocketManager.connect();
+					await emitter.connect();
 					console.log("Manager connected!");
-					await once(webSocketManager, WebSocketShardEvents.Closed);
+					await rest.post(Routes.channelMessages(this.env.STATUS_CHANNEL), {
+						body: {
+							content: "Ready!",
+						} satisfies RESTPostAPIChannelMessageJSONBody,
+					});
+					for await (const [payload] of on(
+						emitter,
+						WebSocketShardEvents.Dispatch,
+						{ close: [WebSocketShardEvents.Closed] },
+					) as NodeJS.AsyncIterator<[payload: GatewayDispatchPayload]>) {
+						try {
+							if (
+								(payload.t !== GatewayDispatchEvents.MessageCreate &&
+									payload.t !== GatewayDispatchEvents.MessageUpdate) ||
+								payload.d.author.id === this.env.DISCORD_APPLICATION_ID
+							)
+								continue;
+							const {
+								d,
+								d: { author },
+							} = payload;
+
+							if (
+								d.content.startsWith(`<@${this.env.DISCORD_APPLICATION_ID}>`)
+							) {
+								let [, command] = d.content.trimStart().split(/\s+/g);
+
+								command = command?.toLowerCase();
+								if (command === "ping")
+									await rest.post(Routes.channelMessages(d.channel_id), {
+										body: {
+											content: template`
+										### 🏓 Pong!
+										${emitter.ping}WS: \`${emitter.ping}ms\`
+										`,
+											message_reference: {
+												message_id: d.id,
+												fail_if_not_exists: false,
+											},
+											allowed_mentions: { parse: [] },
+										} satisfies RESTPostAPIChannelMessageJSONBody,
+									});
+								continue;
+							}
+							if (
+								d.channel_id !== this.env.WORDLE_CHANNEL ||
+								author.id !== "1211781489931452447"
+							)
+								continue;
+							const match = d.content.match(/^(.+) (?:is|and .+ are) playing/);
+							if (!match?.[1]) continue;
+							let wordleStatus = await this.env.KV.get<{
+								startTimestamp?: number;
+								words?: number /* Infinity for X */;
+								endTimestamp?: number;
+							}>(`wordle&${match[1]}`, "json");
+							if (
+								wordleStatus?.startTimestamp &&
+								wordleStatus.startTimestamp >= this.getTodayTimestamp()
+							)
+								continue;
+							wordleStatus = {
+								startTimestamp: Date.parse(d.edited_timestamp ?? d.timestamp),
+							};
+							const results = await Promise.allSettled([
+								rest.post(Routes.channelMessages(d.channel_id), {
+									body: {
+										content: `**${match[1]}** ha appena iniziato il Wordle (\`${wordleStatus.startTimestamp}\`)!`,
+										allowed_mentions: { parse: [] },
+									} satisfies RESTPostAPIChannelMessageJSONBody,
+								}),
+								this.env.KV.put(
+									`wordle&${match[1]}`,
+									JSON.stringify(wordleStatus),
+								),
+							]);
+							for (const result of results)
+								if (result.status === "rejected") console.error(result.reason);
+						} catch (err) {
+							console.error(err);
+						}
+					}
 				} finally {
-					webSocketManager.destroy();
+					emitter.destroy();
 					console.log("Manager closed");
 				}
 			},
@@ -125,7 +170,7 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 		);
 	}
 
-	async closeOldWS(value: string) {
+	private async closeOldWS(value: string) {
 		const id = await this.env.KV.get(this.INSTANCE_KEY);
 
 		if (id) {
@@ -136,7 +181,7 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 		return this.env.KV.put(this.INSTANCE_KEY, value);
 	}
 
-	getTodayTimestamp() {
+	private getTodayTimestamp() {
 		return Temporal.Now.zonedDateTimeISO("Europe/Rome").startOfDay()
 			.epochMilliseconds;
 	}
