@@ -29,11 +29,11 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 			"Update KV with new instance id",
 			this.closeOldWS.bind(this, event.instanceId),
 		);
-		await step.do(
+		await step.do<void>(
 			"Start websocket",
 			{
-				retries: { limit: 15, delay: 5_000, backoff: "linear" },
-				timeout: "1 day",
+				retries: { limit: 64, delay: 5_000, backoff: "constant" },
+				timeout: "30 minutes",
 			},
 			async () => {
 				let ping: number | undefined, messageId: string;
