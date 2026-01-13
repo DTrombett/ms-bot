@@ -9,6 +9,7 @@ await writeFile(
 		// Don't resolve dirname as Workers do not have fs access
 		.replace(/\b(?:var|let|const)\s+__dirname\s*=[^;]+;/, "")
 		// Use built-in WebSocket
+		.replace(/import\s*{\s*WebSocket\s*}\s*from\s*['"]ws["'];?/, "")
 		.replace(
 			/\b(var|let|const)\s+WebSocketConstructor\s*=[^;]+;/,
 			"$1 WebSocketConstructor = globalThis.WebSocket;",

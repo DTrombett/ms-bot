@@ -86,8 +86,8 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 									await rest.post(Routes.channelMessages(d.channel_id), {
 										body: {
 											content: template`
-											### 🏓 Pong!
-											${ping}WS: \`${ping}ms\`
+												### 🏓 Pong!
+												${ping}WS: \`${ping}ms\`
 											`,
 											message_reference: {
 												message_id: d.id,
