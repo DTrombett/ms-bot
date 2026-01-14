@@ -154,7 +154,8 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 					.then((id) => (messageId = id))
 					.catch(console.error);
 				console.log("Manager connected!");
-				await once(emitter, WebSocketShardEvents.Closed);
+				const [error] = await once(emitter, WebSocketShardEvents.Error);
+				throw error;
 			},
 		);
 		await step.do(
