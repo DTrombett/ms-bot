@@ -18,6 +18,11 @@ import { template } from "./util/strings.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type Params = {};
+export type WordleStatus = {
+	startTimestamp?: number;
+	words?: number /* Infinity for X */;
+	endTimestamp?: number;
+};
 
 export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 	private readonly INSTANCE_KEY = "wsInstance";
@@ -103,31 +108,34 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 								author.id !== "1211781489931452447"
 							)
 								return;
-							const match = d.content.match(/^(.+) (?:is|and .+ are) playing/);
-							if (!match?.[1]) return;
-							let wordleStatus = await this.env.KV.get<{
-								startTimestamp?: number;
-								words?: number /* Infinity for X */;
-								endTimestamp?: number;
-							}>(`wordle&${match[1]}`, "json");
-							if (
-								wordleStatus?.startTimestamp &&
-								wordleStatus.startTimestamp >= this.getTodayTimestamp()
-							)
-								return;
-							wordleStatus = {
-								startTimestamp: Date.parse(d.edited_timestamp ?? d.timestamp),
-							};
+							const match = d.content
+								.match(/^(.+) (?:is|and (\D.+) are) playing/)
+								?.slice(1)
+								.filter(Boolean);
+							if (!match?.length) return;
+							const filtered: [string, WordleStatus | null][] = [];
+							const startTimestamp = Date.parse(
+								d.edited_timestamp ?? d.timestamp,
+							);
+							for (const [key, value] of await this.env.KV.get<WordleStatus>(
+								match.map((v) => `wordle&${v}`),
+								"json",
+							))
+								if (
+									!value?.startTimestamp ||
+									value.startTimestamp < this.getTodayTimestamp()
+								)
+									filtered.push([key.slice(7), { startTimestamp }]);
+							if (!filtered.length) return;
 							const results = await Promise.allSettled([
 								rest.post(Routes.channelMessages(d.channel_id), {
 									body: {
-										content: `**${match[1]}** ha appena iniziato il Wordle (\`${wordleStatus.startTimestamp}\`)!`,
+										content: `${filtered.map(([k]) => `**${k}**`).join(", ")} ha${filtered.length === 1 ? "" : "nno"} appena iniziato il Wordle (\`${startTimestamp}\`)!`,
 										allowed_mentions: { parse: [] },
 									} satisfies RESTPostAPIChannelMessageJSONBody,
 								}),
-								this.env.KV.put(
-									`wordle&${match[1]}`,
-									JSON.stringify(wordleStatus),
+								...filtered.map(([k, v]) =>
+									this.env.KV.put(`wordle&${k}`, JSON.stringify(v)),
 								),
 							]);
 							for (const result of results)
