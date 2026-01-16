@@ -109,7 +109,7 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 							)
 								return;
 							const match = d.content
-								.match(/^(.+) (?:is|and (\D.+) are) playing/)
+								.match(/^(.+) (?:is|and (?:\d+ others|(.+)) are) playing$/)
 								?.slice(1)
 								.filter(Boolean);
 							if (!match?.length) return;
