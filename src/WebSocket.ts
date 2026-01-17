@@ -34,6 +34,16 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 			"Update KV with new instance id",
 			this.closeOldWS.bind(this, event.instanceId),
 		);
+		const messageId = await step.do("Send status message", () =>
+			rest
+				.post(Routes.channelMessages(this.env.STATUS_CHANNEL), {
+					body: {
+						content: "## 🟡 Status: Connecting...",
+					} satisfies RESTPostAPIChannelMessageJSONBody,
+				})
+				.then((message) => (message as RESTPostAPIChannelMessageResult).id),
+		);
+
 		await step.do<void>(
 			"Start websocket",
 			{
@@ -41,7 +51,7 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 				timeout: "30 minutes",
 			},
 			async () => {
-				let ping: number | undefined, messageId: string;
+				let ping: number | undefined;
 				await using emitter = new WebSocketManager({
 					handshakeTimeout: 5_000,
 					helloTimeout: 5_000,
@@ -147,23 +157,21 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 
 				console.log("Connecting to the WebSocket...");
 				await emitter.connect();
-				step
-					.do("Send status message", () =>
-						rest
-							.post(Routes.channelMessages(this.env.STATUS_CHANNEL), {
-								body: {
-									content: "## 🟢 Status: Ready!",
-								} satisfies RESTPostAPIChannelMessageJSONBody,
-							})
-							.then(
-								(message) => (message as RESTPostAPIChannelMessageResult).id,
-							),
-					)
-					.then((id) => (messageId = id))
-					.catch(console.error);
-				console.log("Manager connected!");
-				const [error] = await once(emitter, WebSocketShardEvents.Error);
-				throw error;
+				try {
+					await rest.patch(
+						Routes.channelMessage(this.env.STATUS_CHANNEL, messageId),
+						{
+							body: {
+								content: "## 🟢 Status: Ready!",
+							} satisfies RESTPostAPIChannelMessageJSONBody,
+						},
+					);
+					console.log("Manager connected!");
+					const [error] = await once(emitter, WebSocketShardEvents.Error);
+					throw error;
+				} finally {
+					emitter.destroy();
+				}
 			},
 		);
 		await step.do(
