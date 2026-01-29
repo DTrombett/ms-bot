@@ -20,4 +20,5 @@ export * from "./random.ts";
 export * from "./remind.ts";
 export * from "./rps.ts";
 export * from "./search.ts";
+export * from "./share.ts";
 export * from "./time.ts";
