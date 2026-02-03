@@ -51,7 +51,11 @@ export class Share extends Command {
 			const parsed = new URL(url);
 
 			if (parsed.host === "vm.tiktok.com") {
-				const res = await fetch(parsed, { redirect: "manual" });
+				const res = await fetchCache(
+					parsed,
+					{ redirect: "manual" },
+					TimeUnit.Day / TimeUnit.Second,
+				);
 
 				url = res.headers.get("location")!;
 				if (URL.canParse(url)) parsed.href = url;
@@ -63,21 +67,6 @@ export class Share extends Command {
 		const input = new URL(
 			`https://www.tiktok.com/player/v1/${url}?__loader=layout&__ssrDirect=true`,
 		);
-		const device_id =
-			(await fetchCache(
-				input,
-				{
-					headers: {
-						"User-Agent": this.USER_AGENT,
-						"Referer": `https://www.tiktok.com/player/v1/${url}`,
-					},
-				},
-				TimeUnit.Day / TimeUnit.Second,
-			)
-				.then((res) => res.json<{ wid: unknown }>())
-				// eslint-disable-next-line @typescript-eslint/require-await
-				.then(async (j) => (typeof j.wid === "string" ? j.wid : ""))
-				.catch(console.error)) ?? "";
 		const [browser_name, browser_version] = this.USER_AGENT.split(/\/(.+)/) as [
 			string,
 			string,
@@ -108,7 +97,10 @@ export class Share extends Command {
 			is_fullscreen: "false",
 			history_len: "2",
 			security_verification_aid: "",
-			device_id,
+			device_id: (
+				7598128498410554902n +
+				BigInt(Math.round(Math.random() * Number.MAX_SAFE_INTEGER))
+			).toString(),
 		}).toString();
 		const res = await fetchCache(
 			input,
