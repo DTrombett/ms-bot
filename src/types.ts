@@ -46,9 +46,7 @@ declare global {
 		readonly [P in keyof T]: RecursiveReadonly<T[P]>;
 	};
 
-	type RecursivePartial<T> = {
-		[P in keyof T]?: RecursivePartial<T[P]>;
-	};
+	type RecursivePartial<T> = { [P in keyof T]?: RecursivePartial<T[P]> };
 
 	type InteractionByType<
 		T extends InteractionType,
@@ -56,12 +54,16 @@ declare global {
 	> = I extends APIInteraction & { type: T } ? I : never;
 	type CommandInteractionByType<
 		T extends ApplicationCommandType,
-		I extends InteractionByType<InteractionType.ApplicationCommand> = InteractionByType<InteractionType.ApplicationCommand>,
-	> = I extends InteractionByType<InteractionType.ApplicationCommand> & {
-		data: { type: T };
-	}
-		? I
-		: never;
+		I extends InteractionByType<InteractionType.ApplicationCommand> =
+			InteractionByType<InteractionType.ApplicationCommand>,
+	> =
+		I extends (
+			InteractionByType<InteractionType.ApplicationCommand> & {
+				data: { type: T };
+			}
+		) ?
+			I
+		:	never;
 
 	type CommandData<
 		T extends ApplicationCommandType = ApplicationCommandType,
@@ -69,9 +71,7 @@ declare global {
 		N extends string = string,
 	> = RESTPostAPIApplicationCommandsJSONBody & {
 		type: T;
-		options?: (APIApplicationCommandOption & {
-			type: O;
-		})[];
+		options?: (APIApplicationCommandOption & { type: O })[];
 		name: N;
 	};
 
@@ -85,13 +85,9 @@ declare global {
 		host: string;
 	};
 
-	type Merge<A, B> = {
-		[K in Exclude<keyof A, keyof B>]?: A[K];
-	} & {
+	type Merge<A, B> = { [K in Exclude<keyof A, keyof B>]?: A[K] } & {
 		[K in Exclude<keyof B, keyof A>]?: B[K];
-	} & {
-		[K in Extract<keyof A, keyof B>]: A[K] | B[K];
-	};
+	} & { [K in Extract<keyof A, keyof B>]: A[K] | B[K] };
 
 	/**
 	 * Options to create a command
@@ -311,11 +307,7 @@ declare global {
 	type CommentaryResponse = {
 		success: boolean;
 		message: string;
-		errors: {
-			type: string;
-			message: string;
-			params: unknown[];
-		}[];
+		errors: { type: string; message: string; params: unknown[] }[];
 		data: {
 			messages: {
 				comment: string;
@@ -338,11 +330,7 @@ declare global {
 		maxPoints: number,
 	][];
 
-	type Prediction = {
-		matchId: string;
-		userId: string;
-		prediction: string;
-	};
+	type Prediction = { matchId: string; userId: string; prediction: string };
 	type User = {
 		id: string;
 		dayPoints?: number | null;
@@ -359,80 +347,77 @@ declare global {
 		league?: number | null;
 		cards?: string | null;
 	};
-	type Reminder = {
-		id: string;
-		date: string;
-		userId: string;
-		remind: string;
-	};
+	type Reminder = { id: string; date: string; userId: string; remind: string };
 
 	type ResolvedUser = Pick<
 		User,
 		"dayPoints" | "id" | "match" | "matchPointsHistory"
-	> & {
-		predictions: Pick<Prediction, "matchId" | "prediction">[];
-	};
+	> & { predictions: Pick<Prediction, "matchId" | "prediction">[] };
 
 	type ExtractOptionType<
-		T extends RecursiveReadonly<APIApplicationCommandOption> = APIApplicationCommandOption,
-	> = T extends {
-		choices: { value: infer V }[];
-	}
-		? V
-		: (APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
+		T extends RecursiveReadonly<APIApplicationCommandOption> =
+			APIApplicationCommandOption,
+	> =
+		T extends { choices: { value: infer V }[] } ? V
+		:	(APIApplicationCommandInteractionDataBasicOption<InteractionType.ApplicationCommand> & {
 				type: T["type"];
-		  })["value"];
+			})["value"];
 	type ResolvedOptions<
 		T extends RecursiveReadonly<
 			| APIApplicationCommandSubcommandGroupOption
 			| APIApplicationCommandSubcommandOption
 		>,
 		S extends string | undefined = undefined,
-	> = T extends any
-		? CreateObject<
+	> =
+		T extends any ?
+			CreateObject<
 				NonNullable<T["options"]>,
 				undefined extends S ? T["name"] : `${S} ${T["name"]}`
-		  >
-		: never;
+			>
+		:	never;
 	type CreateObject<
 		T extends RecursiveReadonly<APIApplicationCommandOption[]>,
 		S extends string | undefined = undefined,
 		R extends boolean = true,
-	> = T extends RecursiveReadonly<
-		(
-			| APIApplicationCommandSubcommandGroupOption
-			| APIApplicationCommandSubcommandOption
-		)[]
-	>
-		? ResolvedOptions<T[number], S>
-		: {
+	> =
+		T extends (
+			RecursiveReadonly<
+				(
+					| APIApplicationCommandSubcommandGroupOption
+					| APIApplicationCommandSubcommandOption
+				)[]
+			>
+		) ?
+			ResolvedOptions<T[number], S>
+		:	{
 				subcommand: S;
 				options: {
-					[P in T[number] as P["name"]]: R extends true
-						? P["required"] extends true
-							? ExtractOptionType<P>
-							: ExtractOptionType<P> | undefined
-						: ExtractOptionType<P> | undefined;
+					[P in T[number] as P["name"]]: R extends true ?
+						P["required"] extends true ?
+							ExtractOptionType<P>
+						:	ExtractOptionType<P> | undefined
+					:	ExtractOptionType<P> | undefined;
 				};
-		  };
+			};
 	type ParseOptions<
 		T extends
 			| RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody>
 			| undefined,
 		R extends boolean = true,
-	> = RESTPostAPIChatInputApplicationCommandsJSONBody extends T
-		? {
+	> =
+		RESTPostAPIChatInputApplicationCommandsJSONBody extends T ?
+			{
 				subcommand?: string;
 				options: Record<string, ExtractOptionType | undefined>;
-		  }
-		: CreateObject<NonNullable<NonNullable<T>["options"]>, undefined, R>;
+			}
+		:	CreateObject<NonNullable<NonNullable<T>["options"]>, undefined, R>;
 
 	type Reply<T extends InteractionResponseType> = (
-		data?: Extract<APIInteractionResponse, { type: T }> extends {
-			data?: infer D;
-		}
-			? D
-			: never,
+		data?: Extract<APIInteractionResponse, { type: T }> extends (
+			{ data?: infer D }
+		) ?
+			D
+		:	never,
 	) => void;
 	type BaseReplies = {
 		edit: (
@@ -458,17 +443,19 @@ declare global {
 		BaseReplies;
 
 	type ChatInputArgs<
-		A extends RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
+		A extends
+			RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> =
+			RESTPostAPIChatInputApplicationCommandsJSONBody,
 		B extends string | undefined = string | undefined,
 	> = BaseArgs<APIChatInputApplicationCommandInteraction> &
-		ParseOptions<A> & {
-			subcommand: B;
-		};
+		ParseOptions<A> & { subcommand: B };
 
 	type AutoCompleteReplies = Pick<Replies, "autocomplete">;
 
 	type AutoCompleteArgs<
-		A extends RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> = RESTPostAPIChatInputApplicationCommandsJSONBody,
+		A extends
+			RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> =
+			RESTPostAPIChatInputApplicationCommandsJSONBody,
 	> = BaseArgs<APIApplicationCommandAutocompleteInteraction> & ParseOptions<A>;
 
 	type ComponentReplies = Pick<
@@ -483,9 +470,7 @@ declare global {
 
 	type ModalReplies = Pick<Replies, "reply" | "defer"> & BaseReplies;
 
-	type ModalArgs = BaseArgs<APIModalSubmitInteraction> & {
-		args: string[];
-	};
+	type ModalArgs = BaseArgs<APIModalSubmitInteraction> & { args: string[] };
 
 	type UserReplies = Pick<Replies, "reply" | "defer" | "modal"> & BaseReplies;
 
@@ -498,11 +483,11 @@ declare global {
 
 	type CommandRunners = NonNullable<
 		{
-			[K in keyof typeof Command]: (typeof Command)[K] extends
-				| ((...args: any[]) => any)
-				| undefined
-				? K
-				: never;
+			[K in keyof typeof Command]: (typeof Command)[K] extends (
+				((...args: any[]) => any) | undefined
+			) ?
+				K
+			:	never;
 		}[keyof typeof Command]
 	>;
 
@@ -531,8 +516,124 @@ declare global {
 		response: APIInteractionResponse;
 	}[];
 
-	type Filter<T, U> = {
-		[K in keyof T as T[K] extends U ? K : never]: T[K];
+	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
+
+	type TwitterUser = {
+		__typename: "User";
+		id: string;
+		rest_id: string;
+		affiliates_highlighted_label: object;
+		avatar: { image_url: string };
+		core: { created_at: string; name: string; screen_name: string };
+		dm_permissions: object;
+		is_blue_verified: boolean;
+		legacy: {
+			default_profile: boolean;
+			default_profile_image: boolean;
+			description: string;
+			entities: { description: { urls: string[] } };
+			fast_followers_count: number;
+			favourites_count: number;
+			followers_count: number;
+			friends_count: number;
+			has_custom_timelines: boolean;
+			is_translator: boolean;
+			listed_count: number;
+			media_count: number;
+			normal_followers_count: number;
+			pinned_tweet_ids_str: string[];
+			possibly_sensitive: boolean;
+			profile_banner_url: string;
+			profile_interstitial_type: string;
+			statuses_count: number;
+			translator_type: string;
+			withheld_in_countries: string[];
+		};
+		location: { location: string };
+		media_permissions: object;
+		parody_commentary_fan_label: string;
+		profile_image_shape: string;
+		profile_bio: { description: string };
+		privacy: { protected: boolean };
+		relationship_perspectives: object;
+		verification: { verified: boolean };
+	};
+
+	type TwitterMedia = {
+		display_url: string;
+		expanded_url: string;
+		id_str: string;
+		indices: number[];
+		media_key: string;
+		media_url_https: string;
+		type: string;
+		url: string;
+		additional_media_info: { monetizable: boolean };
+		ext_media_availability: { status: string };
+		sizes: {
+			large: { h: number; w: number; resize: string };
+			medium: { h: number; w: number; resize: string };
+			small: { h: number; w: number; resize: string };
+			thumb: { h: number; w: number; resize: string };
+		};
+		original_info: { height: number; width: number; focus_rects: unknown[] };
+		allow_download_status: { allow_download: boolean };
+		video_info: {
+			aspect_ratio: number[];
+			duration_millis: number;
+			variants: { bitrate?: number; content_type: string; url: string }[];
+		};
+		media_results: { result: { media_key: string } };
+	};
+
+	type TwitterTweet = {
+		__typename: "Tweet";
+		rest_id: string;
+		core: { user_results: { result: TwitterUser } };
+		unmention_data: object;
+		edit_control: {
+			edit_tweet_ids: string[];
+			editable_until_msecs: string;
+			is_edit_eligible: boolean;
+			edits_remaining: `${number}`;
+		};
+		is_translatable: boolean;
+		views: { count: `${number}`; state: string };
+		source: string;
+		grok_analysis_button: boolean;
+		legacy: {
+			bookmark_count: number;
+			bookmarked: boolean;
+			created_at: string;
+			conversation_id_str: string;
+			entities: {
+				hashtags: string[];
+				media: TwitterMedia[];
+				symbols: [];
+				timestamps: [];
+				urls: [];
+				user_mentions: [];
+			};
+			extended_entities: { media: TwitterMedia[] };
+			favorite_count: number;
+			favorited: boolean;
+			full_text: string;
+			is_quote_status: boolean;
+			lang: string;
+			possibly_sensitive: boolean;
+			possibly_sensitive_editable: boolean;
+			quote_count: number;
+			reply_count: number;
+			retweet_count: number;
+			retweeted: boolean;
+			user_id_str: string;
+			id_str: string;
+		};
+		grok_annotations: { is_image_editable_by_grok: boolean };
+	};
+
+	type TweetResultByRestId = {
+		data: { tweetResult: { result: TwitterTweet } };
 	};
 
 	namespace Brawl {
@@ -574,11 +675,7 @@ declare global {
 		type StarPowerList = StarPower[];
 		type StarPower = { id: number; name: JsonLocalizedName };
 		type GearStatList = GearStat[];
-		type GearStat = {
-			id: number;
-			name: JsonLocalizedName;
-			level: number;
-		};
+		type GearStat = { id: number; name: JsonLocalizedName; level: number };
 		type BrawlerList = Brawler[];
 		type Brawler = {
 			gadgets: AccessoryList;
@@ -655,11 +752,7 @@ declare global {
 				{ arena: Arena; trophies: number; bestTrophies: number }
 			>;
 		};
-		type PlayerClan = {
-			badgeId: number;
-			tag: string;
-			name: string;
-		};
+		type PlayerClan = { badgeId: number; tag: string; name: string };
 		type PlayerItemLevelList = PlayerItemLevel[];
 		type PlayerItemLevel = {
 			id: number;
@@ -680,11 +773,7 @@ declare global {
 			};
 		};
 		type JsonLocalizedName = string;
-		type Arena = {
-			name: JsonLocalizedName;
-			id: number;
-			iconUrls?: unknown;
-		};
+		type Arena = { name: JsonLocalizedName; id: number; iconUrls?: unknown };
 		type PlayerLeagueStatistics = {
 			previousSeason: LeagueSeasonResult;
 			bestSeason: LeagueSeasonResult;
@@ -890,10 +979,7 @@ declare global {
 		};
 		type RiverRaceClanList = RiverRaceClan[];
 		type PeriodLogList = PeriodLog[];
-		type PeriodLog = {
-			periodIndex: number;
-			items: PeriodLogEntryList;
-		};
+		type PeriodLog = { periodIndex: number; items: PeriodLogEntryList };
 		type PeriodLogEntryList = PeriodLogEntry[];
 		type PeriodLogEntry = {
 			clan: PeriodLogEntryClan;
