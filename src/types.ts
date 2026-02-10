@@ -518,123 +518,129 @@ declare global {
 
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
 
-	type TwitterUser = {
-		__typename: "User";
-		id: string;
-		rest_id: string;
-		affiliates_highlighted_label: object;
-		avatar: { image_url: string };
-		core: { created_at: string; name: string; screen_name: string };
-		dm_permissions: object;
-		is_blue_verified: boolean;
-		legacy: {
-			default_profile: boolean;
-			default_profile_image: boolean;
-			description: string;
-			entities: { description: { urls: string[] } };
-			fast_followers_count: number;
-			favourites_count: number;
-			followers_count: number;
-			friends_count: number;
-			has_custom_timelines: boolean;
-			is_translator: boolean;
-			listed_count: number;
-			media_count: number;
-			normal_followers_count: number;
-			pinned_tweet_ids_str: string[];
-			possibly_sensitive: boolean;
-			profile_banner_url: string;
-			profile_interstitial_type: string;
-			statuses_count: number;
-			translator_type: string;
-			withheld_in_countries: string[];
-		};
-		location: { location: string };
-		media_permissions: object;
-		parody_commentary_fan_label: string;
-		profile_image_shape: string;
-		profile_bio: { description: string };
-		privacy: { protected: boolean };
-		relationship_perspectives: object;
-		verification: { verified: boolean };
-	};
-
-	type TwitterMedia = {
-		display_url: string;
-		expanded_url: string;
-		id_str: string;
-		indices: number[];
-		media_key: string;
-		media_url_https: string;
-		type: string;
-		url: string;
-		additional_media_info: { monetizable: boolean };
-		ext_media_availability: { status: string };
-		sizes: {
-			large: { h: number; w: number; resize: string };
-			medium: { h: number; w: number; resize: string };
-			small: { h: number; w: number; resize: string };
-			thumb: { h: number; w: number; resize: string };
-		};
-		original_info: { height: number; width: number; focus_rects: unknown[] };
-		allow_download_status: { allow_download: boolean };
-		video_info: {
-			aspect_ratio: number[];
-			duration_millis: number;
-			variants: { bitrate?: number; content_type: string; url: string }[];
-		};
-		media_results: { result: { media_key: string } };
-	};
-
-	type TwitterTweet = {
-		__typename: "Tweet";
-		rest_id: string;
-		core: { user_results: { result: TwitterUser } };
-		unmention_data: object;
-		edit_control: {
-			edit_tweet_ids: string[];
-			editable_until_msecs: string;
-			is_edit_eligible: boolean;
-			edits_remaining: `${number}`;
-		};
-		is_translatable: boolean;
-		views: { count: `${number}`; state: string };
-		source: string;
-		grok_analysis_button: boolean;
-		legacy: {
-			bookmark_count: number;
-			bookmarked: boolean;
-			created_at: string;
-			conversation_id_str: string;
-			entities: {
-				hashtags: string[];
-				media: TwitterMedia[];
-				symbols: [];
-				timestamps: [];
-				urls: [];
-				user_mentions: [];
+	namespace Twitter {
+		type User = {
+			__typename: "User";
+			id: string;
+			rest_id: string;
+			affiliates_highlighted_label: object;
+			avatar: { image_url: string };
+			core: { created_at: string; name: string; screen_name: string };
+			dm_permissions: object;
+			is_blue_verified: boolean;
+			legacy: {
+				default_profile: boolean;
+				default_profile_image: boolean;
+				description: string;
+				entities: { description: { urls: string[] } };
+				fast_followers_count: number;
+				favourites_count: number;
+				followers_count: number;
+				friends_count: number;
+				has_custom_timelines: boolean;
+				is_translator: boolean;
+				listed_count: number;
+				media_count: number;
+				normal_followers_count: number;
+				pinned_tweet_ids_str: string[];
+				possibly_sensitive: boolean;
+				profile_banner_url: string;
+				profile_interstitial_type: string;
+				statuses_count: number;
+				translator_type: string;
+				withheld_in_countries: string[];
 			};
-			extended_entities: { media: TwitterMedia[] };
-			favorite_count: number;
-			favorited: boolean;
-			full_text: string;
-			is_quote_status: boolean;
-			lang: string;
-			possibly_sensitive: boolean;
-			possibly_sensitive_editable: boolean;
-			quote_count: number;
-			reply_count: number;
-			retweet_count: number;
-			retweeted: boolean;
-			user_id_str: string;
-			id_str: string;
+			location: { location: string };
+			media_permissions: object;
+			parody_commentary_fan_label: string;
+			profile_image_shape: string;
+			profile_bio: { description: string };
+			privacy: { protected: boolean };
+			relationship_perspectives: object;
+			verification: { verified: boolean };
 		};
-		grok_annotations: { is_image_editable_by_grok: boolean };
-	};
-
-	type TweetResultByRestId = {
-		data: { tweetResult: { result: TwitterTweet } };
-	};
+		type Media = {
+			display_url: string;
+			expanded_url: string;
+			id_str: string;
+			indices: number[];
+			media_key: string;
+			media_url_https: string;
+			type: string;
+			url: string;
+			additional_media_info?: { monetizable: boolean };
+			ext_media_availability: { status: string };
+			sizes: {
+				large: { h: number; w: number; resize: string };
+				medium: { h: number; w: number; resize: string };
+				small: { h: number; w: number; resize: string };
+				thumb: { h: number; w: number; resize: string };
+			};
+			original_info: {
+				height: number;
+				width: number;
+				focus_rects: { x: number; y: number; w: number; h: number }[];
+			};
+			allow_download_status: { allow_download: boolean };
+			video_info?: {
+				aspect_ratio: number[];
+				duration_millis: number;
+				variants: { bitrate?: number; content_type: string; url: string }[];
+			};
+			media_results: { result: { media_key: string } };
+		};
+		type Tweet = {
+			__typename: "Tweet";
+			rest_id: string;
+			core: { user_results: { result: User } };
+			unmention_data: object;
+			edit_control: {
+				edit_tweet_ids: string[];
+				editable_until_msecs: string;
+				is_edit_eligible: boolean;
+				edits_remaining: `${number}`;
+			};
+			is_translatable: boolean;
+			views: { count: `${number}`; state: string };
+			source: string;
+			grok_analysis_button: boolean;
+			legacy: {
+				bookmark_count: number;
+				bookmarked: boolean;
+				created_at: string;
+				conversation_id_str: string;
+				entities: {
+					hashtags: string[];
+					media?: Media[];
+					symbols: [];
+					timestamps: [];
+					urls: [];
+					user_mentions: {
+						id_str: string;
+						name: string;
+						screen_name: string;
+						indices: [number, number];
+					}[];
+				};
+				extended_entities: { media: Media[] };
+				favorite_count: number;
+				favorited: boolean;
+				full_text: string;
+				is_quote_status: boolean;
+				lang: string;
+				possibly_sensitive: boolean;
+				possibly_sensitive_editable: boolean;
+				quote_count: number;
+				reply_count: number;
+				retweet_count: number;
+				retweeted: boolean;
+				user_id_str: string;
+				id_str: string;
+			};
+			grok_annotations: { is_image_editable_by_grok: boolean };
+		};
+		type TweetResultByRestId = { data: { tweetResult: { result: Tweet } } };
+	}
 
 	namespace Brawl {
 		type Player = {

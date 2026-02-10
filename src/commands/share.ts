@@ -3,16 +3,20 @@ import {
 	ApplicationCommandType,
 	ComponentType,
 	MessageFlags,
+	type APIMessageTopLevelComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
 import { fetchCache } from "../util/fetchCache.ts";
 import { findJSObjectAround } from "../util/stringParsing.ts";
+import { template } from "../util/strings.ts";
 import { TimeUnit } from "../util/time.ts";
 
 export class Share extends Command {
-	static readonly "USER_AGENT" =
+	private static readonly "USER_AGENT" =
 		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
+	private static readonly "REAL_USER_AGENT" =
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
 	static override "chatInputData" = {
 		name: "share",
 		description: "Condividi contenuti da una serie di siti web",
@@ -209,9 +213,6 @@ export class Share extends Command {
 			allowed_mentions: { parse: [] },
 		}).catch(console.error);
 	};
-	private static readonly "REAL_USER_AGENT" =
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
-
 	static "twitter" = async (
 		{ defer, edit, reply }: ChatInputReplies,
 		{
@@ -243,7 +244,6 @@ export class Share extends Command {
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
 		const response = await fetch(parsed, {
 			headers: {
-				"Accept": "text/html",
 				"accept-language": locale,
 				"User-Agent": this.REAL_USER_AGENT,
 			},
@@ -285,7 +285,6 @@ export class Share extends Command {
 			});
 		const js = await fetch(url, {
 			headers: {
-				"Accept": "text/javascript",
 				"accept-language": locale,
 				"User-Agent": this.REAL_USER_AGENT,
 			},
@@ -329,7 +328,6 @@ export class Share extends Command {
 			).toString()}`,
 			{
 				headers: {
-					"Accept": "application/json",
 					"Accept-Language": locale,
 					"Authorization": authorization,
 					"User-Agent": this.REAL_USER_AGENT,
@@ -347,8 +345,67 @@ export class Share extends Command {
 			return edit({
 				content: `Si è verificato un errore imprevisto: ${res.status} ${res.statusText}`,
 			});
-		const { data } = await res.json<TweetResultByRestId>();
-		console.log(data.tweetResult.result);
-		return edit({ content: `Tweet estratto correttamente!` });
+		const {
+			data: {
+				tweetResult: { result },
+			},
+		} = await res.json<Twitter.TweetResultByRestId>();
+		console.log(JSON.stringify(result));
+		match = result.source.match(
+			/<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([^<]+)<\/a>/,
+		);
+		result.legacy.entities.user_mentions.sort(
+			(a, b) => a.indices[0] - b.indices[0],
+		);
+		const fullText = result.legacy.entities.user_mentions.reduce(
+			(fullText, mention, i) =>
+				`${fullText}[${result.legacy.full_text.slice(...mention.indices)}](https://twitter.com/${mention.screen_name})${result.legacy.full_text.slice(mention.indices[1], result.legacy.entities.user_mentions[i + 1]?.indices[0])}`,
+			result.legacy.full_text.slice(
+				0,
+				result.legacy.entities.user_mentions[0]?.indices[0],
+			),
+		);
+		const components: APIMessageTopLevelComponent[] = [
+			{
+				type: ComponentType.Section,
+				components: [
+					{
+						type: ComponentType.TextDisplay,
+						content: `## [${result.core.user_results.result.core.name} (@${result.core.user_results.result.core.screen_name})](https://twitter.com/${result.core.user_results.result.core.screen_name})\n${fullText}\n-# [Apri in Twitter](https://twitter.com/i/status/${result.rest_id})`,
+					},
+				],
+				accessory: {
+					type: ComponentType.Thumbnail,
+					media: { url: result.core.user_results.result.avatar.image_url },
+				},
+			},
+		];
+		if (result.legacy.entities.media?.length)
+			components.push({
+				type: ComponentType.MediaGallery,
+				items: result.legacy.entities.media.map((m) => ({
+					media: {
+						url:
+							m.video_info?.variants
+								.filter((a) => a.content_type.startsWith("video/"))
+								.reduce((a, b) =>
+									a.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
+								).url ?? m.media_url_https,
+					},
+				})),
+			});
+		components.push({
+			type: ComponentType.TextDisplay,
+			content: template`
+					-# <t:${Math.round(Date.parse(result.legacy.created_at) / 1000)}:f>\t·\t**${Number(result.views.count).toLocaleString(locale)}** visualizzazioni
+					-# 🗨️ ${result.legacy.reply_count.toLocaleString(locale)}\t🔃 ${(result.legacy.quote_count + result.legacy.retweet_count).toLocaleString(locale)}\t❤️ ${result.legacy.favorite_count.toLocaleString(locale)}\t🔖 ${result.legacy.bookmark_count.toLocaleString(locale)}
+					${match}-# [${match?.[2]}](${match?.[1]})
+				`,
+		});
+		await edit({
+			flags: MessageFlags.IsComponentsV2,
+			components,
+			allowed_mentions: { parse: [] },
+		}).catch(console.error);
 	};
 }
