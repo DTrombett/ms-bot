@@ -650,6 +650,9 @@ declare global {
 				favorite_count: number;
 				favorited: boolean;
 				full_text: string;
+				in_reply_to_screen_name?: string;
+				in_reply_to_status_id_str?: string;
+				in_reply_to_user_id_str?: string;
 				is_quote_status: boolean;
 				lang: string;
 				possibly_sensitive: boolean;

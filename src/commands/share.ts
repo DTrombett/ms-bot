@@ -1,8 +1,10 @@
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
+	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	type APIButtonComponent,
 	type APIComponentInContainer,
 	type APIMessageTopLevelComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
@@ -14,6 +16,7 @@ import { template } from "../util/strings.ts";
 import { TimeUnit } from "../util/time.ts";
 
 export class Share extends Command {
+	static override readonly "supportComponentMethods" = true;
 	private static readonly "USER_AGENT" =
 		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
 	private static readonly "REAL_USER_AGENT" =
@@ -217,9 +220,13 @@ export class Share extends Command {
 	static "twitter" = async (
 		{ defer, edit, reply }: ChatInputReplies,
 		{
-			options: { url, hide },
+			args: [u = "", h = ""] = [],
+			options: { url, hide } = { url: u, hide: Boolean(h) },
 			interaction: { locale },
-		}: ChatInputArgs<typeof Share.chatInputData, "twitter">,
+		}: Merge<
+			ChatInputArgs<typeof Share.chatInputData, "twitter">,
+			ComponentArgs
+		>,
 	) => {
 		const idRegex = /^\d+$/;
 		if (!URL.canParse(url))
@@ -230,29 +237,54 @@ export class Share extends Command {
 					content: "L'URL non è valido!",
 				});
 		const parsed = new URL(url);
-		const tweetId = parsed.pathname.split("/").at(-1)!;
 
 		if (
-			!["x.com", "www.x.com", "twitter.com", "www.twitter.com"].includes(
-				parsed.host,
-			) ||
-			!idRegex.test(tweetId)
+			![
+				"x.com",
+				"www.x.com",
+				"twitter.com",
+				"www.twitter.com",
+				"t.co",
+			].includes(parsed.host)
 		)
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content: "L'URL non è valido!",
 			});
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
-		const response = await fetch(parsed, {
+
+		let response = await fetch(parsed, {
 			headers: {
 				"accept-language": locale,
 				"User-Agent": this.REAL_USER_AGENT,
 			},
 		});
-		const body = `${await response.text()}</body></html>`;
+		if (!response.ok) {
+			void response.body?.cancel();
+			return edit({
+				content: `Impossibile scaricare la pagina: ${response.status} ${response.statusText}`,
+			});
+		}
+		({ url } = response);
+		parsed.href = url;
+		const tweetId = parsed.pathname.split("/").at(-1)!;
+		if (!idRegex.test(tweetId)) {
+			void response.body?.cancel();
+			return edit({ content: "L'URL della pagina non è valido!" });
+		}
+		let body = `${await response.text()}</body></html>`;
+
+		const { resolve, reject, promise } = Promise.withResolvers<string>();
+		new HTMLRewriter()
+			.on('link[href*="/main."]', {
+				element: (element) =>
+					resolve(new URL(element.getAttribute("href")!, url).href),
+			})
+			.onDocument({ end: reject })
+			.transform(new Response(body));
 		let match = body.match(/featureSwitch["']?\s*:\s*{/);
 		if (!match)
-			return edit({ content: "Impossibile estrarre il contenuto dal tweet" });
+			return edit({ content: "Impossibile trovare i dettagli della query" });
 		const featureSwitch = findJSObjectAround<{
 			defaultConfig: Record<string, { value: unknown }>;
 			user: { config: Record<string, { value: unknown }> };
@@ -264,44 +296,36 @@ export class Share extends Command {
 		}>(body, match.index! + match[0].length - 1, 0);
 		match = body.match(/document\s*\.\s*cookie\s*=\s*["']gt=([^;]+)/);
 		if (!match?.[1])
-			return edit({ content: "Impossibile estrarre il contenuto dal tweet!" });
+			return edit({ content: "Impossibile ottenere il guest token" });
 		const gt = match[1];
 		match = body.match(/["']guestId["']\s*:\s*["']([^"']+)["']/);
 		if (!match?.[1])
-			return edit({ content: "Impossibile estrarre il contenuto dal tweet!!" });
+			return edit({ content: "Impossibile ottenere il guest id" });
 		const guestId = match[1];
-		const { resolve, reject, promise } = Promise.withResolvers<string>();
-		({ url } = response);
-		new HTMLRewriter()
-			.on('link[href*="/main."]', {
-				element: (element) =>
-					resolve(new URL(element.getAttribute("href")!, url).href),
-			})
-			.onDocument({ end: reject })
-			.transform(new Response(body));
-		url = await promise.catch(() => "");
-		if (url === "")
+		if (!(url = await promise.catch(() => "")))
 			return edit({
-				content: "Impossibile estrarre il contenuto dal tweet!!!",
+				content: "Impossibile trovare il file JavaScript della pagina",
 			});
-		const js = await fetch(url, {
+
+		body = await fetch(url, {
 			headers: {
 				"accept-language": locale,
 				"User-Agent": this.REAL_USER_AGENT,
 			},
 		}).then((res) => res.text());
-		const authorization = js.match(/Bearer \w[^"']+/)?.[0];
+		const authorization = body.match(/Bearer \w[^"']+/)?.[0];
 		if (!authorization)
 			return edit({
-				content: "Impossibile estrarre il contenuto dal tweet!!!!",
+				content: "Impossibile ottenere il token di autorizzazione",
 			});
 		const trbri = findJSObjectAround<{
 			queryId: string;
 			operationName: string;
 			operationType: string;
 			metadata: { featureSwitches: string[]; fieldToggles: string[] };
-		}>(js, js.indexOf('"TweetResultByRestId"'));
-		const res = await fetch(
+		}>(body, body.indexOf('"TweetResultByRestId"'));
+
+		response = await fetch(
 			`https://api.x.com/graphql/${trbri.queryId}/TweetResultByRestId?${new URLSearchParams(
 				{
 					variables: JSON.stringify({
@@ -342,38 +366,42 @@ export class Share extends Command {
 				method: "GET",
 			},
 		);
-		if (!res.ok)
+		if (!response.ok) {
+			void response.body?.cancel();
 			return edit({
-				content: `Si è verificato un errore imprevisto: ${res.status} ${res.statusText}`,
+				content: `Impossibile scaricare i dettagli del tweet: ${response.status} ${response.statusText}`,
 			});
+		}
 		const {
 			data: {
-				tweetResult: { result },
+				tweetResult: { result: tweet },
 			},
-		} = await res.json<Twitter.TweetResultByRestId>();
-		console.log(JSON.stringify(result));
-		match = result.source.match(
-			/<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([^<]+)<\/a>/,
-		);
+		} = await response.json<Twitter.TweetResultByRestId>();
+
 		const components: APIMessageTopLevelComponent[] =
-			this.createTweetContentComponents(result);
-		if (result.quoted_status_result)
+			this.createTweetContentComponents(tweet);
+		if (tweet.quoted_status_result)
 			components.push({
 				type: ComponentType.Container,
 				components: this.createTweetContentComponents(
-					result.quoted_status_result.result,
-					true,
+					tweet.quoted_status_result.result,
 				),
 			});
-		components.push({
-			type: ComponentType.TextDisplay,
-			content: template`
-					-# <t:${Math.round(Date.parse(result.legacy.created_at) / 1000)}:f>\t·\t**${Number(result.views.count).toLocaleString(locale)}** visualizzazioni
-					-# 🗨️ ${result.legacy.reply_count.toLocaleString(locale)}\t🔃 ${(result.legacy.quote_count + result.legacy.retweet_count).toLocaleString(locale)}\t❤️ ${result.legacy.favorite_count.toLocaleString(locale)}\t🔖 ${result.legacy.bookmark_count.toLocaleString(locale)}
-					${match}-# [${match?.[2]}](${match?.[1]})
+		components.push(
+			{
+				type: ComponentType.TextDisplay,
+				content: template`
+					-# <t:${Math.round(Date.parse(tweet.legacy.created_at) / 1000)}:f>\t·\t**${Number(tweet.views.count).toLocaleString(locale)}** visualizzazioni
+					-# 🗨️ ${tweet.legacy.reply_count.toLocaleString(locale)}\t🔃 ${(tweet.legacy.quote_count + tweet.legacy.retweet_count).toLocaleString(locale)}\t❤️ ${tweet.legacy.favorite_count.toLocaleString(locale)}\t🔖 ${tweet.legacy.bookmark_count.toLocaleString(locale)}
 				`,
-		});
-		await edit({
+			},
+			{
+				type: ComponentType.ActionRow,
+				components: this.createButtons(tweet, hide),
+			},
+		);
+
+		return edit({
 			flags: MessageFlags.IsComponentsV2,
 			components,
 			allowed_mentions: { parse: [] },
@@ -412,10 +440,43 @@ export class Share extends Command {
 			text.slice(0, entities[0]?.indices[0]),
 		);
 	};
+	private static "createButtons" = (tweet: Twitter.Tweet, hide = false) => {
+		const buttons: APIButtonComponent[] = [];
+		const match = tweet.source.match(
+			/<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([^<]+)<\/a>/,
+		);
 
+		if (match && match[1] && match[2])
+			buttons.push({
+				type: ComponentType.Button,
+				style: ButtonStyle.Link,
+				url: match[1],
+				label: match[2],
+			});
+		if (tweet.legacy.in_reply_to_status_id_str)
+			buttons.push({
+				type: ComponentType.Button,
+				style: ButtonStyle.Secondary,
+				label: "Vedi tweet precedente",
+				custom_id: `share-twitter-${tweet.legacy.in_reply_to_status_id_str}-${hide ? "1" : ""}`,
+			});
+		if (tweet.quoted_status_result?.result.rest_id)
+			buttons.push({
+				type: ComponentType.Button,
+				style: ButtonStyle.Secondary,
+				label: "Vedi tweet citato",
+				custom_id: `share-twitter-${tweet.quoted_status_result?.result.rest_id}-${hide ? "1" : ""}`,
+			});
+		buttons.push({
+			type: ComponentType.Button,
+			style: ButtonStyle.Link,
+			url: `https://twitter.com/i/status/${tweet.rest_id}`,
+			label: "Apri in Twitter",
+		});
+		return buttons;
+	};
 	private static "createTweetContentComponents"(
 		tweet: Twitter.Tweet,
-		quote = false,
 	): APIComponentInContainer[] {
 		const components: APIComponentInContainer[] = [
 			{
@@ -423,7 +484,7 @@ export class Share extends Command {
 				components: [
 					{
 						type: ComponentType.TextDisplay,
-						content: `## [${tweet.core.user_results.result.core.name} @${tweet.core.user_results.result.core.screen_name}](https://twitter.com/${tweet.core.user_results.result.core.screen_name})\n${this.getFullText(tweet)}${quote ? "" : `\n-# [Apri in Twitter](https://twitter.com/i/status/${tweet.rest_id})`}`,
+						content: `## [${tweet.core.user_results.result.core.name} @${tweet.core.user_results.result.core.screen_name}](https://twitter.com/${tweet.core.user_results.result.core.screen_name})\n${this.getFullText(tweet)}`,
 					},
 				],
 				accessory: {
