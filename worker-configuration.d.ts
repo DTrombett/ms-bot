@@ -11,6 +11,7 @@ declare namespace Cloudflare {
 		BRAWL_STARS: Fetcher;
 		CLASH_ROYALE: Fetcher;
 		ASSETS: Fetcher;
+		BROWSER: Fetcher;
 		SEASON_ID: "serie-a%3A%3AFootball_Season%3A%3A5f0e080fc3a44073984b75b3a8e06a8a";
 		CLOUDFLARE_API_KEY: string;
 		CLOUDFLARE_ACCOUNT_ID: string;
