@@ -333,7 +333,7 @@ export class Share extends Command {
 			metadata: { featureSwitches: string[]; fieldToggles: string[] };
 		}>(body, body.indexOf('"TweetResultByRestId"'));
 
-		response = await fetch(
+		response = await fetchCache(
 			`https://api.x.com/graphql/${trbri.queryId}/TweetResultByRestId?${new URLSearchParams(
 				{
 					variables: JSON.stringify({
