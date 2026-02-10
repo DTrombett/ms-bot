@@ -23,13 +23,14 @@ export const fetchCache = async (
 		const clonedRes = res.clone();
 
 		if (
+			!cacheHeader ||
 			cacheHeader?.startsWith("no-") ||
 			cacheHeader?.startsWith("private") ||
 			cacheHeader?.startsWith("must-")
 		)
 			resHeaders.set(
 				"Cache-Control",
-				`public, max-age=${cacheHeader.match(/max-age=(\d+)/)?.[1] ?? ttl}`,
+				`public, max-age=${cacheHeader?.match(/max-age=(\d+)/)?.[1] ?? ttl}`,
 			);
 		waitUntil(
 			caches.default.put(
