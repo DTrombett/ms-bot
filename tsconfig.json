@@ -1,6 +1,5 @@
 {
-	"include": ["src/**/*", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.cjs"],
-	"exclude": ["node_modules", "tmp"],
+	"include": ["src/**/*"],
 	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
