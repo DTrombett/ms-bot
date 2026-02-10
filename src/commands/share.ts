@@ -253,7 +253,7 @@ export class Share extends Command {
 			});
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
 
-		let response = await fetch(parsed, {
+		let response = await fetchCache(parsed, {
 			headers: {
 				"accept-language": locale,
 				"User-Agent": this.REAL_USER_AGENT,
@@ -271,6 +271,14 @@ export class Share extends Command {
 		if (!idRegex.test(tweetId)) {
 			void response.body?.cancel();
 			return edit({ content: "L'URL della pagina non è valido!" });
+		}
+		const guestId = response.headers
+			.getSetCookie()
+			.find((v) => v.startsWith("guest_id="))
+			?.match(/^guest_id=([^;]+)/)?.[1];
+		if (!guestId) {
+			void response.body?.cancel();
+			return edit({ content: "Impossibile ottenere il guest id" });
 		}
 		let body = `${await response.text()}</body></html>`;
 
@@ -298,21 +306,21 @@ export class Share extends Command {
 		if (!match?.[1])
 			return edit({ content: "Impossibile ottenere il guest token" });
 		const gt = match[1];
-		match = body.match(/["']guestId["']\s*:\s*["']([^"']+)["']/);
-		if (!match?.[1])
-			return edit({ content: "Impossibile ottenere il guest id" });
-		const guestId = match[1];
 		if (!(url = await promise.catch(() => "")))
 			return edit({
 				content: "Impossibile trovare il file JavaScript della pagina",
 			});
 
-		body = await fetch(url, {
-			headers: {
-				"accept-language": locale,
-				"User-Agent": this.REAL_USER_AGENT,
+		body = await fetchCache(
+			url,
+			{
+				headers: {
+					"accept-language": locale,
+					"User-Agent": this.REAL_USER_AGENT,
+				},
 			},
-		}).then((res) => res.text());
+			TimeUnit.Day / TimeUnit.Second,
+		).then((res) => res.text());
 		const authorization = body.match(/Bearer \w[^"']+/)?.[0];
 		if (!authorization)
 			return edit({
@@ -359,7 +367,7 @@ export class Share extends Command {
 					"x-guest-token": gt,
 					"x-twitter-active-user": "yes",
 					"x-twitter-client-language": locale,
-					"Cookie": `guest_id=v1%3A${guestId}; gt=${gt}`,
+					"Cookie": `guest_id=${guestId}; gt=${gt}`,
 					"Content-Type": "application/json",
 					"Origin": "https://x.com",
 				},
