@@ -525,13 +525,20 @@ export class Share extends Command {
 						el.remove(),
 					),
 				),
+			page
+				.getByRole("link", { name: /^Show more$/ })
+				.last()
+				.evaluateAll(
+					(elements: { textContent: string }[]) =>
+						elements[0] && (elements[0].textContent = "..."),
+				),
 		]);
 
 		return Promise.all([
 			rest
 				.patch(fullRoute, {
 					body: {
-						attachments: [{ id: 0, filename: "screenshot.png" }],
+						attachments: [{ id: 0, filename: `${tweetId}.png` }],
 					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 					files: [
 						{
@@ -548,7 +555,7 @@ export class Share extends Command {
 										}
 									`,
 								}),
-							name: "screenshot.png",
+							name: `${tweetId}.png`,
 							contentType: "image/png",
 						},
 					],
