@@ -1,3 +1,5 @@
+import { devices, launch } from "@cloudflare/playwright";
+import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -7,10 +9,12 @@ import {
 	type APIButtonComponent,
 	type APIComponentInContainer,
 	type APIMessageTopLevelComponent,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
 import { fetchCache } from "../util/fetchCache.ts";
+import { rest } from "../util/rest.ts";
 import { findJSObjectAround } from "../util/stringParsing.ts";
 import { template } from "../util/strings.ts";
 import { TimeUnit } from "../util/time.ts";
@@ -61,6 +65,44 @@ export class Share extends Command {
 						description: "Se nascondere il messaggio dagli altri",
 						type: ApplicationCommandOptionType.Boolean,
 						required: false,
+					},
+				],
+			},
+			{
+				name: "twitter-screenshot",
+				description: "Crea uno screenshot di un tweet (X)",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "url",
+						description: "Il link al post o il suo ID",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+					},
+					{
+						name: "hide",
+						description: "Se nascondere il messaggio dagli altri",
+						type: ApplicationCommandOptionType.Boolean,
+					},
+					{
+						name: "theme",
+						description: "Se usare il tema scuro o chiaro (default: scuro)",
+						type: ApplicationCommandOptionType.String,
+						choices: [
+							{ name: "Chiaro", value: "light" },
+							{ name: "Scuro", value: "dark" },
+						],
+					},
+					{
+						name: "hide-thread",
+						description:
+							"Se nascondere il messaggio precedente (default: false)",
+						type: ApplicationCommandOptionType.Boolean,
+					},
+					{
+						name: "hide-stats",
+						description: "Se nascondere i like e le risposte (default: false)",
+						type: ApplicationCommandOptionType.Boolean,
 					},
 				],
 			},
@@ -218,7 +260,7 @@ export class Share extends Command {
 		}).catch(console.error);
 	};
 	static "twitter" = async (
-		{ defer, edit, reply }: ChatInputReplies,
+		{ defer, edit, reply }: Merge<ChatInputReplies, ComponentReplies>,
 		{
 			args: [u = "", h = ""] = [],
 			options: { url, hide } = { url: u, hide: Boolean(h) },
@@ -405,7 +447,7 @@ export class Share extends Command {
 			},
 			{
 				type: ComponentType.ActionRow,
-				components: this.createButtons(tweet, hide),
+				components: this.twitterCreateButtons(tweet, hide),
 			},
 		);
 
@@ -415,7 +457,107 @@ export class Share extends Command {
 			allowed_mentions: { parse: [] },
 		}).catch(console.error);
 	};
-	private static "getFullText" = (tweet: Twitter.Tweet) => {
+	static "twitter-screenshot" = async (
+		{ defer, reply }: Merge<ChatInputReplies, ComponentReplies>,
+		{
+			args: [u = "", h = ""] = [],
+			options: {
+				url,
+				hide,
+				"hide-thread": hideThread = false,
+				"hide-stats": hideStats = false,
+				theme = "dark",
+			} = {
+				"url": u,
+				"hide": Boolean(h),
+				"hide-thread": false,
+				"hide-stats": false,
+				"theme": "dark",
+			},
+			fullRoute,
+		}: Merge<
+			ChatInputArgs<typeof Share.chatInputData, "twitter-screenshot">,
+			ComponentArgs
+		>,
+	) => {
+		const tweetId = url.match(/(?<=^|\/status\/)\d+/)?.[0];
+		if (!tweetId)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: "L'URL non è valido!",
+			});
+		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
+		const browser = await launch(env.BROWSER);
+		const page = await browser.newPage({
+			baseURL: "https://platform.twitter.com/embed/",
+			...devices["Desktop Chrome HiDPI"],
+			deviceScaleFactor: 4,
+			viewport: { width: 7680, height: 4320 },
+			screen: { width: 7680, height: 4320 },
+		});
+		const hasText = /^Read (?:(\d+) repl(?:ies|y)|more on (?:X|Twitter))$/;
+		const readReplies = page.locator("div", { hasText }).nth(-2);
+
+		page.setDefaultTimeout(20_000);
+		await page.goto(
+			`Tweet.html?${new URLSearchParams({
+				dnt: "true",
+				id: tweetId,
+				theme,
+				hideThread: String(hideThread),
+			}).toString()}`,
+		);
+		await Promise.all([
+			page
+				.getByText("Reply", { exact: true })
+				.last()
+				.evaluate(
+					(el: { textContent: string }, replies: number) =>
+						(el.textContent = String(replies)),
+					Number((await readReplies.innerText()).match(hasText)?.[1]) || 0,
+				),
+			readReplies
+				.or(page.locator("div[aria-hidden='true']", { hasText: /^·$/ }))
+				.or(page.getByRole("link", { name: "Follow", exact: true }))
+				.or(page.getByRole("button", { name: /^Copy link to post$/ }).last())
+				.evaluateAll((elements: { remove: () => void }[]) =>
+					(elements.length > 5 ? elements.slice(1) : elements).forEach((el) =>
+						el.remove(),
+					),
+				),
+		]);
+
+		return Promise.all([
+			rest
+				.patch(fullRoute, {
+					body: {
+						attachments: [{ id: 0, filename: "screenshot.png" }],
+					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+					files: [
+						{
+							data: await page
+								.getByRole("article")
+								.first()
+								.screenshot({
+									omitBackground: true,
+									style: `
+										a[aria-label='X Ads info and privacy'] { visibility: hidden; }
+										a[aria-label='Watch on X'] { display: none; }
+										div:has(> a[href^='https://twitter.com/intent/tweet']) {
+											${hideStats ? "display: none" : "justify-content: space-evenly"};
+										}
+									`,
+								}),
+							name: "screenshot.png",
+							contentType: "image/png",
+						},
+					],
+				})
+				.catch(console.error),
+			browser.close(),
+		]);
+	};
+	private static "twitterGetFullText" = (tweet: Twitter.Tweet) => {
 		const entitySet =
 			tweet.note_tweet?.note_tweet_results.result.entity_set ??
 			tweet.legacy.entities;
@@ -448,7 +590,10 @@ export class Share extends Command {
 			text.slice(0, entities[0]?.indices[0]),
 		);
 	};
-	private static "createButtons" = (tweet: Twitter.Tweet, hide = false) => {
+	private static "twitterCreateButtons" = (
+		tweet: Twitter.Tweet,
+		hide = false,
+	) => {
 		const buttons: APIButtonComponent[] = [];
 		const match = tweet.source.match(
 			/<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([^<]+)<\/a>/,
@@ -492,7 +637,7 @@ export class Share extends Command {
 				components: [
 					{
 						type: ComponentType.TextDisplay,
-						content: `## [${tweet.core.user_results.result.core.name} @${tweet.core.user_results.result.core.screen_name}](https://twitter.com/${tweet.core.user_results.result.core.screen_name})\n${this.getFullText(tweet)}`,
+						content: `## [${tweet.core.user_results.result.core.name} @${tweet.core.user_results.result.core.screen_name}](https://twitter.com/${tweet.core.user_results.result.core.screen_name})\n${this.twitterGetFullText(tweet)}`,
 					},
 				],
 				accessory: {

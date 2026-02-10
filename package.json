@@ -22,6 +22,7 @@
 		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src"
 	},
 	"dependencies": {
+		"@cloudflare/playwright": "^1.1.0",
 		"@discordjs/rest": "^2.6.0",
 		"@discordjs/ws": "^2.0.4",
 		"bufferutil": "^4.1.0",
