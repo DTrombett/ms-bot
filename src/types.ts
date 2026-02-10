@@ -532,7 +532,17 @@ declare global {
 				default_profile: boolean;
 				default_profile_image: boolean;
 				description: string;
-				entities: { description: { urls: string[] } };
+				entities: {
+					description: { urls: [] };
+					url: {
+						urls: {
+							display_url: string;
+							expanded_url: string;
+							url: string;
+							indices: [number, number];
+						}[];
+					};
+				};
 				fast_followers_count: number;
 				favourites_count: number;
 				followers_count: number;
@@ -549,6 +559,7 @@ declare global {
 				statuses_count: number;
 				translator_type: string;
 				withheld_in_countries: string[];
+				url: string;
 			};
 			location: { location: string };
 			media_permissions: object;
@@ -558,17 +569,22 @@ declare global {
 			privacy: { protected: boolean };
 			relationship_perspectives: object;
 			verification: { verified: boolean };
+			profile_description_language?: string;
 		};
 		type Media = {
 			display_url: string;
 			expanded_url: string;
+			ext_alt_text?: string;
 			id_str: string;
 			indices: number[];
 			media_key: string;
 			media_url_https: string;
 			type: string;
 			url: string;
-			additional_media_info?: { monetizable: boolean };
+			additional_media_info?: {
+				monetizable: boolean;
+				source_user?: { user_results: { result: User } };
+			};
 			ext_media_availability: { status: string };
 			sizes: {
 				large: { h: number; w: number; resize: string };
@@ -589,6 +605,19 @@ declare global {
 			};
 			media_results: { result: { media_key: string } };
 		};
+		type Entities = {
+			hashtags: { indices: [number, number]; text: string }[];
+			media?: Media[];
+			symbols: [];
+			timestamps: [];
+			urls: [];
+			user_mentions: {
+				id_str: string;
+				name: string;
+				screen_name: string;
+				indices: [number, number];
+			}[];
+		};
 		type Tweet = {
 			__typename: "Tweet";
 			rest_id: string;
@@ -603,25 +632,20 @@ declare global {
 			is_translatable: boolean;
 			views: { count: `${number}`; state: string };
 			source: string;
+			note_tweet?: {
+				is_expandable: boolean;
+				note_tweet_results: {
+					result: { id: string; text: string; entity_set: Entities };
+				};
+			};
 			grok_analysis_button: boolean;
+			quoted_status_result?: { result: Tweet };
 			legacy: {
 				bookmark_count: number;
 				bookmarked: boolean;
 				created_at: string;
 				conversation_id_str: string;
-				entities: {
-					hashtags: string[];
-					media?: Media[];
-					symbols: [];
-					timestamps: [];
-					urls: [];
-					user_mentions: {
-						id_str: string;
-						name: string;
-						screen_name: string;
-						indices: [number, number];
-					}[];
-				};
+				entities: Entities;
 				extended_entities: { media: Media[] };
 				favorite_count: number;
 				favorited: boolean;

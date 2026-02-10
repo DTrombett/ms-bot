@@ -3,6 +3,7 @@ import {
 	ApplicationCommandType,
 	ComponentType,
 	MessageFlags,
+	type APIComponentInContainer,
 	type APIMessageTopLevelComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
@@ -354,45 +355,15 @@ export class Share extends Command {
 		match = result.source.match(
 			/<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([^<]+)<\/a>/,
 		);
-		result.legacy.entities.user_mentions.sort(
-			(a, b) => a.indices[0] - b.indices[0],
-		);
-		const fullText = result.legacy.entities.user_mentions.reduce(
-			(fullText, mention, i) =>
-				`${fullText}[${result.legacy.full_text.slice(...mention.indices)}](https://twitter.com/${mention.screen_name})${result.legacy.full_text.slice(mention.indices[1], result.legacy.entities.user_mentions[i + 1]?.indices[0])}`,
-			result.legacy.full_text.slice(
-				0,
-				result.legacy.entities.user_mentions[0]?.indices[0],
-			),
-		);
-		const components: APIMessageTopLevelComponent[] = [
-			{
-				type: ComponentType.Section,
-				components: [
-					{
-						type: ComponentType.TextDisplay,
-						content: `## [${result.core.user_results.result.core.name} (@${result.core.user_results.result.core.screen_name})](https://twitter.com/${result.core.user_results.result.core.screen_name})\n${fullText}\n-# [Apri in Twitter](https://twitter.com/i/status/${result.rest_id})`,
-					},
-				],
-				accessory: {
-					type: ComponentType.Thumbnail,
-					media: { url: result.core.user_results.result.avatar.image_url },
-				},
-			},
-		];
-		if (result.legacy.entities.media?.length)
+		const components: APIMessageTopLevelComponent[] =
+			this.createTweetContentComponents(result);
+		if (result.quoted_status_result)
 			components.push({
-				type: ComponentType.MediaGallery,
-				items: result.legacy.entities.media.map((m) => ({
-					media: {
-						url:
-							m.video_info?.variants
-								.filter((a) => a.content_type.startsWith("video/"))
-								.reduce((a, b) =>
-									a.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
-								).url ?? m.media_url_https,
-					},
-				})),
+				type: ComponentType.Container,
+				components: this.createTweetContentComponents(
+					result.quoted_status_result.result,
+					true,
+				),
 			});
 		components.push({
 			type: ComponentType.TextDisplay,
@@ -408,4 +379,88 @@ export class Share extends Command {
 			allowed_mentions: { parse: [] },
 		}).catch(console.error);
 	};
+	private static "getFullText" = (tweet: Twitter.Tweet) => {
+		const entitySet =
+			tweet.note_tweet?.note_tweet_results.result.entity_set ??
+			tweet.legacy.entities;
+		const text =
+			tweet.note_tweet?.note_tweet_results.result.text ??
+			tweet.legacy.full_text;
+		const entities = entitySet.user_mentions
+			.map((e) => ({
+				type: "userMention",
+				indices: e.indices,
+				data: e.screen_name,
+			}))
+			.concat(
+				entitySet.hashtags.map((e) => ({
+					type: "hashtag",
+					indices: e.indices,
+					data: e.text,
+				})),
+			)
+			.sort((a, b) => a.indices[0] - b.indices[0]);
+
+		return entities.reduce(
+			(fullText, mention, i) =>
+				`${fullText}[${text.slice(...mention.indices)}](${
+					mention.type === "userMention" ? `https://twitter.com/${mention.data}`
+					: mention.type === "hashtag" ?
+						`https://twitter.com/hashtag/${mention.data}`
+					:	""
+				})${text.slice(mention.indices[1], entities[i + 1]?.indices[0])}`,
+			text.slice(0, entities[0]?.indices[0]),
+		);
+	};
+
+	private static "createTweetContentComponents"(
+		tweet: Twitter.Tweet,
+		quote = false,
+	): APIComponentInContainer[] {
+		const components: APIComponentInContainer[] = [
+			{
+				type: ComponentType.Section,
+				components: [
+					{
+						type: ComponentType.TextDisplay,
+						content: `## [${tweet.core.user_results.result.core.name} @${tweet.core.user_results.result.core.screen_name}](https://twitter.com/${tweet.core.user_results.result.core.screen_name})\n${this.getFullText(tweet)}${quote ? "" : `\n-# [Apri in Twitter](https://twitter.com/i/status/${tweet.rest_id})`}`,
+					},
+				],
+				accessory: {
+					type: ComponentType.Thumbnail,
+					media: { url: tweet.core.user_results.result.avatar.image_url },
+				},
+			},
+		];
+		const media = (
+			tweet.note_tweet?.note_tweet_results.result.entity_set ??
+			tweet.legacy.entities
+		).media;
+
+		if (media?.length)
+			components.push({
+				type: ComponentType.MediaGallery,
+				items: media.map((m) => ({
+					media: {
+						url:
+							m.video_info?.variants
+								.filter((a) => a.content_type.startsWith("video/"))
+								.reduce((a, b) =>
+									a.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
+								).url ?? m.media_url_https,
+					},
+					description:
+						[
+							m.ext_alt_text,
+							m.additional_media_info?.source_user?.user_results.result.core
+								.name &&
+								`Di ${m.additional_media_info?.source_user?.user_results.result.core.name}`,
+						]
+							.filter(Boolean)
+							.join("\n") || undefined,
+				})),
+			});
+
+		return components;
+	}
 }
