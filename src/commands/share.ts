@@ -276,7 +276,7 @@ export class Share extends Command {
 			else
 				return reply({
 					flags: MessageFlags.Ephemeral,
-					content: "L'URL non è valido!",
+					content: "L'URL non è valido",
 				});
 		const parsed = new URL(url);
 
@@ -287,6 +287,8 @@ export class Share extends Command {
 				"twitter.com",
 				"www.twitter.com",
 				"t.co",
+				"fixvx.com",
+				"vxtwitter.com",
 			].includes(parsed.host)
 		)
 			return reply({
@@ -653,9 +655,20 @@ export class Share extends Command {
 				},
 			},
 		];
-		const media =
+		const media = (
 			tweet.note_tweet?.note_tweet_results.result.entity_set.media ??
-			tweet.legacy.entities.media;
+			tweet.legacy.entities.media
+		)?.filter(
+			(m) =>
+				!m.video_info ||
+				(m.video_info.variants = m.video_info.variants.filter(
+					(a) =>
+						a.content_type.startsWith("video/") &&
+						(!a.bitrate ||
+							(a.bitrate * m.video_info!.duration_millis) / TimeUnit.Second <=
+								500 * 1024 * 1024),
+				)).length,
+		);
 
 		if (media?.length)
 			components.push({
@@ -663,11 +676,9 @@ export class Share extends Command {
 				items: media.map((m) => ({
 					media: {
 						url:
-							m.video_info?.variants
-								.filter((a) => a.content_type.startsWith("video/"))
-								.reduce((a, b) =>
-									a.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
-								).url ?? m.media_url_https,
+							m.video_info?.variants.reduce((a, b) =>
+								a.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
+							).url ?? m.media_url_https,
 					},
 					description:
 						[
