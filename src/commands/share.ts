@@ -447,7 +447,7 @@ export class Share extends Command {
 			},
 			{
 				type: ComponentType.ActionRow,
-				components: this.twitterCreateButtons(tweet, hide),
+				components: this.createTweetButtons(tweet, hide),
 			},
 		);
 
@@ -564,7 +564,7 @@ export class Share extends Command {
 			browser.close(),
 		]);
 	};
-	private static "twitterGetFullText" = (tweet: Twitter.Tweet) => {
+	private static "getFullTweet" = (tweet: Twitter.Tweet) => {
 		const entitySet =
 			tweet.note_tweet?.note_tweet_results.result.entity_set ??
 			tweet.legacy.entities;
@@ -597,7 +597,7 @@ export class Share extends Command {
 			text.slice(0, entities[0]?.indices[0]),
 		);
 	};
-	private static "twitterCreateButtons" = (
+	private static "createTweetButtons" = (
 		tweet: Twitter.Tweet,
 		hide = false,
 	) => {
@@ -644,7 +644,7 @@ export class Share extends Command {
 				components: [
 					{
 						type: ComponentType.TextDisplay,
-						content: `## [${tweet.core.user_results.result.core.name} @${tweet.core.user_results.result.core.screen_name}](https://twitter.com/${tweet.core.user_results.result.core.screen_name})\n${this.twitterGetFullText(tweet)}`,
+						content: `## [${tweet.core.user_results.result.core.name} @${tweet.core.user_results.result.core.screen_name}](https://twitter.com/${tweet.core.user_results.result.core.screen_name})\n${this.getFullTweet(tweet)}`,
 					},
 				],
 				accessory: {
@@ -653,10 +653,9 @@ export class Share extends Command {
 				},
 			},
 		];
-		const media = (
-			tweet.note_tweet?.note_tweet_results.result.entity_set ??
-			tweet.legacy.entities
-		).media;
+		const media =
+			tweet.note_tweet?.note_tweet_results.result.entity_set.media ??
+			tweet.legacy.entities.media;
 
 		if (media?.length)
 			components.push({
