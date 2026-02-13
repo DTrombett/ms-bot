@@ -669,7 +669,61 @@ declare global {
 		};
 		type TweetResultByRestId = { data: { tweetResult: { result: Tweet } } };
 	}
-
+	namespace TikTok {
+		type Image = { height: number; url_list: string[]; width: number };
+		type Items = {
+			status_code: number;
+			status_message: string;
+			items: {
+				author_info: {
+					avatar_url_list: string[];
+					nickname: string;
+					secret_id: string;
+					unique_id: string;
+				};
+				desc: string;
+				id: number;
+				id_str: string;
+				image_post_info?: {
+					cover: {
+						display_image: Image;
+						owner_watermark_image: Image;
+						thumbnail: Image;
+					};
+					images: {
+						display_image: Image;
+						owner_watermark_image: Image;
+						thumbnail: Image;
+					}[];
+				};
+				marker_info: { branded_content_type: number; is_ads: boolean };
+				music_info: {
+					author: string;
+					id: number;
+					id_str: string;
+					title: string;
+				};
+				other_info: unknown;
+				region: string;
+				statistics_info: {
+					comment_count: number;
+					digg_count: number;
+					share_count: number;
+				};
+				video_info: {
+					meta: {
+						bitrate: number;
+						duration: number;
+						height: number;
+						ratio: number;
+						width: number;
+					};
+					uri: string;
+					url_list: string[];
+				};
+			}[];
+		};
+	}
 	namespace Brawl {
 		type Player = {
 			"club": PlayerClub;
