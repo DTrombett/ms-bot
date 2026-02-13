@@ -27,7 +27,7 @@
 		"@discordjs/ws": "^2.0.4",
 		"bufferutil": "^4.1.0",
 		"cloudflare": "^5.2.0",
-		"discord-api-types": "^0.38.38",
+		"discord-api-types": "^0.38.39",
 		"temporal-polyfill": "^0.3.0"
 	},
 	"devDependencies": {
@@ -39,6 +39,6 @@
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.55.0",
 		"undici": "^7.21.0",
-		"wrangler": "^4.64.0"
+		"wrangler": "^4.65.0"
 	}
 }

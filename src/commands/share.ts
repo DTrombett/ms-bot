@@ -655,20 +655,9 @@ export class Share extends Command {
 				},
 			},
 		];
-		const media = (
+		const media =
 			tweet.note_tweet?.note_tweet_results.result.entity_set.media ??
-			tweet.legacy.entities.media
-		)?.filter(
-			(m) =>
-				!m.video_info ||
-				(m.video_info.variants = m.video_info.variants.filter(
-					(a) =>
-						a.content_type.startsWith("video/") &&
-						(!a.bitrate ||
-							(a.bitrate * m.video_info!.duration_millis) / TimeUnit.Second <=
-								500 * 1024 * 1024),
-				)).length,
-		);
+			tweet.legacy.entities.media;
 
 		if (media?.length)
 			components.push({
@@ -676,9 +665,20 @@ export class Share extends Command {
 				items: media.map((m) => ({
 					media: {
 						url:
-							m.video_info?.variants.reduce((a, b) =>
-								a.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
-							).url ?? m.media_url_https,
+							m.video_info?.variants
+								.filter(
+									(a) =>
+										a.content_type.startsWith("video/") &&
+										(!a.bitrate ||
+											(a.bitrate * m.video_info!.duration_millis) /
+												TimeUnit.Second <=
+												500 * 1024 * 1024),
+								)
+								.reduce<Twitter.Variant | null>(
+									(a, b) =>
+										a?.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
+									null,
+								)?.url ?? m.media_url_https,
 					},
 					description:
 						[

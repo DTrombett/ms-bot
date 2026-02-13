@@ -571,6 +571,7 @@ declare global {
 			verification: { verified: boolean };
 			profile_description_language?: string;
 		};
+		type Variant = { bitrate?: number; content_type: string; url: string };
 		type Media = {
 			display_url: string;
 			expanded_url: string;
@@ -601,7 +602,7 @@ declare global {
 			video_info?: {
 				aspect_ratio: number[];
 				duration_millis: number;
-				variants: { bitrate?: number; content_type: string; url: string }[];
+				variants: Variant[];
 			};
 			media_results: { result: { media_key: string } };
 		};
