@@ -220,7 +220,7 @@ export class Share extends Command {
 				},
 				{
 					type: ComponentType.TextDisplay,
-					content: `-# ❤️ ${item.statistics_info.digg_count.toLocaleString(locale)}\t⛓️‍💥 ${item.statistics_info.share_count.toLocaleString(locale)}\t🗨️ ${item.statistics_info.comment_count.toLocaleString(locale)}`,
+					content: `-# ❤️ ${item.statistics_info.digg_count.toLocaleString(locale)}\t🔗 ${item.statistics_info.share_count.toLocaleString(locale)}\t🗨️ ${item.statistics_info.comment_count.toLocaleString(locale)}`,
 				},
 			],
 			allowed_mentions: { parse: [] },
