@@ -8,6 +8,8 @@ export enum MatchStatus {
 	ToBePlayed = "Upcoming",
 	Live = "Live",
 	Finished = "Finished",
-	// TODO: check when we actually find a postponed match
 	Postponed = "Postponed",
+	// TODO: Handle canceled and abandoned matches
+	Cancelled = "Canceled",
+	Abandoned = "Abandoned",
 }
