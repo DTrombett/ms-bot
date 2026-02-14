@@ -16,10 +16,11 @@
 		"url": "https://github.com/DTrombett/ms-bot/issues"
 	},
 	"scripts": {
+		"build": "node build.ts",
+		"deploy": "npm run build && wrangler deploy",
 		"dev": "node build.ts && wrangler dev --test-scheduled",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
-		"deploy": "node build.ts && wrangler deploy",
-		"test": "tsc && eslint --flag unstable_native_nodejs_ts_config src"
+		"test": "npm run build && tsc && eslint --flag unstable_native_nodejs_ts_config src"
 	},
 	"dependencies": {
 		"@cloudflare/playwright": "^1.1.0",
