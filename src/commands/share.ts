@@ -379,13 +379,22 @@ export class Share extends Command {
 				components: await this.createTweetContentComponents(tweet),
 				allowed_mentions: { parse: [] },
 			});
-		const components: APIMessageTopLevelComponent[] =
-			await this.createTweetContentComponents(tweet);
+		let retweeter: string | undefined;
 		if (
 			tweet.__typename === "Tweet" &&
 			tweet.legacy.retweeted_status_result?.result
-		)
+		) {
+			retweeter = tweet.core.user_results.result.core.name;
 			tweet = tweet.legacy.retweeted_status_result?.result;
+		}
+		let lastVersion: string | undefined;
+		if (tweet.__typename === "TweetWithVisibilityResults") {
+			tweet = { __typename: "Tweet", ...tweet.tweet };
+			lastVersion = tweet.edit_control.edit_tweet_ids.at(-1);
+			if (lastVersion === tweetId) lastVersion = undefined;
+		}
+		const components: APIMessageTopLevelComponent[] =
+			await this.createTweetContentComponents(tweet, retweeter);
 		if (tweet.quoted_status_result)
 			components.push({
 				type: ComponentType.Container,
@@ -403,7 +412,7 @@ export class Share extends Command {
 			},
 			{
 				type: ComponentType.ActionRow,
-				components: this.createTweetButtons(tweet, hide),
+				components: this.createTweetButtons(tweet, hide, lastVersion),
 			},
 		);
 
@@ -570,18 +579,29 @@ export class Share extends Command {
 				),
 		);
 	};
-	private static createTweetButtons = (tweet: Twitter.Tweet, hide = false) => {
-		const buttons: APIButtonComponent[] = [];
+	private static createTweetButtons = (
+		tweet: Twitter.Tweet,
+		hide = false,
+		lastVersion?: string,
+	) => {
+		const buttons: APIButtonComponent[] = [
+			{
+				type: ComponentType.Button,
+				style: ButtonStyle.Link,
+				url: `https://twitter.com/i/status/${tweet.rest_id}`,
+				label: "Apri in Twitter",
+			},
+		];
 		const match = tweet.source.match(
 			/<a\s+[^>]*href\s*=\s*["'](https?:\/\/(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}(?:\/[^"']+)?)["'][^>]*>([^<]+)<\/a>/,
 		);
 
-		if (match && match[1] && match[2])
+		if (lastVersion)
 			buttons.push({
 				type: ComponentType.Button,
-				style: ButtonStyle.Link,
-				url: match[1],
-				label: match[2],
+				style: ButtonStyle.Secondary,
+				label: "Visualizza il post più recente",
+				custom_id: `share-twitter-${lastVersion}-${hide ? "1" : ""}`,
 			});
 		if (tweet.legacy.in_reply_to_status_id_str)
 			buttons.push({
@@ -597,25 +617,19 @@ export class Share extends Command {
 				label: "Vedi tweet citato",
 				custom_id: `share-twitter-${tweet.quoted_status_result?.result.rest_id}-${hide ? "1" : ""}`,
 			});
-		buttons.push({
-			type: ComponentType.Button,
-			style: ButtonStyle.Link,
-			url: `https://twitter.com/i/status/${tweet.rest_id}`,
-			label: "Apri in Twitter",
-		});
+		if (match && match[1] && match[2])
+			buttons.push({
+				type: ComponentType.Button,
+				style: ButtonStyle.Link,
+				url: match[1],
+				label: match[2],
+			});
 		return buttons;
 	};
 	private static async createTweetContentComponents(
 		tweet: Twitter.Tweet | Twitter.TweetTombstone,
+		retweeter?: string,
 	): Promise<APIComponentInContainer[]> {
-		let retweeter: string | undefined;
-		if (
-			tweet.__typename === "Tweet" &&
-			tweet.legacy.retweeted_status_result?.result
-		) {
-			retweeter = tweet.core.user_results.result.core.name;
-			tweet = tweet.legacy.retweeted_status_result?.result;
-		}
 		const user =
 			tweet.__typename === "Tweet" ?
 				tweet.core.user_results.result

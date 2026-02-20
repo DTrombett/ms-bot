@@ -691,32 +691,42 @@ declare global {
 			legacy: {
 				bookmark_count: number;
 				bookmarked: boolean;
-				created_at: string;
 				conversation_id_str: string;
+				created_at: string;
+				display_text_range?: [number, number];
 				entities: Entities;
 				extended_entities: { media: Media[] };
 				favorite_count: number;
 				favorited: boolean;
 				full_text: string;
+				id_str: string;
 				in_reply_to_screen_name?: string;
 				in_reply_to_status_id_str?: string;
 				in_reply_to_user_id_str?: string;
 				is_quote_status: boolean;
 				lang: string;
-				possibly_sensitive: boolean;
 				possibly_sensitive_editable: boolean;
+				possibly_sensitive: boolean;
 				quote_count: number;
 				reply_count: number;
 				retweet_count: number;
 				retweeted_status_result?: { result: Tweet };
 				retweeted: boolean;
 				user_id_str: string;
-				id_str: string;
 			};
 			grok_annotations: { is_image_editable_by_grok: boolean };
 		};
+		type TweetWithVisibilityResults = {
+			__typename: "TweetWithVisibilityResults";
+			limitedActionResults: { limited_actions: { action: string }[] };
+			tweet: Omit<Tweet, "__typename">;
+		};
 		type TweetResultByRestId = {
-			data: { tweetResult: { result?: Tweet | TweetTombstone } };
+			data: {
+				tweetResult: {
+					result?: Tweet | TweetTombstone | TweetWithVisibilityResults;
+				};
+			};
 		};
 	}
 	namespace TikTok {
