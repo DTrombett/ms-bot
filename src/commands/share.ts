@@ -366,7 +366,7 @@ export class Share extends Command {
 			});
 		}
 		const json = await response.json<Twitter.TweetResultByRestId>();
-		const {
+		let {
 			data: {
 				tweetResult: { result: tweet },
 			},
@@ -381,6 +381,11 @@ export class Share extends Command {
 			});
 		const components: APIMessageTopLevelComponent[] =
 			await this.createTweetContentComponents(tweet);
+		if (
+			tweet.__typename === "Tweet" &&
+			tweet.legacy.retweeted_status_result?.result
+		)
+			tweet = tweet.legacy.retweeted_status_result?.result;
 		if (tweet.quoted_status_result)
 			components.push({
 				type: ComponentType.Container,
@@ -603,6 +608,14 @@ export class Share extends Command {
 	private static async createTweetContentComponents(
 		tweet: Twitter.Tweet | Twitter.TweetTombstone,
 	): Promise<APIComponentInContainer[]> {
+		let retweeter: string | undefined;
+		if (
+			tweet.__typename === "Tweet" &&
+			tweet.legacy.retweeted_status_result?.result
+		) {
+			retweeter = tweet.core.user_results.result.core.name;
+			tweet = tweet.legacy.retweeted_status_result?.result;
+		}
 		const user =
 			tweet.__typename === "Tweet" ?
 				tweet.core.user_results.result
@@ -613,7 +626,11 @@ export class Share extends Command {
 				components: [
 					{
 						type: ComponentType.TextDisplay,
-						content: `## [${user.core.name} @${user.core.screen_name}](https://twitter.com/${user.core.screen_name})\n${this.getFullTweet(tweet)}`,
+						content: template`
+							## [${user.core.name} @${user.core.screen_name}](https://twitter.com/${user.core.screen_name})
+							${true}${this.getFullTweet(tweet)}
+							${retweeter}-# \\🔃 Repost di ${retweeter}
+						`,
 					},
 				],
 				accessory: {

@@ -708,6 +708,7 @@ declare global {
 				quote_count: number;
 				reply_count: number;
 				retweet_count: number;
+				retweeted_status_result?: { result: Tweet };
 				retweeted: boolean;
 				user_id_str: string;
 				id_str: string;
