@@ -543,30 +543,28 @@ export class Share extends Command {
 				(tweet.note_tweet?.note_tweet_results.result.text ??
 					tweet.legacy.full_text)
 			:	tweet.tombstone.text.text,
+		).slice(
+			...((tweet.__typename === "Tweet" && tweet.legacy.display_text_range) ||
+				[]),
 		);
-		const entities: {
-			type: "userMention" | "hashtag" | "url";
-			indices: readonly [number, number];
-			data: string;
-		}[] = [
+		const entities: { indices: readonly [number, number]; data: string }[] = [
 			...(entitySet.user_mentions?.map(
 				(e) =>
 					({
-						type: "userMention",
 						indices: e.indices,
-						data: e.screen_name,
+						data: `https://twitter.com/${e.screen_name}`,
 					}) as const,
 			) ?? []),
 			...(entitySet.hashtags?.map(
-				(e) => ({ type: "hashtag", indices: e.indices, data: e.text }) as const,
+				(e) =>
+					({
+						indices: e.indices,
+						data: `https://twitter.com/hashtag/${e.text}`,
+					}) as const,
 			) ?? []),
 			...(entitySet.text?.map(
 				(u) =>
-					({
-						type: "url",
-						indices: [u.fromIndex, u.toIndex],
-						data: u.ref.url,
-					}) as const,
+					({ indices: [u.fromIndex, u.toIndex], data: u.ref.url }) as const,
 			) ?? []),
 		];
 
@@ -575,13 +573,9 @@ export class Share extends Command {
 				.sort((a, b) => a.indices[0] - b.indices[0])
 				.reduce(
 					(fullText, mention, i) =>
-						`${fullText}[${text.slice(...mention.indices).join("")}](${
-							mention.type === "userMention" ?
-								`https://twitter.com/${mention.data}`
-							: mention.type === "hashtag" ?
-								`https://twitter.com/hashtag/${mention.data}`
-							:	mention.data
-						})${text.slice(mention.indices[1], entities[i + 1]?.indices[0]).join("")}`,
+						`${fullText}[${text.slice(...mention.indices).join("")}](${escapeMarkdown(
+							mention.data,
+						)})${text.slice(mention.indices[1], entities[i + 1]?.indices[0]).join("")}`,
 					text.slice(0, entities[0]?.indices[0]).join(""),
 				),
 		);
