@@ -733,8 +733,8 @@ declare global {
 		type Image = { height: number; url_list: string[]; width: number };
 		type Items = {
 			status_code: number;
-			status_message: string;
-			items: {
+			status_msg: string;
+			items?: {
 				author_info: {
 					avatar_url_list: string[];
 					nickname: string;

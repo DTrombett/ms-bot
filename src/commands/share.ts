@@ -28,6 +28,10 @@ export class Share extends Command {
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
 	private static readonly TWITTER_REGEX =
 		/^(\d+)$|^https?:\/\/(?:(?:www|m(?:obile)?)\.)?(?:(?:twitter|x)\.com|twitter3e4tixl4xyajtrzo62zg5vztmjuricljdp2c5kshju4avyoid\.onion)\/(?:(?:i\/web|[^/]+)\/status|statuses)\/(\d+)/;
+	private static readonly TIKTOK_REGEX =
+		/^(\d+)$|^https?:\/\/www\.tiktok\.com\/(?:embed|@(?:[\w.-]+)?\/video)\/(\d+)/;
+	private static readonly TIKTOK_VM_REGEX =
+		/^https?:\/\/(?:(?:vm|vt)\.tiktok\.com|(?:www\.)tiktok\.com\/t)\/\w+/;
 	static override chatInputData = {
 		name: "share",
 		description: "Condividi contenuti da una serie di siti web",
@@ -108,33 +112,35 @@ export class Share extends Command {
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static tiktok = async (
-		{ defer, edit }: ChatInputReplies,
+		{ defer, edit, reply }: ChatInputReplies,
 		{
 			options: { url, hide },
 			interaction: { locale },
 		}: ChatInputArgs<typeof Share.chatInputData, "tiktok">,
 	) => {
-		const idRegex = /^\d+$/;
-		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
-		if (URL.canParse(url)) {
-			const parsed = new URL(url);
-
-			if (parsed.host === "vm.tiktok.com") {
-				const res = await fetchCache(
-					parsed,
-					{ redirect: "manual" },
-					TimeUnit.Day / TimeUnit.Second,
-				);
-
-				url = res.headers.get("location")!;
-				if (URL.canParse(url)) parsed.href = url;
-			}
-			if (parsed.host === "www.tiktok.com" || parsed.host === "tiktok.com")
-				url = parsed.pathname.split("/").findLast((v) => idRegex.test(v))!;
+		let response: Response;
+		if (this.TIKTOK_VM_REGEX.test(url)) {
+			response = await fetchCache(
+				url,
+				{ method: "HEAD" },
+				TimeUnit.Year / TimeUnit.Second,
+			);
+			url = response.url;
+			if (!response.ok)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: `Impossibile seguire il collegamento: ${response.status} ${response.statusText}`,
+				});
 		}
-		if (!idRegex.test(url)) return edit({ content: "L'URL non è valido!" });
+		const id = url.match(this.TIKTOK_REGEX)?.findLast(Boolean);
+		if (!id)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: "L'URL non è valido!",
+			});
+		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
 		const input = new URL(
-			`https://www.tiktok.com/player/v1/${url}?__loader=layout&__ssrDirect=true`,
+			`https://www.tiktok.com/player/v1/${id}?__loader=layout&__ssrDirect=true`,
 		);
 		const [browser_name, browser_version] = this.USER_AGENT.split(/\/(.+)/) as [
 			string,
@@ -143,7 +149,7 @@ export class Share extends Command {
 
 		input.pathname = "/player/api/v1/items";
 		input.search = new URLSearchParams({
-			item_ids: url,
+			item_ids: id,
 			language: locale,
 			aid: "1284",
 			app_name: "tiktok_web",
@@ -171,25 +177,29 @@ export class Share extends Command {
 				BigInt(Math.round(Math.random() * Number.MAX_SAFE_INTEGER))
 			).toString(),
 		}).toString();
-		const res = await fetchCache(
+		response = await fetchCache(
 			input,
 			{
 				headers: {
 					"User-Agent": this.USER_AGENT,
-					Referer: `https://www.tiktok.com/player/v1/${url}`,
+					Referer: `https://www.tiktok.com/player/v1/${id}`,
 					"agw-js-conv": "str",
 				},
 			},
 			TimeUnit.Day / TimeUnit.Second,
-		)
-			.then((res) => res.json<TikTok.Items>())
-			.catch(console.error);
-
-		if (!res || res.status_code !== 0 || !res.items[0])
+		);
+		if (!response.ok)
 			return edit({
-				content: `Si è verificato un errore: \`${res?.status_message.replaceAll("`", "\\`") || "Errore sconosciuto"}\``,
+				content: `Impossibile scaricare i dati del video: ${response.status} ${response.statusText}`,
 			});
-		const [item] = res.items;
+		const items = await response.json<TikTok.Items>().catch(console.error);
+
+		console.log(items);
+		if (!items || items.status_code !== 0 || !items.items?.[0])
+			return edit({
+				content: `Si è verificato un errore: \`${items?.status_msg.replaceAll("`", "\\`") || "Errore sconosciuto"}\``,
+			});
+		const [item] = items.items;
 		await edit({
 			flags: MessageFlags.IsComponentsV2,
 			components: [
@@ -198,7 +208,7 @@ export class Share extends Command {
 					components: [
 						{
 							type: ComponentType.TextDisplay,
-							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${item.author_info.unique_id}/video/${url})`,
+							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${item.author_info.unique_id}/video/${id})`,
 						},
 					],
 					accessory: {
