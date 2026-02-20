@@ -375,15 +375,15 @@ export class Share extends Command {
 		if (tweet.__typename === "TweetTombstone")
 			return edit({
 				flags: MessageFlags.IsComponentsV2,
-				components: this.createTweetContentComponents(tweet),
+				components: await this.createTweetContentComponents(tweet),
 				allowed_mentions: { parse: [] },
 			});
 		const components: APIMessageTopLevelComponent[] =
-			this.createTweetContentComponents(tweet);
+			await this.createTweetContentComponents(tweet);
 		if (tweet.quoted_status_result)
 			components.push({
 				type: ComponentType.Container,
-				components: this.createTweetContentComponents(
+				components: await this.createTweetContentComponents(
 					tweet.quoted_status_result.result,
 				),
 			});
@@ -593,9 +593,9 @@ export class Share extends Command {
 		});
 		return buttons;
 	};
-	private static createTweetContentComponents(
+	private static async createTweetContentComponents(
 		tweet: Twitter.Tweet | Twitter.TweetTombstone,
-	): APIComponentInContainer[] {
+	): Promise<APIComponentInContainer[]> {
 		const user =
 			tweet.__typename === "Tweet" ?
 				tweet.core.user_results.result
@@ -620,10 +620,28 @@ export class Share extends Command {
 			| undefined =
 			tweet.__typename === "Tweet" ?
 				(tweet.note_tweet?.note_tweet_results.result.entity_set.media ??
-				tweet.legacy.entities.media)
+				tweet.legacy.entities.media ??
+				[])
 			:	[{ media_url_https: tweet.tombstone.blurred_image_url }];
 
-		if (media?.length)
+		if (tweet.__typename === "Tweet" && tweet.card)
+			media.push(
+				...(await Promise.try(() =>
+					Object.values(
+						(
+							JSON.parse(
+								tweet.card!.legacy.binding_values.find(
+									(b) => b.key === "unified_card",
+								)?.value.string_value ?? JSON.stringify({ media_entities: [] }),
+							) as Twitter.TweetCard
+						).media_entities,
+					),
+				).catch((err) => {
+					console.error(err, tweet.card?.legacy.binding_values);
+					return [];
+				})),
+			);
+		if (media.length)
 			components.push({
 				type: ComponentType.MediaGallery,
 				items: media.map((m) => ({

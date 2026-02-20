@@ -576,7 +576,7 @@ declare global {
 			expanded_url: string;
 			ext_alt_text?: string;
 			id_str: string;
-			indices: number[];
+			indices: [number, number];
 			media_key: string;
 			media_url_https: string;
 			type: string;
@@ -595,7 +595,7 @@ declare global {
 			original_info: {
 				height: number;
 				width: number;
-				focus_rects: { x: number; y: number; w: number; h: number }[];
+				focus_rects?: { x: number; y: number; w: number; h: number }[];
 			};
 			allow_download_status: { allow_download: boolean };
 			video_info?: {
@@ -633,8 +633,41 @@ declare global {
 			__typename: "TweetTombstone";
 			tombstone: BlurredMediaTombstone;
 		};
+		type TweetCard = {
+			type: string;
+			components: string[];
+			media_entities: Record<
+				string,
+				Media & {
+					id: number;
+					media_url: string;
+					source_user_id: number;
+					source_user_id_str: string;
+					media_key: string;
+				}
+			>;
+		};
+
 		type Tweet = {
 			__typename: "Tweet";
+			card?: {
+				legacy: {
+					binding_values: {
+						key: string;
+						value: { scribe_key?: string; string_value: string; type: string };
+					}[];
+					card_platform: {
+						platform: {
+							audience: { name: string };
+							device: { name: string; version: string };
+						};
+					};
+					name: string;
+					url: string;
+					user_refs_results: [];
+				};
+				rest_id: string;
+			};
 			rest_id: string;
 			core: { user_results: { result: User } };
 			unmention_data: object;
