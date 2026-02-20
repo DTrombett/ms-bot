@@ -37,7 +37,7 @@ const pngChunk = (type: string, data: Uint8Array) => {
 	out.set(crcBuf, (offset -= crcBuf.byteLength));
 	out.set(data, (offset -= data.byteLength));
 	out.set(typeBuf, (offset -= typeBuf.byteLength));
-	out.set(lenBuf, (offset -= lenBuf.byteLength));
+	out.set(lenBuf, offset - lenBuf.byteLength);
 	return out;
 };
 
@@ -94,6 +94,6 @@ export const createSolidPng = async (
 	out.set(iendChunk, (offset -= iendChunk.length));
 	out.set(idatChunk, (offset -= idatChunk.length));
 	out.set(ihdrChunk, (offset -= ihdrChunk.length));
-	out.set(signature, (offset -= signature.length));
+	out.set(signature, offset - signature.length);
 	return out;
 };

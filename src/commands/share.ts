@@ -12,6 +12,7 @@ import {
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { decodeHTML } from "entities";
 import Command from "../Command.ts";
 import { fetchCache } from "../util/fetchCache.ts";
 import { rest } from "../util/rest.ts";
@@ -513,11 +514,15 @@ export class Share extends Command {
 				(tweet.note_tweet?.note_tweet_results.result.entity_set ??
 				tweet.legacy.entities)
 			:	{ text: tweet.tombstone.text.entities };
-		const text =
-			tweet.__typename === "Tweet" ?
-				(tweet.note_tweet?.note_tweet_results.result.text ??
-				tweet.legacy.full_text)
-			:	tweet.tombstone.text.text;
+		const text = Array.from(
+			new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(
+				tweet.__typename === "Tweet" ?
+					(tweet.note_tweet?.note_tweet_results.result.text ??
+						tweet.legacy.full_text)
+				:	tweet.tombstone.text.text,
+			),
+			(s) => s.segment,
+		);
 		const entities: {
 			type: "userMention" | "hashtag" | "url";
 			indices: readonly [number, number];
@@ -544,19 +549,21 @@ export class Share extends Command {
 			) ?? []),
 		];
 
-		return entities
-			.sort((a, b) => a.indices[0] - b.indices[0])
-			.reduce(
-				(fullText, mention, i) =>
-					`${fullText}[${text.slice(...mention.indices)}](${
-						mention.type === "userMention" ?
-							`https://twitter.com/${mention.data}`
-						: mention.type === "hashtag" ?
-							`https://twitter.com/hashtag/${mention.data}`
-						:	mention.data
-					})${text.slice(mention.indices[1], entities[i + 1]?.indices[0])}`,
-				text.slice(0, entities[0]?.indices[0]),
-			);
+		return decodeHTML(
+			entities
+				.sort((a, b) => a.indices[0] - b.indices[0])
+				.reduce(
+					(fullText, mention, i) =>
+						`${fullText}[${text.slice(...mention.indices).join("")}](${
+							mention.type === "userMention" ?
+								`https://twitter.com/${mention.data}`
+							: mention.type === "hashtag" ?
+								`https://twitter.com/hashtag/${mention.data}`
+							:	mention.data
+						})${text.slice(mention.indices[1], entities[i + 1]?.indices[0]).join("")}`,
+					text.slice(0, entities[0]?.indices[0]).join(""),
+				),
+		);
 	};
 	private static createTweetButtons = (tweet: Twitter.Tweet, hide = false) => {
 		const buttons: APIButtonComponent[] = [];
