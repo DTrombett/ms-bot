@@ -20,12 +20,14 @@ import { template } from "../util/strings.ts";
 import { TimeUnit } from "../util/time.ts";
 
 export class Share extends Command {
-	static override readonly "supportComponentMethods" = true;
-	private static readonly "USER_AGENT" =
+	static override readonly supportComponentMethods = true;
+	private static readonly USER_AGENT =
 		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
-	private static readonly "REAL_USER_AGENT" =
+	private static readonly REAL_USER_AGENT =
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
-	static override "chatInputData" = {
+	private static readonly TWITTER_REGEX =
+		/^(\d+)$|^https?:\/\/(?:(?:www|m(?:obile)?)\.)?(?:(?:twitter|x)\.com|twitter3e4tixl4xyajtrzo62zg5vztmjuricljdp2c5kshju4avyoid\.onion)\/(?:(?:i\/web|[^/]+)\/status|statuses)\/(\d+)/;
+	static override chatInputData = {
 		name: "share",
 		description: "Condividi contenuti da una serie di siti web",
 		type: ApplicationCommandType.ChatInput,
@@ -80,11 +82,6 @@ export class Share extends Command {
 						required: true,
 					},
 					{
-						name: "hide",
-						description: "Se nascondere il messaggio dagli altri",
-						type: ApplicationCommandOptionType.Boolean,
-					},
-					{
 						name: "theme",
 						description: "Se usare il tema scuro o chiaro (default: scuro)",
 						type: ApplicationCommandOptionType.String,
@@ -101,14 +98,15 @@ export class Share extends Command {
 					},
 					{
 						name: "hide-stats",
-						description: "Se nascondere i like e le risposte (default: false)",
+						description:
+							"Se nascondere il numero di like e risposte (default: false)",
 						type: ApplicationCommandOptionType.Boolean,
 					},
 				],
 			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
-	static "tiktok" = async (
+	static tiktok = async (
 		{ defer, edit }: ChatInputReplies,
 		{
 			options: { url, hide },
@@ -177,7 +175,7 @@ export class Share extends Command {
 			{
 				headers: {
 					"User-Agent": this.USER_AGENT,
-					"Referer": `https://www.tiktok.com/player/v1/${url}`,
+					Referer: `https://www.tiktok.com/player/v1/${url}`,
 					"agw-js-conv": "str",
 				},
 			},
@@ -226,7 +224,7 @@ export class Share extends Command {
 			allowed_mentions: { parse: [] },
 		}).catch(console.error);
 	};
-	static "twitter" = async (
+	static twitter = async (
 		{ defer, edit, reply }: Merge<ChatInputReplies, ComponentReplies>,
 		{
 			args: [u = "", h = ""] = [],
@@ -237,51 +235,26 @@ export class Share extends Command {
 			ComponentArgs
 		>,
 	) => {
-		const idRegex = /^\d+$/;
-		if (!URL.canParse(url))
-			if (idRegex.test(url)) url = `https://x.com/i/status/${url}`;
-			else
-				return reply({
-					flags: MessageFlags.Ephemeral,
-					content: "L'URL non è valido",
-				});
-		const parsed = new URL(url);
-
-		if (
-			![
-				"x.com",
-				"www.x.com",
-				"twitter.com",
-				"www.twitter.com",
-				"t.co",
-				"fixvx.com",
-				"vxtwitter.com",
-			].includes(parsed.host)
-		)
+		const tweetId = url.match(this.TWITTER_REGEX)?.findLast(Boolean);
+		if (!tweetId)
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content: "L'URL non è valido!",
 			});
+		url = `https://x.com/i/status/${tweetId}`;
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
-
-		let response = await fetchCache(parsed, {
+		let response = await fetchCache(url, {
 			headers: {
 				"accept-language": locale,
 				"User-Agent": this.REAL_USER_AGENT,
 			},
 		});
+		({ url } = response);
 		if (!response.ok) {
 			void response.body?.cancel();
 			return edit({
 				content: `Impossibile scaricare la pagina: ${response.status} ${response.statusText}`,
 			});
-		}
-		({ url } = response);
-		parsed.href = url;
-		const tweetId = parsed.pathname.split("/").at(-1)!;
-		if (!idRegex.test(tweetId)) {
-			void response.body?.cancel();
-			return edit({ content: "L'URL della pagina non è valido!" });
 		}
 		const guestId = response.headers
 			.getSetCookie()
@@ -373,14 +346,14 @@ export class Share extends Command {
 			{
 				headers: {
 					"Accept-Language": locale,
-					"Authorization": authorization,
+					Authorization: authorization,
 					"User-Agent": this.REAL_USER_AGENT,
 					"x-guest-token": gt,
 					"x-twitter-active-user": "yes",
 					"x-twitter-client-language": locale,
-					"Cookie": `guest_id=${guestId}; gt=${gt}`,
+					Cookie: `guest_id=${guestId}; gt=${gt}`,
 					"Content-Type": "application/json",
-					"Origin": "https://x.com",
+					Origin: "https://x.com",
 				},
 				method: "GET",
 			},
@@ -391,12 +364,20 @@ export class Share extends Command {
 				content: `Impossibile scaricare i dettagli del tweet: ${response.status} ${response.statusText}`,
 			});
 		}
+		const json = await response.json<Twitter.TweetResultByRestId>();
 		const {
 			data: {
 				tweetResult: { result: tweet },
 			},
-		} = await response.json<Twitter.TweetResultByRestId>();
+		} = json;
 
+		if (!tweet) return edit({ content: "Tweet non trovato!" });
+		if (tweet.__typename === "TweetTombstone")
+			return edit({
+				flags: MessageFlags.IsComponentsV2,
+				components: this.createTweetContentComponents(tweet),
+				allowed_mentions: { parse: [] },
+			});
 		const components: APIMessageTopLevelComponent[] =
 			this.createTweetContentComponents(tweet);
 		if (tweet.quoted_status_result)
@@ -410,7 +391,7 @@ export class Share extends Command {
 			{
 				type: ComponentType.TextDisplay,
 				content: template`
-					-# <t:${Math.round(Date.parse(tweet.legacy.created_at) / 1000)}:f>\t·\t**${Number(tweet.views.count).toLocaleString(locale)}** visualizzazioni
+					-# ${[`<t:${Math.round(Date.parse(tweet.legacy.created_at) / 1000)}:f>`, tweet.views.count && `**${Number(tweet.views.count).toLocaleString(locale)}** visualizzazioni`].filter(Boolean).join(`\t·\t`)}
 					-# 🗨️ ${tweet.legacy.reply_count.toLocaleString(locale)}\t🔃 ${(tweet.legacy.quote_count + tweet.legacy.retweet_count).toLocaleString(locale)}\t❤️ ${tweet.legacy.favorite_count.toLocaleString(locale)}\t🔖 ${tweet.legacy.bookmark_count.toLocaleString(locale)}
 				`,
 			},
@@ -424,38 +405,27 @@ export class Share extends Command {
 			flags: MessageFlags.IsComponentsV2,
 			components,
 			allowed_mentions: { parse: [] },
-		}).catch(console.error);
+		});
 	};
 	static "twitter-screenshot" = async (
-		{ defer, reply }: Merge<ChatInputReplies, ComponentReplies>,
+		{ defer, reply }: ChatInputReplies,
 		{
-			args: [u = "", h = ""] = [],
 			options: {
 				url,
-				hide,
 				"hide-thread": hideThread = false,
 				"hide-stats": hideStats = false,
 				theme = "dark",
-			} = {
-				"url": u,
-				"hide": Boolean(h),
-				"hide-thread": false,
-				"hide-stats": false,
-				"theme": "dark",
 			},
 			fullRoute,
-		}: Merge<
-			ChatInputArgs<typeof Share.chatInputData, "twitter-screenshot">,
-			ComponentArgs
-		>,
+		}: ChatInputArgs<typeof Share.chatInputData, "twitter-screenshot">,
 	) => {
-		const tweetId = url.match(/(?<=^|\/status\/)\d+/)?.[0];
+		const tweetId = url.match(this.TWITTER_REGEX)?.findLast(Boolean);
 		if (!tweetId)
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content: "L'URL non è valido!",
 			});
-		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
+		defer();
 		const browser = await launch(env.BROWSER);
 		const page = await browser.newPage({
 			baseURL: "https://platform.twitter.com/embed/",
@@ -533,46 +503,65 @@ export class Share extends Command {
 			browser.close(),
 		]);
 	};
-	private static "getFullTweet" = (tweet: Twitter.Tweet) => {
-		const entitySet =
-			tweet.note_tweet?.note_tweet_results.result.entity_set ??
-			tweet.legacy.entities;
-		const text =
-			tweet.note_tweet?.note_tweet_results.result.text ??
-			tweet.legacy.full_text;
-		const entities = entitySet.user_mentions
-			.map((e) => ({
-				type: "userMention",
-				indices: e.indices,
-				data: e.screen_name,
-			}))
-			.concat(
-				entitySet.hashtags.map((e) => ({
-					type: "hashtag",
-					indices: e.indices,
-					data: e.text,
-				})),
-			)
-			.sort((a, b) => a.indices[0] - b.indices[0]);
-
-		return entities.reduce(
-			(fullText, mention, i) =>
-				`${fullText}[${text.slice(...mention.indices)}](${
-					mention.type === "userMention" ? `https://twitter.com/${mention.data}`
-					: mention.type === "hashtag" ?
-						`https://twitter.com/hashtag/${mention.data}`
-					:	""
-				})${text.slice(mention.indices[1], entities[i + 1]?.indices[0])}`,
-			text.slice(0, entities[0]?.indices[0]),
-		);
-	};
-	private static "createTweetButtons" = (
-		tweet: Twitter.Tweet,
-		hide = false,
+	private static getFullTweet = (
+		tweet: Twitter.Tweet | Twitter.TweetTombstone,
 	) => {
+		const entitySet: Partial<Twitter.Entities> & {
+			text?: Twitter.TextEntity[];
+		} =
+			tweet.__typename === "Tweet" ?
+				(tweet.note_tweet?.note_tweet_results.result.entity_set ??
+				tweet.legacy.entities)
+			:	{ text: tweet.tombstone.text.entities };
+		const text =
+			tweet.__typename === "Tweet" ?
+				(tweet.note_tweet?.note_tweet_results.result.text ??
+				tweet.legacy.full_text)
+			:	tweet.tombstone.text.text;
+		const entities: {
+			type: "userMention" | "hashtag" | "url";
+			indices: readonly [number, number];
+			data: string;
+		}[] = [
+			...(entitySet.user_mentions?.map(
+				(e) =>
+					({
+						type: "userMention",
+						indices: e.indices,
+						data: e.screen_name,
+					}) as const,
+			) ?? []),
+			...(entitySet.hashtags?.map(
+				(e) => ({ type: "hashtag", indices: e.indices, data: e.text }) as const,
+			) ?? []),
+			...(entitySet.text?.map(
+				(u) =>
+					({
+						type: "url",
+						indices: [u.fromIndex, u.toIndex],
+						data: u.ref.url,
+					}) as const,
+			) ?? []),
+		];
+
+		return entities
+			.sort((a, b) => a.indices[0] - b.indices[0])
+			.reduce(
+				(fullText, mention, i) =>
+					`${fullText}[${text.slice(...mention.indices)}](${
+						mention.type === "userMention" ?
+							`https://twitter.com/${mention.data}`
+						: mention.type === "hashtag" ?
+							`https://twitter.com/hashtag/${mention.data}`
+						:	mention.data
+					})${text.slice(mention.indices[1], entities[i + 1]?.indices[0])}`,
+				text.slice(0, entities[0]?.indices[0]),
+			);
+	};
+	private static createTweetButtons = (tweet: Twitter.Tweet, hide = false) => {
 		const buttons: APIButtonComponent[] = [];
 		const match = tweet.source.match(
-			/<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([^<]+)<\/a>/,
+			/<a\s+[^>]*href\s*=\s*["'](https?:\/\/(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}(?:\/[^"']+)?)["'][^>]*>([^<]+)<\/a>/,
 		);
 
 		if (match && match[1] && match[2])
@@ -604,27 +593,35 @@ export class Share extends Command {
 		});
 		return buttons;
 	};
-	private static "createTweetContentComponents"(
-		tweet: Twitter.Tweet,
+	private static createTweetContentComponents(
+		tweet: Twitter.Tweet | Twitter.TweetTombstone,
 	): APIComponentInContainer[] {
+		const user =
+			tweet.__typename === "Tweet" ?
+				tweet.core.user_results.result
+			:	tweet.tombstone.user_results.result;
 		const components: APIComponentInContainer[] = [
 			{
 				type: ComponentType.Section,
 				components: [
 					{
 						type: ComponentType.TextDisplay,
-						content: `## [${tweet.core.user_results.result.core.name} @${tweet.core.user_results.result.core.screen_name}](https://twitter.com/${tweet.core.user_results.result.core.screen_name})\n${this.getFullTweet(tweet)}`,
+						content: `## [${user.core.name} @${user.core.screen_name}](https://twitter.com/${user.core.screen_name})\n${this.getFullTweet(tweet)}`,
 					},
 				],
 				accessory: {
 					type: ComponentType.Thumbnail,
-					media: { url: tweet.core.user_results.result.avatar.image_url },
+					media: { url: user.avatar.image_url },
 				},
 			},
 		];
-		const media =
-			tweet.note_tweet?.note_tweet_results.result.entity_set.media ??
-			tweet.legacy.entities.media;
+		const media:
+			| (Partial<Twitter.Media> & Pick<Twitter.Media, "media_url_https">)[]
+			| undefined =
+			tweet.__typename === "Tweet" ?
+				(tweet.note_tweet?.note_tweet_results.result.entity_set.media ??
+				tweet.legacy.entities.media)
+			:	[{ media_url_https: tweet.tombstone.blurred_image_url }];
 
 		if (media?.length)
 			components.push({

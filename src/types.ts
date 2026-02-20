@@ -519,6 +519,12 @@ declare global {
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
 
 	namespace Twitter {
+		type UrlEntity = {
+			display_url: string;
+			expanded_url: string;
+			url: string;
+			indices: [number, number];
+		};
 		type User = {
 			__typename: "User";
 			id: string;
@@ -533,15 +539,8 @@ declare global {
 				default_profile_image: boolean;
 				description: string;
 				entities: {
-					description: { urls: [] };
-					url: {
-						urls: {
-							display_url: string;
-							expanded_url: string;
-							url: string;
-							indices: [number, number];
-						}[];
-					};
+					description: { urls: UrlEntity[] };
+					url: { urls: UrlEntity[] };
 				};
 				fast_followers_count: number;
 				favourites_count: number;
@@ -611,13 +610,28 @@ declare global {
 			media?: Media[];
 			symbols: [];
 			timestamps: [];
-			urls: [];
+			urls: UrlEntity[];
 			user_mentions: {
 				id_str: string;
 				name: string;
 				screen_name: string;
 				indices: [number, number];
 			}[];
+		};
+		type TextEntity = {
+			fromIndex: number;
+			ref: { type: string; url: string; urlType: string };
+			toIndex: number;
+		};
+		type BlurredMediaTombstone = {
+			__typename: "BlurredMediaTombstone";
+			blurred_image_url: string;
+			text: { entities: TextEntity[]; rtl: boolean; text: string };
+			user_results: { result: User };
+		};
+		type TweetTombstone = {
+			__typename: "TweetTombstone";
+			tombstone: BlurredMediaTombstone;
 		};
 		type Tweet = {
 			__typename: "Tweet";
@@ -631,7 +645,7 @@ declare global {
 				edits_remaining: `${number}`;
 			};
 			is_translatable: boolean;
-			views: { count: `${number}`; state: string };
+			views: { count?: `${number}`; state: string };
 			source: string;
 			note_tweet?: {
 				is_expandable: boolean;
@@ -667,7 +681,9 @@ declare global {
 			};
 			grok_annotations: { is_image_editable_by_grok: boolean };
 		};
-		type TweetResultByRestId = { data: { tweetResult: { result: Tweet } } };
+		type TweetResultByRestId = {
+			data: { tweetResult: { result?: Tweet | TweetTombstone } };
+		};
 	}
 	namespace TikTok {
 		type Image = { height: number; url_list: string[]; width: number };
@@ -726,22 +742,22 @@ declare global {
 	}
 	namespace Brawl {
 		type Player = {
-			"club": PlayerClub;
-			"isQualifiedFromChampionshipChallenge": boolean;
+			club: PlayerClub;
+			isQualifiedFromChampionshipChallenge: boolean;
 			"3vs3Victories": number;
-			"icon": PlayerIcon;
-			"tag": string;
-			"name": string;
-			"trophies": number;
-			"expLevel": number;
-			"expPoints": number;
-			"highestTrophies": number;
-			"soloVictories": number;
-			"duoVictories": number;
-			"bestRoboRumbleTime": number;
-			"bestTimeAsBigBrawler": number;
-			"brawlers": BrawlerStatList;
-			"nameColor": string;
+			icon: PlayerIcon;
+			tag: string;
+			name: string;
+			trophies: number;
+			expLevel: number;
+			expPoints: number;
+			highestTrophies: number;
+			soloVictories: number;
+			duoVictories: number;
+			bestRoboRumbleTime: number;
+			bestTimeAsBigBrawler: number;
+			brawlers: BrawlerStatList;
+			nameColor: string;
 		};
 		type PlayerClub = { tag: string; name: string };
 		type PlayerIcon = { id: number };
