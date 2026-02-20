@@ -15,6 +15,7 @@ import {
 import { decodeHTML } from "entities";
 import Command from "../Command.ts";
 import { fetchCache } from "../util/fetchCache.ts";
+import { escapeMarkdown } from "../util/formatters.ts";
 import { rest } from "../util/rest.ts";
 import { findJSObjectAround } from "../util/stringParsing.ts";
 import { template } from "../util/strings.ts";
@@ -194,7 +195,6 @@ export class Share extends Command {
 			});
 		const items = await response.json<TikTok.Items>().catch(console.error);
 
-		console.log(items);
 		if (!items || items.status_code !== 0 || !items.items?.[0])
 			return edit({
 				content: `Si è verificato un errore: \`${items?.status_msg.replaceAll("`", "\\`") || "Errore sconosciuto"}\``,
@@ -208,7 +208,7 @@ export class Share extends Command {
 					components: [
 						{
 							type: ComponentType.TextDisplay,
-							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${item.author_info.unique_id}/video/${id})`,
+							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${escapeMarkdown(item.author_info.unique_id)}/video/${id})`,
 						},
 					],
 					accessory: {
@@ -233,7 +233,7 @@ export class Share extends Command {
 				},
 			],
 			allowed_mentions: { parse: [] },
-		}).catch(console.error);
+		});
 	};
 	static twitter = async (
 		{ defer, edit, reply }: Merge<ChatInputReplies, ComponentReplies>,
