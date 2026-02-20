@@ -529,13 +529,10 @@ export class Share extends Command {
 				tweet.legacy.entities)
 			:	{ text: tweet.tombstone.text.entities };
 		const text = Array.from(
-			new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(
-				tweet.__typename === "Tweet" ?
-					(tweet.note_tweet?.note_tweet_results.result.text ??
-						tweet.legacy.full_text)
-				:	tweet.tombstone.text.text,
-			),
-			(s) => s.segment,
+			tweet.__typename === "Tweet" ?
+				(tweet.note_tweet?.note_tweet_results.result.text ??
+					tweet.legacy.full_text)
+			:	tweet.tombstone.text.text,
 		);
 		const entities: {
 			type: "userMention" | "hashtag" | "url";
