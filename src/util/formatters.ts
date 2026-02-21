@@ -3,3 +3,6 @@ export const escapeList = (text: string) =>
 
 export const escapeMarkdown = (text: string) =>
 	text.replace(/[\\`*_[\]()#+\-.|>~:]/g, "\\$&");
+
+export const escapeBaseMarkdown = (text: string) =>
+	text.replace(/[`*_]/g, "\\$&");

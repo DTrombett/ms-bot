@@ -15,7 +15,7 @@ import {
 import { decodeHTML } from "entities";
 import Command from "../Command.ts";
 import { fetchCache } from "../util/fetchCache.ts";
-import { escapeMarkdown } from "../util/formatters.ts";
+import { escapeBaseMarkdown } from "../util/formatters.ts";
 import { rest } from "../util/rest.ts";
 import {
 	findJSObjectAround,
@@ -232,7 +232,7 @@ export class Share extends Command {
 					components: [
 						{
 							type: ComponentType.TextDisplay,
-							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${escapeMarkdown(item.author_info.unique_id)}/video/${id})`,
+							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${escapeBaseMarkdown(item.author_info.unique_id)}/video/${id})`,
 						},
 					],
 					accessory: {
@@ -729,7 +729,7 @@ export class Share extends Command {
 				.sort((a, b) => a.indices[0] - b.indices[0])
 				.reduce(
 					(fullText, mention, i) =>
-						`${fullText}[${text.slice(...mention.indices).join("")}](${escapeMarkdown(
+						`${fullText}[${text.slice(...mention.indices).join("")}](${escapeBaseMarkdown(
 							mention.data,
 						)})${text.slice(mention.indices[1], entities[i + 1]?.indices[0]).join("")}`,
 					text.slice(0, entities[0]?.indices[0]).join(""),
