@@ -201,8 +201,7 @@ export class Share extends Command {
 			history_len: "2",
 			security_verification_aid: "",
 			device_id: (
-				7598128498410554902n +
-				BigInt(Math.round(Math.random() * Number.MAX_SAFE_INTEGER))
+				BigInt(id) + BigInt(Math.round(Math.random() * Number.MAX_SAFE_INTEGER))
 			).toString(),
 		}).toString();
 		response = await fetch(input, {
