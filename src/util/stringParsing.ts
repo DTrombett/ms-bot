@@ -195,7 +195,9 @@ const parseExpression = (
 				cause: { string, identifier: match[0] },
 			});
 	else if (
-		(match = string.match(StringLiteral) ?? string.match(/^[-+]?[.\d]+/))
+		(match =
+			string.match(StringLiteral) ??
+			string.match(/^[-+]?\d+\.?\d*(?:[eE][-+]?\d+)?/))
 	)
 		return {
 			result: JSON.parse(match[0]),
