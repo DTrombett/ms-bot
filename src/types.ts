@@ -784,6 +784,236 @@ declare global {
 			}[];
 		};
 	}
+	namespace Instagram {
+		type User = {
+			__typename: "XDTUserDict";
+			pk: string;
+			username: string;
+			full_name: string;
+			profile_pic_url: string;
+			is_private: boolean;
+			is_embeds_disabled: boolean;
+			is_unpublished: boolean;
+			is_verified: boolean;
+			friendship_status: null;
+			latest_reel_media: null;
+			id: string;
+			show_account_transparency_details: boolean;
+			live_broadcast_visibility: null;
+			live_broadcast_id: null;
+			hd_profile_pic_url_info?: { url?: string };
+			transparency_product: null;
+			transparency_product_enabled: boolean;
+			transparency_label: null;
+			ai_agent_owner_username: null;
+		};
+		type Location = {
+			__typename: "XDTLocationDict";
+			pk: number;
+			lat: number;
+			lng: number;
+			name: string;
+			profile_pic_url: null;
+		};
+		type Comment = {
+			__typename: "XDTCommentDict";
+			pk: string;
+			text: string;
+			user: { pk: string; is_verified: boolean; username: string; id: string };
+			has_liked_comment: null;
+		};
+		type Item = {
+			code: string;
+			pk: string;
+			id: string;
+			ad_id: null;
+			taken_at: number;
+			inventory_source: null;
+			video_versions:
+				| { width: number; height: number; url: string; type: number }[]
+				| null;
+			coauthor_producers: [];
+			invited_coauthor_producers: [];
+			facepile_top_likers: null;
+			is_dash_eligible: number | null;
+			number_of_qualities: number | null;
+			video_dash_manifest: string | null;
+			image_versions2: {
+				candidates: { url: string; height: number; width: number }[];
+			};
+			is_paid_partnership: boolean;
+			sponsor_tags: null;
+			original_height: number;
+			original_width: number;
+			organic_tracking_token: string;
+			user: User;
+			group: null;
+			comments_disabled: null;
+			like_and_view_counts_disabled: boolean;
+			can_viewer_reshare: boolean;
+			product_type: string;
+			media_type: number;
+			usertags: {
+				in: {
+					user: {
+						pk: string;
+						full_name: string;
+						username: string;
+						profile_pic_url: string;
+						is_verified: boolean;
+						id: string;
+					};
+					position: [number, number];
+				}[];
+			} | null;
+			media_overlay_info: null;
+			carousel_media:
+				| {
+						id: string;
+						pk: string;
+						accessibility_caption: null;
+						is_dash_eligible: number | null;
+						video_dash_manifest: string | null;
+						original_height: number;
+						original_width: number;
+						image_versions2: {
+							candidates: { url: string; height: number; width: number }[];
+						};
+						carousel_parent_id: string;
+						sharing_friction_info: {
+							should_have_sharing_friction: boolean;
+							bloks_app_url: null;
+						};
+						preview: null;
+						organic_tracking_token: null;
+						video_versions: {
+							width: number;
+							height: number;
+							url: string;
+							type: number;
+						}[];
+						media_overlay_info: null;
+						usertags: {
+							in: {
+								user: {
+									pk: string;
+									full_name: string;
+									username: string;
+									profile_pic_url: string;
+									is_verified: boolean;
+									id: string;
+								};
+								position: [number, number];
+							}[];
+						} | null;
+						media_type: number;
+						code: string | null;
+						display_uri: string;
+						user: null;
+						number_of_qualities: number | null;
+						product_type: string;
+						taken_at: number;
+						previous_submitter: null;
+						link: null;
+						story_cta: null;
+						has_liked: boolean | null;
+						like_count: number | null;
+						inventory_source: null;
+						logging_info_token: null;
+				  }[]
+				| null;
+			location: Location | null;
+			has_audio: boolean | null;
+			floating_context_items: null;
+			clips_metadata: {
+				audio_type: string;
+				achievements_info: { show_achievements: boolean };
+				music_info: {
+					music_consumption_info: {
+						should_mute_audio: boolean;
+						should_mute_audio_reason: string;
+						is_trending_in_clips: boolean;
+					};
+					music_asset_info: {
+						display_artist: string;
+						title: string;
+						audio_cluster_id: string;
+						is_explicit: boolean;
+					};
+				} | null;
+				original_sound_info: {
+					original_audio_title: string;
+					should_mute_audio: boolean;
+					audio_asset_id: string;
+					consumption_info: {
+						should_mute_audio_reason: string;
+						should_mute_audio_reason_type: null;
+						is_trending_in_clips: boolean;
+					};
+					ig_artist: { username: string; id: string };
+					is_explicit: boolean;
+				} | null;
+				is_shared_to_fb: boolean;
+				originality_info: null;
+			} | null;
+			clips_attribution_info: null;
+			ai_interactive_embodiment_attachment_style_info: null;
+			has_liked: boolean | null;
+			open_carousel_submission_state: null | string;
+			carousel_parent_id: null;
+			display_uri: string;
+			preview: null;
+			accessibility_caption: null | string;
+			previous_submitter: null;
+			link: null;
+			story_cta: null;
+			like_count: number | null;
+			logging_info_token: null;
+			carousel_media_count: number | null;
+			comment_count: number;
+			preview_comments: Comment[];
+			view_count: null;
+			top_likers: null;
+			hidden_likes_string_variant: number;
+			fb_like_count: null;
+			crosspost_metadata: null;
+			social_context: null;
+			can_reshare: null;
+			enable_media_notes_production: boolean;
+			media_repost_count: null;
+			saved_collection_ids: null;
+			has_viewer_saved: null;
+			sharing_friction_info: {
+				should_have_sharing_friction: boolean;
+				bloks_app_url: null;
+			};
+			caption: {
+				text: string;
+				pk: string;
+				has_translation: null;
+				created_at: number;
+			} | null;
+			boosted_status: null;
+			boost_unavailable_identifier: null;
+			boost_unavailable_reason: null;
+			can_see_insights_as_brand: boolean;
+			affiliate_info: null;
+			ig_media_sharing_disabled: boolean;
+			share_ids: null;
+			feed_demotion_control: null;
+			feed_recs_demotion_control: null;
+			main_feed_carousel_starting_media_id: null;
+			owner: { show_account_transparency_details: boolean; id: string };
+			is_shared_from_basel: null;
+			fb_comment_count: null;
+			all_previous_submitters: null;
+			follow_hashtag_info: null;
+			media_attributions_data: [];
+			wearable_attribution_info: null;
+			caption_is_edited: boolean;
+			commenting_disabled_for_viewer: null;
+		};
+	}
 	namespace Brawl {
 		type Player = {
 			club: PlayerClub;

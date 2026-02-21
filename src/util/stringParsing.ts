@@ -218,3 +218,27 @@ export const findJSObjectAround = <T>(
 	equal(level, 0, "Couldn't find opening brackets");
 	return parseObject(string.slice(bracketIndex), context).result as T;
 };
+export const findJSONObjectAround = <T>(
+	string: string,
+	index: number,
+	level = 1,
+) => {
+	for (; level > 0; level--) index = string.lastIndexOf("{", index);
+	equal(level, 0, "Couldn't find opening brackets");
+	string = string.slice(index);
+	let inString = false,
+		escape = false;
+
+	for (index = 0; index < string.length; index++)
+		if (inString) {
+			if (escape) escape = false;
+			else if (string[index] === "\\") escape = true;
+			else if (string[index] === '"') inString = false;
+		} else if (string[index] === '"') inString = true;
+		else if (string[index] === "{" || string[index] === "[") level++;
+		else if (string[index] === "}" || string[index] === "]") {
+			level--;
+			if (level === 0) return JSON.parse(string.slice(0, index + 1)) as T;
+		}
+	throw new Error("No complete JSON value found");
+};

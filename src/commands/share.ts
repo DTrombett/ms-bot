@@ -17,7 +17,10 @@ import Command from "../Command.ts";
 import { fetchCache } from "../util/fetchCache.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
 import { rest } from "../util/rest.ts";
-import { findJSObjectAround } from "../util/stringParsing.ts";
+import {
+	findJSObjectAround,
+	findJSONObjectAround,
+} from "../util/stringParsing.ts";
 import { template } from "../util/strings.ts";
 import { TimeUnit } from "../util/time.ts";
 
@@ -26,13 +29,15 @@ export class Share extends Command {
 	private static readonly USER_AGENT =
 		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
 	private static readonly REAL_USER_AGENT =
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
 	private static readonly TWITTER_REGEX =
 		/^(\d+)$|^https?:\/\/(?:(?:www|m(?:obile)?)\.)?(?:(?:twitter|x)\.com|twitter3e4tixl4xyajtrzo62zg5vztmjuricljdp2c5kshju4avyoid\.onion)\/(?:(?:i\/web|[^/]+)\/status|statuses)\/(\d+)/;
 	private static readonly TIKTOK_REGEX =
 		/^(\d+)$|^https?:\/\/www\.tiktok\.com\/(?:embed|@(?:[\w.-]+)?\/video)\/(\d+)/;
 	private static readonly TIKTOK_VM_REGEX =
 		/^https?:\/\/(?:(?:vm|vt)\.tiktok\.com|(?:www\.)tiktok\.com\/t)\/\w+/;
+	private static readonly INSTAGRAM_REGEX =
+		/^https?:\/\/(?:www\.)?instagram\.com(?:\/(?!share\/)[^/?#]+)?\/(?:p|tv|reels?(?!\/audio\/))\/([^/?#&]+)/;
 	static override chatInputData = {
 		name: "share",
 		description: "Condividi contenuti da una serie di siti web",
@@ -46,6 +51,25 @@ export class Share extends Command {
 					{
 						name: "url",
 						description: "Il link al video o il suo ID",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+					},
+					{
+						name: "hide",
+						description: "Se nascondere il messaggio dagli altri",
+						type: ApplicationCommandOptionType.Boolean,
+						required: false,
+					},
+				],
+			},
+			{
+				name: "instagram",
+				description: "Condividi un post da Instagram",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "url",
+						description: "Il link del post",
 						type: ApplicationCommandOptionType.String,
 						required: true,
 					},
@@ -123,7 +147,7 @@ export class Share extends Command {
 		if (this.TIKTOK_VM_REGEX.test(url)) {
 			response = await fetchCache(
 				url,
-				{ method: "HEAD" },
+				{ method: "HEAD", headers: { "User-Agent": this.USER_AGENT } },
 				TimeUnit.Year / TimeUnit.Second,
 			);
 			url = response.url;
@@ -527,6 +551,133 @@ export class Share extends Command {
 				.catch(console.error),
 			browser.close(),
 		]);
+	};
+	static instagram = async (
+		{ defer, edit, reply }: ChatInputReplies,
+		{
+			options: { url, hide },
+			interaction: { locale },
+		}: ChatInputArgs<typeof Share.chatInputData, "tiktok">,
+	) => {
+		const id = url.match(this.INSTAGRAM_REGEX)?.findLast(Boolean);
+		if (!id)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: "L'URL non è valido!",
+			});
+		url = `https://www.instagram.com/p/${id}`;
+		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
+		const response = await fetch(url, {
+			headers: {
+				"Accept-Language": locale,
+				"User-Agent": this.REAL_USER_AGENT,
+				Accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+				Priority: "u=0, i",
+				"Sec-Fetch-Dest": "document",
+				"Sec-Fetch-Mode": "navigate",
+				"Sec-Fetch-Site": "none",
+				"Sec-Fetch-User": "?1",
+			},
+		});
+
+		if (!response.ok)
+			return edit({
+				content: `Impossibile scaricare la pagina Instagram: ${response.status} ${response.statusText}`,
+			});
+		const html = await response.text();
+		const index = html.match(
+			new RegExp(`\\{[^<{]*?"code":\\s*"${id}"`, "u"),
+		)?.index;
+		if (!index)
+			return edit({
+				content:
+					"Impossibile estrarre i contenuti dalla pagina! Assicurati che il post sia visibile nel browser senza effettuare il login.",
+			});
+		const item = findJSONObjectAround<Instagram.Item>(html, index, 0);
+		await edit({
+			flags: MessageFlags.IsComponentsV2,
+			components: [
+				...[
+					item.clips_metadata?.original_sound_info ?
+						({
+							type: ComponentType.TextDisplay,
+							content: template`
+								### [${item.clips_metadata.original_sound_info.ig_artist.username}](https://www.instagram.com/${item.clips_metadata.original_sound_info.ig_artist.username})
+								${1}${item.clips_metadata.original_sound_info.original_audio_title}
+							`,
+						} as const)
+					: item.clips_metadata?.music_info?.music_asset_info.title ?
+						({
+							type: ComponentType.TextDisplay,
+							content: template`
+								### [${item.user.username}](https://www.instagram.com/${item.user.username})
+								${1}${item.clips_metadata?.music_info?.music_asset_info.display_artist} • ${item.clips_metadata?.music_info?.music_asset_info.title}
+							`,
+						} as const)
+					: item.location ?
+						({
+							type: ComponentType.TextDisplay,
+							content: template`
+								### [${item.user.username}](https://www.instagram.com/${item.user.username})
+								${1}${item.location.name}
+							`,
+						} as const)
+					:	null,
+				].filter((a) => a != null),
+				{
+					type: ComponentType.Section,
+					components: [
+						{
+							type: ComponentType.TextDisplay,
+							content: template`
+								## [${item.user.full_name && `${item.user.full_name} @`}${item.user.username}](https://www.instagram.com/${item.user.username})
+								${item.caption}${item.caption?.text}
+								${item.is_paid_partnership}-# Contenuto sponsorizzato
+								[Apri in Instagram](${url})
+							`,
+						},
+					],
+					accessory: {
+						type: ComponentType.Thumbnail,
+						media: {
+							url:
+								item.user.hd_profile_pic_url_info?.url ??
+								item.user.profile_pic_url,
+						},
+					},
+				},
+				{
+					type: ComponentType.MediaGallery,
+					items: (item.carousel_media ?? [item]).map((item) => ({
+						media: {
+							url:
+								item.video_versions?.[0]?.url ??
+								item.image_versions2.candidates[0]?.url ??
+								item.display_uri,
+						},
+						description:
+							[
+								item.accessibility_caption,
+								item.usertags?.in &&
+									`Tags: ${item.usertags?.in
+										.map(
+											(t) =>
+												`${t.user.full_name && `${t.user.full_name} @`}${t.user.username}`,
+										)
+										.join(", ")}`,
+							]
+								.filter(Boolean)
+								.join("\n") || undefined,
+					})),
+				},
+				{
+					type: ComponentType.TextDisplay,
+					content: `-# ❤️ ${(item.like_count ?? 0).toLocaleString(locale)}\t🗨️ ${item.comment_count.toLocaleString(locale)}\t•\t<t:${item.taken_at}:f>`,
+				},
+			],
+			allowed_mentions: { parse: [] },
+		});
 	};
 	private static getFullTweet = (
 		tweet: Twitter.Tweet | Twitter.TweetTombstone,
