@@ -4,11 +4,9 @@ const blackListedRequestHeaders = ["Authorization", "Cookie", "X-Guest-Token"];
 
 export const fetchCache = async (
 	input: RequestInfo | URL,
-	init: RequestInit<RequestInitCfProperties> = {},
+	init: Omit<RequestInit<RequestInitCfProperties>, "method"> = {},
 	ttl: number = 20,
 ) => {
-	init.cf ??= {};
-	init.cf.cacheEverything = true;
 	const originalRequest = new Request(input, init);
 	const modifiedRequest = originalRequest.clone();
 

@@ -147,21 +147,24 @@ export class Share extends Command {
 		if (this.TIKTOK_VM_REGEX.test(url)) {
 			response = await fetchCache(
 				url,
-				{ method: "HEAD", headers: { "User-Agent": this.USER_AGENT } },
+				{ headers: { "User-Agent": this.USER_AGENT }, redirect: "manual" },
 				TimeUnit.Year / TimeUnit.Second,
 			);
-			url = response.url;
-			if (!response.ok)
+			void response.body?.cancel();
+			const location = response.headers.get("location");
+			if (!location)
 				return reply({
 					flags: MessageFlags.Ephemeral,
-					content: `Impossibile seguire il collegamento: ${response.status} ${response.statusText}`,
+					content:
+						"Impossibile seguire il collegamento, prova a passare il link diretto al video",
 				});
+			url = location;
 		}
 		const id = url.match(this.TIKTOK_REGEX)?.findLast(Boolean);
 		if (!id)
 			return reply({
 				flags: MessageFlags.Ephemeral,
-				content: "L'URL non è valido!",
+				content: `L'URL <${url}> non è valido!`,
 			});
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
 		const input = new URL(
@@ -213,10 +216,12 @@ export class Share extends Command {
 			},
 			TimeUnit.Day / TimeUnit.Second,
 		);
-		if (!response.ok)
+		if (!response.ok) {
+			void response.body?.cancel();
 			return edit({
 				content: `Impossibile scaricare i dati del video: ${response.status} ${response.statusText}`,
 			});
+		}
 		const items = await response.json<TikTok.Items>().catch(console.error);
 
 		if (!items?.items?.[0] || items.status_code !== 0)
@@ -391,7 +396,6 @@ export class Share extends Command {
 					"Content-Type": "application/json",
 					Origin: "https://x.com",
 				},
-				method: "GET",
 			},
 		);
 		if (!response.ok) {
@@ -585,10 +589,12 @@ export class Share extends Command {
 			TimeUnit.Day / TimeUnit.Second,
 		);
 
-		if (!response.ok)
+		if (!response.ok) {
+			void response.body?.cancel();
 			return edit({
 				content: `Impossibile scaricare la pagina Instagram: ${response.status} ${response.statusText}`,
 			});
+		}
 		const html = await response.text();
 		const index = html.match(
 			new RegExp(`\\{[^<{]*?"code":\\s*"${id}"`, "u"),
