@@ -1,6 +1,6 @@
 import { waitUntil } from "cloudflare:workers";
 
-const blackListedRequestHeaders = ["Authorization"];
+const blackListedRequestHeaders = ["Authorization", "Cookie", "X-Guest-Token"];
 
 export const fetchCache = async (
 	input: RequestInfo | URL,
