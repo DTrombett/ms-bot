@@ -13,7 +13,7 @@ await writeFile(
 			/\b(var|let|const)\s+WebSocketConstructor\s*=[^;]+;/,
 			"$1 WebSocketConstructor = globalThis.WebSocket;",
 		),
-	// // cloudflare/workerd#5822
+	// cloudflare/workerd#5822
 	// .replace(
 	// 	/\bnew WebSocketConstructor\s*\(([^,]+),\s*\[\]/,
 	// 	"new WebSocketConstructor($1, undefined",

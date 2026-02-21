@@ -213,9 +213,9 @@ export const findJSObjectAround = <T>(
 ) => {
 	let bracketIndex = index;
 
-	for (; level > 0; level--)
+	for (; level > 0 && bracketIndex >= 0; level--)
 		bracketIndex = string.lastIndexOf("{", bracketIndex);
-	equal(level, 0, "Couldn't find opening brackets");
+	ok(level === 0 && bracketIndex >= 0, "Couldn't find opening brackets");
 	return parseObject(string.slice(bracketIndex), context).result as T;
 };
 export const findJSONObjectAround = <T>(

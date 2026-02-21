@@ -309,6 +309,7 @@ export class Share extends Command {
 			})
 			.onDocument({ end: reject })
 			.transform(new Response(body));
+		setTimeout(reject, 5_000);
 		let match = body.match(/featureSwitch["']?\s*:\s*{/);
 		if (!match)
 			return edit({ content: "Impossibile trovare i dettagli della query" });
@@ -476,81 +477,80 @@ export class Share extends Command {
 			});
 		defer();
 		const browser = await launch(env.BROWSER);
-		const page = await browser.newPage({
-			baseURL: "https://platform.twitter.com/embed/",
-			...devices["Desktop Chrome HiDPI"],
-			deviceScaleFactor: 4,
-			viewport: { width: 7680, height: 4320 },
-			screen: { width: 7680, height: 4320 },
-		});
-		const hasText = /^Read (?:(\d+) repl(?:ies|y)|more on (?:X|Twitter))$/;
-		const readReplies = page.locator("div", { hasText }).nth(-2);
+		try {
+			const page = await browser.newPage({
+				baseURL: "https://platform.twitter.com/embed/",
+				...devices["Desktop Chrome HiDPI"],
+				deviceScaleFactor: 4,
+				viewport: { width: 7680, height: 4320 },
+				screen: { width: 7680, height: 4320 },
+			});
+			const hasText = /^Read (?:(\d+) repl(?:ies|y)|more on (?:X|Twitter))$/;
+			const readReplies = page.locator("div", { hasText }).nth(-2);
 
-		page.setDefaultTimeout(20_000);
-		await page.goto(
-			`Tweet.html?${new URLSearchParams({
-				dnt: "true",
-				id: tweetId,
-				theme,
-				hideThread: String(hideThread),
-			}).toString()}`,
-		);
-		await Promise.all([
-			page
-				.getByText("Reply", { exact: true })
-				.last()
-				.evaluate(
-					(el: { textContent: string }, replies: number) =>
-						(el.textContent = String(replies)),
-					Number((await readReplies.innerText()).match(hasText)?.[1]) || 0,
-				),
-			readReplies
-				.or(page.locator("div[aria-hidden='true']", { hasText: /^·$/ }))
-				.or(page.getByRole("link", { name: "Follow", exact: true }))
-				.or(page.getByRole("button", { name: /^Copy link to post$/ }).last())
-				.evaluateAll((elements: { remove: () => void }[]) =>
-					(elements.length > 5 ? elements.slice(1) : elements).forEach((el) =>
-						el.remove(),
+			page.setDefaultTimeout(20_000);
+			await page.goto(
+				`Tweet.html?${new URLSearchParams({
+					dnt: "true",
+					id: tweetId,
+					theme,
+					hideThread: String(hideThread),
+				}).toString()}`,
+			);
+			await Promise.all([
+				page
+					.getByText("Reply", { exact: true })
+					.last()
+					.evaluate(
+						(el: { textContent: string }, replies: number) =>
+							(el.textContent = String(replies)),
+						Number((await readReplies.innerText()).match(hasText)?.[1]) || 0,
 					),
-				),
-			page
-				.getByRole("link", { name: /^Show more$/ })
-				.last()
-				.evaluateAll(
-					(elements: { textContent: string }[]) =>
-						elements[0] && (elements[0].textContent = "..."),
-				),
-		]);
+				readReplies
+					.or(page.locator("div[aria-hidden='true']", { hasText: /^·$/ }))
+					.or(page.getByRole("link", { name: "Follow", exact: true }))
+					.or(page.getByRole("button", { name: /^Copy link to post$/ }).last())
+					.evaluateAll((elements: { remove: () => void }[]) =>
+						(elements.length > 5 ? elements.slice(1) : elements).forEach((el) =>
+							el.remove(),
+						),
+					),
+				page
+					.getByRole("link", { name: /^Show more$/ })
+					.last()
+					.evaluateAll(
+						(elements: { textContent: string }[]) =>
+							elements[0] && (elements[0].textContent = "..."),
+					),
+			]);
 
-		return Promise.all([
-			rest
-				.patch(fullRoute, {
-					body: {
-						attachments: [{ id: 0, filename: `${tweetId}.png` }],
-					} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-					files: [
-						{
-							data: await page
-								.getByRole("article")
-								.first()
-								.screenshot({
-									omitBackground: true,
-									style: `
-										a[aria-label='X Ads info and privacy'] { visibility: hidden; }
-										a[aria-label='Watch on X'] { display: none; }
-										div:has(> a[href^='https://twitter.com/intent/tweet']) {
-											${hideStats ? "display: none" : "justify-content: space-evenly"};
-										}
-									`,
-								}),
-							name: `${tweetId}.png`,
-							contentType: "image/png",
-						},
-					],
-				})
-				.catch(console.error),
-			browser.close(),
-		]);
+			return rest.patch(fullRoute, {
+				body: {
+					attachments: [{ id: 0, filename: `${tweetId}.png` }],
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				files: [
+					{
+						data: await page
+							.getByRole("article")
+							.first()
+							.screenshot({
+								omitBackground: true,
+								style: `
+								a[aria-label='X Ads info and privacy'] { visibility: hidden; }
+								a[aria-label='Watch on X'] { display: none; }
+								div:has(> a[href^='https://twitter.com/intent/tweet']) {
+									${hideStats ? "display: none" : "justify-content: space-evenly"};
+								}
+							`,
+							}),
+						name: `${tweetId}.png`,
+						contentType: "image/png",
+					},
+				],
+			});
+		} finally {
+			await browser.close();
+		}
 	};
 	static instagram = async (
 		{ defer, edit, reply }: ChatInputReplies,
@@ -567,19 +567,23 @@ export class Share extends Command {
 			});
 		url = `https://www.instagram.com/p/${id}`;
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
-		const response = await fetch(url, {
-			headers: {
-				"Accept-Language": locale,
-				"User-Agent": this.REAL_USER_AGENT,
-				Accept:
-					"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-				Priority: "u=0, i",
-				"Sec-Fetch-Dest": "document",
-				"Sec-Fetch-Mode": "navigate",
-				"Sec-Fetch-Site": "none",
-				"Sec-Fetch-User": "?1",
+		const response = await fetchCache(
+			url,
+			{
+				headers: {
+					"Accept-Language": locale,
+					"User-Agent": this.REAL_USER_AGENT,
+					Accept:
+						"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+					Priority: "u=0, i",
+					"Sec-Fetch-Dest": "document",
+					"Sec-Fetch-Mode": "navigate",
+					"Sec-Fetch-Site": "none",
+					"Sec-Fetch-User": "?1",
+				},
 			},
-		});
+			TimeUnit.Day / TimeUnit.Second,
+		);
 
 		if (!response.ok)
 			return edit({
