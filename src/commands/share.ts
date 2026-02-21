@@ -557,7 +557,7 @@ export class Share extends Command {
 		{
 			options: { url, hide },
 			interaction: { locale },
-		}: ChatInputArgs<typeof Share.chatInputData, "tiktok">,
+		}: ChatInputArgs<typeof Share.chatInputData, "instagram">,
 	) => {
 		const id = url.match(this.INSTAGRAM_REGEX)?.findLast(Boolean);
 		if (!id)
