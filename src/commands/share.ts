@@ -205,17 +205,13 @@ export class Share extends Command {
 				BigInt(Math.round(Math.random() * Number.MAX_SAFE_INTEGER))
 			).toString(),
 		}).toString();
-		response = await fetchCache(
-			input,
-			{
-				headers: {
-					"User-Agent": this.USER_AGENT,
-					Referer: `https://www.tiktok.com/player/v1/${id}`,
-					"agw-js-conv": "str",
-				},
+		response = await fetch(input, {
+			headers: {
+				"User-Agent": this.USER_AGENT,
+				Referer: `https://www.tiktok.com/player/v1/${id}`,
+				"agw-js-conv": "str",
 			},
-			TimeUnit.Day / TimeUnit.Second,
-		);
+		});
 		if (!response.ok) {
 			void response.body?.cancel();
 			return edit({
