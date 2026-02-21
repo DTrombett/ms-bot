@@ -219,7 +219,7 @@ export class Share extends Command {
 			});
 		const items = await response.json<TikTok.Items>().catch(console.error);
 
-		if (!items || items.status_code !== 0 || !items.items?.[0])
+		if (!items?.items?.[0] || items.status_code !== 0)
 			return edit({
 				content: `Si è verificato un errore: \`${items?.status_msg.replaceAll("`", "\\`") || "Errore sconosciuto"}\``,
 			});
