@@ -278,12 +278,16 @@ export class Share extends Command {
 			});
 		url = `https://x.com/i/status/${tweetId}`;
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
-		let response = await fetchCache(url, {
-			headers: {
-				"accept-language": locale,
-				"User-Agent": this.REAL_USER_AGENT,
+		let response = await fetchCache(
+			url,
+			{
+				headers: {
+					"accept-language": locale,
+					"User-Agent": this.REAL_USER_AGENT,
+				},
 			},
-		});
+			(30 * TimeUnit.Minute) / TimeUnit.Second,
+		);
 		({ url } = response);
 		if (!response.ok) {
 			void response.body?.cancel();
@@ -339,7 +343,7 @@ export class Share extends Command {
 					"User-Agent": this.REAL_USER_AGENT,
 				},
 			},
-			TimeUnit.Day / TimeUnit.Second,
+			TimeUnit.Year / TimeUnit.Second,
 		).then((res) => res.text());
 		const authorization = body.match(/Bearer \w[^"']+/)?.[0];
 		if (!authorization)
@@ -353,7 +357,7 @@ export class Share extends Command {
 			metadata: { featureSwitches: string[]; fieldToggles: string[] };
 		}>(body, body.indexOf('"TweetResultByRestId"'));
 
-		response = await fetchCache(
+		response = await fetch(
 			`https://api.x.com/graphql/${trbri.queryId}/TweetResultByRestId?${new URLSearchParams(
 				{
 					variables: JSON.stringify({
