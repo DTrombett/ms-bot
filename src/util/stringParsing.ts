@@ -205,27 +205,28 @@ const parseExpression = (
 	throw new SyntaxError("Invalid or unexpected token", { cause: string });
 };
 
+const findOpeningBrackets = (string: string, level: number, index: number) => {
+	for (; level > 0 && index >= 0; level--)
+		index = string.lastIndexOf("{", index);
+	ok(level === 0 && index >= 0, "Couldn't find opening brackets");
+	return { level, index, string: string.slice(index) };
+};
+
 export const findJSObjectAround = <T>(
 	string: string,
 	index: number,
 	level = 1,
 	context = { true: true, false: false, null: null },
 ) => {
-	let bracketIndex = index;
-
-	for (; level > 0 && bracketIndex >= 0; level--)
-		bracketIndex = string.lastIndexOf("{", bracketIndex);
-	ok(level === 0 && bracketIndex >= 0, "Couldn't find opening brackets");
-	return parseObject(string.slice(bracketIndex), context).result as T;
+	({ string } = findOpeningBrackets(string, level, index));
+	return parseObject(string, context).result as T;
 };
 export const findJSONObjectAround = <T>(
 	string: string,
 	index: number,
 	level = 1,
 ) => {
-	for (; level > 0; level--) index = string.lastIndexOf("{", index);
-	equal(level, 0, "Couldn't find opening brackets");
-	string = string.slice(index);
+	({ string, level } = findOpeningBrackets(string, level, index));
 	let inString = false,
 		escape = false;
 
