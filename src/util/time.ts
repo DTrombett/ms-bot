@@ -83,6 +83,8 @@ export const idToTimestamp = (id: string): number =>
  * @returns The timestamp in milliseconds, or NaN if the value is invalid or cannot be parsed
  */
 export const parseTimeValue = (value: string): number => {
+	if (value.startsWith("http"))
+		value = value.match(/\/(\d+)(?:[?#]|$)/)?.[1] ?? value;
 	const num = Number(value);
 
 	if (Number.isNaN(num)) return NaN;

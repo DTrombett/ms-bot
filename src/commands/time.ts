@@ -51,7 +51,6 @@ export class Time extends Command {
 						name: "time2",
 						description: "Secondo timestamp",
 						type: ApplicationCommandOptionType.String,
-						required: true,
 					},
 					{
 						name: "long",
@@ -117,7 +116,7 @@ export class Time extends Command {
 			options: { time1, time2, long },
 		}: ChatInputArgs<typeof Time.chatInputData, "compare">,
 	) => {
-		const diff = Math.abs(parseTimeValue(time1) - parseTimeValue(time2));
+		const diff = Math.abs(parseTimeValue(time1) - (time2 != null ? parseTimeValue(time2) : Date.now()));
 
 		if (Number.isNaN(diff))
 			return reply({
