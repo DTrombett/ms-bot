@@ -75,7 +75,6 @@ export const idToTimestamp = (id: string): number =>
 
 /**
  * Parses a time value string and converts it to a UNIX timestamp in milliseconds.
- * Automatically detects the format based on the numeric value:
  * Automatically detects the format based on the value:
  * - Values that start with http: Treated as Discord URL with an ID as last path fragment
  * - Values < 10^10: Treated as UNIX timestamp in seconds, converted to milliseconds
