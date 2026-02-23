@@ -33,7 +33,7 @@ export class Share extends Command {
 	private static readonly TWITTER_REGEX =
 		/^(\d+)$|^https?:\/\/(?:(?:www|m(?:obile)?)\.)?(?:(?:twitter|x)\.com|twitter3e4tixl4xyajtrzo62zg5vztmjuricljdp2c5kshju4avyoid\.onion)\/(?:(?:i\/web|[^/]+)\/status|statuses)\/(\d+)/;
 	private static readonly TIKTOK_REGEX =
-		/^(\d+)$|^https?:\/\/www\.tiktok\.com\/(?:embed|@(?:[\w.-]+)?\/video)\/(\d+)/;
+		/^(\d+)$|^https?:\/\/www\.tiktok\.com\/(?:embed|@(?:[\w.-]+)?\/(?:video|photo))\/(\d+)/;
 	private static readonly TIKTOK_VM_REGEX =
 		/^https?:\/\/(?:(?:vm|vt)\.tiktok\.com|(?:www\.)tiktok\.com\/t)\/\w+/;
 	private static readonly INSTAGRAM_REGEX =
@@ -276,17 +276,12 @@ export class Share extends Command {
 				flags: MessageFlags.Ephemeral,
 				content: "L'URL non è valido!",
 			});
-		url = `https://x.com/i/status/${tweetId}`;
+		url = `https://x.com`;
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
 		let response = await fetchCache(
 			url,
-			{
-				headers: {
-					"accept-language": locale,
-					"User-Agent": this.REAL_USER_AGENT,
-				},
-			},
-			(30 * TimeUnit.Minute) / TimeUnit.Second,
+			{ headers: { "User-Agent": this.REAL_USER_AGENT } },
+			TimeUnit.Day / TimeUnit.Second,
 		);
 		({ url } = response);
 		if (!response.ok) {
@@ -337,12 +332,7 @@ export class Share extends Command {
 
 		body = await fetchCache(
 			url,
-			{
-				headers: {
-					"accept-language": locale,
-					"User-Agent": this.REAL_USER_AGENT,
-				},
-			},
+			{ headers: { "User-Agent": this.REAL_USER_AGENT } },
 			TimeUnit.Year / TimeUnit.Second,
 		).then((res) => res.text());
 		const authorization = body.match(/Bearer \w[^"']+/)?.[0];
