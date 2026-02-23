@@ -49,7 +49,7 @@ export class Time extends Command {
 					},
 					{
 						name: "time2",
-						description: "Secondo timestamp",
+						description: "Secondo timestamp (default: adesso)",
 						type: ApplicationCommandOptionType.String,
 					},
 					{
