@@ -575,7 +575,7 @@ export class Share extends Command {
 		}
 		const html = await response.text();
 		const index = html.match(
-			new RegExp(`\\{[^<{]*?"code":\\s*"${id}"`, "u"),
+			new RegExp(`\\{[^<{}]*?"code":\\s*"${id}"`, "u"),
 		)?.index;
 		if (!index)
 			return edit({
