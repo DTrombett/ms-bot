@@ -553,23 +553,19 @@ export class Share extends Command {
 			});
 		url = `https://www.instagram.com/p/${id}`;
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
-		const response = await fetchCache(
-			url,
-			{
-				headers: {
-					"Accept-Language": locale,
-					"User-Agent": this.REAL_USER_AGENT,
-					Accept:
-						"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-					Priority: "u=0, i",
-					"Sec-Fetch-Dest": "document",
-					"Sec-Fetch-Mode": "navigate",
-					"Sec-Fetch-Site": "none",
-					"Sec-Fetch-User": "?1",
-				},
+		const response = await fetch(url, {
+			headers: {
+				"Accept-Language": locale,
+				"User-Agent": this.REAL_USER_AGENT,
+				Accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+				Priority: "u=0, i",
+				"Sec-Fetch-Dest": "document",
+				"Sec-Fetch-Mode": "navigate",
+				"Sec-Fetch-Site": "none",
+				"Sec-Fetch-User": "?1",
 			},
-			TimeUnit.Day / TimeUnit.Second,
-		);
+		});
 
 		if (!response.ok) {
 			void response.body?.cancel();
