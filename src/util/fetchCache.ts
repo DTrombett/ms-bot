@@ -1,41 +1,74 @@
 import { waitUntil } from "cloudflare:workers";
 
-const blackListedRequestHeaders = ["Authorization", "Cookie", "X-Guest-Token"];
+const blackListedRequestHeaders = ["authorization", "cookie", "x-guest-token"];
+const blackListedResponseHeaders = [
+	"pragma",
+	"expires",
+	"set-cookie",
+	"cache-control",
+];
 
 export const fetchCache = async (
-	input: RequestInfo | URL,
-	init: Omit<RequestInit<RequestInitCfProperties>, "method"> = {},
+	input: RequestInfo<CfProperties> | URL,
+	init: Omit<RequestInit<CfProperties>, "method"> = {},
 	ttl: number = 20,
-) => {
-	const originalRequest = new Request(input, init);
-	const modifiedRequest = originalRequest.clone();
+): Promise<Response> => {
+	input = input instanceof Request ? input : new Request(input, init);
+	const request = input.clone();
 
 	for (const name of blackListedRequestHeaders)
-		if (originalRequest.headers.has(name)) modifiedRequest.headers.delete(name);
-	let res = await caches.default.match(modifiedRequest);
+		if (input.headers.has(name)) request.headers.delete(name);
+	let response = await caches.default.match(request);
+	if (response) {
+		const headers = Array.from(response.headers);
 
-	if (!res) {
-		res = await fetch(originalRequest);
-		const cacheHeader = res.headers.get("Cache-Control");
-		const resHeaders = new Headers(res.headers);
-		const clonedRes = res.clone();
-
-		if (
-			!cacheHeader ||
-			cacheHeader?.startsWith("no-") ||
-			cacheHeader?.startsWith("private") ||
-			cacheHeader?.startsWith("must-")
-		)
-			resHeaders.set(
-				"Cache-Control",
-				`public, max-age=${cacheHeader?.match(/max-age=(\d+)/)?.[1] ?? ttl}`,
+		try {
+			headers.push(
+				...(
+					JSON.parse(response.headers.get("x-set-cookie") ?? "[]") as string[]
+				).map((c): [string, string] => ["set-cookie", c]),
 			);
+		} catch (err) {
+			console.error(err);
+			waitUntil(caches.default.delete(request));
+		}
+		response = new Response(response.body, {
+			cf: response.cf,
+			status: response.status,
+			statusText: response.statusText,
+			headers,
+		});
+	} else {
+		response = await fetch(input);
+		const cacheControl = response.headers.get("Cache-Control");
+
 		waitUntil(
 			caches.default.put(
-				modifiedRequest,
-				new Response(clonedRes.body, { ...clonedRes, headers: resHeaders }),
+				request,
+				new Response(response.clone().body, {
+					headers: Array.from(response.headers)
+						.filter(
+							([k]) => !blackListedResponseHeaders.includes(k.toLowerCase()),
+						)
+						.concat([
+							[
+								"Cache-Control",
+								(
+									!cacheControl ||
+									cacheControl?.startsWith("no-") ||
+									cacheControl?.startsWith("private") ||
+									cacheControl?.startsWith("must-")
+								) ?
+									`public, max-age=${cacheControl?.match(/max-age=(\d+)/)?.[1] ?? ttl}`
+								:	cacheControl,
+							],
+							["x-set-cookie", JSON.stringify(response.headers.getSetCookie())],
+						]),
+					status: response.status,
+					statusText: response.statusText,
+				}),
 			),
 		);
 	}
-	return res;
+	return response;
 };

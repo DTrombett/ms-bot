@@ -20,7 +20,8 @@
 		"deploy": "npm run build && wrangler deploy",
 		"dev": "node build.ts && wrangler dev --test-scheduled",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
-		"test": "npm run build && tsc && eslint --flag unstable_native_nodejs_ts_config src"
+		"test": "npm run build && tsc && eslint --flag unstable_native_nodejs_ts_config src",
+		"types": "wrangler types"
 	},
 	"dependencies": {
 		"@cloudflare/playwright": "^1.1.1",
@@ -37,10 +38,10 @@
 		"@tsconfig/recommended": "^1.0.13",
 		"@tsconfig/strictest": "^2.0.8",
 		"@types/node": "^24.10.13",
-		"eslint": "^10.0.1",
+		"eslint": "^10.0.2",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.56.1",
 		"undici": "^7.22.0",
-		"wrangler": "^4.67.1"
+		"wrangler": "^4.68.1"
 	}
 }

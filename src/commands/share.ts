@@ -276,14 +276,12 @@ export class Share extends Command {
 				flags: MessageFlags.Ephemeral,
 				content: "L'URL non è valido!",
 			});
-		url = `https://x.com`;
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
 		let response = await fetchCache(
-			url,
+			"https://x.com/",
 			{ headers: { "User-Agent": this.REAL_USER_AGENT } },
 			TimeUnit.Day / TimeUnit.Second,
 		);
-		({ url } = response);
 		if (!response.ok) {
 			void response.body?.cancel();
 			return edit({
@@ -298,17 +296,8 @@ export class Share extends Command {
 			void response.body?.cancel();
 			return edit({ content: "Impossibile ottenere il guest id" });
 		}
-		let body = `${await response.text()}</body></html>`;
+		let body = await response.text();
 
-		const { resolve, reject, promise } = Promise.withResolvers<string>();
-		new HTMLRewriter()
-			.on('link[href*="/main."]', {
-				element: (element) =>
-					resolve(new URL(element.getAttribute("href")!, url).href),
-			})
-			.onDocument({ end: reject })
-			.transform(new Response(body));
-		setTimeout(reject, 5_000);
 		let match = body.match(/featureSwitch["']?\s*:\s*{/);
 		if (!match)
 			return edit({ content: "Impossibile trovare i dettagli della query" });
@@ -325,10 +314,14 @@ export class Share extends Command {
 		if (!match?.[1])
 			return edit({ content: "Impossibile ottenere il guest token" });
 		const gt = match[1];
-		if (!(url = await promise.catch(() => "")))
+		match = body.match(
+			/<link\s+(?:[a-z0-9-.:_]+(?:=["'][^"']+["'])?\s+)*href=["']((?:|[^"']*\/)main(?:\.[^.]+)?\.js)["'][^>]*>/i,
+		);
+		if (!match?.[1])
 			return edit({
 				content: "Impossibile trovare il file JavaScript della pagina",
 			});
+		url = new URL(match[1], "https://x.com").href;
 
 		body = await fetchCache(
 			url,
@@ -800,7 +793,9 @@ export class Share extends Command {
 				],
 				accessory: {
 					type: ComponentType.Thumbnail,
-					media: { url: user.avatar.image_url },
+					media: {
+						url: user.avatar.image_url.replace(/_[^_.-/?#]+?\.(\w+)$/, ".$1"),
+					},
 				},
 			},
 		];
