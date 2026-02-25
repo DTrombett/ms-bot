@@ -2,7 +2,6 @@ import {
 	WorkflowEntrypoint,
 	type WorkflowEvent,
 	type WorkflowStep,
-	type WorkflowStepConfig,
 } from "cloudflare:workers";
 import {
 	ButtonStyle,
@@ -38,9 +37,6 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 		500, 1_500, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 40_000, 50_000,
 		60_000, 70_000, 80_000, 90_000, 100_000,
 	];
-	static config: WorkflowStepConfig = {
-		retries: { limit: 1, delay: 5000, backoff: "constant" },
-	};
 
 	override async run(
 		{ payload: { users } }: WorkflowEvent<Params>,
@@ -51,7 +47,7 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 			users.map(async (user) => {
 				const { components, player } = await step.do(
 					`Process user ${user.id}`,
-					BrawlNotifications.config,
+					{ retries: { limit: 0, delay: 0 } },
 					this.processUser.bind(this, user),
 				);
 
@@ -59,12 +55,12 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 				if (components.length)
 					await step.do(
 						`Send message for user ${user.id}`,
-						BrawlNotifications.config,
+						{ retries: { limit: 1, delay: 5000 } },
 						this.sendMessage.bind(this, user, components, player),
 					);
 				return step.do(
 					`Update user ${user.id} data`,
-					BrawlNotifications.config,
+					{ retries: { limit: 4, delay: 300, backoff: "exponential" } },
 					this.updateUser.bind(this, user, player),
 				);
 			}),
@@ -107,9 +103,10 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 			)
 				components.push({
 					type: ComponentType.Container,
-					accent_color: player.nameColor
-						? parseInt(player.nameColor.slice(4), 16)
-						: 0xffffff,
+					accent_color:
+						player.nameColor ?
+							parseInt(player.nameColor.slice(4), 16)
+						:	0xffffff,
 					components: [
 						{
 							type: ComponentType.Section,
