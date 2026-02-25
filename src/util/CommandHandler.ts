@@ -44,19 +44,15 @@ export class CommandHandler {
 		[InteractionType.ApplicationCommand]: {
 			findCommand: (interaction) =>
 				this.commands.find(
-					interaction.data.type === ApplicationCommandType.ChatInput
-						? (c) => c.chatInputData?.name === interaction.data.name
-						: (c) =>
-								c.contextMenuData?.some(
-									(d) => d.name === interaction.data.name,
-								),
+					interaction.data.type === ApplicationCommandType.ChatInput ?
+						(c) => c.chatInputData?.name === interaction.data.name
+					:	(c) =>
+							c.contextMenuData?.some((d) => d.name === interaction.data.name),
 				),
 			getRunner: (interaction) =>
-				interaction.data.type === ApplicationCommandType.ChatInput
-					? "chatInput"
-					: interaction.data.type === ApplicationCommandType.User
-					? "user"
-					: "message",
+				interaction.data.type === ApplicationCommandType.ChatInput ? "chatInput"
+				: interaction.data.type === ApplicationCommandType.User ? "user"
+				: "message",
 		},
 		[InteractionType.MessageComponent]: {
 			findCommand: (interaction) => {
@@ -120,9 +116,7 @@ export class CommandHandler {
 	async handleInteraction(request: Request): Promise<Response> {
 		const interaction = await this.verifySignature(request);
 		if (interaction.type === InteractionType.Ping)
-			return new Response('{"type":1}', {
-				headers: { "Content-Type": "application/json" },
-			});
+			return Response.json({ type: 1 });
 		const Command = this.interactionTypes[interaction.type].findCommand(
 			interaction as never,
 		);
@@ -133,9 +127,9 @@ export class CommandHandler {
 			return new Response(null, { status: 403 });
 		console.log(
 			`Interaction type: ${InteractionType[interaction.type]}, command: ${
-				"name" in interaction.data
-					? interaction.data.name
-					: interaction.data.custom_id
+				"name" in interaction.data ?
+					interaction.data.name
+				:	interaction.data.custom_id
 			}, user: ${user.username} (${user.id}), channel: ${
 				interaction.channel?.name
 			} (${interaction.channel?.id})`,
@@ -237,8 +231,6 @@ export class CommandHandler {
 				)
 				?.catch(console.error),
 		);
-		return new Response(JSON.stringify(await promise), {
-			headers: { "Content-Type": "application/json" },
-		});
+		return Response.json(await promise);
 	}
 }

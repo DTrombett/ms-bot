@@ -10,7 +10,6 @@ import type {
 import * as commands from "./commands/index.ts";
 import { CommandHandler } from "./util/CommandHandler.ts";
 import { createSolidPng } from "./util/createSolidPng.ts";
-import { JsonResponse } from "./util/JsonResponse.ts";
 import type { RGB } from "./util/resolveColor.ts";
 
 const handler = new CommandHandler(Object.values(commands));
@@ -20,28 +19,28 @@ const server: ExportedHandler<Env> = {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/") {
+			if (request.method === "GET") return new Response("Ready!");
+			return Response.json({ error: "Method Not Allowed" }, { status: 405 });
+		}
+		if (url.pathname === "/interactions") {
 			if (request.method === "POST")
 				return handler.handleInteraction(request).catch((e) => {
 					if (e instanceof Response) return e;
 					console.error(e);
 					return new Response(null, { status: 500 });
 				});
-			if (request.method === "GET") return new Response("Ready!");
-			return new JsonResponse({ error: "Method Not Allowed" }, { status: 405 });
+			return Response.json({ error: "Method Not Allowed" }, { status: 405 });
 		}
 		if (url.pathname === "/color") {
 			if (request.method !== "GET")
-				return new JsonResponse(
-					{ error: "Method Not Allowed" },
-					{ status: 405 },
-				);
+				return Response.json({ error: "Method Not Allowed" }, { status: 405 });
 			const rgb = [
 				url.searchParams.get("red"),
 				url.searchParams.get("green"),
 				url.searchParams.get("blue"),
 			].map(Number) as RGB;
 			if (rgb.some(isNaN))
-				return new JsonResponse(
+				return Response.json(
 					{ error: "Missing 'red', 'green' or 'blue' query parameter" },
 					{ status: 400 },
 				);
@@ -49,7 +48,7 @@ const server: ExportedHandler<Env> = {
 				headers: { "Content-Type": "image/png" },
 			});
 		}
-		return new JsonResponse({ error: "Not Found" }, { status: 404 });
+		return Response.json({ error: "Not Found" }, { status: 404 });
 	},
 	scheduled: async ({ cron }) => {
 		if (cron === "0 0 * * *")
