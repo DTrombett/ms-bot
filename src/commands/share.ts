@@ -249,7 +249,9 @@ export class Share extends Command {
 						...(item.image_post_info?.images.map((m) => ({
 							media: { url: m.display_image.url_list[0]! },
 						})) ?? []),
-					].filter((a): a is Exclude<typeof a, Falsy> => Boolean(a)),
+					]
+						.filter((a): a is Exclude<typeof a, Falsy> => Boolean(a))
+						.slice(0, 10),
 				},
 				{
 					type: ComponentType.TextDisplay,
@@ -280,7 +282,7 @@ export class Share extends Command {
 		let response = await fetchCache(
 			"https://x.com/",
 			{ headers: { "User-Agent": this.REAL_USER_AGENT } },
-			TimeUnit.Day / TimeUnit.Second,
+			(30 * TimeUnit.Minute) / TimeUnit.Second,
 		);
 		if (!response.ok) {
 			void response.body?.cancel();
@@ -637,27 +639,29 @@ export class Share extends Command {
 				},
 				{
 					type: ComponentType.MediaGallery,
-					items: (item.carousel_media ?? [item]).map((item) => ({
-						media: {
-							url:
-								item.video_versions?.[0]?.url ??
-								item.image_versions2.candidates[0]?.url ??
-								item.display_uri,
-						},
-						description:
-							[
-								item.accessibility_caption,
-								item.usertags?.in &&
-									`Tags: ${item.usertags?.in
-										.map(
-											(t) =>
-												`${t.user.full_name && `${t.user.full_name} @`}${t.user.username}`,
-										)
-										.join(", ")}`,
-							]
-								.filter(Boolean)
-								.join("\n") || undefined,
-					})),
+					items: (item.carousel_media ?? [item])
+						.slice(0, 10)
+						.map((item) => ({
+							media: {
+								url:
+									item.video_versions?.[0]?.url ??
+									item.image_versions2.candidates[0]?.url ??
+									item.display_uri,
+							},
+							description:
+								[
+									item.accessibility_caption,
+									item.usertags?.in &&
+										`Tags: ${item.usertags?.in
+											.map(
+												(t) =>
+													`${t.user.full_name && `${t.user.full_name} @`}${t.user.username}`,
+											)
+											.join(", ")}`,
+								]
+									.filter(Boolean)
+									.join("\n") || undefined,
+						})),
 				},
 				{
 					type: ComponentType.TextDisplay,
@@ -824,34 +828,36 @@ export class Share extends Command {
 		if (media.length)
 			components.push({
 				type: ComponentType.MediaGallery,
-				items: media.map((m) => ({
-					media: {
-						url:
-							m.video_info?.variants
-								.filter(
-									(a) =>
-										a.content_type.startsWith("video/") &&
-										(!a.bitrate ||
-											(a.bitrate * m.video_info!.duration_millis) /
-												TimeUnit.Second <=
-												500 * 1024 * 1024),
-								)
-								.reduce<Twitter.Variant | null>(
-									(a, b) =>
-										a?.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
-									null,
-								)?.url ?? m.media_url_https,
-					},
-					description:
-						[
-							m.ext_alt_text,
-							m.additional_media_info?.source_user?.user_results.result.core
-								.name &&
-								`Di ${m.additional_media_info?.source_user?.user_results.result.core.name}`,
-						]
-							.filter(Boolean)
-							.join("\n") || undefined,
-				})),
+				items: media
+					.slice(0, 10)
+					.map((m) => ({
+						media: {
+							url:
+								m.video_info?.variants
+									.filter(
+										(a) =>
+											a.content_type.startsWith("video/") &&
+											(!a.bitrate ||
+												(a.bitrate * m.video_info!.duration_millis) /
+													TimeUnit.Second <=
+													500 * 1024 * 1024),
+									)
+									.reduce<Twitter.Variant | null>(
+										(a, b) =>
+											a?.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
+										null,
+									)?.url ?? m.media_url_https,
+						},
+						description:
+							[
+								m.ext_alt_text,
+								m.additional_media_info?.source_user?.user_results.result.core
+									.name &&
+									`Di ${m.additional_media_info?.source_user?.user_results.result.core.name}`,
+							]
+								.filter(Boolean)
+								.join("\n") || undefined,
+					})),
 			});
 
 		return components;
