@@ -5,6 +5,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	PermissionFlagsBits,
 	SeparatorSpacingSize,
 	type APIActionRowComponent,
 	type APIButtonComponent,
@@ -746,6 +747,25 @@ export class Brawl extends Command {
 						],
 					},
 					{
+						name: "link",
+						description: "Collega il tuo profilo Brawl Stars!",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "tag",
+								description: "Il tuo tag giocatore (es. #8QJR0YC)",
+								type: ApplicationCommandOptionType.String,
+								required: true,
+							},
+							{
+								name: "user",
+								description:
+									"Opzione privata. L'utente al quale collegare il tag",
+								type: ApplicationCommandOptionType.User,
+							},
+						],
+					},
+					{
 						name: "brawlers",
 						description: "Vedi i brawler posseduti da un giocatore",
 						type: ApplicationCommandOptionType.Subcommand,
@@ -1370,7 +1390,7 @@ export class Brawl extends Command {
 		errors: Record<number, string> = {},
 		cache = true,
 	) {
-		Object.assign(errors, Brawl.ERROR_MESSAGES);
+		errors = { ...this.ERROR_MESSAGES, ...errors };
 		const request = new Request(
 			new URL(path, "https://api.brawlstars.com/v1/"),
 		);
@@ -1467,9 +1487,22 @@ export class Brawl extends Command {
 			request: { url },
 			interaction: {
 				data: { id: commandId },
+				member,
 			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, `${"player"} ${string}`>,
 	) => {
+		if (
+			subcommand === "player link" &&
+			options.user &&
+			!(
+				member?.permissions &&
+				BigInt(member.permissions) & PermissionFlagsBits.ManageGuild
+			)
+		)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: "Questa opzione è privata!",
+			});
 		const userId = options.tag ? undefined : id;
 		options.tag ??=
 			(await env.DB.prepare("SELECT brawlTag FROM Users WHERE id = ?")
@@ -1520,6 +1553,38 @@ export class Brawl extends Command {
 				),
 				flags: MessageFlags.IsComponentsV2,
 			});
+		if (subcommand === "player link") {
+			const [player, playerId] = await Promise.all([
+				this.getPlayer(options.tag, edit),
+				userId ??
+					env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
+						.bind(options.tag)
+						.first<string>("id"),
+			]);
+
+			if (playerId)
+				return edit({
+					content: `Questo tag è già collegato a <@${playerId}>!`,
+					allowed_mentions: { parse: [] },
+				});
+			return edit({
+				embeds: [this.createPlayerEmbed(player)],
+				components: [
+					{
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								custom_id: `brawl-link-${id}-${options.tag}-${commandId}-${options.user ?? id}`,
+								label: "Salva",
+								emoji: { name: "🔗" },
+								style: ButtonStyle.Success,
+							},
+						],
+					},
+				],
+			});
+		}
 	};
 	static "clubCommand" = async (
 		{ defer, edit }: ChatInputReplies,
@@ -1668,7 +1733,7 @@ export class Brawl extends Command {
 	static "linkComponent" = async (
 		{ edit, deferUpdate }: ComponentReplies,
 		{
-			args: [tag, commandId],
+			args: [tag, commandId, userId],
 			user: { id },
 			interaction: {
 				message: { components },
@@ -1676,6 +1741,7 @@ export class Brawl extends Command {
 		}: ComponentArgs,
 	) => {
 		deferUpdate();
+		userId ||= id;
 		const player = await this.getPlayer(tag!, edit);
 
 		await env.DB.prepare(
@@ -1687,7 +1753,7 @@ export class Brawl extends Command {
 					brawlers = excluded.brawlers`,
 		)
 			.bind(
-				id,
+				userId,
 				tag,
 				player.highestTrophies,
 				JSON.stringify(
@@ -1698,7 +1764,7 @@ export class Brawl extends Command {
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
 				type: ComponentType.Button,
-				custom_id: `brawl-unlink-${id}-${tag}-${commandId || "0"}`,
+				custom_id: `brawl-unlink-${id}-${tag}-${commandId || "0"}-${userId}`,
 				label: "Scollega",
 				emoji: { name: "⛓️‍💥" },
 				style: ButtonStyle.Danger,
@@ -1713,13 +1779,14 @@ export class Brawl extends Command {
 	static "unlinkComponent" = async (
 		{ update }: ComponentReplies,
 		{
-			args: [tag, commandId],
+			args: [tag, commandId, userId],
 			user: { id },
 			interaction: {
 				message: { components },
 			},
 		}: ComponentArgs,
 	) => {
+		userId ||= id;
 		await env.DB.prepare(
 			`UPDATE Users
 				SET brawlTag = NULL,
@@ -1727,12 +1794,12 @@ export class Brawl extends Command {
 					brawlers = NULL
 				WHERE id = ?`,
 		)
-			.bind(id)
+			.bind(userId)
 			.run();
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
 				type: ComponentType.Button,
-				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}`,
+				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}`,
 				label: "Salva",
 				emoji: { name: "🔗" },
 				style: ButtonStyle.Success,

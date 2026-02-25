@@ -12,6 +12,7 @@ export * from "./editedAfter.ts";
 export * from "./icon.ts";
 export * from "./kick.ts";
 export * from "./love.ts";
+export * from "./matchChannel.ts";
 export * from "./ping.ts";
 export * from "./predict.ts";
 export * from "./predictions.ts";
