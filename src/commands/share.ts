@@ -251,7 +251,7 @@ export class Share extends Command {
 						})) ?? []),
 					]
 						.filter((a): a is Exclude<typeof a, Falsy> => Boolean(a))
-						.slice(0, 10),
+						.slice(0, 8),
 				},
 				{
 					type: ComponentType.TextDisplay,
@@ -280,7 +280,7 @@ export class Share extends Command {
 			});
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
 		let response = await fetchCache(
-			"https://x.com/",
+			"https://x.com",
 			{ headers: { "User-Agent": this.REAL_USER_AGENT } },
 			(30 * TimeUnit.Minute) / TimeUnit.Second,
 		);
@@ -640,7 +640,7 @@ export class Share extends Command {
 				{
 					type: ComponentType.MediaGallery,
 					items: (item.carousel_media ?? [item])
-						.slice(0, 10)
+						.slice(0, 8)
 						.map((item) => ({
 							media: {
 								url:
@@ -829,7 +829,7 @@ export class Share extends Command {
 			components.push({
 				type: ComponentType.MediaGallery,
 				items: media
-					.slice(0, 10)
+					.slice(0, 8)
 					.map((m) => ({
 						media: {
 							url:
