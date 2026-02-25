@@ -1764,7 +1764,7 @@ export class Brawl extends Command {
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
 				type: ComponentType.Button,
-				custom_id: `brawl-unlink-${id}-${tag}-${commandId || "0"}`,
+				custom_id: `brawl-unlink-${id}-${tag}-${commandId || "0"}-${userId}`,
 				label: "Scollega",
 				emoji: { name: "⛓️‍💥" },
 				style: ButtonStyle.Danger,
@@ -1779,13 +1779,14 @@ export class Brawl extends Command {
 	static "unlinkComponent" = async (
 		{ update }: ComponentReplies,
 		{
-			args: [tag, commandId],
+			args: [tag, commandId, userId],
 			user: { id },
 			interaction: {
 				message: { components },
 			},
 		}: ComponentArgs,
 	) => {
+		userId ||= id;
 		await env.DB.prepare(
 			`UPDATE Users
 				SET brawlTag = NULL,
@@ -1793,12 +1794,12 @@ export class Brawl extends Command {
 					brawlers = NULL
 				WHERE id = ?`,
 		)
-			.bind(id)
+			.bind(userId)
 			.run();
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
 				type: ComponentType.Button,
-				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}`,
+				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}`,
 				label: "Salva",
 				emoji: { name: "🔗" },
 				style: ButtonStyle.Success,
