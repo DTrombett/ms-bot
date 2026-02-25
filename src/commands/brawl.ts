@@ -66,13 +66,13 @@ enum ResolvedMemberRole {
 }
 
 export class Brawl extends Command {
-	static "NOTIFICATION_TYPES" = [
+	static NOTIFICATION_TYPES = [
 		"Brawler Tier Max",
 		"New Brawler",
 		"Trophy Road Advancement",
 		"All",
 	] as const;
-	static readonly "BRAWLER_EMOJIS": RecursiveReadonly<
+	static readonly BRAWLER_EMOJIS: RecursiveReadonly<
 		Record<string, [string, string, string, string]>
 	> = {
 		"0": [
@@ -646,7 +646,7 @@ export class Brawl extends Command {
 			"1431299150921732158",
 		],
 	};
-	static readonly "ROBO_RUMBLE_LEVELS" = [
+	static readonly ROBO_RUMBLE_LEVELS = [
 		"*None*",
 		"Normale",
 		"Difficile",
@@ -669,7 +669,7 @@ export class Brawl extends Command {
 		"Smodata XV",
 		"Smodata XVI",
 	];
-	private static readonly "ERROR_MESSAGES" = {
+	private static readonly ERROR_MESSAGES = {
 		400: "Parametri non validi forniti.",
 		403: "Accesso all'API negato.",
 		404: "Dati non trovati.",
@@ -677,7 +677,7 @@ export class Brawl extends Command {
 		500: "Errore interno dell'API.",
 		503: "Manutenzione in corso!",
 	};
-	static override "chatInputData" = {
+	static override chatInputData = {
 		name: "brawl",
 		description: "Interagisci con Brawl Stars!",
 		type: ApplicationCommandType.ChatInput,
@@ -837,7 +837,7 @@ export class Brawl extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	static "calculateFlags" = (flags = 0) =>
+	static calculateFlags = (flags = 0) =>
 		flags & NotificationType.All ? "**tutti i tipi**"
 		: flags ?
 			Object.values(NotificationType)
@@ -845,7 +845,7 @@ export class Brawl extends Command {
 				.map((v) => `**${NotificationType[v]}**`)
 				.join(", ")
 		:	"**nessun tipo**";
-	static "createBrawlerComponents" = (
+	static createBrawlerComponents = (
 		player: Brawl.Player,
 		userId: string,
 		brawler: Brawl.BrawlerStat,
@@ -923,7 +923,7 @@ export class Brawl extends Command {
 			],
 		},
 	];
-	static "createBrawlersComponents" = (
+	static createBrawlersComponents = (
 		player: Brawl.Player,
 		url: string,
 		id: string,
@@ -1057,7 +1057,7 @@ export class Brawl extends Command {
 			},
 		];
 	};
-	static "createMembersComponents" = (
+	static createMembersComponents = (
 		club: Brawl.Club,
 		locale: string,
 		id: string,
@@ -1189,7 +1189,7 @@ export class Brawl extends Command {
 			},
 		];
 	};
-	static "createPlayerEmbed" = (
+	static createPlayerEmbed = (
 		player: Brawl.Player,
 		playerId?: string,
 	): APIEmbed => ({
@@ -1228,7 +1228,7 @@ export class Brawl extends Command {
 			},
 		],
 	});
-	static "createClubMessage" = (
+	static createClubMessage = (
 		club: Brawl.Club,
 		locale: Locale,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
@@ -1337,7 +1337,7 @@ export class Brawl extends Command {
 			],
 		};
 	};
-	static "createPlayerMessage" = (
+	static createPlayerMessage = (
 		player: Brawl.Player,
 		userId: string,
 		playerId?: string,
@@ -1417,7 +1417,7 @@ export class Brawl extends Command {
 				`\`${res.status} ${res.statusText}\``,
 		);
 	}
-	static "getPlayer" = async (
+	static getPlayer = async (
 		tag: string,
 		edit?: BaseReplies["edit"],
 		cache?: boolean,
@@ -1440,7 +1440,7 @@ export class Brawl extends Command {
 			throw err;
 		}
 	};
-	static "getClub" = async (
+	static getClub = async (
 		tag: string,
 		edit?: BaseReplies["edit"],
 		cache?: boolean,
@@ -1463,7 +1463,7 @@ export class Brawl extends Command {
 			throw err;
 		}
 	};
-	static "normalizeTag" = (tag: string) => {
+	static normalizeTag = (tag: string) => {
 		tag = tag.toUpperCase().replace(/O/g, "0");
 		if (!tag.startsWith("#")) tag = `#${tag}`;
 		if (!/^#[0289PYLQGRJCUV]{3,15}$/.test(tag))
@@ -1478,7 +1478,7 @@ export class Brawl extends Command {
 			`${args.subcommand.split(" ")[0] as "player" | "club"}Command`
 		]?.(replies, args as never);
 	}
-	static "playerCommand" = async (
+	static playerCommand = async (
 		{ reply, defer, edit }: ChatInputReplies,
 		{
 			options,
@@ -1522,7 +1522,9 @@ export class Brawl extends Command {
 					err instanceof Error ? err.message : "Il tag fornito non è valido.",
 			});
 		}
-		defer();
+		defer({
+			flags: subcommand === "player link" ? MessageFlags.Ephemeral : undefined,
+		});
 
 		if (subcommand === "player view") {
 			const [player, playerId] = await Promise.all([
@@ -1586,7 +1588,7 @@ export class Brawl extends Command {
 			});
 		}
 	};
-	static "clubCommand" = async (
+	static clubCommand = async (
 		{ defer, edit }: ChatInputReplies,
 		{
 			options,
@@ -1730,7 +1732,7 @@ export class Brawl extends Command {
 			content: "Questa azione non è per te!",
 		});
 	}
-	static "linkComponent" = async (
+	static linkComponent = async (
 		{ edit, deferUpdate }: ComponentReplies,
 		{
 			args: [tag, commandId, userId],
@@ -1776,7 +1778,7 @@ export class Brawl extends Command {
 			components,
 		});
 	};
-	static "unlinkComponent" = async (
+	static unlinkComponent = async (
 		{ update }: ComponentReplies,
 		{
 			args: [tag, commandId, userId],
@@ -1806,7 +1808,7 @@ export class Brawl extends Command {
 			};
 		return update({ content: "Profilo scollegato con successo!", components });
 	};
-	static "brawlersComponent" = async (
+	static brawlersComponent = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
 			interaction: { data },
@@ -1832,7 +1834,7 @@ export class Brawl extends Command {
 			flags: MessageFlags.IsComponentsV2,
 		});
 	};
-	static "membersComponent" = async (
+	static membersComponent = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
 			interaction: { data, locale },
@@ -1857,7 +1859,7 @@ export class Brawl extends Command {
 			flags: MessageFlags.IsComponentsV2,
 		});
 	};
-	static "brawlerComponent" = async (
+	static brawlerComponent = async (
 		{ deferUpdate, edit }: ComponentReplies,
 		{ args: [tag, brawler, order, page], user: { id } }: ComponentArgs,
 	) => {
@@ -1875,7 +1877,7 @@ export class Brawl extends Command {
 			),
 		});
 	};
-	static "playerComponent" = async (
+	static playerComponent = async (
 		{ defer, edit }: ComponentReplies,
 		{ user: { id }, interaction: { data }, args: [tag] }: ComponentArgs,
 	) => {
@@ -1899,7 +1901,7 @@ export class Brawl extends Command {
 			),
 		);
 	};
-	static "clubComponent" = async (
+	static clubComponent = async (
 		{ defer, edit }: ComponentReplies,
 		{ args: [tag], interaction: { locale } }: ComponentArgs,
 	) => {
