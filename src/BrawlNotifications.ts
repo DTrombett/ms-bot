@@ -55,7 +55,7 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 				if (components.length)
 					await step.do(
 						`Send message for user ${user.id}`,
-						{ retries: { limit: 1, delay: 5000 } },
+						{ retries: { limit: 0, delay: 0 } },
 						this.sendMessage.bind(this, user, components, player),
 					);
 				return step.do(
@@ -82,7 +82,11 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 	private async processUser(
 		user: UserResult,
 	): Promise<{ components: APIContainerComponent[]; player: PartialPlayer }> {
-		const player: PartialPlayer = await Brawl.getPlayer(user.brawlTag);
+		const player: PartialPlayer = await Brawl.getPlayer(
+			user.brawlTag,
+			undefined,
+			false,
+		);
 		const components: APIContainerComponent[] = [];
 
 		if (

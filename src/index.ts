@@ -82,7 +82,7 @@ const server: ExportedHandler<Env> = {
 			const brawlBatch: WorkflowInstanceCreateOptions<BrawlParams>[] = results
 				.reduce((arr, v) => {
 					if (!v.brawlTag || !v.brawlNotifications) return arr;
-					if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+					if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
 					arr
 						.at(-1)!
 						.push({

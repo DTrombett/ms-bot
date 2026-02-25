@@ -818,16 +818,13 @@ export class Brawl extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static "calculateFlags" = (flags = 0) =>
-		flags & NotificationType.All
-			? "**tutti i tipi**"
-			: flags
-			? Object.values(NotificationType)
-					.filter(
-						(v): v is number => typeof v === "number" && (flags & v) !== 0,
-					)
-					.map((v) => `**${NotificationType[v]}**`)
-					.join(", ")
-			: "**nessun tipo**";
+		flags & NotificationType.All ? "**tutti i tipi**"
+		: flags ?
+			Object.values(NotificationType)
+				.filter((v): v is number => typeof v === "number" && (flags & v) !== 0)
+				.map((v) => `**${NotificationType[v]}**`)
+				.join(", ")
+		:	"**nessun tipo**";
 	static "createBrawlerComponents" = (
 		player: Brawl.Player,
 		userId: string,
@@ -875,10 +872,7 @@ export class Brawl extends Command {
 						},
 					},
 				},
-				{
-					type: ComponentType.Separator,
-					spacing: SeparatorSpacingSize.Large,
-				},
+				{ type: ComponentType.Separator, spacing: SeparatorSpacingSize.Large },
 				{
 					type: ComponentType.MediaGallery,
 					items: [
@@ -919,15 +913,14 @@ export class Brawl extends Command {
 		const pages = Math.ceil(player.brawlers.length / 10);
 
 		player.brawlers.sort(
-			order === BrawlerOrder.Name
-				? (a, b) => a.name.localeCompare(b.name)
-				: order === BrawlerOrder.MostTrophies
-				? (a, b) =>
-						b.trophies - a.trophies || b.highestTrophies - a.highestTrophies
-				: order === BrawlerOrder.LeastTrophies
-				? (a, b) =>
-						a.trophies - b.trophies || a.highestTrophies - b.highestTrophies
-				: (a, b) => b.power - a.power,
+			order === BrawlerOrder.Name ? (a, b) => a.name.localeCompare(b.name)
+			: order === BrawlerOrder.MostTrophies ?
+				(a, b) =>
+					b.trophies - a.trophies || b.highestTrophies - a.highestTrophies
+			: order === BrawlerOrder.LeastTrophies ?
+				(a, b) =>
+					a.trophies - b.trophies || a.highestTrophies - b.highestTrophies
+			:	(a, b) => b.power - a.power,
 		);
 		return [
 			{
@@ -950,21 +943,21 @@ export class Brawl extends Command {
 									{
 										type: ComponentType.TextDisplay,
 										content: `<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${
-											brawler.gadgets.length
-												? "<:gadget:1431298224966336639>"
-												: " \t "
+											brawler.gadgets.length ?
+												"<:gadget:1431298224966336639>"
+											:	" \t "
 										}${
-											brawler.gears.length
-												? "<:gear:1431298227105300593>"
-												: " \t "
+											brawler.gears.length ?
+												"<:gear:1431298227105300593>"
+											:	" \t "
 										}${
-											brawler.starPowers.length
-												? "<:starpower:1431298229328150649>"
-												: " \t "
+											brawler.starPowers.length ?
+												"<:starpower:1431298229328150649>"
+											:	" \t "
 										}${
-											brawler.gears.length >= 2
-												? "<:gear:1431298227105300593>"
-												: ""
+											brawler.gears.length >= 2 ?
+												"<:gear:1431298227105300593>"
+											:	""
 										}\n<:l3:${l3}><:l4:${l4}>\t<:level:1431299161717866536> ${
 											brawler.power
 										}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}`,
@@ -1055,13 +1048,10 @@ export class Brawl extends Command {
 		const members = club.members.map((m) => m.trophies).sort((a, b) => b - a);
 
 		club.members.sort(
-			order === MembersOrder.Name
-				? (a, b) => a.name.localeCompare(b.name)
-				: order === MembersOrder.MostTrophies
-				? (a, b) => b.trophies - a.trophies
-				: order === MembersOrder.LeastTrophies
-				? (a, b) => a.trophies - b.trophies
-				: (a, b) => MemberRole[a.role] - MemberRole[b.role],
+			order === MembersOrder.Name ? (a, b) => a.name.localeCompare(b.name)
+			: order === MembersOrder.MostTrophies ? (a, b) => b.trophies - a.trophies
+			: order === MembersOrder.LeastTrophies ? (a, b) => a.trophies - b.trophies
+			: (a, b) => MemberRole[a.role] - MemberRole[b.role],
 		);
 		return [
 			{
@@ -1092,25 +1082,27 @@ export class Brawl extends Command {
 							},
 						},
 					},
-					...club.members.slice(page * 10, (page + 1) * 10).flatMap(
-						(member, i): APISectionComponent => ({
-							type: ComponentType.Section,
-							components: [
-								{
-									type: ComponentType.TextDisplay,
-									content: `${i + page * 10 + 1}.\t**${member.name}**\n${
-										MemberEmoji[member.role]
-									} ${ResolvedMemberRole[member.role]}\t🏆 ${member.trophies}`,
+					...club.members
+						.slice(page * 10, (page + 1) * 10)
+						.flatMap(
+							(member, i): APISectionComponent => ({
+								type: ComponentType.Section,
+								components: [
+									{
+										type: ComponentType.TextDisplay,
+										content: `${i + page * 10 + 1}.\t**${member.name}**\n${
+											MemberEmoji[member.role]
+										} ${ResolvedMemberRole[member.role]}\t🏆 ${member.trophies}`,
+									},
+								],
+								accessory: {
+									type: ComponentType.Button,
+									style: ButtonStyle.Secondary,
+									custom_id: `brawl-player-${id}-${member.tag}`,
+									label: "Dettagli",
 								},
-							],
-							accessory: {
-								type: ComponentType.Button,
-								style: ButtonStyle.Secondary,
-								custom_id: `brawl-player-${id}-${member.tag}`,
-								label: "Dettagli",
-							},
-						}),
-					),
+							}),
+						),
 					{
 						type: ComponentType.ActionRow,
 						components: [
@@ -1185,13 +1177,12 @@ export class Brawl extends Command {
 		thumbnail: {
 			url: `https://cdn.brawlify.com/profile-icons/regular/${player.icon.id}.png`,
 		},
-		color: player.nameColor
-			? parseInt(player.nameColor.slice(4), 16)
-			: 0xffffff,
+		color:
+			player.nameColor ? parseInt(player.nameColor.slice(4), 16) : 0xffffff,
 		description: `🛡️ Club: ${
-			player.club.tag
-				? `**${player.club.name}** (${player.club.tag})`
-				: "*In nessun club*"
+			player.club.tag ?
+				`**${player.club.name}** (${player.club.tag})`
+			:	"*In nessun club*"
 		}${playerId ? `\n👤 Discord: <@${playerId}>` : ""}`,
 		fields: [
 			{
@@ -1301,11 +1292,13 @@ export class Brawl extends Command {
 							type: ComponentType.StringSelect,
 							custom_id: "brawl-player",
 							placeholder: "Visualizza un membro...",
-							options: club.members.slice(0, 25).map((m) => ({
-								label: m.name,
-								value: m.tag,
-								emoji: { name: MemberEmoji[m.role] ?? "👤" },
-							})),
+							options: club.members
+								.slice(0, 25)
+								.map((m) => ({
+									label: m.name,
+									value: m.tag,
+									emoji: { name: MemberEmoji[m.role] ?? "👤" },
+								})),
 						},
 					],
 				},
@@ -1370,24 +1363,25 @@ export class Brawl extends Command {
 				emoji: { name: "🫂" },
 				style: ButtonStyle.Primary,
 			});
-		return {
-			embeds: [this.createPlayerEmbed(player, playerId)],
-			components,
-		};
+		return { embeds: [this.createPlayerEmbed(player, playerId)], components };
 	};
-	static async "callApi"<T>(path: string, errors: Record<number, string> = {}) {
+	static async callApi<T>(
+		path: string,
+		errors: Record<number, string> = {},
+		cache = true,
+	) {
 		Object.assign(errors, Brawl.ERROR_MESSAGES);
 		const request = new Request(
 			new URL(path, "https://api.brawlstars.com/v1/"),
 		);
-		let res = await caches.default.match(request);
+		let res = cache && (await caches.default.match(request));
 
 		if (!res) {
 			const clone = request.clone();
 
 			clone.headers.set("Authorization", `Bearer ${env.BRAWL_STARS_API_TOKEN}`);
 			res = await env.BRAWL_STARS.fetch(clone);
-			waitUntil(caches.default.put(request, res.clone()));
+			if (cache) waitUntil(caches.default.put(request, res.clone()));
 		}
 		if (res.ok) return res.json<T>();
 		const body = await res.text();
@@ -1398,44 +1392,53 @@ export class Brawl extends Command {
 
 		console.error(json ?? body);
 		throw new Error(
-			errors[res.status] ??
-				`Errore interno: \`${json?.message ?? "Unknown error"}\``,
+			json?.message ??
+				errors[res.status] ??
+				`\`${res.status} ${res.statusText}\``,
 		);
 	}
-	static "getPlayer" = async (tag: string, edit?: BaseReplies["edit"]) => {
+	static "getPlayer" = async (
+		tag: string,
+		edit?: BaseReplies["edit"],
+		cache?: boolean,
+	) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Brawl.callApi<Brawl.Player>(
 				`players/${encodeURIComponent(tag)}`,
-				{
-					404: "Giocatore non trovato.",
-				},
+				{ 404: "Giocatore non trovato." },
+				cache,
 			);
 		} catch (err) {
 			if (edit)
 				throw await edit({
 					content:
-						err instanceof Error
-							? err.message
-							: "Non è stato possibile recuperare il profilo. Riprova più tardi.",
+						err instanceof Error ?
+							err.message
+						:	"Non è stato possibile recuperare il profilo. Riprova più tardi.",
 				});
 			throw err;
 		}
 	};
-	static "getClub" = async (tag: string, edit?: BaseReplies["edit"]) => {
+	static "getClub" = async (
+		tag: string,
+		edit?: BaseReplies["edit"],
+		cache?: boolean,
+	) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Brawl.callApi<Brawl.Club>(
 				`clubs/${encodeURIComponent(tag)}`,
 				{ 404: "Club non trovato." },
+				cache,
 			);
 		} catch (err) {
 			if (edit)
 				throw await edit({
 					content:
-						err instanceof Error
-							? err.message
-							: "Non è stato possibile recuperare il club. Riprova più tardi.",
+						err instanceof Error ?
+							err.message
+						:	"Non è stato possibile recuperare il club. Riprova più tardi.",
 				});
 			throw err;
 		}
@@ -1447,7 +1450,7 @@ export class Brawl extends Command {
 			throw new TypeError("Tag non valido.");
 		return tag;
 	};
-	static override async "chatInput"(
+	static override async chatInput(
 		replies: ChatInputReplies,
 		args: ChatInputArgs<typeof Brawl.chatInputData>,
 	) {
@@ -1585,9 +1588,9 @@ export class Brawl extends Command {
 			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(
 				result?.brawlNotifications,
 			)}.${
-				!result?.brawlTag
-					? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
-					: ""
+				!result?.brawlTag ?
+					`\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
+				:	""
 			}`,
 		});
 	};
@@ -1615,9 +1618,9 @@ export class Brawl extends Command {
 			content: `Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(
 				result?.brawlNotifications,
 			)}.${
-				!result?.brawlTag
-					? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
-					: ""
+				!result?.brawlTag ?
+					`\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
+				:	""
 			}`,
 		});
 	};
@@ -1641,13 +1644,13 @@ export class Brawl extends Command {
 			content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(
 				result?.brawlNotifications,
 			)}.${
-				!result?.brawlTag
-					? `\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
-					: ""
+				!result?.brawlTag ?
+					`\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
+				:	""
 			}`,
 		});
 	};
-	static override async "component"(
+	static override async component(
 		replies: ComponentReplies,
 		args: ComponentArgs,
 	) {
@@ -1753,9 +1756,9 @@ export class Brawl extends Command {
 				request.url,
 				id,
 				Number(
-					data.component_type === ComponentType.StringSelect
-						? data.values[0]
-						: order,
+					data.component_type === ComponentType.StringSelect ?
+						data.values[0]
+					:	order,
 				) || undefined,
 				Number(page) || undefined,
 			),
@@ -1778,9 +1781,9 @@ export class Brawl extends Command {
 				locale,
 				id,
 				Number(
-					data.component_type === ComponentType.StringSelect
-						? data.values[0]
-						: order,
+					data.component_type === ComponentType.StringSelect ?
+						data.values[0]
+					:	order,
 				) || undefined,
 				Number(page) || undefined,
 			),
