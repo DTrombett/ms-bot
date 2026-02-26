@@ -13,6 +13,8 @@ import { createSolidPng } from "./util/createSolidPng.ts";
 import type { RGB } from "./util/resolveColor.ts";
 
 const handler = new CommandHandler(Object.values(commands));
+const create405 = (Allow = "GET") =>
+	new Response(null, { status: 405, headers: { Allow } });
 
 const server: ExportedHandler<Env> = {
 	fetch: async (request) => {
@@ -25,10 +27,10 @@ const server: ExportedHandler<Env> = {
 					console.error(e);
 					return new Response(null, { status: 500 });
 				});
-			return new Response(null, { status: 405 });
+			return create405("POST");
 		}
 		if (url.pathname === "/color") {
-			if (request.method !== "GET") return new Response(null, { status: 405 });
+			if (request.method !== "GET") return create405();
 			const rgb = [
 				url.searchParams.get("red"),
 				url.searchParams.get("green"),
@@ -49,11 +51,11 @@ const server: ExportedHandler<Env> = {
 				return Response.redirect(
 					`https://open.spotify.com/user/${encodeURIComponent(env.SPOTIFY_ID)}`,
 				);
-			return new Response(null, { status: 405 });
+			return create405();
 		}
 		if (url.pathname === "/") {
 			if (request.method === "GET") return new Response("Ready!");
-			return new Response(null, { status: 405 });
+			return create405();
 		}
 		return new Response(null, { status: 404 });
 	},
