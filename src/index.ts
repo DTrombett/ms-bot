@@ -13,8 +13,8 @@ import { createSolidPng } from "./util/createSolidPng.ts";
 import type { RGB } from "./util/resolveColor.ts";
 
 const handler = new CommandHandler(Object.values(commands));
-const create405 = (Allow = "GET") =>
-	new Response(null, { status: 405, headers: { Allow } });
+const create405 = (allow = "GET") =>
+	new Response(null, { status: 405, headers: { allow } });
 
 const server: ExportedHandler<Env> = {
 	fetch: async (request) => {
