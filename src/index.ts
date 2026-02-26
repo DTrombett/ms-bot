@@ -47,7 +47,7 @@ const server: ExportedHandler<Env> = {
 		if (url.pathname === "/spotify") {
 			if (request.method === "GET")
 				return Response.redirect(
-					`https://open.spotify.com/user/${env.SPOTIFY_ID}`,
+					`https://open.spotify.com/user/${encodeURIComponent(env.SPOTIFY_ID)}`,
 				);
 			return new Response(null, { status: 405 });
 		}
