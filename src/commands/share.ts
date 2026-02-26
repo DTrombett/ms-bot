@@ -8,6 +8,7 @@ import {
 	MessageFlags,
 	type APIButtonComponent,
 	type APIComponentInContainer,
+	type APIMediaGalleryItem,
 	type APIMessageTopLevelComponent,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
@@ -399,7 +400,7 @@ export class Share extends Command {
 		if (tweet.__typename === "TweetTombstone")
 			return edit({
 				flags: MessageFlags.IsComponentsV2,
-				components: await this.createTweetContentComponents(tweet),
+				components: this.createTweetContentComponents(tweet),
 				allowed_mentions: { parse: [] },
 			});
 		let retweeter: string | undefined;
@@ -417,11 +418,11 @@ export class Share extends Command {
 			if (lastVersion === tweetId) lastVersion = undefined;
 		}
 		const components: APIMessageTopLevelComponent[] =
-			await this.createTweetContentComponents(tweet, retweeter);
+			this.createTweetContentComponents(tweet, retweeter);
 		if (tweet.quoted_status_result)
 			components.push({
 				type: ComponentType.Container,
-				components: await this.createTweetContentComponents(
+				components: this.createTweetContentComponents(
 					tweet.quoted_status_result.result,
 				),
 			});
@@ -783,10 +784,39 @@ export class Share extends Command {
 			});
 		return buttons;
 	};
-	private static async createTweetContentComponents(
+	private static mapTwitterMedia = (
+		media: Twitter.Media,
+	): APIMediaGalleryItem => ({
+		media: {
+			url:
+				media.video_info?.variants
+					.filter(
+						(a) =>
+							a.content_type.startsWith("video/") &&
+							(!a.bitrate ||
+								(a.bitrate * media.video_info!.duration_millis) /
+									TimeUnit.Second <=
+									500 * 1024 * 1024),
+					)
+					.reduce<Twitter.Variant | null>(
+						(a, b) => (a?.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b),
+						null,
+					)?.url ?? media.media_url_https,
+		},
+		description:
+			[
+				media.ext_alt_text,
+				media.additional_media_info?.source_user?.user_results.result.core
+					.name &&
+					`Di ${media.additional_media_info?.source_user?.user_results.result.core.name}`,
+			]
+				.filter(Boolean)
+				.join("\n") || undefined,
+	});
+	private static createTweetContentComponents(
 		tweet: Twitter.Tweet | Twitter.TweetTombstone,
 		retweeter?: string,
-	): Promise<APIComponentInContainer[]> {
+	): APIComponentInContainer[] {
 		const user =
 			tweet.__typename === "Tweet" ?
 				tweet.core.user_results.result
@@ -812,67 +842,83 @@ export class Share extends Command {
 				},
 			},
 		];
-		const media:
-			| (Partial<Twitter.Media> & Pick<Twitter.Media, "media_url_https">)[]
-			| undefined =
-			tweet.__typename === "Tweet" ?
-				(tweet.note_tweet?.note_tweet_results.result.entity_set.media ??
-				tweet.legacy.entities.media ??
-				[])
-			:	[{ media_url_https: tweet.tombstone.blurred_image_url }];
+		const items: APIMediaGalleryItem[] = [];
 
-		if (tweet.__typename === "Tweet" && tweet.card)
-			media.push(
-				...(await Promise.try(() =>
-					Object.values(
-						(
-							JSON.parse(
-								tweet.card!.legacy.binding_values.find(
-									(b) => b.key === "unified_card",
-								)?.value.string_value ?? JSON.stringify({ media_entities: [] }),
-							) as Twitter.TweetCard
-						).media_entities,
-					),
-				).catch((err) => {
-					console.error(err, tweet.card?.legacy.binding_values);
-					return [];
-				})),
+		if (tweet.__typename === "Tweet") {
+			items.push(
+				...(
+					tweet.note_tweet?.note_tweet_results.result.entity_set.media ??
+					tweet.legacy.entities.media ??
+					[]
+				).map(this.mapTwitterMedia),
 			);
-		if (media.length)
-			components.push({
-				type: ComponentType.MediaGallery,
-				items: media
-					.slice(0, 8)
-					.map((m) => ({
-						media: {
-							url:
-								m.video_info?.variants
-									.filter(
-										(a) =>
-											a.content_type.startsWith("video/") &&
-											(!a.bitrate ||
-												(a.bitrate * m.video_info!.duration_millis) /
-													TimeUnit.Second <=
-													500 * 1024 * 1024),
-									)
-									.reduce<Twitter.Variant | null>(
-										(a, b) =>
-											a?.bitrate && a.bitrate > (b.bitrate ?? 0) ? a : b,
-										null,
-									)?.url ?? m.media_url_https,
-						},
-						description:
-							[
-								m.ext_alt_text,
-								m.additional_media_info?.source_user?.user_results.result.core
-									.name &&
-									`Di ${m.additional_media_info?.source_user?.user_results.result.core.name}`,
-							]
-								.filter(Boolean)
-								.join("\n") || undefined,
-					})),
-			});
+			if (tweet.card) {
+				const { binding_values } = tweet.card.legacy;
 
+				switch (tweet.card.legacy.name) {
+					case "unified_card":
+						try {
+							items.push(
+								...Object.values(
+									(
+										JSON.parse(
+											binding_values.find(
+												(b): b is Twitter.StringBinding =>
+													b.value.type === "STRING" && b.key === "unified_card",
+											)!.value.string_value,
+										) as Twitter.TweetCard
+									).media_entities,
+								).map(this.mapTwitterMedia),
+							);
+						} catch (err) {
+							console.log(
+								`Failed to resolve ${JSON.stringify(binding_values)}`,
+							);
+						}
+						break;
+					case "summary_large_image": {
+						const url = binding_values.find(
+							(v): v is Twitter.ImageBinding =>
+								v.value.type === "IMAGE" &&
+								[
+									"thumbnail_image_original",
+									"photo_image_full_size_original",
+									"summary_photo_image_original",
+								].includes(v.key),
+						)?.value.image_value.url;
+
+						if (url) {
+							const domain = binding_values.find(
+								(b): b is Twitter.StringBinding =>
+									b.value.type === "STRING" &&
+									["domain", "vanity_url"].includes(b.key),
+							)?.value.string_value;
+
+							items.push({
+								media: { url },
+								description:
+									[
+										binding_values.find(
+											(b): b is Twitter.StringBinding =>
+												b.value.type === "STRING" && b.key === "title",
+										)?.value.string_value,
+										binding_values.find(
+											(b): b is Twitter.StringBinding =>
+												b.value.type === "STRING" && b.key === "description",
+										)?.value.string_value,
+										domain && `Da ${domain}`,
+									]
+										.filter(Boolean)
+										.join("\n") || undefined,
+							});
+						}
+					}
+				}
+			}
+		} else if (tweet.__typename === "TweetTombstone")
+			items.push({ media: { url: tweet.tombstone.blurred_image_url } });
+		if (items.length)
+			components.push({ type: ComponentType.MediaGallery, items });
 		return components;
 	}
 }
