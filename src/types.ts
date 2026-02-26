@@ -647,15 +647,22 @@ declare global {
 				}
 			>;
 		};
-
+		type StringBinding = {
+			key: string;
+			value: { scribe_key?: string; string_value: string; type: "STRING" };
+		};
+		type ImageBinding = {
+			key: string;
+			value: {
+				image_value: { height: number; url: string; width: number };
+				type: "IMAGE";
+			};
+		};
 		type Tweet = {
 			__typename: "Tweet";
 			card?: {
 				legacy: {
-					binding_values: {
-						key: string;
-						value: { scribe_key?: string; string_value: string; type: string };
-					}[];
+					binding_values: (StringBinding | ImageBinding)[];
 					card_platform: {
 						platform: {
 							audience: { name: string };
