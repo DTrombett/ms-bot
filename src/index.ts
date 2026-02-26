@@ -10,16 +10,10 @@ import type {
 import * as commands from "./commands/index.ts";
 import { CommandHandler } from "./util/CommandHandler.ts";
 import { createSolidPng } from "./util/createSolidPng.ts";
+import { spotifyKey } from "./util/keys.ts";
 import type { RGB } from "./util/resolveColor.ts";
 
 const handler = new CommandHandler(Object.values(commands));
-const spotifyKey = await crypto.subtle.importKey(
-	"raw",
-	Uint8Array.from(atob(env.SPOTIFY_PRIVATE_KEY), (c) => c.charCodeAt(0)),
-	{ name: "AES-GCM" },
-	false,
-	["encrypt", "decrypt"],
-);
 
 const server: ExportedHandler<Env> = {
 	fetch: async (request) => {

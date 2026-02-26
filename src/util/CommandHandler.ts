@@ -11,17 +11,10 @@ import {
 	type RoutesDeclarations,
 } from "discord-api-types/v10";
 import type { Command } from "../Command.ts";
+import { discordKey } from "./keys.ts";
 import { rest } from "./rest.ts";
 import { hexToUint8Array } from "./strings.ts";
 import { TimeUnit } from "./time.ts";
-
-const key = await crypto.subtle.importKey(
-	"raw",
-	hexToUint8Array(env.DISCORD_PUBLIC_KEY),
-	"Ed25519",
-	false,
-	["verify"],
-);
 
 export class CommandHandler {
 	static ReplyTypes = {
@@ -103,7 +96,7 @@ export class CommandHandler {
 		if (
 			await crypto.subtle.verify(
 				"Ed25519",
-				key,
+				discordKey,
 				hexToUint8Array(signature),
 				new TextEncoder().encode(timestamp + body),
 			)
