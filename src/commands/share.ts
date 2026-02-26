@@ -686,11 +686,12 @@ export class Share extends Command {
 				(tweet.note_tweet?.note_tweet_results.result.text ??
 					tweet.legacy.full_text)
 			:	tweet.tombstone.text.text,
-		).slice(
-			...((tweet.__typename === "Tweet" && tweet.legacy.display_text_range) ||
-				[]),
 		);
-		const entities: { indices: readonly [number, number]; data: string }[] = [
+		const entities: {
+			indices: readonly [number, number];
+			data: string;
+			replace?: boolean;
+		}[] = [
 			...(entitySet.user_mentions?.map(
 				(e) =>
 					({
@@ -709,6 +710,14 @@ export class Share extends Command {
 				(u) =>
 					({ indices: [u.fromIndex, u.toIndex], data: u.ref.url }) as const,
 			) ?? []),
+			...(entitySet.urls?.map(
+				(u) =>
+					({
+						indices: u.indices,
+						data: u.expanded_url,
+						replace: true,
+					}) as const,
+			) ?? []),
 		];
 
 		return decodeHTML(
@@ -716,9 +725,13 @@ export class Share extends Command {
 				.sort((a, b) => a.indices[0] - b.indices[0])
 				.reduce(
 					(fullText, mention, i) =>
-						`${fullText}[${text.slice(...mention.indices).join("")}](${escapeBaseMarkdown(
-							mention.data,
-						)})${text.slice(mention.indices[1], entities[i + 1]?.indices[0]).join("")}`,
+						`${fullText}${
+							mention.replace ?
+								escapeBaseMarkdown(mention.data)
+							:	`[${text.slice(...mention.indices).join("")}](${escapeBaseMarkdown(
+									mention.data,
+								)})`
+						}${text.slice(mention.indices[1], entities[i + 1]?.indices[0]).join("")}`,
 					text.slice(0, entities[0]?.indices[0]).join(""),
 				),
 		);
