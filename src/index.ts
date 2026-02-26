@@ -10,7 +10,6 @@ import type {
 import * as commands from "./commands/index.ts";
 import { CommandHandler } from "./util/CommandHandler.ts";
 import { createSolidPng } from "./util/createSolidPng.ts";
-import { spotifyKey } from "./util/keys.ts";
 import type { RGB } from "./util/resolveColor.ts";
 
 const handler = new CommandHandler(Object.values(commands));
@@ -43,92 +42,6 @@ const server: ExportedHandler<Env> = {
 				);
 			return new Response(await createSolidPng(256, 256, ...rgb), {
 				headers: { "Content-Type": "image/png" },
-			});
-		}
-		if (url.pathname === "/spotify/login") {
-			if (request.method !== "GET") return new Response(null, { status: 405 });
-			if (!url.searchParams.has("id"))
-				return new Response("Missing id", { status: 400 });
-			const iv = crypto.getRandomValues(new Uint8Array(12));
-
-			return Response.redirect(
-				`https://accounts.spotify.com/authorize?${new URLSearchParams({
-					response_type: "code",
-					scope: "user-library-read",
-					client_id: env.SPOTIFY_CLIENT_ID,
-					redirect_uri: env.SPOTIFY_REDIRECT_URI,
-					state: `${btoa(
-						String.fromCharCode(
-							...new Uint8Array(
-								await crypto.subtle.encrypt(
-									{ name: "AES-GCM", iv },
-									spotifyKey,
-									new TextEncoder().encode(url.searchParams.toString()),
-								),
-							),
-						),
-					)},${btoa(String.fromCharCode(...iv))}`,
-				}).toString()}`,
-			);
-		}
-		if (url.pathname === "/spotify/callback") {
-			if (request.method !== "GET") return new Response(null, { status: 405 });
-			const code = url.searchParams.get("code");
-			const [cipherText, iv] = (url.searchParams.get("state") ?? "").split(",");
-
-			if (!code || !cipherText || !iv)
-				return new Response(
-					`Impossibile collegare il profilo! Debug: code: ${!!code}, cipherText: ${!!cipherText}, iv: ${!!iv}`,
-					{ status: 400 },
-				);
-			const state = new URLSearchParams(
-				new TextDecoder().decode(
-					new Uint8Array(
-						await crypto.subtle.decrypt(
-							{
-								name: "AES-GCM",
-								iv: Uint8Array.from(atob(iv), (c) => c.charCodeAt(0)),
-							},
-							spotifyKey,
-							Uint8Array.from(atob(cipherText), (c) => c.charCodeAt(0)),
-						),
-					),
-				),
-			);
-			let res = await fetch("https://accounts.spotify.com/api/token", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-					Authorization: `Basic ${btoa(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`)}`,
-				},
-				body: new URLSearchParams({
-					grant_type: "authorization_code",
-					code,
-					redirect_uri: env.SPOTIFY_REDIRECT_URI,
-				}),
-			});
-			if (!res.ok) return res;
-			const now = Math.floor(Date.now() / 1000),
-				body = await res.json<Spotify.TokenResponse>();
-			res = await fetch("https://api.spotify.com/v1/me", {
-				headers: { Authorization: `Bearer ${body.access_token}` },
-			});
-			if (!res.ok) return res;
-			const data = await res.json<Spotify.CurrentUserProfile>();
-			await env.DB.prepare(
-				`INSERT OR REPLACE INTO SpotifyUsers (id, discordId, accessToken, expirationDate, refreshToken)
-				VALUES (?1, ?2, ?3, ?4, ?5)`,
-			)
-				.bind(
-					data.id,
-					state.get("id"),
-					body.access_token,
-					now + body.expires_in,
-					body.refresh_token,
-				)
-				.run();
-			return new Response("Profilo collegato con successo!", {
-				headers: { "Content-Type": "text/plain" },
 			});
 		}
 		if (url.pathname === "/spotify") {
