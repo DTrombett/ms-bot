@@ -15,7 +15,7 @@ import { rest } from "./rest.ts";
 import { hexToUint8Array } from "./strings.ts";
 import { TimeUnit } from "./time.ts";
 
-const key = await crypto.subtle.importKey(
+const discordKey = await crypto.subtle.importKey(
 	"raw",
 	hexToUint8Array(env.DISCORD_PUBLIC_KEY),
 	"Ed25519",
@@ -103,7 +103,7 @@ export class CommandHandler {
 		if (
 			await crypto.subtle.verify(
 				"Ed25519",
-				key,
+				discordKey,
 				hexToUint8Array(signature),
 				new TextEncoder().encode(timestamp + body),
 			)

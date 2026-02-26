@@ -13,15 +13,13 @@ import { createSolidPng } from "./util/createSolidPng.ts";
 import type { RGB } from "./util/resolveColor.ts";
 
 const handler = new CommandHandler(Object.values(commands));
+const create405 = (Allow = "GET") =>
+	new Response(null, { status: 405, headers: { Allow } });
 
 const server: ExportedHandler<Env> = {
 	fetch: async (request) => {
 		const url = new URL(request.url);
 
-		if (url.pathname === "/") {
-			if (request.method === "GET") return new Response("Ready!");
-			return Response.json({ error: "Method Not Allowed" }, { status: 405 });
-		}
 		if (url.pathname === "/interactions") {
 			if (request.method === "POST")
 				return handler.handleInteraction(request).catch((e) => {
@@ -29,16 +27,16 @@ const server: ExportedHandler<Env> = {
 					console.error(e);
 					return new Response(null, { status: 500 });
 				});
-			return Response.json({ error: "Method Not Allowed" }, { status: 405 });
+			return create405("POST");
 		}
 		if (url.pathname === "/color") {
-			if (request.method !== "GET")
-				return Response.json({ error: "Method Not Allowed" }, { status: 405 });
+			if (request.method !== "GET") return create405();
 			const rgb = [
 				url.searchParams.get("red"),
 				url.searchParams.get("green"),
 				url.searchParams.get("blue"),
 			].map(Number) as RGB;
+
 			if (rgb.some(isNaN))
 				return Response.json(
 					{ error: "Missing 'red', 'green' or 'blue' query parameter" },
@@ -48,7 +46,18 @@ const server: ExportedHandler<Env> = {
 				headers: { "Content-Type": "image/png" },
 			});
 		}
-		return Response.json({ error: "Not Found" }, { status: 404 });
+		if (url.pathname === "/spotify") {
+			if (request.method === "GET")
+				return Response.redirect(
+					`https://open.spotify.com/user/${encodeURIComponent(env.SPOTIFY_ID)}`,
+				);
+			return create405();
+		}
+		if (url.pathname === "/") {
+			if (request.method === "GET") return new Response("Ready!");
+			return create405();
+		}
+		return new Response(null, { status: 404 });
 	},
 	scheduled: async ({ cron }) => {
 		if (cron === "0 0 * * *")
