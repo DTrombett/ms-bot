@@ -1238,6 +1238,7 @@ export class Clash extends Command {
 				path,
 				"https://ms-api.trombett.org/proxy/api.clashroyale.com/v1/",
 			),
+			{ headers: { "x-env": env.NODE_ENV } },
 		);
 		let res = await caches.default.match(request);
 
