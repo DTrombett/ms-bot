@@ -77,11 +77,10 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 			);
 	}
 
-	private async processUser(user: UserResult): Promise<{
-		embeds: APIEmbed[];
-		player: PartialPlayer;
-	}> {
-		const player = await Clash.getPlayer(user.clashTag);
+	private async processUser(
+		user: UserResult,
+	): Promise<{ embeds: APIEmbed[]; player: PartialPlayer }> {
+		const player = await Clash.getPlayer(user.clashTag, { cache: false });
 		const embeds: APIEmbed[] = [];
 
 		if (
@@ -132,9 +131,9 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 					)
 						embeds.push({
 							title: `Hai trovato ${
-								card.rarity === "champion"
-									? "un nuovo campione"
-									: "una nuova leggendaria"
+								card.rarity === "champion" ?
+									"un nuovo campione"
+								:	"una nuova leggendaria"
 							}!`,
 							description: `Hai sbloccato **${card.name}**!`,
 							thumbnail: { url: card.iconUrls?.medium ?? "" },
@@ -147,33 +146,33 @@ export class ClashNotifications extends WorkflowEntrypoint<Env, Params> {
 							...bitSetMap<APIEmbed | null>(
 								(card.evolutionLevel ?? 0) ^ (oldCard?.evolutionLevel ?? 0),
 								(evo) =>
-									evo
-										? {
-												color: 0xa312ef,
-												title: "Nuova evoluzione sbloccata!",
-												description: `Hai sbloccato l'evoluzione per **${card.name}**!`,
-												thumbnail: {
-													url:
-														card.iconUrls?.evolutionMedium ??
-														card.iconUrls?.medium ??
-														"",
-												},
-										  }
-										: null,
+									evo ?
+										{
+											color: 0xa312ef,
+											title: "Nuova evoluzione sbloccata!",
+											description: `Hai sbloccato l'evoluzione per **${card.name}**!`,
+											thumbnail: {
+												url:
+													card.iconUrls?.evolutionMedium ??
+													card.iconUrls?.medium ??
+													"",
+											},
+										}
+									:	null,
 								(hero) =>
-									hero
-										? {
-												color: 0xffd700,
-												title: "Nuovo eroe sbloccato!",
-												description: `Hai sbloccato **${card.name}** eroe!`,
-												thumbnail: {
-													url:
-														card.iconUrls?.heroMedium ??
-														card.iconUrls?.medium ??
-														"",
-												},
-										  }
-										: null,
+									hero ?
+										{
+											color: 0xffd700,
+											title: "Nuovo eroe sbloccato!",
+											description: `Hai sbloccato **${card.name}** eroe!`,
+											thumbnail: {
+												url:
+													card.iconUrls?.heroMedium ??
+													card.iconUrls?.medium ??
+													"",
+											},
+										}
+									:	null,
 							),
 						);
 				}

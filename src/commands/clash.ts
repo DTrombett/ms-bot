@@ -1231,8 +1231,14 @@ export class Clash extends Command {
 				/(?:\p{Extended_Pictographic}|\p{Regional_Indicator})+/gu,
 				(s) => `${s} `,
 			);
-	static async callApi<T>(path: string, errors: Record<number, string> = {}) {
-		Object.assign(errors, Clash.ERROR_MESSAGES);
+	static async callApi<T>(
+		path: string,
+		{
+			errors = {},
+			cache = true,
+		}: { errors?: Record<number, string>; cache?: boolean } = {},
+	) {
+		errors = { ...this.ERROR_MESSAGES, ...errors };
 		const request = new Request(
 			new URL(
 				path,
@@ -1240,7 +1246,7 @@ export class Clash extends Command {
 			),
 			{ headers: { "x-env": env.NODE_ENV } },
 		);
-		let res = await caches.default.match(request);
+		let res = cache && (await caches.default.match(request));
 
 		if (!res) {
 			const clone = request.clone();
@@ -1250,7 +1256,7 @@ export class Clash extends Command {
 				`Bearer ${env.CLASH_ROYALE_API_TOKEN}`,
 			);
 			res = await fetch(clone);
-			waitUntil(caches.default.put(request, res.clone()));
+			if (cache) waitUntil(caches.default.put(request, res.clone()));
 		}
 		if (res.ok) return res.json<T>();
 		const body = await res.text();
@@ -1261,16 +1267,20 @@ export class Clash extends Command {
 
 		console.error(json ?? body);
 		throw new Error(
-			errors[res.status] ??
-				`Errore interno: \`${json?.message ?? "Unknown error"}\``,
+			json?.message ??
+				errors[res.status] ??
+				`\`${res.status} ${res.statusText}\``,
 		);
 	}
-	static "getPlayer" = async (tag: string, edit?: BaseReplies["edit"]) => {
+	static "getPlayer" = async (
+		tag: string,
+		{ edit, cache }: { edit?: BaseReplies["edit"]; cache?: boolean } = {},
+	) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Clash.callApi<Clash.Player>(
 				`players/${encodeURIComponent(tag)}`,
-				{ 404: "Giocatore non trovato." },
+				{ errors: { 404: "Giocatore non trovato." }, cache },
 			);
 		} catch (err) {
 			if (edit)
@@ -1283,12 +1293,15 @@ export class Clash extends Command {
 			throw err;
 		}
 	};
-	static "getBattleLog" = async (tag: string, edit?: BaseReplies["edit"]) => {
+	static "getBattleLog" = async (
+		tag: string,
+		{ edit, cache }: { edit?: BaseReplies["edit"]; cache?: boolean } = {},
+	) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Clash.callApi<Clash.BattleList>(
 				`players/${encodeURIComponent(tag)}/battlelog`,
-				{ 404: "Giocatore non trovato." },
+				{ errors: { 404: "Giocatore non trovato." }, cache },
 			);
 		} catch (err) {
 			if (edit)
@@ -1301,12 +1314,15 @@ export class Clash extends Command {
 			throw err;
 		}
 	};
-	static "getClan" = async (tag: string, edit?: BaseReplies["edit"]) => {
+	static "getClan" = async (
+		tag: string,
+		{ edit, cache }: { edit?: BaseReplies["edit"]; cache?: boolean } = {},
+	) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Clash.callApi<Clash.Clan>(
 				`clans/${encodeURIComponent(tag)}`,
-				{ 404: "Clan non trovato." },
+				{ errors: { 404: "Clan non trovato." }, cache },
 			);
 		} catch (err) {
 			if (edit)
@@ -1363,7 +1379,7 @@ export class Clash extends Command {
 		defer();
 		if (subcommand === "player view") {
 			const [player, playerId] = await Promise.all([
-				this.getPlayer(options.tag, edit),
+				this.getPlayer(options.tag, { edit }),
 				userId ??
 					env.DB.prepare("SELECT id FROM Users WHERE clashTag = ?")
 						.bind(options.tag)
@@ -1388,7 +1404,7 @@ export class Clash extends Command {
 		if (subcommand === "player collection")
 			return edit({
 				components: this.createCardsComponents(
-					await this.getPlayer(options.tag, edit),
+					await this.getPlayer(options.tag, { edit }),
 					url,
 					id,
 					options.order,
@@ -1418,13 +1434,13 @@ export class Clash extends Command {
 				.first<string>("clashTag");
 
 			if (playerTag)
-				options.tag = (await this.getPlayer(playerTag, edit)).clan.tag;
+				options.tag = (await this.getPlayer(playerTag, { edit })).clan.tag;
 		}
 		if (!options.tag)
 			return edit({
 				content: `Non hai ancora collegato un profilo Clash Royale! Specifica il tag del clan come parametro o collega un profilo con </clash profile:${commandId}>.`,
 			});
-		const clan = await this.getClan(options.tag, edit);
+		const clan = await this.getClan(options.tag, { edit });
 
 		if (subcommand === "clan view")
 			return edit(this.createClanMessage(clan, locale));
@@ -1614,7 +1630,7 @@ export class Clash extends Command {
 		else deferUpdate();
 		return edit({
 			components: this.createCardsComponents(
-				await this.getPlayer(tag!, edit),
+				await this.getPlayer(tag!, { edit }),
 				request.url,
 				id,
 				((data.component_type === ComponentType.StringSelect ?
@@ -1638,7 +1654,7 @@ export class Clash extends Command {
 		else deferUpdate();
 		return edit({
 			components: this.createBadgesComponents(
-				await this.getPlayer(tag!, edit),
+				await this.getPlayer(tag!, { edit }),
 				request.url,
 				id,
 				locale,
@@ -1660,7 +1676,7 @@ export class Clash extends Command {
 		else deferUpdate();
 		return edit({
 			components: this.createAchievementsComponents(
-				await this.getPlayer(tag!, edit),
+				await this.getPlayer(tag!, { edit }),
 				request.url,
 				id,
 				locale,
@@ -1680,7 +1696,7 @@ export class Clash extends Command {
 	) => {
 		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
 		else deferUpdate();
-		const player = await this.getPlayer(tag!, edit);
+		const player = await this.getPlayer(tag!, { edit });
 
 		player.cards = player.supportCards ?? [];
 		return edit({
@@ -1709,7 +1725,7 @@ export class Clash extends Command {
 		else deferUpdate();
 		return edit({
 			components: this.createMembersComponents(
-				await this.getClan(tag!, edit),
+				await this.getClan(tag!, { edit }),
 				locale,
 				id,
 				((data.component_type === ComponentType.StringSelect ?
@@ -1729,7 +1745,7 @@ export class Clash extends Command {
 		}: ComponentArgs,
 	) => {
 		deferUpdate();
-		const player = await this.getPlayer(tag!, edit);
+		const player = await this.getPlayer(tag!, { edit });
 		const cardId = Number(card);
 		let item = player.cards.find((b) => b.id === cardId);
 		let supportCard = false;
@@ -1764,7 +1780,7 @@ export class Clash extends Command {
 		if (updateFlag) deferUpdate();
 		else defer({ flags: MessageFlags.Ephemeral });
 		const [player, playerId] = await Promise.all([
-			this.getPlayer(tag, edit),
+			this.getPlayer(tag, { edit }),
 			env.DB.prepare("SELECT id FROM Users WHERE clashTag = ?")
 				.bind(tag)
 				.first<string>("id"),
@@ -1786,7 +1802,9 @@ export class Clash extends Command {
 		{ args: [tag], interaction: { locale } }: ComponentArgs,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
-		return edit(this.createClanMessage(await this.getClan(tag!, edit), locale));
+		return edit(
+			this.createClanMessage(await this.getClan(tag!, { edit }), locale),
+		);
 	};
 	static "logComponent" = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
@@ -1798,7 +1816,7 @@ export class Clash extends Command {
 	) => {
 		if (replyFlag) defer({ flags: MessageFlags.Ephemeral });
 		else deferUpdate();
-		const battleLog = await this.getBattleLog(tag!, edit);
+		const battleLog = await this.getBattleLog(tag!, { edit });
 
 		const { page, component } = this.pagination(
 			battleLog,
