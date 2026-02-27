@@ -190,11 +190,16 @@ export class Dev extends Command {
 			{ method: "POST", headers: { "x-env": env.NODE_ENV } },
 		);
 
+		if (res.headers.get("content-type") !== "application/json")
+			return edit({
+				content: `${res.status} ${res.statusText}: ${await res
+					.text()
+					.catch((err) => normalizeError(err).message)
+					.then((t) => t.slice(0, 1000))}`,
+			});
+		const body = await res.json<{ dev: boolean; devIP?: string }>();
 		return edit({
-			content: `${res.status} ${res.statusText}: ${await res
-				.text()
-				.catch((err) => normalizeError(err).message)
-				.then((t) => t.slice(0, 1000))}`,
+			content: `**${body.dev ? "Enabled" : "Disabled"}!**\nIP: ${body.devIP}`,
 		});
 	};
 	static "api get-connections" = async ({ defer, edit }: ChatInputReplies) => {
@@ -203,11 +208,21 @@ export class Dev extends Command {
 			headers: { "x-env": env.NODE_ENV },
 		});
 
+		if (res.headers.get("content-type") !== "application/json")
+			return edit({
+				content: `${res.status} ${res.statusText}: ${await res
+					.text()
+					.catch((err) => normalizeError(err).message)
+					.then((t) => t.slice(0, 1000))}`,
+			});
+		const body = await res.json<
+			{ count: number } | { name: string; stack?: string; message: string }
+		>();
 		return edit({
-			content: `${res.status} ${res.statusText}: ${await res
-				.text()
-				.catch((err) => normalizeError(err).message)
-				.then((t) => t.slice(0, 1000))}`,
+			content:
+				"count" in body ?
+					`${body.count} open inbound connections!`
+				:	`${body.name}: ${body.message}\n${body.stack ?? ""}`,
 		});
 	};
 }
