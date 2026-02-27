@@ -1392,7 +1392,8 @@ export class Brawl extends Command {
 	) {
 		errors = { ...this.ERROR_MESSAGES, ...errors };
 		const request = new Request(
-			new URL(path, "https://api.brawlstars.com/v1/"),
+			new URL(path, "https://ms-api.trombett.org/proxy/api.brawlstars.com/v1/"),
+			{ headers: { "x-env": env.NODE_ENV } },
 		);
 		let res = cache && (await caches.default.match(request));
 
@@ -1400,7 +1401,7 @@ export class Brawl extends Command {
 			const clone = request.clone();
 
 			clone.headers.set("Authorization", `Bearer ${env.BRAWL_STARS_API_TOKEN}`);
-			res = await env.BRAWL_STARS.fetch(clone);
+			res = await fetch(clone);
 			if (cache) waitUntil(caches.default.put(request, res.clone()));
 		}
 		if (res.ok) return res.json<T>();

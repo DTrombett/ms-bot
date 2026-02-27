@@ -96,18 +96,6 @@ const additionalEnv: Omit<Filter<Env, object>, keyof Filter<Env, Workflow>> = {
 			throw new Error("Not implemented");
 		},
 	},
-	BRAWL_STARS: {
-		fetch: fetch as unknown as Fetcher["fetch"],
-		connect: () => {
-			throw new Error("Not implemented");
-		},
-	},
-	CLASH_ROYALE: {
-		fetch: fetch as unknown as Fetcher["fetch"],
-		connect: () => {
-			throw new Error("Not implemented");
-		},
-	},
 };
 export const env = { ...parsedEnv, ...additionalEnv } as Env;
 export const agent = new MockAgent().enableCallHistory();
@@ -135,11 +123,7 @@ class WorkflowBase implements Workflow {
 		);
 		const instance: Instance = {
 			promise: workflow.run(
-				{
-					instanceId: id,
-					payload: params ?? {},
-					timestamp: new Date(),
-				},
+				{ instanceId: id, payload: params ?? {}, timestamp: new Date() },
 				{
 					do: ({}, config, callback = config) =>
 						(callback as () => Promise<void>)(),
@@ -179,18 +163,18 @@ class WorkflowBase implements Workflow {
 
 registerHooks({
 	resolve: (specifier, context, nextResolve) =>
-		specifier.startsWith("cloudflare:")
-			? {
-					url: pathToFileURL("./tests/empty.js").href,
-					shortCircuit: true,
-			  }
-			: nextResolve(specifier, context),
+		specifier.startsWith("cloudflare:") ?
+			{ url: pathToFileURL("./tests/empty.js").href, shortCircuit: true }
+		:	nextResolve(specifier, context),
 });
 mock.module("cloudflare:workers", {
 	namedExports: {
 		env,
 		WorkflowEntrypoint: class {
-			constructor(protected ctx: ExecutionContext, protected env: Env) {}
+			constructor(
+				protected ctx: ExecutionContext,
+				protected env: Env,
+			) {}
 		},
 		waitUntil: () => {},
 	},

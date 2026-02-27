@@ -35,6 +35,30 @@ export class Dev extends Command {
 				],
 			},
 			{
+				name: "api",
+				description: "Manage the private API",
+				type: ApplicationCommandOptionType.SubcommandGroup,
+				options: [
+					{
+						name: "set-dev",
+						description: "Enable/disable development mode",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "dev",
+								description: "The development mode (default: true)",
+								type: ApplicationCommandOptionType.Boolean,
+							},
+						],
+					},
+					{
+						name: "get-connections",
+						description: "Get the number of connections",
+						type: ApplicationCommandOptionType.Subcommand,
+					},
+				],
+			},
+			{
 				name: "shorten",
 				description: "Shorten a url",
 				type: ApplicationCommandOptionType.Subcommand,
@@ -105,18 +129,18 @@ export class Dev extends Command {
 					},
 				) as Promise<APIApplicationCommand[]>
 			).catch(normalizeError),
-			isDev
-				? []
-				: (
-						rest.put(Routes.applicationCommands(env.DISCORD_APPLICATION_ID), {
-							body: commands
-								.filter((c) => !c.private)
-								.flatMap((file) => [
-									...(file.chatInputData ? [file.chatInputData] : []),
-									...(file.contextMenuData ?? []),
-								]) satisfies RecursiveReadonly<RESTPutAPIApplicationCommandsJSONBody>,
-						}) as Promise<APIApplicationCommand[]>
-					).catch(normalizeError),
+			isDev ?
+				[]
+			:	(
+					rest.put(Routes.applicationCommands(env.DISCORD_APPLICATION_ID), {
+						body: commands
+							.filter((c) => !c.private)
+							.flatMap((file) => [
+								...(file.chatInputData ? [file.chatInputData] : []),
+								...(file.contextMenuData ?? []),
+							]) satisfies RecursiveReadonly<RESTPutAPIApplicationCommandsJSONBody>,
+					}) as Promise<APIApplicationCommand[]>
+				).catch(normalizeError),
 		]);
 
 		await edit({
@@ -144,16 +168,46 @@ export class Dev extends Command {
 				preserveQuery: options["preserve-query"],
 				preservePath: options["preserve-path"],
 				duration:
-					(options.duration
-						? options.duration === "Infinity"
-							? Infinity
-							: parseTime(options.duration)
-						: 0) || 24 * 60 * 60 * 1000,
+					(options.duration ?
+						options.duration === "Infinity" ?
+							Infinity
+						:	parseTime(options.duration)
+					:	0) || 24 * 60 * 60 * 1000,
 				interaction: {
 					application_id: interaction.application_id,
 					token: interaction.token,
 				},
 			},
+		});
+	};
+	static "api set-dev" = async (
+		{ defer, edit }: ChatInputReplies,
+		{ options }: ChatInputArgs<typeof Dev.chatInputData, "api set-dev">,
+	) => {
+		defer({ flags: MessageFlags.Ephemeral });
+		const res = await fetch(
+			`https://ms-api.trombett.org/dev/${options.dev ?? "true"}`,
+			{ method: "POST", headers: { "x-env": env.NODE_ENV } },
+		);
+
+		return edit({
+			content: `${res.status} ${res.statusText}: ${await res
+				.text()
+				.catch((err) => normalizeError(err).message)
+				.then((t) => t.slice(0, 1000))}`,
+		});
+	};
+	static "api get-connections" = async ({ defer, edit }: ChatInputReplies) => {
+		defer({ flags: MessageFlags.Ephemeral });
+		const res = await fetch(`https://ms-api.trombett.org/connections`, {
+			headers: { "x-env": env.NODE_ENV },
+		});
+
+		return edit({
+			content: `${res.status} ${res.statusText}: ${await res
+				.text()
+				.catch((err) => normalizeError(err).message)
+				.then((t) => t.slice(0, 1000))}`,
 		});
 	};
 }

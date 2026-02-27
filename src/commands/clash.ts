@@ -162,8 +162,8 @@ export class Clash extends Command {
 	private static readonly "MEMBERS_ORDER" = {
 		"Più trofei": (a, b) => b.trophies - a.trophies,
 		"Meno trofei": (a, b) => a.trophies - b.trophies,
-		"Nome": (a, b) => a.name.localeCompare(b.name),
-		"Ruolo": (a, b) =>
+		Nome: (a, b) => a.name.localeCompare(b.name),
+		Ruolo: (a, b) =>
 			MemberRole[toUpperCase(a.role)] - MemberRole[toUpperCase(b.role)],
 		"Più donazioni": (a, b) => b.donations - a.donations,
 		"Meno donazioni": (a, b) => a.donations - b.donations,
@@ -324,16 +324,13 @@ export class Clash extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static "calculateFlags" = (flags = 0) =>
-		flags & NotificationType.All
-			? "**tutti i tipi**"
-			: flags
-			? Object.values(NotificationType)
-					.filter(
-						(v): v is number => typeof v === "number" && (flags & v) !== 0,
-					)
-					.map((v) => `**${NotificationType[v]}**`)
-					.join(", ")
-			: "**nessun tipo**";
+		flags & NotificationType.All ? "**tutti i tipi**"
+		: flags ?
+			Object.values(NotificationType)
+				.filter((v): v is number => typeof v === "number" && (flags & v) !== 0)
+				.map((v) => `**${NotificationType[v]}**`)
+				.join(", ")
+		:	"**nessun tipo**";
 	private static "pagination" = <T>(
 		array: T[],
 		pageLength: number,
@@ -443,22 +440,26 @@ export class Clash extends Command {
 						card.maxEvolutionLevel ?? 0,
 						(evo) =>
 							`<:evo:${this.EMOJIS.wildShard}> Evoluzione: **${
-								evo ? ((card.evolutionLevel ?? 0) & 1 ? "Sì" : "No") : "N/A"
+								evo ?
+									(card.evolutionLevel ?? 0) & 1 ?
+										"Sì"
+									:	"No"
+								:	"N/A"
 							}**`,
 						(hero) =>
 							`<:hero:${this.EMOJIS.heroBox}> Eroe: **${
-								hero ? ((card.evolutionLevel ?? 0) & 2 ? "Sì" : "No") : "N/A"
+								hero ?
+									(card.evolutionLevel ?? 0) & 2 ?
+										"Sì"
+									:	"No"
+								:	"N/A"
 							}**`,
 					).join("\n")}
 					`,
 				},
 				{
 					type: ComponentType.MediaGallery,
-					items: [
-						{
-							media: { url: card.iconUrls?.medium ?? "" },
-						},
-					],
+					items: [{ media: { url: card.iconUrls?.medium ?? "" } }],
 				},
 				{
 					type: ComponentType.ActionRow,
@@ -511,23 +512,23 @@ export class Clash extends Command {
 									content: `[**${card.name}**](${this.buildURL(
 										`cardInfo?id=${card.id}`,
 									)})${card.elixirCost ? ` 💧${card.elixirCost}` : ""}${
-										card.starLevel
-											? ` <:starlevel:${this.EMOJIS.starLevel}> ${card.starLevel}`
-											: ""
+										card.starLevel ?
+											` <:starlevel:${this.EMOJIS.starLevel}> ${card.starLevel}`
+										:	""
 									}  ${bitSetMap(
 										card.maxEvolutionLevel ?? 0,
 										(evo) =>
-											evo
-												? (card.evolutionLevel ?? 0) & 1
-													? `<:evo:${this.EMOJIS.wildShard}>`
-													: `<:evo:${this.EMOJIS.wildShardGray}>`
-												: null,
+											evo ?
+												(card.evolutionLevel ?? 0) & 1 ?
+													`<:evo:${this.EMOJIS.wildShard}>`
+												:	`<:evo:${this.EMOJIS.wildShardGray}>`
+											:	null,
 										(hero) =>
-											hero
-												? (card.evolutionLevel ?? 0) & 2
-													? `<:hero:${this.EMOJIS.heroBox}>`
-													: `<:hero:${this.EMOJIS.heroBoxGray}>`
-												: null,
+											hero ?
+												(card.evolutionLevel ?? 0) & 2 ?
+													`<:hero:${this.EMOJIS.heroBox}>`
+												:	`<:hero:${this.EMOJIS.heroBoxGray}>`
+											:	null,
 									).join(" ")}\n${
 										ResolvedCardRarity[toUpperCase(card.rarity)]
 									}  <:level:${this.EMOJIS.experienceIcon}> ${
@@ -601,10 +602,10 @@ export class Clash extends Command {
 									content: template`
 										### ${badge.name}
 										📈 Progresso: **${(badge.progress ?? 1).toLocaleString(locale)}${
-										badge.target
-											? `/${(badge.target ?? 1).toLocaleString(locale)}`
-											: ""
-									}**
+											badge.target ?
+												`/${(badge.target ?? 1).toLocaleString(locale)}`
+											:	""
+										}**
 										⭐ Livello: **${badge.level ? `${badge.level}/${badge.maxLevel}` : "N/A"}**
 										`,
 								},
@@ -650,8 +651,10 @@ export class Clash extends Command {
 								**__${ach.name}__** ${"⭐".repeat(ach.stars ?? 0)}
 								${ach.info}**${ach.info}**
 								Progresso: **${(ach.value ?? 1).toLocaleString(locale)}${
-								ach.target ? `/${(ach.target ?? 1).toLocaleString(locale)}` : ""
-							}**
+									ach.target ?
+										`/${(ach.target ?? 1).toLocaleString(locale)}`
+									:	""
+								}**
 								${ach.completionInfo}${ach.completionInfo}
 								`,
 						}),
@@ -764,11 +767,7 @@ export class Clash extends Command {
 		playerId?: string,
 	): APIEmbed => {
 		let mergeTactics:
-			| {
-					arena: Clash.Arena;
-					trophies: number;
-					bestTrophies: number;
-			  }
+			| { arena: Clash.Arena; trophies: number; bestTrophies: number }
 			| undefined;
 		const daysPlayed =
 			player.badges?.find((b) => b.name === "YearsPlayed")?.progress ?? 0;
@@ -782,9 +781,9 @@ export class Clash extends Command {
 			(k) =>
 				player[k] &&
 				[
-					player[k].trophies
-						? `<:medal:${this.EMOJIS.pathOfLegends}>${player[k].trophies}`
-						: `Lega ${player[k].leagueNumber}`,
+					player[k].trophies ?
+						`<:medal:${this.EMOJIS.pathOfLegends}>${player[k].trophies}`
+					:	`Lega ${player[k].leagueNumber}`,
 					player[k].rank && `#${player[k].rank}`,
 				]
 					.filter(Boolean)
@@ -796,9 +795,10 @@ export class Clash extends Command {
 		return {
 			title: `${escapeMarkdown(player.name)} (${player.tag})`,
 			url: this.buildURL(`playerInfo?id=${player.tag.slice(1)}`),
-			thumbnail: player.currentFavouriteCard?.iconUrls?.medium
-				? { url: player.currentFavouriteCard.iconUrls.medium }
-				: undefined,
+			thumbnail:
+				player.currentFavouriteCard?.iconUrls?.medium ?
+					{ url: player.currentFavouriteCard.iconUrls.medium }
+				:	undefined,
 			color: 0x5197ed,
 			description: template`
 			${
@@ -825,9 +825,7 @@ export class Clash extends Command {
 			}> **Punti stella**: ${player.starPoints?.toLocaleString(locale)}
 			${daysPlayed}<:battle:${this.EMOJIS.battle}> **Media partite**: ${(
 				(player.battleCount ?? 0) / daysPlayed
-			).toLocaleString(locale, {
-				maximumFractionDigits: 1,
-			})}/giorno
+			).toLocaleString(locale, { maximumFractionDigits: 1 })}/giorno
 			${player.currentFavouriteCard}⭐ **Carta preferita**: ${
 				player.currentFavouriteCard?.name
 			} 💧${player.currentFavouriteCard?.elixirCost}
@@ -839,13 +837,14 @@ export class Clash extends Command {
 			fields: [
 				{
 					name: `<:clan:${this.EMOJIS.clan}> Clan`,
-					value: player.clan
-						? template`
+					value:
+						player.clan ?
+							template`
 							[${player.clan.name}](${this.buildURL(`clanInfo?id=${player.clan.tag}`)}) (${
 								player.clan.tag
-						  })
+							})
 							${player.role}**Ruolo**: ${capitalize(player.role ?? "")}`
-						: "*Nessun clan*",
+						:	"*Nessun clan*",
 				},
 				{
 					name: `<:cards:${this.EMOJIS.cards}> Mazzo battaglia`,
@@ -873,10 +872,10 @@ export class Clash extends Command {
 						).toLocaleString(locale, {
 							maximumFractionDigits: 1,
 						})}**💧 - [Copia](${this.buildURL(
-						`copyDeck?deck=${player.currentDeck
-							.map((c) => c.id)
-							.join(";")}&l=Royals&id=${player.tag.slice(1)}`,
-					)})`,
+							`copyDeck?deck=${player.currentDeck
+								.map((c) => c.id)
+								.join(";")}&l=Royals&id=${player.tag.slice(1)}`,
+						)})`,
 				},
 				{
 					name: `<:collection:${this.EMOJIS.cards}> Collezione`,
@@ -915,9 +914,7 @@ export class Clash extends Command {
 					}Totali: **${player.totalDonations?.toLocaleString(locale)}**
 					${daysPlayed && player.totalDonations != null}Media: **${(
 						(player.totalDonations ?? 0) / daysPlayed
-					).toLocaleString(locale, {
-						maximumFractionDigits: 1,
-					})}/g**
+					).toLocaleString(locale, { maximumFractionDigits: 1 })}/g**
 					${player.donations != null}Settimanali: **${player.donations?.toLocaleString(
 						locale,
 					)}**
@@ -931,25 +928,25 @@ export class Clash extends Command {
 					name: `<:tournament:${this.EMOJIS.tournament}> Sfide`,
 					value: template`
 						${player.challengeMaxWins != null}<:blueCrown:${
-						this.EMOJIS.blueCrown
-					}> Record vittorie: **${player.challengeMaxWins?.toLocaleString(
-						locale,
-					)}**
+							this.EMOJIS.blueCrown
+						}> Record vittorie: **${player.challengeMaxWins?.toLocaleString(
+							locale,
+						)}**
 						${player.challengeCardsWon != null}<:cards:${
-						this.EMOJIS.cards
-					}> Carte vinte: **${player.challengeCardsWon?.toLocaleString(
-						locale,
-					)}**
+							this.EMOJIS.cards
+						}> Carte vinte: **${player.challengeCardsWon?.toLocaleString(
+							locale,
+						)}**
 						${player.tournamentBattleCount != null}<:battle:${
-						this.EMOJIS.battle
-					}> Batt. in tornei: **${player.tournamentBattleCount?.toLocaleString(
-						locale,
-					)}**
+							this.EMOJIS.battle
+						}> Batt. in tornei: **${player.tournamentBattleCount?.toLocaleString(
+							locale,
+						)}**
 						${player.tournamentCardsWon != null}<:cards:${
-						this.EMOJIS.cards
-					}> Carte vinte: **${player.tournamentCardsWon?.toLocaleString(
-						locale,
-					)}**
+							this.EMOJIS.cards
+						}> Carte vinte: **${player.tournamentCardsWon?.toLocaleString(
+							locale,
+						)}**
 						`,
 					inline: true,
 				},
@@ -957,26 +954,26 @@ export class Clash extends Command {
 					name: "👑 Statistiche Royale",
 					value: template`
 						${player.wins != null}<:blueCrown:${
-						this.EMOJIS.blueCrown
-					}> Vittorie: **${player.wins?.toLocaleString(locale)}** (${(
-						((player.wins ?? 0) / (player.battleCount || Infinity)) *
-						100
-					).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
+							this.EMOJIS.blueCrown
+						}> Vittorie: **${player.wins?.toLocaleString(locale)}** (${(
+							((player.wins ?? 0) / (player.battleCount || Infinity)) *
+							100
+						).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
 						${player.threeCrownWins != null}<:blueCrown:${
-						this.EMOJIS.blueCrown
-					}> 3 corone: **${player.threeCrownWins?.toLocaleString(locale)}** (${(
-						((player.threeCrownWins ?? 0) / (player.wins || Infinity)) *
-						100
-					).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
+							this.EMOJIS.blueCrown
+						}> 3 corone: **${player.threeCrownWins?.toLocaleString(locale)}** (${(
+							((player.threeCrownWins ?? 0) / (player.wins || Infinity)) *
+							100
+						).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
 						${player.losses != null}<:redCrown:${
-						this.EMOJIS.redCrown
-					}> Sconfitte: **${player.losses?.toLocaleString(locale)}** (${(
-						((player.losses ?? 0) / (player.battleCount || Infinity)) *
-						100
-					).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
+							this.EMOJIS.redCrown
+						}> Sconfitte: **${player.losses?.toLocaleString(locale)}** (${(
+							((player.losses ?? 0) / (player.battleCount || Infinity)) *
+							100
+						).toLocaleString(locale, { maximumFractionDigits: 2 })}%)
 						${player.battleCount != null}<:battle:${
-						this.EMOJIS.battle
-					}> Battaglie totali: **${player.battleCount?.toLocaleString(locale)}**
+							this.EMOJIS.battle
+						}> Battaglie totali: **${player.battleCount?.toLocaleString(locale)}**
 						`,
 					inline: true,
 				},
@@ -1008,11 +1005,7 @@ export class Clash extends Command {
 			leader: Pick<Clash.ClanMember, "name" | "tag">;
 			coLeader: Pick<Clash.ClanMember, "name" | "tag">[];
 			elder: Pick<Clash.ClanMember, "name" | "tag">[];
-		} = {
-			leader: { name: "", tag: "" },
-			coLeader: [],
-			elder: [],
-		};
+		} = { leader: { name: "", tag: "" }, coLeader: [], elder: [] };
 
 		for (const member of clan.memberList) {
 			const role = toUpperCase(member.role);
@@ -1021,15 +1014,9 @@ export class Clash extends Command {
 			memberLevels.push(member.expLevel);
 			if (role === "LEADER") staff.leader = member;
 			else if (role === "COLEADER")
-				staff.coLeader.push({
-					name: member.name,
-					tag: member.tag,
-				});
+				staff.coLeader.push({ name: member.name, tag: member.tag });
 			else if (role === "ELDER")
-				staff.elder.push({
-					name: member.name,
-					tag: member.tag,
-				});
+				staff.elder.push({ name: member.name, tag: member.tag });
 		}
 		memberLevels.sort((a, b) => b - a);
 		memberTrophies.sort((a, b) => b - a);
@@ -1125,18 +1112,18 @@ export class Clash extends Command {
 							type: ComponentType.StringSelect,
 							custom_id: "clash-player",
 							placeholder: "Visualizza un membro...",
-							options: clan.memberList.slice(0, 25).map((m) => ({
-								label: `${m.clanRank}. ${m.name}`,
-								value: m.tag,
-								description: `➡️${m.donations} 🏆${m.trophies.toLocaleString(
-									locale,
-								)} 🕓${formatShortTime(
-									now - Clash.parseAPIDate(m.lastSeen),
-								)} fa`,
-								emoji: {
-									name: MemberEmoji[toUpperCase(m.role)] ?? "👤",
-								},
-							})),
+							options: clan.memberList
+								.slice(0, 25)
+								.map((m) => ({
+									label: `${m.clanRank}. ${m.name}`,
+									value: m.tag,
+									description: `➡️${m.donations} 🏆${m.trophies.toLocaleString(
+										locale,
+									)} 🕓${formatShortTime(
+										now - Clash.parseAPIDate(m.lastSeen),
+									)} fa`,
+									emoji: { name: MemberEmoji[toUpperCase(m.role)] ?? "👤" },
+								})),
 						},
 					],
 				},
@@ -1244,10 +1231,13 @@ export class Clash extends Command {
 				/(?:\p{Extended_Pictographic}|\p{Regional_Indicator})+/gu,
 				(s) => `${s} `,
 			);
-	static async "callApi"<T>(path: string, errors: Record<number, string> = {}) {
+	static async callApi<T>(path: string, errors: Record<number, string> = {}) {
 		Object.assign(errors, Clash.ERROR_MESSAGES);
 		const request = new Request(
-			new URL(path, "https://api.clashroyale.com/v1/"),
+			new URL(
+				path,
+				"https://ms-api.trombett.org/proxy/api.clashroyale.com/v1/",
+			),
 		);
 		let res = await caches.default.match(request);
 
@@ -1258,7 +1248,7 @@ export class Clash extends Command {
 				"Authorization",
 				`Bearer ${env.CLASH_ROYALE_API_TOKEN}`,
 			);
-			res = await env.CLASH_ROYALE.fetch(clone);
+			res = await fetch(clone);
 			waitUntil(caches.default.put(request, res.clone()));
 		}
 		if (res.ok) return res.json<T>();
@@ -1279,17 +1269,15 @@ export class Clash extends Command {
 			tag = Brawl.normalizeTag(tag);
 			return await Clash.callApi<Clash.Player>(
 				`players/${encodeURIComponent(tag)}`,
-				{
-					404: "Giocatore non trovato.",
-				},
+				{ 404: "Giocatore non trovato." },
 			);
 		} catch (err) {
 			if (edit)
 				throw await edit({
 					content:
-						err instanceof Error
-							? err.message
-							: "Non è stato possibile recuperare il profilo. Riprova più tardi.",
+						err instanceof Error ?
+							err.message
+						:	"Non è stato possibile recuperare il profilo. Riprova più tardi.",
 				});
 			throw err;
 		}
@@ -1299,17 +1287,15 @@ export class Clash extends Command {
 			tag = Brawl.normalizeTag(tag);
 			return await Clash.callApi<Clash.BattleList>(
 				`players/${encodeURIComponent(tag)}/battlelog`,
-				{
-					404: "Giocatore non trovato.",
-				},
+				{ 404: "Giocatore non trovato." },
 			);
 		} catch (err) {
 			if (edit)
 				throw await edit({
 					content:
-						err instanceof Error
-							? err.message
-							: "Non è stato possibile recuperare il registro battaglie. Riprova più tardi.",
+						err instanceof Error ?
+							err.message
+						:	"Non è stato possibile recuperare il registro battaglie. Riprova più tardi.",
 				});
 			throw err;
 		}
@@ -1325,14 +1311,14 @@ export class Clash extends Command {
 			if (edit)
 				throw await edit({
 					content:
-						err instanceof Error
-							? err.message
-							: "Non è stato possibile recuperare il clan. Riprova più tardi.",
+						err instanceof Error ?
+							err.message
+						:	"Non è stato possibile recuperare il clan. Riprova più tardi.",
 				});
 			throw err;
 		}
 	};
-	static override async "chatInput"(
+	static override async chatInput(
 		replies: ChatInputReplies,
 		args: ChatInputArgs<typeof Clash.chatInputData>,
 	) {
@@ -1353,7 +1339,7 @@ export class Clash extends Command {
 			},
 		}: ChatInputArgs<typeof Clash.chatInputData, `${"player"} ${string}`>,
 	) => {
-		const userId = options.tag ? undefined : options.user ?? id;
+		const userId = options.tag ? undefined : (options.user ?? id);
 
 		options.tag ??=
 			(await env.DB.prepare("SELECT clashTag FROM Users WHERE id = ?")
@@ -1390,7 +1376,11 @@ export class Clash extends Command {
 					locale,
 					playerId ?? undefined,
 					commandId,
-					userId ? (playerId === id ? false : undefined) : playerId !== id,
+					userId ?
+						playerId === id ?
+							false
+						:	undefined
+					:	playerId !== id,
 				),
 			);
 		}
@@ -1534,7 +1524,7 @@ export class Clash extends Command {
 			`,
 		});
 	};
-	static override async "component"(
+	static override async component(
 		replies: ComponentReplies,
 		args: ComponentArgs,
 	) {
@@ -1626,9 +1616,9 @@ export class Clash extends Command {
 				await this.getPlayer(tag!, edit),
 				request.url,
 				id,
-				((data.component_type === ComponentType.StringSelect
-					? data.values[0]
-					: order) as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
+				((data.component_type === ComponentType.StringSelect ?
+					data.values[0]
+				:	order) as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
 				Number(page) || undefined,
 			),
 			flags: MessageFlags.IsComponentsV2,
@@ -1697,9 +1687,9 @@ export class Clash extends Command {
 				player,
 				request.url,
 				id,
-				((data.component_type === ComponentType.StringSelect
-					? data.values[0]
-					: order) as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
+				((data.component_type === ComponentType.StringSelect ?
+					data.values[0]
+				:	order) as keyof (typeof Clash)["CARDS_ORDER"] | "") || undefined,
 				Number(page) || undefined,
 				true,
 			),
@@ -1721,9 +1711,9 @@ export class Clash extends Command {
 				await this.getClan(tag!, edit),
 				locale,
 				id,
-				((data.component_type === ComponentType.StringSelect
-					? data.values[0]
-					: order) as keyof (typeof Clash)["MEMBERS_ORDER"] | "") || undefined,
+				((data.component_type === ComponentType.StringSelect ?
+					data.values[0]
+				:	order) as keyof (typeof Clash)["MEMBERS_ORDER"] | "") || undefined,
 				Number(page) || undefined,
 			),
 			flags: MessageFlags.IsComponentsV2,
@@ -1818,9 +1808,9 @@ export class Clash extends Command {
 		return edit({
 			embeds: page.map((battle) => ({
 				color:
-					battle.team[0]!.crowns > battle.opponent[0]!.crowns
-						? 0x2fceff
-						: 0xff0063,
+					battle.team[0]!.crowns > battle.opponent[0]!.crowns ?
+						0x2fceff
+					:	0xff0063,
 				description: template`
 				### <:blueCrown:${this.EMOJIS.blueCrown}> ${battle.team[0]!.crowns} - ${
 					battle.opponent[0]!.crowns
@@ -1836,30 +1826,30 @@ export class Clash extends Command {
 						name: `${player.name} (${player.tag})`,
 						value: template`
 						Clan: ${
-							player.clan
-								? `[${player.clan?.name ?? "*Nessun Clan*"}](${this.buildURL(
-										`clanInfo?id=${player.clan?.tag?.slice(1)}`,
-								  )})`
-								: "*Nessun Clan*"
+							player.clan ?
+								`[${player.clan?.name ?? "*Nessun Clan*"}](${this.buildURL(
+									`clanInfo?id=${player.clan?.tag?.slice(1)}`,
+								)})`
+							:	"*Nessun Clan*"
 						}
 						Trofei: 🏆 **${player.startingTrophies?.toLocaleString(locale) ?? 0}**
 						Elisir perso: 💧 **${player.elixirLeaked.toLocaleString(locale)}**
 						<:tower:${
-							player.princessTowersHitPoints?.[0]
-								? this.EMOJIS.princessTower
-								: this.EMOJIS.princessTowerGray
+							player.princessTowersHitPoints?.[0] ?
+								this.EMOJIS.princessTower
+							:	this.EMOJIS.princessTowerGray
 						}> **${
 							player.princessTowersHitPoints?.[0]?.toLocaleString(locale) ?? 0
 						}**  <:king:${
-							player.kingTowerHitPoints
-								? this.EMOJIS.blueKingHappy
-								: this.EMOJIS.blueKingCry
+							player.kingTowerHitPoints ?
+								this.EMOJIS.blueKingHappy
+							:	this.EMOJIS.blueKingCry
 						}> **${
 							player.kingTowerHitPoints?.toLocaleString(locale) ?? 0
 						}**  <:tower:${
-							player.princessTowersHitPoints?.[1]
-								? this.EMOJIS.princessTower
-								: this.EMOJIS.princessTowerGray
+							player.princessTowersHitPoints?.[1] ?
+								this.EMOJIS.princessTower
+							:	this.EMOJIS.princessTowerGray
 						}> **${
 							player.princessTowersHitPoints?.[1]?.toLocaleString(locale) ?? 0
 						}**
@@ -1895,30 +1885,30 @@ export class Clash extends Command {
 						name: `${player.name} (${player.tag})`,
 						value: template`
 						Clan: ${
-							player.clan
-								? `[${player.clan?.name ?? "*Nessun Clan*"}](${this.buildURL(
-										`clanInfo?id=${player.clan?.tag?.slice(1)}`,
-								  )})`
-								: "*Nessun Clan*"
+							player.clan ?
+								`[${player.clan?.name ?? "*Nessun Clan*"}](${this.buildURL(
+									`clanInfo?id=${player.clan?.tag?.slice(1)}`,
+								)})`
+							:	"*Nessun Clan*"
 						}
 						Trofei: 🏆 **${player.startingTrophies?.toLocaleString(locale) ?? 0}**
 						Elisir perso: 💧 **${player.elixirLeaked.toLocaleString(locale)}**
 						<:tower:${
-							player.princessTowersHitPoints?.[0]
-								? this.EMOJIS.princessTower
-								: this.EMOJIS.princessTowerGray
+							player.princessTowersHitPoints?.[0] ?
+								this.EMOJIS.princessTower
+							:	this.EMOJIS.princessTowerGray
 						}> **${
 							player.princessTowersHitPoints?.[0]?.toLocaleString(locale) ?? 0
 						}**  <:king:${
-							player.kingTowerHitPoints
-								? this.EMOJIS.redKingHappy
-								: this.EMOJIS.redKingCry
+							player.kingTowerHitPoints ?
+								this.EMOJIS.redKingHappy
+							:	this.EMOJIS.redKingCry
 						}> **${
 							player.kingTowerHitPoints?.toLocaleString(locale) ?? 0
 						}**  <:tower:${
-							player.princessTowersHitPoints?.[1]
-								? this.EMOJIS.princessTower
-								: this.EMOJIS.princessTowerGray
+							player.princessTowersHitPoints?.[1] ?
+								this.EMOJIS.princessTower
+							:	this.EMOJIS.princessTowerGray
 						}> **${
 							player.princessTowersHitPoints?.[1]?.toLocaleString(locale) ?? 0
 						}**
