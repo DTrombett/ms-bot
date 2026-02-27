@@ -197,7 +197,7 @@ export class Dev extends Command {
 			{ method: "POST", headers: { "x-env": env.NODE_ENV } },
 		);
 
-		if (res.headers.get("content-type") !== "application/json")
+		if (res.headers.get("content-type")?.split(";")[0] !== "application/json")
 			return edit({
 				content: `${res.status} ${res.statusText}: ${await res
 					.text()
@@ -215,7 +215,7 @@ export class Dev extends Command {
 			headers: { "x-env": env.NODE_ENV },
 		});
 
-		if (res.headers.get("content-type") !== "application/json")
+		if (res.headers.get("content-type")?.split(";")[0] !== "application/json")
 			return edit({
 				content: `${res.status} ${res.statusText}: ${await res
 					.text()
@@ -238,7 +238,7 @@ export class Dev extends Command {
 			headers: { "x-env": env.NODE_ENV },
 		});
 
-		if (res.headers.get("content-type") !== "application/json")
+		if (res.headers.get("content-type")?.split(";")[0] !== "application/json")
 			return edit({
 				content: `${res.status} ${res.statusText}: ${await res
 					.text()
