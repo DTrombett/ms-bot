@@ -29,16 +29,6 @@ pattern = "ms-bot-interactions.trombett.org"
 custom_domain = true
 zone_name = "trombett.org"
 
-[[vpc_services]]
-binding = "BRAWL_STARS"
-service_id = "019a5526-d448-7030-8492-1e4572309bc6"
-remote = true
-
-[[vpc_services]]
-binding = "CLASH_ROYALE"
-service_id = "019aa1b8-0c56-7fe3-bc0c-08e43931f508"
-remote = true
-
 [[d1_databases]]
 binding = "DB"
 database_name = "database"

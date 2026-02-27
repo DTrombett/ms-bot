@@ -82,11 +82,9 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 	private async processUser(
 		user: UserResult,
 	): Promise<{ components: APIContainerComponent[]; player: PartialPlayer }> {
-		const player: PartialPlayer = await Brawl.getPlayer(
-			user.brawlTag,
-			undefined,
-			false,
-		);
+		const player: PartialPlayer = await Brawl.getPlayer(user.brawlTag, {
+			cache: false,
+		});
 		const components: APIContainerComponent[] = [];
 
 		if (

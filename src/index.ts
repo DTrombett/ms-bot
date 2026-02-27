@@ -106,7 +106,7 @@ const server: ExportedHandler<Env> = {
 			const clashBatch: WorkflowInstanceCreateOptions<ClashParams>[] = results
 				.reduce((arr, v) => {
 					if (!v.clashTag || !v.clashNotifications) return arr;
-					if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+					if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
 					arr
 						.at(-1)!
 						.push({

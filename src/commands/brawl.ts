@@ -1387,12 +1387,15 @@ export class Brawl extends Command {
 	};
 	static async callApi<T>(
 		path: string,
-		errors: Record<number, string> = {},
-		cache = true,
+		{
+			errors = {},
+			cache = true,
+		}: { errors?: Record<number, string>; cache?: boolean } = {},
 	) {
 		errors = { ...this.ERROR_MESSAGES, ...errors };
 		const request = new Request(
-			new URL(path, "https://api.brawlstars.com/v1/"),
+			new URL(path, "https://ms-api.trombett.org/proxy/api.brawlstars.com/v1/"),
+			{ headers: { "x-env": env.NODE_ENV } },
 		);
 		let res = cache && (await caches.default.match(request));
 
@@ -1400,7 +1403,7 @@ export class Brawl extends Command {
 			const clone = request.clone();
 
 			clone.headers.set("Authorization", `Bearer ${env.BRAWL_STARS_API_TOKEN}`);
-			res = await env.BRAWL_STARS.fetch(clone);
+			res = await fetch(clone);
 			if (cache) waitUntil(caches.default.put(request, res.clone()));
 		}
 		if (res.ok) return res.json<T>();
@@ -1419,15 +1422,13 @@ export class Brawl extends Command {
 	}
 	static getPlayer = async (
 		tag: string,
-		edit?: BaseReplies["edit"],
-		cache?: boolean,
+		{ edit, cache }: { edit?: BaseReplies["edit"]; cache?: boolean } = {},
 	) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Brawl.callApi<Brawl.Player>(
 				`players/${encodeURIComponent(tag)}`,
-				{ 404: "Giocatore non trovato." },
-				cache,
+				{ errors: { 404: "Giocatore non trovato." }, cache },
 			);
 		} catch (err) {
 			if (edit)
@@ -1442,15 +1443,13 @@ export class Brawl extends Command {
 	};
 	static getClub = async (
 		tag: string,
-		edit?: BaseReplies["edit"],
-		cache?: boolean,
+		{ edit, cache }: { edit?: BaseReplies["edit"]; cache?: boolean } = {},
 	) => {
 		try {
 			tag = Brawl.normalizeTag(tag);
 			return await Brawl.callApi<Brawl.Club>(
 				`clubs/${encodeURIComponent(tag)}`,
-				{ 404: "Club non trovato." },
-				cache,
+				{ errors: { 404: "Club non trovato." }, cache },
 			);
 		} catch (err) {
 			if (edit)
@@ -1528,7 +1527,7 @@ export class Brawl extends Command {
 
 		if (subcommand === "player view") {
 			const [player, playerId] = await Promise.all([
-				this.getPlayer(options.tag, edit),
+				this.getPlayer(options.tag, { edit }),
 				userId ??
 					env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
 						.bind(options.tag)
@@ -1548,7 +1547,7 @@ export class Brawl extends Command {
 		if (subcommand === "player brawlers")
 			return edit({
 				components: this.createBrawlersComponents(
-					await this.getPlayer(options.tag, edit),
+					await this.getPlayer(options.tag, { edit }),
 					url,
 					id,
 					options.order,
@@ -1557,7 +1556,7 @@ export class Brawl extends Command {
 			});
 		if (subcommand === "player link") {
 			const [player, playerId] = await Promise.all([
-				this.getPlayer(options.tag, edit),
+				this.getPlayer(options.tag, { edit }),
 				userId ??
 					env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
 						.bind(options.tag)
@@ -1609,13 +1608,13 @@ export class Brawl extends Command {
 				.first<string>("brawlTag");
 
 			if (playerTag)
-				options.tag = (await this.getPlayer(playerTag, edit)).club.tag;
+				options.tag = (await this.getPlayer(playerTag, { edit })).club.tag;
 		}
 		if (!options.tag)
 			return edit({
 				content: `Non hai ancora collegato un profilo Brawl Stars! Specifica il tag del club come parametro o collega un profilo con </brawl profile:${commandId}>.`,
 			});
-		const club = await this.getClub(options.tag, edit);
+		const club = await this.getClub(options.tag, { edit });
 
 		if (subcommand === "club view")
 			return edit(this.createClubMessage(club, locale));
@@ -1744,7 +1743,7 @@ export class Brawl extends Command {
 	) => {
 		deferUpdate();
 		userId ||= id;
-		const player = await this.getPlayer(tag!, edit);
+		const player = await this.getPlayer(tag!, { edit });
 
 		await env.DB.prepare(
 			`INSERT INTO Users (id, brawlTag, brawlTrophies, brawlers)
@@ -1821,7 +1820,7 @@ export class Brawl extends Command {
 		else deferUpdate();
 		return edit({
 			components: this.createBrawlersComponents(
-				await this.getPlayer(tag!, edit),
+				await this.getPlayer(tag!, { edit }),
 				request.url,
 				id,
 				Number(
@@ -1846,7 +1845,7 @@ export class Brawl extends Command {
 		else deferUpdate();
 		return edit({
 			components: this.createMembersComponents(
-				await this.getClub(tag!, edit),
+				await this.getClub(tag!, { edit }),
 				locale,
 				id,
 				Number(
@@ -1864,7 +1863,7 @@ export class Brawl extends Command {
 		{ args: [tag, brawler, order, page], user: { id } }: ComponentArgs,
 	) => {
 		deferUpdate();
-		const player = await this.getPlayer(tag!, edit);
+		const player = await this.getPlayer(tag!, { edit });
 		const brawlerId = Number(brawler);
 
 		return edit({
@@ -1885,7 +1884,7 @@ export class Brawl extends Command {
 		ok(tag);
 		defer({ flags: MessageFlags.Ephemeral });
 		const [player, playerId] = await Promise.all([
-			this.getPlayer(tag, edit),
+			this.getPlayer(tag, { edit }),
 			env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
 				.bind(tag)
 				.first<string>("id"),
@@ -1906,6 +1905,8 @@ export class Brawl extends Command {
 		{ args: [tag], interaction: { locale } }: ComponentArgs,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
-		return edit(this.createClubMessage(await this.getClub(tag!, edit), locale));
+		return edit(
+			this.createClubMessage(await this.getClub(tag!, { edit }), locale),
+		);
 	};
 }
