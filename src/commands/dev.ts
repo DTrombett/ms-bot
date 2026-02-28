@@ -12,6 +12,7 @@ import {
 import type { SessionState, Settings } from "node:http2";
 import Command from "../Command.ts";
 import normalizeError from "../util/normalizeError.ts";
+import { toSearchParams } from "../util/objects.ts";
 import { rest } from "../util/rest.ts";
 import { template } from "../util/strings.ts";
 import { parseTime } from "../util/time.ts";
@@ -54,14 +55,64 @@ export class Dev extends Command {
 						],
 					},
 					{
-						name: "get-connections",
+						name: "connections",
 						description: "Get the number of connections",
 						type: ApplicationCommandOptionType.Subcommand,
 					},
 					{
-						name: "get-clients",
+						name: "clients",
 						description: "Get the outbound clients info",
 						type: ApplicationCommandOptionType.Subcommand,
+					},
+					{
+						name: "logs",
+						description: "Get the last logs",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "output",
+								description: "The output type (default: cat)",
+								type: ApplicationCommandOptionType.String,
+								choices: [
+									{ name: "short", value: "short" },
+									{ name: "short-full", value: "short-full" },
+									{ name: "short-iso", value: "short-iso" },
+									{ name: "short-iso-precise", value: "short-iso-precise" },
+									{ name: "short-precise", value: "short-precise" },
+									{ name: "short-monotonic", value: "short-monotonic" },
+									{ name: "short-unix", value: "short-unix" },
+									{ name: "verbose", value: "verbose" },
+									{ name: "export", value: "export" },
+									{ name: "json", value: "json" },
+									{ name: "cat", value: "cat" },
+								],
+							},
+							{
+								name: "explain",
+								description: "Add details about restarts (default: true)",
+								type: ApplicationCommandOptionType.Boolean,
+							},
+							{
+								name: "since",
+								description: "Start date",
+								type: ApplicationCommandOptionType.String,
+							},
+							{
+								name: "until",
+								description: "End date",
+								type: ApplicationCommandOptionType.String,
+							},
+							{
+								name: "lines",
+								description: "The number of lines",
+								type: ApplicationCommandOptionType.Integer,
+							},
+							{
+								name: "boot",
+								description: "The boot ID (default: 0)",
+								type: ApplicationCommandOptionType.Integer,
+							},
+						],
 					},
 				],
 			},
@@ -273,6 +324,29 @@ export class Dev extends Command {
 					`,
 				)
 				.join("\n"),
+		});
+	};
+	static "api logs" = async (
+		{ defer, edit }: ChatInputReplies,
+		{ options }: ChatInputArgs<typeof Dev.chatInputData, "api logs">,
+	) => {
+		defer({ flags: MessageFlags.Ephemeral });
+		const res = await fetch(
+			`https://ms-api.trombett.org/logs?${toSearchParams(options).toString()}`,
+			{ headers: { "x-env": env.NODE_ENV } },
+		);
+		const text = await res.text().catch((err) => normalizeError(err).message),
+			lines: string[] = [];
+		let length = 0;
+
+		for (const line of text.split("\n"))
+			if (line.length + length > 1985) break;
+			else {
+				lines.push(line);
+				length += line.length + 1;
+			}
+		return edit({
+			content: `${res.status}\n\`\`\`ansi\n${lines.reverse().join("\n")}\`\`\``,
 		});
 	};
 }
