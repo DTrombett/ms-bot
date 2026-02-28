@@ -474,7 +474,8 @@ export class Share extends Command {
 				viewport: { width: 7680, height: 4320 },
 				screen: { width: 7680, height: 4320 },
 			});
-			const hasText = /^Read (?:(\d+) repl(?:ies|y)|more on (?:X|Twitter))$/;
+			const hasText =
+				/^Read (?:(?:\d+\.?\d*(?:[A-Z])?) repl(?:ies|y)|more on (?:X|Twitter))$/;
 			const readReplies = page.locator("div", { hasText }).nth(-2);
 
 			page.setDefaultTimeout(20_000);
