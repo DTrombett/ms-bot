@@ -1,3 +1,4 @@
+import { APIError, UnprocessableEntityError } from "cloudflare";
 import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
@@ -17,6 +18,7 @@ import Command from "../Command.ts";
 import { fetchCache } from "../util/fetchCache.ts";
 import { escapeBaseMarkdown } from "../util/formatters.ts";
 import { cloudflare, rest } from "../util/globals.ts";
+import normalizeError from "../util/normalizeError.ts";
 import {
 	findJSObjectAround,
 	findJSONObjectAround,
@@ -446,7 +448,7 @@ export class Share extends Command {
 		});
 	};
 	static "twitter-screenshot" = async (
-		{ defer, reply }: ChatInputReplies,
+		{ defer, reply, edit }: ChatInputReplies,
 		{
 			options: {
 				url,
@@ -506,22 +508,19 @@ export class Share extends Command {
 							while ((thisNode = result.iterateNext())) lastNode = thisNode;
 							div.id = "ready";
 							const replies =
-								lastNode?.textContent?.match(/^\s*Read (\d\S*)/)?.[1];
+								lastNode?.textContent?.match(/^\s*Read (\d\S*)/)?.[1] ?? "0";
 
 							lastNode?.parentElement?.remove();
-							if (replies) {
-								result = document.evaluate(
-									".//span[text()='Reply']",
-									article,
-									null,
-									XPathResult.ORDERED_NODE_ITERATOR_TYPE,
-									null,
-								);
-								lastNode = undefined;
-								while ((thisNode = result.iterateNext())) lastNode = thisNode;
-								if (lastNode instanceof HTMLElement)
-									lastNode.innerText = replies;
-							}
+							result = document.evaluate(
+								".//span[text()='Reply']",
+								article,
+								null,
+								XPathResult.ORDERED_NODE_ITERATOR_TYPE,
+								null,
+							);
+							lastNode = undefined;
+							while ((thisNode = result.iterateNext())) lastNode = thisNode;
+							if (lastNode instanceof HTMLElement) lastNode.innerText = replies;
 							result = document.evaluate(
 								".//a[@role='link' and normalize-space(translate(., '\u00A0', ' '))='Show more']",
 								article,
@@ -582,8 +581,18 @@ export class Share extends Command {
 					},
 				],
 			})
-			.asResponse();
+			.asResponse()
+			.catch(normalizeError);
 
+		if (res instanceof UnprocessableEntityError && res.errors[0]?.code === 6002)
+			return edit({ content: "Tweet non trovato!" });
+		if (res instanceof APIError)
+			return edit({
+				content: res.errors
+					.map((e) => (e as typeof e & { detail: string }).detail)
+					.join("\n"),
+			});
+		if (res instanceof Error) return edit({ content: res.message });
 		return rest.patch(fullRoute, {
 			body: {
 				attachments: [
