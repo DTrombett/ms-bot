@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 export const handleTweet = async () => {
 	const div = document.createElement("div");
 	/** @type {Element} */
