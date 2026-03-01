@@ -13,7 +13,7 @@ import {
 } from "discord-api-types/v10";
 import { Clash } from "./commands/clash.ts";
 import { bitSetMap } from "./util/bitSets.ts";
-import { rest } from "./util/rest.ts";
+import { rest } from "./util/globals.ts";
 
 export type UserResult = Pick<
 	User,

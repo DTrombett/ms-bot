@@ -14,9 +14,9 @@ import {
 import Command from "../Command.ts";
 import { Emojis } from "../util/Constants.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
+import { rest } from "../util/globals.ts";
 import { ok } from "../util/node.ts";
 import normalizeError from "../util/normalizeError.ts";
-import { rest } from "../util/rest.ts";
 import { maxLength } from "../util/strings.ts";
 import { Bann } from "./bann.ts";
 
@@ -76,11 +76,7 @@ export class Kick extends Command {
 			member,
 		);
 
-		if (content)
-			return reply({
-				content,
-				flags: MessageFlags.Ephemeral,
-			});
+		if (content) return reply({ content, flags: MessageFlags.Ephemeral });
 		defer();
 		return edit(
 			await this.executeKick(interaction.guild_id, user!, options.reason),

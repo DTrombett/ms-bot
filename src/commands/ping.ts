@@ -4,8 +4,8 @@ import {
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
+import { rest } from "../util/globals.ts";
 import { timeout } from "../util/node.ts";
-import { rest } from "../util/rest.ts";
 import { idDiff, idToTimestamp } from "../util/time.ts";
 
 export class Ping extends Command {

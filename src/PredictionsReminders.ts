@@ -18,19 +18,17 @@ import {
 import { getLiveEmbed } from "./util/getLiveEmbed.ts";
 import { getMatchDayNumber } from "./util/getMatchDayNumber.ts";
 import { fetchMatchDays } from "./util/getSeasonData.ts";
+import { rest } from "./util/globals.ts";
 import { hashMatches } from "./util/hashMatches.ts";
 import { loadMatches } from "./util/loadMatches.ts";
 import { createMatchName } from "./util/normalizeTeamName.ts";
 import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
-import { rest } from "./util/rest.ts";
 import { formatLongTime, TimeUnit } from "./util/time.ts";
 
 const KV_KEY = "started-matchdays";
 const timeout = 20 * TimeUnit.Second;
 
-export type Params = {
-	matchDay?: { day: number; id: string };
-};
+export type Params = { matchDay?: { day: number; id: string } };
 
 export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	override async run(
@@ -181,10 +179,9 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 
 		return results
 			.sort((a, b) => b.remindMinutes! - a.remindMinutes!)
-			.map<[recipient_id: string, date: number]>((u) => [
-				u.id,
-				startTime - u.remindMinutes! * 60 * 1000,
-			]);
+			.map<
+				[recipient_id: string, date: number]
+			>((u) => [u.id, startTime - u.remindMinutes! * 60 * 1000]);
 	}
 
 	private async notExists(userId: string, matchId: string) {
@@ -199,10 +196,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		userId: string,
 		date: number,
 		startTime: number,
-		matchDay: {
-			day: number;
-			id: string;
-		},
+		matchDay: { day: number; id: string },
 	) {
 		await this.env.REMINDER.create({
 			id: `${userId}-predictions-${matchDay.day}`,
@@ -263,10 +257,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				...user,
 				predictions: predictions
 					.filter((p) => p.userId === user.id)
-					.map((p) => ({
-						matchId: p.matchId,
-						prediction: p.prediction,
-					})),
+					.map((p) => ({ matchId: p.matchId, prediction: p.prediction })),
 			}))
 			.filter((u) => u.predictions.length || u.dayPoints != null);
 	}
@@ -289,16 +280,16 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 								name: user?.global_name ?? user?.username ?? data.id,
 								icon_url:
 									user &&
-									(user.avatar == null
-										? rest.cdn.defaultAvatar(
-												user.discriminator === "0"
-													? Number(BigInt(user.id) >> 22n) % 6
-													: Number(user.discriminator) % 5,
-										  )
-										: rest.cdn.avatar(user.id, user.avatar, {
-												size: 4096,
-												extension: "png",
-										  })),
+									(user.avatar == null ?
+										rest.cdn.defaultAvatar(
+											user.discriminator === "0" ?
+												Number(BigInt(user.id) >> 22n) % 6
+											:	Number(user.discriminator) % 5,
+										)
+									:	rest.cdn.avatar(user.id, user.avatar, {
+											size: 4096,
+											extension: "png",
+										})),
 							},
 							color: user?.accent_color ?? 0x3498db,
 							fields: matches.map((match) => ({
@@ -323,10 +314,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 	private async sendMatchDayMessage(
 		users: ResolvedUser[],
 		matches: Match[],
-		matchDay: {
-			day: number;
-			id: string;
-		},
+		matchDay: { day: number; id: string },
 	) {
 		const { id } = (await rest.post(
 			Routes.channelMessages(this.env.PREDICTIONS_CHANNEL),

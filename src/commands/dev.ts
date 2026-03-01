@@ -12,9 +12,9 @@ import {
 } from "discord-api-types/v10";
 import type { SessionState, Settings } from "node:http2";
 import Command from "../Command.ts";
+import { rest } from "../util/globals.ts";
 import normalizeError from "../util/normalizeError.ts";
 import { toSearchParams } from "../util/objects.ts";
-import { rest } from "../util/rest.ts";
 import { template } from "../util/strings.ts";
 import { parseTime } from "../util/time.ts";
 import * as commandsObj from "./index.ts";

@@ -8,7 +8,7 @@ import {
 	Routes,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
-import { rest } from "./util/rest.ts";
+import { cloudflare, rest } from "./util/globals.ts";
 
 export type Params = {
 	url: string;
@@ -17,10 +17,7 @@ export type Params = {
 	status?: 301 | 302 | 307 | 308;
 	preserveQuery?: boolean;
 	preservePath?: boolean;
-	interaction: {
-		application_id: string;
-		token: string;
-	};
+	interaction: { application_id: string; token: string };
 };
 
 export class Shorten extends WorkflowEntrypoint<Env, Params> {
@@ -28,11 +25,9 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
-		const client = new Cloudflare({ apiToken: this.env.CLOUDFLARE_API_KEY });
-
 		await step.do<void>(
 			"Create short url",
-			this.shorten.bind(this, client, event.payload),
+			this.shorten.bind(this, cloudflare, event.payload),
 		);
 		await step.do<void>(
 			"Update message",
@@ -44,10 +39,10 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 			"Delete short url",
 			this.deleteUrl.bind(
 				this,
-				client,
+				cloudflare,
 				await step.do(
 					"Get id",
-					this.getId.bind(this, client, event.payload.source),
+					this.getId.bind(this, cloudflare, event.payload.source),
 				),
 			),
 		);
@@ -83,9 +78,9 @@ export class Shorten extends WorkflowEntrypoint<Env, Params> {
 				body: {
 					// When the message is sent the url may not be ready so avoid Discord caching the 404
 					content: `Shortened url: <https://s.trombett.org/${options.source}>\n${
-						options.duration == null
-							? "No expire time"
-							: `Valid until <t:${seconds}:F> (<t:${seconds}:R>)`
+						options.duration == null ?
+							"No expire time"
+						:	`Valid until <t:${seconds}:F> (<t:${seconds}:R>)`
 					}`,
 				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
 			},

@@ -25,9 +25,9 @@ import {
 import Command from "../Command.ts";
 import { Emojis } from "../util/Constants.ts";
 import { escapeMarkdown } from "../util/formatters.ts";
+import { rest } from "../util/globals.ts";
 import { ok } from "../util/node.ts";
 import normalizeError from "../util/normalizeError.ts";
-import { rest } from "../util/rest.ts";
 import { maxLength } from "../util/strings.ts";
 import { TimeUnit } from "../util/time.ts";
 
@@ -199,52 +199,48 @@ export class Bann extends Command {
 			.catch(() => {})) as APIBan | undefined;
 
 		return reply(
-			bannData
-				? {
-						content: `<@${options.user}> (${escapeMarkdown(user?.username ?? "Unknown user")} - ${
-							options.user
-						}) è bannato dal server!\n\nMotivo: ${
-							bannData.reason
-								? maxLength(bannData.reason, 500)
-								: "*Nessun motivo*"
-						}`,
-						allowed_mentions: { parse: [] },
-						components: [
-							{
-								type: ComponentType.ActionRow,
-								components: [
-									{
-										type: ComponentType.Button,
-										custom_id: `bann-${options.user}-r`,
-										style: ButtonStyle.Danger,
-										label: "Revoca bann",
-									},
-								],
-							},
-						],
-					}
-				: {
-						content: `<@${options.user}> (${escapeMarkdown(user?.username ?? "Unknown user")} - ${options.user}) non è bannato dal server!`,
-						allowed_mentions: { parse: [] },
-						components: [
-							{
-								type: ComponentType.ActionRow,
-								components: [
-									{
-										type: ComponentType.Button,
-										custom_id: `bann-${options.user}-a`,
-										label: "Bann",
-										style: ButtonStyle.Success,
-										emoji: {
-											animated: false,
-											id: Emojis.bann,
-											name: "bann",
-										},
-									},
-								],
-							},
-						],
-					},
+			bannData ?
+				{
+					content: `<@${options.user}> (${escapeMarkdown(user?.username ?? "Unknown user")} - ${
+						options.user
+					}) è bannato dal server!\n\nMotivo: ${
+						bannData.reason ?
+							maxLength(bannData.reason, 500)
+						:	"*Nessun motivo*"
+					}`,
+					allowed_mentions: { parse: [] },
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `bann-${options.user}-r`,
+									style: ButtonStyle.Danger,
+									label: "Revoca bann",
+								},
+							],
+						},
+					],
+				}
+			:	{
+					content: `<@${options.user}> (${escapeMarkdown(user?.username ?? "Unknown user")} - ${options.user}) non è bannato dal server!`,
+					allowed_mentions: { parse: [] },
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `bann-${options.user}-a`,
+									label: "Bann",
+									style: ButtonStyle.Success,
+									emoji: { animated: false, id: Emojis.bann, name: "bann" },
+								},
+							],
+						},
+					],
+				},
 		);
 	}
 	static override async component(
@@ -407,11 +403,7 @@ export class Bann extends Command {
 								custom_id: `bann-${user.id}-a`,
 								label: "Bann",
 								style: ButtonStyle.Success,
-								emoji: {
-									animated: false,
-									id: Emojis.bann,
-									name: "bann",
-								},
+								emoji: { animated: false, id: Emojis.bann, name: "bann" },
 							},
 						],
 					},
@@ -438,11 +430,7 @@ export class Bann extends Command {
 							custom_id: `bann-${user.id}-a`,
 							label: "Bann",
 							style: ButtonStyle.Success,
-							emoji: {
-								animated: false,
-								id: Emojis.bann,
-								name: "bann",
-							},
+							emoji: { animated: false, id: Emojis.bann, name: "bann" },
 						},
 					],
 				},
@@ -478,9 +466,9 @@ export class Bann extends Command {
 			content: `<:bann:${Emojis.bann}> <@${user.id}> (${escapeMarkdown(
 				user.username,
 			)} - ${user.id}) è stato bannato!\n\nMotivo: ${
-				reason !== undefined && reason.length > 0
-					? reason.slice(0, 1_000)
-					: "*Nessun motivo*"
+				reason !== undefined && reason.length > 0 ?
+					reason.slice(0, 1_000)
+				:	"*Nessun motivo*"
 			}`,
 			allowed_mentions: { parse: [] },
 			components: [

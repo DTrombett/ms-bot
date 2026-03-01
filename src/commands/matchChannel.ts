@@ -12,9 +12,9 @@ import {
 	type RESTPostAPIGuildChannelResult,
 } from "discord-api-types/v10";
 import Command from "../Command.ts";
+import { rest } from "../util/globals.ts";
 import { ok } from "../util/node.ts";
 import normalizeError from "../util/normalizeError.ts";
-import { rest } from "../util/rest.ts";
 
 export class MatchChannel extends Command {
 	static override chatInputData = {

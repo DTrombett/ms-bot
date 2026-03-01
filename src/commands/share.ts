@@ -17,7 +17,7 @@ import { decodeHTML } from "entities";
 import Command from "../Command.ts";
 import { fetchCache } from "../util/fetchCache.ts";
 import { escapeBaseMarkdown } from "../util/formatters.ts";
-import { rest } from "../util/rest.ts";
+import { rest } from "../util/globals.ts";
 import {
 	findJSObjectAround,
 	findJSONObjectAround,

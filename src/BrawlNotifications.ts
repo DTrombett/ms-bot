@@ -13,7 +13,7 @@ import {
 } from "discord-api-types/v10";
 import { Brawl } from "./commands/brawl.ts";
 import { escapeMarkdown } from "./util/formatters.ts";
-import { rest } from "./util/rest.ts";
+import { rest } from "./util/globals.ts";
 
 export type UserResult = Pick<
 	User,
