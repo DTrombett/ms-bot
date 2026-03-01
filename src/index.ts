@@ -46,13 +46,6 @@ const server: ExportedHandler<Env> = {
 				headers: { "Content-Type": "image/png" },
 			});
 		}
-		if (url.pathname === "/spotify") {
-			if (request.method === "GET")
-				return Response.redirect(
-					`https://open.spotify.com/user/${encodeURIComponent(env.SPOTIFY_ID)}`,
-				);
-			return create405();
-		}
 		if (url.pathname === "/") {
 			if (request.method === "GET") return new Response("Ready!");
 			return create405();

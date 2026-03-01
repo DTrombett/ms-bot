@@ -109,7 +109,7 @@ export class Dev extends Command {
 							},
 							{
 								name: "boot",
-								description: "The boot ID (default: 0)",
+								description: "The boot ID",
 								type: ApplicationCommandOptionType.Integer,
 							},
 						],
