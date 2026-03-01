@@ -6,7 +6,7 @@
 		"allowSyntheticDefaultImports": true,
 		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,
-		"lib": ["esnext"],
+		"lib": ["ESNext", "DOM"],
 		"module": "esnext",
 		"moduleResolution": "bundler",
 		"noEmit": true,
