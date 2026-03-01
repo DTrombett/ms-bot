@@ -1,4 +1,4 @@
-import { equal, ok } from "./node.ts";
+import { equal, ok } from "./node";
 
 type ParseResult<T> = {
 	result: T;

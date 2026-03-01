@@ -11,10 +11,10 @@ import {
 	type RESTPostAPIGuildChannelJSONBody,
 	type RESTPostAPIGuildChannelResult,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { ok } from "../util/node.ts";
-import normalizeError from "../util/normalizeError.ts";
-import { rest } from "../util/rest.ts";
+import Command from "../Command";
+import { rest } from "../util/globals";
+import { ok } from "../util/node";
+import normalizeError from "../util/normalizeError";
 
 export class MatchChannel extends Command {
 	static override chatInputData = {

@@ -7,10 +7,16 @@ import {
 	type APIMessage,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { timeout } from "../util/node.ts";
-import { rest } from "../util/rest.ts";
-import { formatLongTime, formatTime, idDiff, idToTimestamp, parseTimeValue } from "../util/time.ts";
+import Command from "../Command";
+import { rest } from "../util/globals";
+import { timeout } from "../util/node";
+import {
+	formatLongTime,
+	formatTime,
+	idDiff,
+	idToTimestamp,
+	parseTimeValue,
+} from "../util/time";
 
 export class Time extends Command {
 	static override chatInputData = {
@@ -92,9 +98,7 @@ export class Time extends Command {
 	};
 	static "resolve-id" = (
 		{ reply }: ChatInputReplies,
-		{
-			options: { id },
-		}: ChatInputArgs<typeof Time.chatInputData, "resolve-id">,
+		{ options: { id } }: ChatInputArgs<typeof Time.chatInputData, "resolve-id">,
 	) => {
 		try {
 			const timestamp = idToTimestamp(id);
@@ -104,10 +108,7 @@ export class Time extends Command {
 				content: `Timestamp: \`${timestamp}\`, <t:${timestampSeconds}:f>, <t:${timestampSeconds}:R>\n`,
 			});
 		} catch {
-			reply({
-				content: "ID non valido!",
-				flags: MessageFlags.Ephemeral,
-			});
+			reply({ content: "ID non valido!", flags: MessageFlags.Ephemeral });
 		}
 	};
 	static compare = (
@@ -116,7 +117,9 @@ export class Time extends Command {
 			options: { time1, time2, long },
 		}: ChatInputArgs<typeof Time.chatInputData, "compare">,
 	) => {
-		const diff = Math.abs(parseTimeValue(time1) - (time2 ? parseTimeValue(time2) : Date.now()));
+		const diff = Math.abs(
+			parseTimeValue(time1) - (time2 ? parseTimeValue(time2) : Date.now()),
+		);
 
 		if (Number.isNaN(diff))
 			return reply({
@@ -131,13 +134,13 @@ export class Time extends Command {
 		{ reply, update }: ComponentReplies,
 		{ interaction, user: { id } }: ComponentArgs,
 	) =>
-		interaction.message.interaction_metadata?.user.id === id
-			? update({
-					content: `Cronometro fermato dopo **${formatTime(idDiff(interaction.id, interaction.message.id))}**`,
-					components: [],
-				})
-			: reply({
-					content: "Non puoi gestire questo cronometro!",
-					flags: MessageFlags.Ephemeral,
-				});
+		interaction.message.interaction_metadata?.user.id === id ?
+			update({
+				content: `Cronometro fermato dopo **${formatTime(idDiff(interaction.id, interaction.message.id))}**`,
+				components: [],
+			})
+		:	reply({
+				content: "Non puoi gestire questo cronometro!",
+				flags: MessageFlags.Ephemeral,
+			});
 }

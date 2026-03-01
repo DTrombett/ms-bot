@@ -5,8 +5,8 @@ import {
 	MessageFlags,
 	type APIMediaGalleryItem,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { rest } from "../util/rest.ts";
+import Command from "../Command";
+import { rest } from "../util/globals";
 
 export class Avatar extends Command {
 	static override chatInputData = {
@@ -29,9 +29,10 @@ export class Avatar extends Command {
 			user,
 		}: ChatInputArgs<typeof Avatar.chatInputData>,
 	) {
-		const member = userId
-			? interaction.data.resolved?.members?.[userId]
-			: interaction.member;
+		const member =
+			userId ?
+				interaction.data.resolved?.members?.[userId]
+			:	interaction.member;
 		const items: APIMediaGalleryItem[] = [];
 
 		if (userId) user = interaction.data.resolved?.users?.[userId] ?? user;
@@ -42,10 +43,7 @@ export class Avatar extends Command {
 						interaction.guild_id!,
 						user.id,
 						member.avatar,
-						{
-							size: 4096,
-							extension: "png",
-						},
+						{ size: 4096, extension: "png" },
 					),
 				},
 			});
@@ -62,23 +60,17 @@ export class Avatar extends Command {
 			items.push({
 				media: {
 					url: rest.cdn.defaultAvatar(
-						user.discriminator === "0"
-							? Number(BigInt(user.id) >> 22n) % 6
-							: Number(user.discriminator) % 5,
+						user.discriminator === "0" ?
+							Number(BigInt(user.id) >> 22n) % 6
+						:	Number(user.discriminator) % 5,
 					),
 				},
 			});
 		reply({
 			flags: MessageFlags.IsComponentsV2,
 			components: [
-				{
-					type: ComponentType.TextDisplay,
-					content: `Avatar di <@${user.id}>`,
-				},
-				{
-					type: ComponentType.MediaGallery,
-					items,
-				},
+				{ type: ComponentType.TextDisplay, content: `Avatar di <@${user.id}>` },
+				{ type: ComponentType.MediaGallery, items },
 			],
 			allowed_mentions: { parse: [] },
 		});

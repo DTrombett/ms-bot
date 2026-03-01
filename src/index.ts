@@ -2,15 +2,15 @@ import { env } from "cloudflare:workers";
 import type {
 	Params as BrawlParams,
 	UserResult as BrawlUserResult,
-} from "./BrawlNotifications.ts";
+} from "./BrawlNotifications";
 import type {
 	Params as ClashParams,
 	UserResult as ClashUserResult,
-} from "./ClashNotifications.ts";
-import * as commands from "./commands/index.ts";
-import { CommandHandler } from "./util/CommandHandler.ts";
-import { createSolidPng } from "./util/createSolidPng.ts";
-import type { RGB } from "./util/resolveColor.ts";
+} from "./ClashNotifications";
+import * as commands from "./commands/index";
+import { CommandHandler } from "./util/CommandHandler";
+import { createSolidPng } from "./util/createSolidPng";
+import type { RGB } from "./util/resolveColor";
 
 const handler = new CommandHandler(Object.values(commands));
 const create405 = (allow = "GET") =>
@@ -132,11 +132,11 @@ const server: ExportedHandler<Env> = {
 	},
 };
 
-export { BrawlNotifications } from "./BrawlNotifications.ts";
-export { ClashNotifications } from "./ClashNotifications.ts";
-export { PredictionsReminders } from "./PredictionsReminders.ts";
-export { Reminder } from "./Reminder.ts";
-export { Shorten } from "./Shorten.ts";
-export { WebSocket } from "./WebSocket.ts";
+export { BrawlNotifications } from "./BrawlNotifications";
+export { ClashNotifications } from "./ClashNotifications";
+export { PredictionsReminders } from "./PredictionsReminders";
+export { Reminder } from "./Reminder";
+export { Shorten } from "./Shorten";
+export { WebSocket } from "./WebSocket";
 
 export default server;

@@ -10,10 +10,10 @@ import {
 	type APIUser,
 	type RoutesDeclarations,
 } from "discord-api-types/v10";
-import type { Command } from "../Command.ts";
-import { rest } from "./rest.ts";
-import { hexToUint8Array } from "./strings.ts";
-import { TimeUnit } from "./time.ts";
+import type { Command } from "../Command";
+import { rest } from "./globals";
+import { hexToUint8Array } from "./strings";
+import { TimeUnit } from "./time";
 
 const discordKey = await crypto.subtle.importKey(
 	"raw",

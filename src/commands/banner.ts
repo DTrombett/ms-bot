@@ -9,8 +9,8 @@ import {
 	type APIUser,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { rest } from "../util/rest.ts";
+import Command from "../Command";
+import { rest } from "../util/globals";
 
 export class Banner extends Command {
 	static override chatInputData = {
@@ -33,9 +33,10 @@ export class Banner extends Command {
 			interaction,
 		}: ChatInputArgs<typeof Banner.chatInputData>,
 	) {
-		const member = userId
-			? interaction.data.resolved?.members?.[userId]
-			: interaction.member;
+		const member =
+			userId ?
+				interaction.data.resolved?.members?.[userId]
+			:	interaction.member;
 		const items: APIMediaGalleryItem[] = [];
 		const promises: Promise<any>[] = [];
 
@@ -58,10 +59,7 @@ export class Banner extends Command {
 						interaction.guild_id!,
 						user.id,
 						member.banner,
-						{
-							size: 4096,
-							extension: "png",
-						},
+						{ size: 4096, extension: "png" },
 					),
 				},
 			});
@@ -82,14 +80,8 @@ export class Banner extends Command {
 		reply({
 			flags: MessageFlags.IsComponentsV2,
 			components: [
-				{
-					type: ComponentType.TextDisplay,
-					content: `Banner di <@${user.id}>`,
-				},
-				{
-					type: ComponentType.MediaGallery,
-					items,
-				},
+				{ type: ComponentType.TextDisplay, content: `Banner di <@${user.id}>` },
+				{ type: ComponentType.MediaGallery, items },
 			],
 			allowed_mentions: { parse: [] },
 		});

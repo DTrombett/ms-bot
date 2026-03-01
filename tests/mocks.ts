@@ -8,7 +8,7 @@ import { mock } from "node:test";
 import { pathToFileURL } from "node:url";
 import { parseEnv } from "node:util";
 import { caches, fetch, MockAgent, Request, setGlobalDispatcher } from "undici";
-import { constant } from "./utils.ts";
+import { constant } from "./utils";
 
 const run = async <T>(): Promise<D1Result<T>> => ({
 	results: DB.results,

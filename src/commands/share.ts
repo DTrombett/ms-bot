@@ -1,4 +1,4 @@
-import { devices, launch } from "@cloudflare/playwright";
+import { APIError, UnprocessableEntityError } from "cloudflare";
 import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
@@ -14,16 +14,18 @@ import {
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import { decodeHTML } from "entities";
-import Command from "../Command.ts";
-import { fetchCache } from "../util/fetchCache.ts";
-import { escapeBaseMarkdown } from "../util/formatters.ts";
-import { rest } from "../util/rest.ts";
+import Command from "../Command";
+import { handleTweet } from "../dom/handleTweet";
+import { fetchCache } from "../util/fetchCache";
+import { escapeBaseMarkdown } from "../util/formatters";
+import { cloudflare, rest } from "../util/globals";
+import normalizeError from "../util/normalizeError";
 import {
 	findJSObjectAround,
 	findJSONObjectAround,
-} from "../util/stringParsing.ts";
-import { template } from "../util/strings.ts";
-import { TimeUnit } from "../util/time.ts";
+} from "../util/stringParsing";
+import { template } from "../util/strings";
+import { TimeUnit } from "../util/time";
 
 export class Share extends Command {
 	static override readonly supportComponentMethods = true;
@@ -447,7 +449,7 @@ export class Share extends Command {
 		});
 	};
 	static "twitter-screenshot" = async (
-		{ defer, reply }: ChatInputReplies,
+		{ defer, reply, edit }: ChatInputReplies,
 		{
 			options: {
 				url,
@@ -465,82 +467,65 @@ export class Share extends Command {
 				content: "L'URL non è valido!",
 			});
 		defer();
-		const browser = await launch(env.BROWSER);
-		try {
-			const page = await browser.newPage({
-				baseURL: "https://platform.twitter.com/embed/",
-				...devices["Desktop Chrome HiDPI"],
-				deviceScaleFactor: 4,
-				viewport: { width: 7680, height: 4320 },
-				screen: { width: 7680, height: 4320 },
-			});
-			const hasText =
-				/^Read (?:(?:\d+\.?\d*(?:[A-Z])?) repl(?:ies|y)|more on (?:X|Twitter))$/;
-			const readReplies = page.locator("div", { hasText }).nth(-2);
-
-			page.setDefaultTimeout(20_000);
-			await page.goto(
-				`Tweet.html?${new URLSearchParams({
-					dnt: "true",
-					id: tweetId,
-					theme,
-					hideThread: String(hideThread),
-				}).toString()}`,
-			);
-			await Promise.all([
-				page
-					.getByText("Reply", { exact: true })
-					.last()
-					.evaluate(
-						(el: { textContent: string }, replies: number) =>
-							(el.textContent = String(replies)),
-						Number((await readReplies.innerText()).match(hasText)?.[1]) || 0,
-					),
-				readReplies
-					.or(page.locator("div[aria-hidden='true']", { hasText: /^·$/ }))
-					.or(page.getByRole("link", { name: "Follow", exact: true }))
-					.or(page.getByRole("button", { name: /^Copy link to post$/ }).last())
-					.evaluateAll((elements: { remove: () => void }[]) =>
-						(elements.length > 5 ? elements.slice(1) : elements).forEach((el) =>
-							el.remove(),
-						),
-					),
-				page
-					.getByRole("link", { name: /^Show more$/ })
-					.last()
-					.evaluateAll(
-						(elements: { textContent: string }[]) =>
-							elements[0] && (elements[0].textContent = "..."),
-					),
-			]);
-
-			return rest.patch(fullRoute, {
-				body: {
-					attachments: [{ id: 0, filename: `${tweetId}.png` }],
-				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
-				files: [
+		const res = await cloudflare.browserRendering.screenshot
+			.create({
+				account_id: env.CLOUDFLARE_ACCOUNT_ID,
+				actionTimeout: 5000,
+				viewport: { width: 7680, height: 4320, deviceScaleFactor: 4 },
+				url: `https://platform.twitter.com/embed/Tweet.html?${new URLSearchParams(
+					{ dnt: "true", id: tweetId, theme, hideThread: String(hideThread) },
+				).toString()}`,
+				gotoOptions: { timeout: 5000 },
+				cacheTTL: 86400,
+				screenshotOptions: { omitBackground: true },
+				selector: 'article[role="article"]',
+				waitForSelector: { selector: 'div[id="ready"]', timeout: 5000 },
+				addScriptTag: [
 					{
-						data: await page
-							.getByRole("article")
-							.first()
-							.screenshot({
-								omitBackground: true,
-								style: `
-								a[aria-label='X Ads info and privacy'] { visibility: hidden; }
-								a[aria-label='Watch on X'] { display: none; }
-								div:has(> a[href^='https://twitter.com/intent/tweet']) {
-									${hideStats ? "display: none" : "justify-content: space-evenly"};
-								}
-							`,
-							}),
-						name: `${tweetId}.png`,
-						contentType: "image/png",
+						content: `(${handleTweet.toString()})().catch(err=>document.body.innerHTML=\`<article role='article' style='width:fit-content;'>\${err.stack}</article><div id="ready"></div>\`)`,
 					},
 				],
+				addStyleTag: [
+					{
+						content: `
+							a[aria-label='X Ads info and privacy'] { visibility: hidden; }
+							a[aria-label='Watch on X'] { display: none; }
+							div:has(> a[href^='https://twitter.com/intent/tweet']) {
+								${hideStats ? "display: none" : "justify-content: space-evenly"};
+							}
+						`,
+					},
+				],
+			})
+			.asResponse()
+			.catch(normalizeError);
+
+		if (res instanceof UnprocessableEntityError && res.errors[0]?.code === 6002)
+			return edit({ content: "Tweet non trovato!" });
+		if (res instanceof APIError)
+			return edit({
+				content: res.errors
+					.map((e) => (e as typeof e & { detail: string }).detail)
+					.join("\n"),
 			});
-		} finally {
-			await browser.close();
-		}
+		if (res instanceof Error) return edit({ content: res.message });
+		return rest.patch(fullRoute, {
+			body: {
+				attachments: [
+					{
+						id: 0,
+						filename: `${res.headers.get("X-Browser-Ms-Used") ?? tweetId}.png`,
+					},
+				],
+			} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+			files: [
+				{
+					data: await res.bytes(),
+					name: `${tweetId}.png`,
+					contentType: "image/png",
+				},
+			],
+		});
 	};
 	static instagram = async (
 		{ defer, edit, reply }: ChatInputReplies,
