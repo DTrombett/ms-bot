@@ -3,10 +3,10 @@ import {
 	type APIMessage,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { rest } from "../util/globals.ts";
-import { timeout } from "../util/node.ts";
-import { idDiff, idToTimestamp } from "../util/time.ts";
+import Command from "../Command";
+import { rest } from "../util/globals";
+import { timeout } from "../util/node";
+import { idDiff, idToTimestamp } from "../util/time";
 
 export class Ping extends Command {
 	static override chatInputData = {

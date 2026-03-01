@@ -13,8 +13,8 @@ import {
 } from "discord-api-types/v10";
 import { once } from "node:events";
 import { Temporal } from "temporal-polyfill";
-import { rest } from "./util/globals.ts";
-import { template } from "./util/strings.ts";
+import { rest } from "./util/globals";
+import { template } from "./util/strings";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type Params = {};

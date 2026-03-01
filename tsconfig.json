@@ -3,6 +3,7 @@
 	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
+		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
 		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,

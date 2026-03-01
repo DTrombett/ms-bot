@@ -8,7 +8,7 @@ import {
 	Routes,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 } from "discord-api-types/v10";
-import { cloudflare, rest } from "./util/globals.ts";
+import { cloudflare, rest } from "./util/globals";
 
 export type Params = {
 	url: string;

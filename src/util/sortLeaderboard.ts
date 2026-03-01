@@ -1,5 +1,5 @@
-import { calculateAveragePoints } from "./calculateAveragePoints.ts";
-import { calculateWins } from "./calculateWins.ts";
+import { calculateAveragePoints } from "./calculateAveragePoints";
+import { calculateWins } from "./calculateWins";
 
 /**
  * Enhanced sorting function for leaderboards that considers:

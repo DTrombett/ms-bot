@@ -11,9 +11,9 @@ import {
 	type APIEmbed,
 	type RESTPostAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
-import { Clash } from "./commands/clash.ts";
-import { bitSetMap } from "./util/bitSets.ts";
-import { rest } from "./util/globals.ts";
+import { Clash } from "./commands/clash";
+import { bitSetMap } from "./util/bitSets";
+import { rest } from "./util/globals";
 
 export type UserResult = Pick<
 	User,

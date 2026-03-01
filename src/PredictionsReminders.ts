@@ -14,16 +14,16 @@ import {
 import {
 	createLiveComponents,
 	getNextMatch,
-} from "./util/createLiveComponents.ts";
-import { getLiveEmbed } from "./util/getLiveEmbed.ts";
-import { getMatchDayNumber } from "./util/getMatchDayNumber.ts";
-import { fetchMatchDays } from "./util/getSeasonData.ts";
-import { rest } from "./util/globals.ts";
-import { hashMatches } from "./util/hashMatches.ts";
-import { loadMatches } from "./util/loadMatches.ts";
-import { createMatchName } from "./util/normalizeTeamName.ts";
-import { resolveLeaderboard } from "./util/resolveLeaderboard.ts";
-import { formatLongTime, TimeUnit } from "./util/time.ts";
+} from "./util/createLiveComponents";
+import { getLiveEmbed } from "./util/getLiveEmbed";
+import { getMatchDayNumber } from "./util/getMatchDayNumber";
+import { fetchMatchDays } from "./util/getSeasonData";
+import { rest } from "./util/globals";
+import { hashMatches } from "./util/hashMatches";
+import { loadMatches } from "./util/loadMatches";
+import { createMatchName } from "./util/normalizeTeamName";
+import { resolveLeaderboard } from "./util/resolveLeaderboard";
+import { formatLongTime, TimeUnit } from "./util/time";
 
 const KV_KEY = "started-matchdays";
 const timeout = 20 * TimeUnit.Second;

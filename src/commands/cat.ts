@@ -6,7 +6,7 @@ import {
 	MessageFlags,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
+import Command from "../Command";
 
 export class Cat extends Command {
 	static override chatInputData = {
@@ -53,10 +53,7 @@ export class Cat extends Command {
 		return edit({
 			flags: MessageFlags.IsComponentsV2,
 			components: [
-				{
-					type: ComponentType.TextDisplay,
-					content: "# Meow! 🐱",
-				},
+				{ type: ComponentType.TextDisplay, content: "# Meow! 🐱" },
 				{
 					type: ComponentType.MediaGallery,
 					items: data.slice(0, limit).map((media) => ({ media })),

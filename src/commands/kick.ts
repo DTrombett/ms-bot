@@ -11,14 +11,14 @@ import {
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type Snowflake,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { Emojis } from "../util/Constants.ts";
-import { escapeMarkdown } from "../util/formatters.ts";
-import { rest } from "../util/globals.ts";
-import { ok } from "../util/node.ts";
-import normalizeError from "../util/normalizeError.ts";
-import { maxLength } from "../util/strings.ts";
-import { Bann } from "./bann.ts";
+import Command from "../Command";
+import { Emojis } from "../util/Constants";
+import { escapeMarkdown } from "../util/formatters";
+import { rest } from "../util/globals";
+import { ok } from "../util/node";
+import normalizeError from "../util/normalizeError";
+import { maxLength } from "../util/strings";
+import { Bann } from "./bann";
 
 export class Kick extends Command {
 	static override chatInputData = {

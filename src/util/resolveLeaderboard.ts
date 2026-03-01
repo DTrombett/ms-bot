@@ -1,4 +1,4 @@
-import { MatchStatus } from "./Constants.ts";
+import { MatchStatus } from "./Constants";
 
 export const resolveLeaderboard = (users: ResolvedUser[], matches: Match[]) => {
 	const leaderboard = users
@@ -26,11 +26,9 @@ export const resolveLeaderboard = (users: ResolvedUser[], matches: Match[]) => {
 						away?: `${number}`;
 					};
 					const result =
-						match.providerHomeScore > match.providerAwayScore
-							? "1"
-							: match.providerHomeScore < match.providerAwayScore
-							? "2"
-							: "X";
+						match.providerHomeScore > match.providerAwayScore ? "1"
+						: match.providerHomeScore < match.providerAwayScore ? "2"
+						: "X";
 					let diffPoints = 0;
 					const toBePlayed =
 						match.providerStatus === MatchStatus.ToBePlayed ||
@@ -73,8 +71,8 @@ export const resolveLeaderboard = (users: ResolvedUser[], matches: Match[]) => {
 	for (const entry of leaderboard)
 		entry[2] =
 			first -
-			(entry[0].predictions.length
-				? leaderboard.findIndex(([, p]) => entry[1] === p)
-				: leaderboard.length);
+			(entry[0].predictions.length ?
+				leaderboard.findIndex(([, p]) => entry[1] === p)
+			:	leaderboard.length);
 	return leaderboard;
 };

@@ -11,22 +11,22 @@ import {
 	type ModalSubmitActionRowComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { calculateWins } from "../util/calculateWins.ts";
+import Command from "../Command";
+import { calculateWins } from "../util/calculateWins";
 import {
 	createLiveComponents,
 	getNextMatch,
-} from "../util/createLiveComponents.ts";
-import { getLiveEmbed, resolveStats } from "../util/getLiveEmbed.ts";
-import { getMatchDayNumber } from "../util/getMatchDayNumber.ts";
-import { getSeasonData } from "../util/getSeasonData.ts";
-import { rest } from "../util/globals.ts";
-import { hashMatches } from "../util/hashMatches.ts";
-import { loadMatches } from "../util/loadMatches.ts";
-import { createMatchName } from "../util/normalizeTeamName.ts";
-import { resolveLeaderboard } from "../util/resolveLeaderboard.ts";
-import { sortLeaderboard } from "../util/sortLeaderboard.ts";
-import { TimeUnit } from "../util/time.ts";
+} from "../util/createLiveComponents";
+import { getLiveEmbed, resolveStats } from "../util/getLiveEmbed";
+import { getMatchDayNumber } from "../util/getMatchDayNumber";
+import { getSeasonData } from "../util/getSeasonData";
+import { rest } from "../util/globals";
+import { hashMatches } from "../util/hashMatches";
+import { loadMatches } from "../util/loadMatches";
+import { createMatchName } from "../util/normalizeTeamName";
+import { resolveLeaderboard } from "../util/resolveLeaderboard";
+import { sortLeaderboard } from "../util/sortLeaderboard";
+import { TimeUnit } from "../util/time";
 
 export class Predictions extends Command {
 	static override chatInputData = {

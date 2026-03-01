@@ -5,8 +5,8 @@ import {
 	MessageFlags,
 	type APIMediaGalleryItem,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { rest } from "../util/globals.ts";
+import Command from "../Command";
+import { rest } from "../util/globals";
 
 export class Avatar extends Command {
 	static override chatInputData = {

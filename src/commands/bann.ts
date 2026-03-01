@@ -22,14 +22,14 @@ import {
 	type RESTPutAPIGuildBanJSONBody,
 	type Snowflake,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { Emojis } from "../util/Constants.ts";
-import { escapeMarkdown } from "../util/formatters.ts";
-import { rest } from "../util/globals.ts";
-import { ok } from "../util/node.ts";
-import normalizeError from "../util/normalizeError.ts";
-import { maxLength } from "../util/strings.ts";
-import { TimeUnit } from "../util/time.ts";
+import Command from "../Command";
+import { Emojis } from "../util/Constants";
+import { escapeMarkdown } from "../util/formatters";
+import { rest } from "../util/globals";
+import { ok } from "../util/node";
+import normalizeError from "../util/normalizeError";
+import { maxLength } from "../util/strings";
+import { TimeUnit } from "../util/time";
 
 export class Bann extends Command {
 	static override chatInputData = {

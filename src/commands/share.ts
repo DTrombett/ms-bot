@@ -14,18 +14,18 @@ import {
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import { decodeHTML } from "entities";
-import Command from "../Command.ts";
-import { fetchCache } from "../util/fetchCache.ts";
-import { escapeBaseMarkdown } from "../util/formatters.ts";
-import { cloudflare, rest } from "../util/globals.ts";
-import { handleTweet } from "../util/handleTweet.ts";
-import normalizeError from "../util/normalizeError.ts";
+import Command from "../Command";
+import { handleTweet } from "../dom/handleTweet";
+import { fetchCache } from "../util/fetchCache";
+import { escapeBaseMarkdown } from "../util/formatters";
+import { cloudflare, rest } from "../util/globals";
+import normalizeError from "../util/normalizeError";
 import {
 	findJSObjectAround,
 	findJSONObjectAround,
-} from "../util/stringParsing.ts";
-import { template } from "../util/strings.ts";
-import { TimeUnit } from "../util/time.ts";
+} from "../util/stringParsing";
+import { template } from "../util/strings";
+import { TimeUnit } from "../util/time";
 
 export class Share extends Command {
 	static override readonly supportComponentMethods = true;

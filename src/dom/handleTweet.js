@@ -1,11 +1,11 @@
 /* eslint-disable */
-// @ts-nocheck
 
 export const handleTweet = async () => {
 	const div = document.createElement("div");
+	/** @type {Element} */
 	const article =
 		document.body.querySelector('article[role="article"]') ??
-		(await new Promise<Element>((resolve) =>
+		(await new Promise((resolve) =>
 			new MutationObserver((_mutations, observer) => {
 				const article = document.body.querySelector('article[role="article"]');
 
@@ -15,7 +15,8 @@ export const handleTweet = async () => {
 				}
 			}).observe(document.body, { childList: true, subtree: true }),
 		));
-	let thisNode: Node | null, lastNode: Node | undefined;
+	let /** @type {Node | null} */ thisNode,
+		/** @type {Node | undefined} */ lastNode;
 	let result = document.evaluate(
 		".//a[@role='link' and starts-with(normalize-space(translate(., '\u00A0', ' ')), 'Read ')]",
 		article,
