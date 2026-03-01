@@ -5,6 +5,7 @@ import {
 	MessageFlags,
 	Routes,
 	type APIApplicationCommand,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationGuildCommandsJSONBody,
@@ -93,6 +94,12 @@ export class Dev extends Command {
 								type: ApplicationCommandOptionType.Boolean,
 							},
 							{
+								name: "all",
+								description:
+									"Include colors and other escape codes (default: true)",
+								type: ApplicationCommandOptionType.Boolean,
+							},
+							{
 								name: "since",
 								description: "Start date",
 								type: ApplicationCommandOptionType.String,
@@ -111,6 +118,11 @@ export class Dev extends Command {
 								name: "boot",
 								description: "The boot ID",
 								type: ApplicationCommandOptionType.Integer,
+							},
+							{
+								name: "file",
+								description: "Send the output as file (default: false)",
+								type: ApplicationCommandOptionType.Boolean,
 							},
 						],
 					},
@@ -328,13 +340,22 @@ export class Dev extends Command {
 	};
 	static "api logs" = async (
 		{ defer, edit }: ChatInputReplies,
-		{ options }: ChatInputArgs<typeof Dev.chatInputData, "api logs">,
+		{ options, fullRoute }: ChatInputArgs<typeof Dev.chatInputData, "api logs">,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
 		const res = await fetch(
 			`https://ms-api.trombett.org/logs?${toSearchParams(options).toString()}`,
 			{ headers: { "x-env": env.NODE_ENV } },
 		);
+
+		if (options.file)
+			return rest.patch(fullRoute, {
+				body: {
+					attachments: [{ id: 0, filename: "logs.ansi" }],
+					content: `${res.status} ${res.statusText}`,
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				files: [{ data: await res.bytes(), name: "logs.ansi" }],
+			});
 		const text = await res.text().catch((err) => normalizeError(err).message),
 			lines: string[] = [];
 		let length = 0;

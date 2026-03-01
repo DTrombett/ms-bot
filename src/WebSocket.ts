@@ -194,9 +194,7 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 				body: {
 					attachments: [{ id: 0, filename: "log.ansi" }],
 				} satisfies RESTPostAPIChannelMessageJSONBody,
-				files: [
-					{ data: new Uint8Array(await res.arrayBuffer()), name: "log.ansi" },
-				],
+				files: [{ data: await res.bytes(), name: "log.ansi" }],
 			})
 			.then(() => {});
 	}
