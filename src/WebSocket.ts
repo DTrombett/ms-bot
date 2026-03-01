@@ -30,6 +30,9 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
+		step
+			.do<void>("Send daily logs", this.sendDailyLogs.bind(this))
+			.catch(console.error);
 		await step.do(
 			"Update KV with new instance id",
 			this.closeOldWS.bind(this, event.instanceId),
@@ -178,6 +181,22 @@ export class WebSocket extends WorkflowEntrypoint<Env, Params> {
 			"Remove instance id from KV",
 			this.env.KV.delete.bind(this.env.KV, this.INSTANCE_KEY),
 		);
+	}
+
+	private async sendDailyLogs() {
+		const res = await fetch(
+			`https://ms-api.trombett.org/logs?since=1+day+ago&output=short-precise&reverse=false`,
+			{ headers: { "x-env": this.env.NODE_ENV } },
+		);
+
+		return rest
+			.post(Routes.channelMessages(this.env.STATUS_CHANNEL), {
+				body: {
+					attachments: [{ id: 0, filename: "log.ansi" }],
+				} satisfies RESTPostAPIChannelMessageJSONBody,
+				files: [{ data: await res.bytes(), name: "log.ansi" }],
+			})
+			.then(() => {});
 	}
 
 	private async closeOldWS(value: string) {
