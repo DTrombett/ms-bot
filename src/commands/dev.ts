@@ -260,7 +260,7 @@ export class Dev extends Command {
 			content: `**${body.dev ? "Enabled" : "Disabled"}!**\nIP: ${body.devIP}`,
 		});
 	};
-	static "api get-connections" = async ({ defer, edit }: ChatInputReplies) => {
+	static "api connections" = async ({ defer, edit }: ChatInputReplies) => {
 		defer({ flags: MessageFlags.Ephemeral });
 		const res = await fetch(`https://ms-api.trombett.org/connections`, {
 			headers: { "x-env": env.NODE_ENV },
@@ -283,7 +283,7 @@ export class Dev extends Command {
 				:	`${body.name}: ${body.message}\n${body.stack ?? ""}`,
 		});
 	};
-	static "api get-clients" = async ({ defer, edit }: ChatInputReplies) => {
+	static "api clients" = async ({ defer, edit }: ChatInputReplies) => {
 		defer({ flags: MessageFlags.Ephemeral });
 		const res = await fetch(`https://ms-api.trombett.org/clients`, {
 			headers: { "x-env": env.NODE_ENV },
