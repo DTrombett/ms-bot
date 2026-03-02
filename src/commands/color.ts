@@ -4,8 +4,8 @@ import {
 	MessageFlags,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { cssRound, resolveColor } from "../util/resolveColor.ts";
+import Command from "../Command";
+import { cssRound, resolveColor } from "../util/resolveColor";
 
 export class Color extends Command {
 	static override chatInputData = {
@@ -44,16 +44,8 @@ export class Color extends Command {
 				{
 					title: resolvedColor.name ?? resolvedColor.hex,
 					fields: [
-						{
-							name: "HEX",
-							value: resolvedColor.hex,
-							inline: true,
-						},
-						{
-							name: "RGB",
-							value: resolvedColor.rgb.join(", "),
-							inline: true,
-						},
+						{ name: "HEX", value: resolvedColor.hex, inline: true },
+						{ name: "RGB", value: resolvedColor.rgb.join(", "), inline: true },
 						{
 							name: "CMYK",
 							value: resolvedColor.cmyk

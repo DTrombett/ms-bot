@@ -5,7 +5,7 @@ import type {
 	APIMessageComponentInteraction,
 	APIModalSubmitInteraction,
 } from "discord-api-types/v10";
-import "./mocks.ts";
+import "./mocks";
 
 import { deepStrictEqual } from "node:assert/strict";
 import { mock } from "node:test";

@@ -16,11 +16,11 @@ import {
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { NotificationType } from "../BrawlNotifications.ts";
-import Command from "../Command.ts";
-import capitalize from "../util/capitalize.ts";
-import { percentile } from "../util/maths.ts";
-import { ok } from "../util/node.ts";
+import { NotificationType } from "../BrawlNotifications";
+import Command from "../Command";
+import capitalize from "../util/capitalize";
+import { percentile } from "../util/maths";
+import { ok } from "../util/node";
 
 enum BrawlerOrder {
 	Name,

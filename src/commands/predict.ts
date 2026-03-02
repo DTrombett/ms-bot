@@ -7,7 +7,7 @@ import {
 	MessageFlags,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
+import Command from "../Command";
 
 export class Predict extends Command {
 	static override chatInputData = {
@@ -57,9 +57,9 @@ export class Predict extends Command {
 	) =>
 		reply({
 			content:
-				Math.random() < 0.95
-					? Predict.replies[Math.floor(Math.random() * Predict.replies.length)]
-					: "MA IO CHE CABBO NE SO?!?!?!",
+				Math.random() < 0.95 ?
+					Predict.replies[Math.floor(Math.random() * Predict.replies.length)]
+				:	"MA IO CHE CABBO NE SO?!?!?!",
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -75,9 +75,9 @@ export class Predict extends Command {
 				},
 			],
 			flags:
-				type === InteractionType.MessageComponent
-					? MessageFlags.Ephemeral
-					: undefined,
+				type === InteractionType.MessageComponent ?
+					MessageFlags.Ephemeral
+				:	undefined,
 		});
 	static override chatInput = this.makePrediction;
 	static override component = this.makePrediction;

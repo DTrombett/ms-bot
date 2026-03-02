@@ -5,8 +5,8 @@ import {
 	ComponentType,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { escapeMarkdown } from "../util/formatters.ts";
+import Command from "../Command";
+import { escapeMarkdown } from "../util/formatters";
 
 export class Search extends Command {
 	static override chatInputData = {
@@ -82,46 +82,16 @@ export class Search extends Command {
 						description: "Il tipo di ricerca da effettuare",
 						type: ApplicationCommandOptionType.String,
 						choices: [
-							{
-								name: "Repository",
-								value: "repositories",
-							},
-							{
-								name: "Codice",
-								value: "code",
-							},
-							{
-								name: "Commit",
-								value: "commits",
-							},
-							{
-								name: "Issue",
-								value: "issues",
-							},
-							{
-								name: "Discussioni",
-								value: "discussions",
-							},
-							{
-								name: "Packages",
-								value: "registrypackages",
-							},
-							{
-								name: "Marketplace",
-								value: "marketplace",
-							},
-							{
-								name: "Topics",
-								value: "topics",
-							},
-							{
-								name: "Wikis",
-								value: "wikis",
-							},
-							{
-								name: "Utenti",
-								value: "users",
-							},
+							{ name: "Repository", value: "repositories" },
+							{ name: "Codice", value: "code" },
+							{ name: "Commit", value: "commits" },
+							{ name: "Issue", value: "issues" },
+							{ name: "Discussioni", value: "discussions" },
+							{ name: "Packages", value: "registrypackages" },
+							{ name: "Marketplace", value: "marketplace" },
+							{ name: "Topics", value: "topics" },
+							{ name: "Wikis", value: "wikis" },
+							{ name: "Utenti", value: "users" },
 						],
 					},
 				],

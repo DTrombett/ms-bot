@@ -1,5 +1,5 @@
-import capitalize from "./capitalize.ts";
-import { randomArrayItem } from "./random.ts";
+import capitalize from "./capitalize";
+import { randomArrayItem } from "./random";
 
 export type RGB = [red: number, green: number, blue: number];
 export type HSL = [hue: number, sat: number, light: number];
@@ -61,9 +61,9 @@ export const rgbToHsl = (red: number, green: number, blue: number): HSL => {
 
 	if (d !== 0) {
 		sat =
-			light === 0 || light === 1
-				? 0
-				: (max - light) / Math.min(light, 1 - light);
+			light === 0 || light === 1 ?
+				0
+			:	(max - light) / Math.min(light, 1 - light);
 		switch (max) {
 			case red:
 				hue = (green - blue) / d + (green < blue ? 6 : 0);
@@ -533,14 +533,15 @@ export const resolveColor = (color: string): Color => {
 	if (color.startsWith("rgb(")) {
 		color = color.slice(4, -1).trim();
 		const rgb = (
-			color.includes(",") ? color.split(",") : color.split(/\s+/)
-		).map((c) => {
+			color.includes(",") ?
+				color.split(",")
+			:	color.split(/\s+/)).map((c) => {
 			c = c.trim();
 			return Math.max(
 				Math.min(
-					c.endsWith("%")
-						? cssRound((parseFloat(c) / 100) * 255)
-						: parseInt(c, 10),
+					c.endsWith("%") ?
+						cssRound((parseFloat(c) / 100) * 255)
+					:	parseInt(c, 10),
 					255,
 				),
 				0,
@@ -561,8 +562,9 @@ export const resolveColor = (color: string): Color => {
 	if (color.startsWith("hsl(")) {
 		color = color.slice(4, -1).trim();
 		const hsl = (
-			color.includes(",") ? color.split(",") : color.split(/\s+/)
-		).map((c) => c.trim());
+			color.includes(",") ?
+				color.split(",")
+			:	color.split(/\s+/)).map((c) => c.trim());
 		if (hsl.length !== 3) throw new Error("Invalid HSL color");
 		const h = ((parseFloat(hsl[0]!) % 360) + 360) % 360; // Normalize to [0, 360)
 		const s = Math.max(Math.min(parseFloat(hsl[1]!), 100), 0);
@@ -582,8 +584,9 @@ export const resolveColor = (color: string): Color => {
 	if (color.startsWith("hwb(")) {
 		color = color.slice(4, -1).trim();
 		const hwb = (
-			color.includes(",") ? color.split(",") : color.split(/\s+/)
-		).map((c) => c.trim());
+			color.includes(",") ?
+				color.split(",")
+			:	color.split(/\s+/)).map((c) => c.trim());
 		if (hwb.length !== 3) throw new Error("Invalid HWB color");
 		const h = ((parseFloat(hwb[0]!) % 360) + 360) % 360; // Normalize to [0, 360)
 		const w = Math.max(Math.min(parseFloat(hwb[1]!), 100), 0);

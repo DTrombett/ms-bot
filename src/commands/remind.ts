@@ -9,10 +9,10 @@ import {
 	type APIComponentInContainer,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import normalizeError from "../util/normalizeError.ts";
-import { maxLength } from "../util/strings.ts";
-import { parseTime, TimeUnit } from "../util/time.ts";
+import Command from "../Command";
+import normalizeError from "../util/normalizeError";
+import { maxLength } from "../util/strings";
+import { parseTime, TimeUnit } from "../util/time";
 
 export class Remind extends Command {
 	static override chatInputData = {
@@ -164,9 +164,7 @@ export class Remind extends Command {
 			return edit({
 				content: `Si è verificato un errore: \`${error.message}\``,
 			});
-		return edit({
-			content: "Promemoria rimosso correttamente!",
-		});
+		return edit({ content: "Promemoria rimosso correttamente!" });
 	};
 	static sendPage = async (
 		edit: ChatInputReplies["edit"],
@@ -190,8 +188,9 @@ export class Remind extends Command {
 			components: [
 				{
 					type: ComponentType.Container,
-					components: results.length
-						? [
+					components:
+						results.length ?
+							[
 								{
 									type: ComponentType.TextDisplay,
 									content: "## ⏰ Promemoria",
@@ -246,7 +245,7 @@ export class Remind extends Command {
 									],
 								},
 							]
-						: [
+						:	[
 								{
 									type: ComponentType.TextDisplay,
 									content: "Non è presente alcun promemoria!",

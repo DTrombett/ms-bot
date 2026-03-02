@@ -11,22 +11,22 @@ import {
 	type ModalSubmitActionRowComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { calculateWins } from "../util/calculateWins.ts";
+import Command from "../Command";
+import { calculateWins } from "../util/calculateWins";
 import {
 	createLiveComponents,
 	getNextMatch,
-} from "../util/createLiveComponents.ts";
-import { getLiveEmbed, resolveStats } from "../util/getLiveEmbed.ts";
-import { getMatchDayNumber } from "../util/getMatchDayNumber.ts";
-import { getSeasonData } from "../util/getSeasonData.ts";
-import { hashMatches } from "../util/hashMatches.ts";
-import { loadMatches } from "../util/loadMatches.ts";
-import { createMatchName } from "../util/normalizeTeamName.ts";
-import { resolveLeaderboard } from "../util/resolveLeaderboard.ts";
-import { rest } from "../util/rest.ts";
-import { sortLeaderboard } from "../util/sortLeaderboard.ts";
-import { TimeUnit } from "../util/time.ts";
+} from "../util/createLiveComponents";
+import { getLiveEmbed, resolveStats } from "../util/getLiveEmbed";
+import { getMatchDayNumber } from "../util/getMatchDayNumber";
+import { getSeasonData } from "../util/getSeasonData";
+import { rest } from "../util/globals";
+import { hashMatches } from "../util/hashMatches";
+import { loadMatches } from "../util/loadMatches";
+import { createMatchName } from "../util/normalizeTeamName";
+import { resolveLeaderboard } from "../util/resolveLeaderboard";
+import { sortLeaderboard } from "../util/sortLeaderboard";
+import { TimeUnit } from "../util/time";
 
 export class Predictions extends Command {
 	static override chatInputData = {
@@ -244,16 +244,16 @@ export class Predictions extends Command {
 						author: {
 							name: user.global_name ?? user.username,
 							icon_url:
-								user.avatar == null
-									? rest.cdn.defaultAvatar(
-											user.discriminator === "0"
-												? Number(BigInt(user.id) >> 22n) % 6
-												: Number(user.discriminator) % 5,
-									  )
-									: rest.cdn.avatar(user.id, user.avatar, {
-											size: 4096,
-											extension: "png",
-									  }),
+								user.avatar == null ?
+									rest.cdn.defaultAvatar(
+										user.discriminator === "0" ?
+											Number(BigInt(user.id) >> 22n) % 6
+										:	Number(user.discriminator) % 5,
+									)
+								:	rest.cdn.avatar(user.id, user.avatar, {
+										size: 4096,
+										extension: "png",
+									}),
 						},
 						color: 0x3498db,
 						fields: matches.map((m) => ({
@@ -349,11 +349,12 @@ export class Predictions extends Command {
 				if (invalidMatch) invalid.push(createMatchName(invalidMatch));
 			} else if (
 				existingPredictions.find((p) => p.matchId === matchId)?.prediction !==
-				(resolved[field!.value] ??= match.groups.prediction
-					? `${match.groups.prediction.toUpperCase()} (${
+				(resolved[field!.value] ??=
+					match.groups.prediction ?
+						`${match.groups.prediction.toUpperCase()} (${
 							match.groups.first
-					  } - ${match.groups.second})`
-					: value.toUpperCase())
+						} - ${match.groups.second})`
+					:	value.toUpperCase())
 			)
 				newPredictions.push({
 					matchId,
@@ -646,25 +647,29 @@ export class Predictions extends Command {
 		custom_id: `predictions-${getMatchDayNumber(
 			matchDay,
 		)}-${part}-${timestamp}-${userId}`,
-		components: matches.slice((part - 1) * 5, part * 5).map((m) => ({
-			type: ComponentType.ActionRow,
-			components: [
-				{
-					type: ComponentType.TextInput,
-					custom_id: m.matchId,
-					label: createMatchName(m),
-					style: TextInputStyle.Short,
-					required: true,
-					placeholder: `es. ${
-						Predictions.predictionExamples[
-							Math.floor(Math.random() * Predictions.predictionExamples.length)
-						]
-					}`,
-					value: predictions?.find(
-						(prediction) => prediction.matchId === m.matchId,
-					)?.prediction,
-				},
-			],
-		})),
+		components: matches
+			.slice((part - 1) * 5, part * 5)
+			.map((m) => ({
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.TextInput,
+						custom_id: m.matchId,
+						label: createMatchName(m),
+						style: TextInputStyle.Short,
+						required: true,
+						placeholder: `es. ${
+							Predictions.predictionExamples[
+								Math.floor(
+									Math.random() * Predictions.predictionExamples.length,
+								)
+							]
+						}`,
+						value: predictions?.find(
+							(prediction) => prediction.matchId === m.matchId,
+						)?.prediction,
+					},
+				],
+			})),
 	});
 }

@@ -11,9 +11,9 @@ import {
 	type APIContainerComponent,
 	type RESTPostAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
-import { Brawl } from "./commands/brawl.ts";
-import { escapeMarkdown } from "./util/formatters.ts";
-import { rest } from "./util/rest.ts";
+import { Brawl } from "./commands/brawl";
+import { escapeMarkdown } from "./util/formatters";
+import { rest } from "./util/globals";
 
 export type UserResult = Pick<
 	User,

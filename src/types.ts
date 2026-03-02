@@ -29,8 +29,8 @@ import type {
 	RESTPostAPIInteractionFollowupJSONBody,
 	RoutesDeclarations,
 } from "discord-api-types/v10";
-import type Command from "./Command.ts";
-import type { CommandHandler } from "./util/CommandHandler.ts";
+import type Command from "./Command";
+import type { CommandHandler } from "./util/CommandHandler";
 
 declare global {
 	interface ObjectConstructor {

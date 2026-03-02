@@ -15,16 +15,16 @@ import {
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { NotificationType } from "../ClashNotifications.ts";
-import Command from "../Command.ts";
-import { bitSetMap } from "../util/bitSets.ts";
-import capitalize from "../util/capitalize.ts";
-import { escapeMarkdown } from "../util/formatters.ts";
-import { percentile } from "../util/maths.ts";
-import { ok } from "../util/node.ts";
-import { template, toUpperCase } from "../util/strings.ts";
-import { formatShortTime, TimeUnit } from "../util/time.ts";
-import { Brawl } from "./brawl.ts";
+import { NotificationType } from "../ClashNotifications";
+import Command from "../Command";
+import { bitSetMap } from "../util/bitSets";
+import capitalize from "../util/capitalize";
+import { escapeMarkdown } from "../util/formatters";
+import { percentile } from "../util/maths";
+import { ok } from "../util/node";
+import { template, toUpperCase } from "../util/strings";
+import { formatShortTime, TimeUnit } from "../util/time";
+import { Brawl } from "./brawl";
 
 enum LevelOffset {
 	COMMON,

@@ -8,9 +8,9 @@ import {
 	type APIButtonComponent,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { escapeList } from "../util/formatters.ts";
-import { maxLength } from "../util/strings.ts";
+import Command from "../Command";
+import { escapeList } from "../util/formatters";
+import { maxLength } from "../util/strings";
 
 export class Quelo extends Command {
 	static override chatInputData = {
@@ -195,9 +195,10 @@ export class Quelo extends Command {
 		},
 	) => {
 		phrase = phrase?.trim().toLowerCase();
-		const answer = phrase
-			? Quelo.queloAnswers.find(([p]) => p.toLowerCase().includes(phrase))
-			: Quelo.queloAnswers[
+		const answer =
+			phrase ?
+				Quelo.queloAnswers.find(([p]) => p.toLowerCase().includes(phrase))
+			:	Quelo.queloAnswers[
 					Math.floor(Math.random() * Quelo.queloAnswers.length)
 				];
 
@@ -224,16 +225,11 @@ export class Quelo extends Command {
 			});
 		return reply({
 			content: `>>> ${escapeList(answer[0])}`,
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components,
-				},
-			],
+			components: [{ type: ComponentType.ActionRow, components }],
 			flags:
-				type === InteractionType.MessageComponent
-					? MessageFlags.Ephemeral
-					: undefined,
+				type === InteractionType.MessageComponent ?
+					MessageFlags.Ephemeral
+				:	undefined,
 		});
 	};
 	static override chatInput = this.askQuelo;
@@ -244,11 +240,11 @@ export class Quelo extends Command {
 	) {
 		phrase = phrase?.toLowerCase();
 		autocomplete({
-			choices: (phrase
-				? Quelo.phrases.filter(({ phrase: p }) =>
-						p.toLowerCase().includes(phrase),
-					)
-				: Quelo.phrases
+			choices: (phrase ?
+				Quelo.phrases.filter(({ phrase: p }) =>
+					p.toLowerCase().includes(phrase),
+				)
+			:	Quelo.phrases
 			).slice(0, 25),
 		});
 	}

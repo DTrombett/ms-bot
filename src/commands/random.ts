@@ -7,8 +7,8 @@ import {
 	MessageFlags,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { randomNumber } from "../util/random.ts";
+import Command from "../Command";
+import { randomNumber } from "../util/random";
 
 export class Random extends Command {
 	static override chatInputData = {
@@ -74,9 +74,9 @@ export class Random extends Command {
 				},
 			],
 			flags:
-				type === InteractionType.MessageComponent
-					? MessageFlags.Ephemeral
-					: undefined,
+				type === InteractionType.MessageComponent ?
+					MessageFlags.Ephemeral
+				:	undefined,
 		});
 	};
 	static override chatInput = this.random;

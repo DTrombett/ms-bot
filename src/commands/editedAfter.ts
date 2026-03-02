@@ -3,15 +3,12 @@ import {
 	MessageFlags,
 	type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { formatTime } from "../util/time.ts";
+import Command from "../Command";
+import { formatTime } from "../util/time";
 
 export class EditedAfter extends Command {
 	static override contextMenuData = [
-		{
-			name: "Edited After",
-			type: ApplicationCommandType.Message,
-		},
+		{ name: "Edited After", type: ApplicationCommandType.Message },
 	] satisfies RESTPostAPIContextMenuApplicationCommandsJSONBody[];
 	static override message(
 		{ reply }: MessageReplies,

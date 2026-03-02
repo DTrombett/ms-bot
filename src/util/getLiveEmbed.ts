@@ -1,8 +1,8 @@
 import type { APIEmbed } from "discord-api-types/v10";
-import { calculateAveragePoints } from "./calculateAveragePoints.ts";
-import { calculateWins } from "./calculateWins.ts";
-import { MatchStatus } from "./Constants.ts";
-import { createMatchName } from "./normalizeTeamName.ts";
+import { calculateAveragePoints } from "./calculateAveragePoints";
+import { calculateWins } from "./calculateWins";
+import { MatchStatus } from "./Constants";
+import { createMatchName } from "./normalizeTeamName";
 
 const finalEmojis: Record<number, string | undefined> = {
 	[-2]: "⏬",
@@ -27,9 +27,10 @@ export const createLeaderboardDescription = (
 	return leaderboard
 		.toSorted((a, b) => b[1] - a[1])
 		.map(([user, points, dayPoints, maxPoints]) => {
-			const position = user.predictions.length
-				? leaderboard.findIndex(([, p]) => points === p) + 1
-				: leaderboard.length;
+			const position =
+				user.predictions.length ?
+					leaderboard.findIndex(([, p]) => points === p) + 1
+				:	leaderboard.length;
 			const matchPointsHistory =
 				user.matchPointsHistory
 					?.split(",")
@@ -39,18 +40,16 @@ export const createLeaderboardDescription = (
 			return `${position}\\. <@${user.id}>: **${points}** Punt${
 				points === 1 ? "o" : "i"
 			} Partita (${
-				final
-					? `avg. ${(
-							(matchPointsHistory.reduce((a, b) => a + b, 0) + points) /
-							(matchPointsHistory.length + 1)
-					  ).toFixed(2)}`
-					: `max. ${maxPoints}`
+				final ?
+					`avg. ${(
+						(matchPointsHistory.reduce((a, b) => a + b, 0) + points) /
+						(matchPointsHistory.length + 1)
+					).toFixed(2)}`
+				:	`max. ${maxPoints}`
 			}) (${dayPoints > 0 ? "+" : ""}${dayPoints})${
-				position === 1 && points > highestMatchPoints
-					? " ✨"
-					: !matchPointsHistory.some((p) => p >= points)
-					? " 🔥"
-					: ""
+				position === 1 && points > highestMatchPoints ? " ✨"
+				: !matchPointsHistory.some((p) => p >= points) ? " 🔥"
+				: ""
 			}`;
 		})
 		.join("\n");
@@ -64,13 +63,12 @@ const resolveMatches = (matches: Match[]) =>
 				}[${createMatchName(match)}](https://en.legaseriea.it/serie-a/match/${
 					match.matchId.split(":")[4]
 				}/${match.home.shortName.toLowerCase()}-vs-${match.away.shortName.toLowerCase()}): ${
-					match.providerStatus === MatchStatus.ToBePlayed
-						? `<t:${Math.round(Date.parse(match.matchDateUtc) / 1_000)}:F>`
-						: match.providerStatus === MatchStatus.Postponed
-						? "*Posticipata*"
-						: `**${match.providerHomeScore ?? 0} - ${
-								match.providerAwayScore ?? 0
-						  }**`
+					match.providerStatus === MatchStatus.ToBePlayed ?
+						`<t:${Math.round(Date.parse(match.matchDateUtc) / 1_000)}:F>`
+					: match.providerStatus === MatchStatus.Postponed ? "*Posticipata*"
+					: `**${match.providerHomeScore ?? 0} - ${
+							match.providerAwayScore ?? 0
+						}**`
 				}`,
 		)
 		.join("\n");
@@ -196,9 +194,9 @@ export const resolveStats = (
 		if (day.winnerPoints >= highestPoints.points) {
 			highestPoints.users = new Set([
 				...day.winners,
-				...(day.winnerPoints === highestPoints.points
-					? highestPoints.users
-					: []),
+				...(day.winnerPoints === highestPoints.points ?
+					highestPoints.users
+				:	[]),
 			]);
 			highestPoints.points = day.winnerPoints;
 		}
@@ -229,37 +227,37 @@ export const resolveStats = (
 	return {
 		name: "Statistiche Serie A 2025/2026",
 		value: `- Punteggio più alto: ${
-			highestPoints.users.size
-				? `${[...highestPoints.users].map((id) => `<@${id}>`).join(", ")} • **${
-						highestPoints.points
-				  }** Punti Partita`
-				: "**N/A**"
+			highestPoints.users.size ?
+				`${[...highestPoints.users].map((id) => `<@${id}>`).join(", ")} • **${
+					highestPoints.points
+				}** Punti Partita`
+			:	"**N/A**"
 		}\n- Media più alta: ${
-			highestAvg.users.size
-				? `${[...highestAvg.users]
-						.map((id) => `<@${id}>`)
-						.join(", ")} • **${highestAvg.avg.toFixed(2)}** Punti Partita`
-				: "**N/A**"
+			highestAvg.users.size ?
+				`${[...highestAvg.users]
+					.map((id) => `<@${id}>`)
+					.join(", ")} • **${highestAvg.avg.toFixed(2)}** Punti Partita`
+			:	"**N/A**"
 		}\n- Vittoria con maggior distacco: ${
-			highestDiff.users.size
-				? `${[...highestDiff.users].map((id) => `<@${id}>`).join(", ")} • **${
-						highestDiff.points
-				  }** Punti Partita`
-				: "**N/A**"
+			highestDiff.users.size ?
+				`${[...highestDiff.users].map((id) => `<@${id}>`).join(", ")} • **${
+					highestDiff.points
+				}** Punti Partita`
+			:	"**N/A**"
 		}\n- Combo vittorie più lunga: ${
-			highestStreak.users.size
-				? `${[...highestStreak.users].map((id) => `<@${id}>`).join(", ")} • **${
-						highestStreak.days
-				  }** Giornate`
-				: "**N/A**"
+			highestStreak.users.size ?
+				`${[...highestStreak.users].map((id) => `<@${id}>`).join(", ")} • **${
+					highestStreak.days
+				}** Giornate`
+			:	"**N/A**"
 		}\n- Maggior numero di punti in una giornata: ${
 			bestDay ? `**${bestDay.totalPoints}** Punti Partita` : "**N/A**"
 		}\n- Punti totali accumulati: ${
-			days.length
-				? `**${totalPoints}** Punti Partita • Avg. **${(
-						totalPoints / days.length
-				  ).toFixed(2)}**/day`
-				: "**N/A**"
+			days.length ?
+				`**${totalPoints}** Punti Partita • Avg. **${(
+					totalPoints / days.length
+				).toFixed(2)}**/day`
+			:	"**N/A**"
 		}`,
 	};
 };
@@ -276,9 +274,10 @@ export const getLiveEmbed = (
 			name: "Serie A Enilive",
 			url: "https://legaseriea.it/it/serie-a",
 		},
-		title: finished
-			? `Risultati Finali ${day}ª Giornata`
-			: `🔴 Risultati Live ${day}ª Giornata`,
+		title:
+			finished ?
+				`Risultati Finali ${day}ª Giornata`
+			:	`🔴 Risultati Live ${day}ª Giornata`,
 		thumbnail: {
 			url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 		},
@@ -290,18 +289,18 @@ export const getLiveEmbed = (
 			name: "Serie A Enilive",
 			url: "https://legaseriea.it/it/serie-a",
 		},
-		title: finished
-			? `⚽ Classifica Definitiva Pronostici ${day}ª Giornata`
-			: `🔴 Classifica Live Pronostici ${day}ª Giornata`,
+		title:
+			finished ?
+				`⚽ Classifica Definitiva Pronostici ${day}ª Giornata`
+			:	`🔴 Classifica Live Pronostici ${day}ª Giornata`,
 		thumbnail: {
 			url: "https://img.legaseriea.it/vimages/6685b340/SerieA_ENILIVE_RGB.jpg",
 		},
 		description: createLeaderboardDescription(leaderboard, finished),
 		fields: [
 			{
-				name: finished
-					? "Classifica Generale"
-					: "Classifica Generale Provvisoria",
+				name:
+					finished ? "Classifica Generale" : "Classifica Generale Provvisoria",
 				value: createFinalLeaderboard(leaderboard),
 			},
 			resolveStats(users),

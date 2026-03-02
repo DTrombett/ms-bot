@@ -1,0 +1,14 @@
+{
+	"include": ["*.js", "*.ts"],
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": true,
+		"isolatedModules": true,
+		"lib": ["ES2024", "DOM"],
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"pretty": true,
+		"target": "esnext"
+	}
+}

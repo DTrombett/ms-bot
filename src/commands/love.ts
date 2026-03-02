@@ -3,7 +3,7 @@ import {
 	ApplicationCommandType,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
+import Command from "../Command";
 
 export class Love extends Command {
 	static override chatInputData = {
@@ -67,9 +67,9 @@ export class Love extends Command {
 				) +
 			BigInt(10 ** Math.abs(user2.username.length - length));
 		const loveRate =
-			bigint1 > bigint2
-				? (bigint2 * 100n) / bigint1
-				: (bigint1 * 100n) / bigint2;
+			bigint1 > bigint2 ?
+				(bigint2 * 100n) / bigint1
+			:	(bigint1 * 100n) / bigint2;
 		const emoji = Love.emojis[Math.floor(Number(loveRate) / 10)] ?? "❤️";
 
 		reply({

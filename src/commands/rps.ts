@@ -7,9 +7,9 @@ import {
 	MessageFlags,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import Command from "../Command.ts";
-import { ok } from "../util/node.ts";
-import { randomArrayItem } from "../util/random.ts";
+import Command from "../Command";
+import { ok } from "../util/node";
+import { randomArrayItem } from "../util/random";
 
 type Choice = (typeof RPS.choices)[number];
 
@@ -25,18 +25,9 @@ export class RPS extends Command {
 				type: ApplicationCommandOptionType.String,
 				required: true,
 				choices: [
-					{
-						name: "Sasso",
-						value: "rock",
-					},
-					{
-						name: "Carta",
-						value: "paper",
-					},
-					{
-						name: "Forbici",
-						value: "scissors",
-					},
+					{ name: "Sasso", value: "rock" },
+					{ name: "Carta", value: "paper" },
+					{ name: "Forbici", value: "scissors" },
 				],
 			},
 		],
@@ -47,11 +38,7 @@ export class RPS extends Command {
 		paper: ":raised_hand:",
 		scissors: ":v:",
 	} as const;
-	static unicodeEmojis = {
-		rock: "✊",
-		paper: "✋",
-		scissors: "✌️",
-	} as const;
+	static unicodeEmojis = { rock: "✊", paper: "✋", scissors: "✌️" } as const;
 	static winners = {
 		rock: "paper",
 		paper: "scissors",
@@ -83,11 +70,9 @@ export class RPS extends Command {
 			content: `### Tu: ${RPS.emojis[choice]}\n### Io: ${
 				RPS.emojis[myChoice]
 			}\n## ${
-				myChoice === choice
-					? "Pareggio"
-					: RPS.winners[myChoice] === choice
-						? "Hai vinto"
-						: "Hai perso"
+				myChoice === choice ? "Pareggio"
+				: RPS.winners[myChoice] === choice ? "Hai vinto"
+				: "Hai perso"
 			}!\n-# Rivincita?`,
 			components: [
 				{
@@ -101,9 +86,9 @@ export class RPS extends Command {
 				},
 			],
 			flags:
-				type === InteractionType.MessageComponent
-					? MessageFlags.Ephemeral
-					: undefined,
+				type === InteractionType.MessageComponent ?
+					MessageFlags.Ephemeral
+				:	undefined,
 		});
 	};
 	static override component = this.play;

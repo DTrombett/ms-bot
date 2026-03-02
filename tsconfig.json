@@ -3,10 +3,11 @@
 	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
+		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
 		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,
-		"lib": ["esnext"],
+		"lib": ["ESNext"],
 		"module": "esnext",
 		"moduleResolution": "bundler",
 		"noEmit": true,
