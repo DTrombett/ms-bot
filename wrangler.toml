@@ -21,6 +21,9 @@ crons = ["0 0 * * *", "*/5 * * * *"]
 directory = "./public"
 binding = "ASSETS"
 
+[browser]
+binding = "BROWSER"
+
 [[routes]]
 pattern = "ms-bot-interactions.trombett.org"
 custom_domain = true

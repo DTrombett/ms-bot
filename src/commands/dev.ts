@@ -1,3 +1,4 @@
+import { launch } from "@cloudflare/playwright";
 import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
@@ -12,6 +13,7 @@ import {
 } from "discord-api-types/v10";
 import type { SessionState, Settings } from "node:http2";
 import Command from "../Command";
+import { requestFullscreen } from "../dom/heatmap";
 import { rest } from "../util/globals";
 import normalizeError from "../util/normalizeError";
 import { toSearchParams } from "../util/objects";
@@ -37,6 +39,11 @@ export class Dev extends Command {
 						type: ApplicationCommandOptionType.Boolean,
 					},
 				],
+			},
+			{
+				name: "stock-heatmap",
+				description: "Create a stock heatmap image",
+				type: ApplicationCommandOptionType.Subcommand,
 			},
 			{
 				name: "api",
@@ -369,5 +376,73 @@ export class Dev extends Command {
 		return edit({
 			content: `${res.status}\n\`\`\`ansi\n${lines.reverse().join("\n")}\`\`\``,
 		});
+	};
+	static "stock-heatmap" = async (
+		{ defer, edit }: ChatInputReplies,
+		{ fullRoute }: ChatInputArgs<typeof Dev.chatInputData, "stock-heatmap">,
+	) => {
+		defer();
+		const browser = await launch(env.BROWSER);
+
+		try {
+			const page = await browser.newPage({
+				acceptDownloads: false,
+				baseURL: "https://tradingview.com/heatmap/stock/",
+				serviceWorkers: "block",
+				screen: { width: 4096, height: 2707 },
+				viewport: { width: 4096, height: 2707 },
+				colorScheme: "dark",
+			});
+			let n = 0,
+				promise = Promise.resolve(),
+				resolve: () => void;
+
+			page.setDefaultTimeout(5_000);
+			page.on("request", async (req) => {
+				if (req.url().endsWith(".svg")) {
+					if (n === 0) ({ promise, resolve } = Promise.withResolvers<void>());
+					n++;
+					await req.response().catch(console.error);
+					n--;
+					if (n === 0) resolve();
+				}
+			});
+			await page.goto(
+				`#${encodeURIComponent(JSON.stringify({ dataSource: "NASDAQCOMPOSITE", blockColor: "change", blockSize: "market_cap_basic", grouping: "no_group" }))}`,
+				{ timeout: 20000, waitUntil: "domcontentloaded" },
+			);
+			await page
+				.locator("button[data-qa-id='heatmap-top-bar_fullscreen']")
+				.first()
+				.click();
+			await page
+				.locator('div[class^="canvasContainer"]:has(> canvas)')
+				.first()
+				.evaluate(requestFullscreen);
+			await promise;
+			await rest.patch(fullRoute, {
+				body: {
+					attachments: [{ id: 0, filename: "heatmap.png" }],
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				files: [
+					{
+						data: await page
+							.locator('div[class^="canvasContainer"] > canvas')
+							.last()
+							.screenshot({
+								omitBackground: true,
+								style: "* { background-color: transparent !important; }",
+								timeout: 20000,
+							}),
+						name: "heatmap.png",
+						contentType: "image/png",
+					},
+				],
+			});
+		} catch (err) {
+			await edit({ content: normalizeError(err).message });
+		} finally {
+			await browser.close();
+		}
 	};
 }
