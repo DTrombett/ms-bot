@@ -21,6 +21,7 @@ import Command from "../Command";
 import capitalize from "../util/capitalize";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
+import { template } from "../util/strings";
 
 enum BrawlerOrder {
 	Name,
@@ -67,7 +68,7 @@ enum ResolvedMemberRole {
 
 export class Brawl extends Command {
 	static NOTIFICATION_TYPES = [
-		"Brawler Tier Max",
+		"Prestige",
 		"New Brawler",
 		"Trophy Road Advancement",
 		"All",
@@ -1199,11 +1200,15 @@ export class Brawl extends Command {
 		},
 		color:
 			player.nameColor ? parseInt(player.nameColor.slice(4), 16) : 0xffffff,
-		description: `🛡️ Club: ${
-			player.club.tag ?
-				`**${player.club.name}** (${player.club.tag})`
-			:	"*In nessun club*"
-		}${playerId ? `\n👤 Discord: <@${playerId}>` : ""}`,
+		description: template`
+			🛡️ Club: ${
+				player.club.tag ?
+					`**${player.club.name}** (${player.club.tag})`
+				:	"*In nessun club*"
+			}
+			<:totalPrestige:1479095470541242480> Prestigio: ${player.totalPrestigeLevel}
+			${playerId}👤 Discord: <@${playerId}>
+		`,
 		fields: [
 			{
 				name: "🏆 Trofei",

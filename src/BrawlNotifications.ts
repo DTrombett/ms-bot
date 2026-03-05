@@ -23,10 +23,10 @@ export type UserResult = Pick<
 export type PartialPlayer = Pick<
 	Brawl.Player,
 	"name" | "highestTrophies" | "nameColor" | "icon"
-> & { brawlers: Pick<Brawl.BrawlerStat, "id" | "rank" | "name">[] };
+> & { brawlers: Pick<Brawl.BrawlerStat, "id" | "prestigeLevel" | "name">[] };
 export enum NotificationType {
 	"All" = 1 << 0,
-	"Brawler Tier Max" = 1 << 1,
+	"Prestige" = 1 << 1,
 	"New Brawler" = 1 << 2,
 	"Trophy Road Advancement" = 1 << 3,
 }
@@ -130,20 +130,20 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 		}
 		if (
 			user.brawlNotifications & NotificationType["New Brawler"] ||
-			user.brawlNotifications & NotificationType["Brawler Tier Max"] ||
+			user.brawlNotifications & NotificationType["Prestige"] ||
 			user.brawlNotifications & NotificationType["All"]
 		) {
 			const oldBrawlers = await Promise.try<
-				Pick<Brawl.BrawlerStat, "id" | "rank">[],
+				Pick<Brawl.BrawlerStat, "id" | "prestigeLevel">[],
 				Parameters<typeof JSON.parse>
 			>(JSON.parse, user.brawlers ?? "[]").catch(() => {});
 
 			if (oldBrawlers)
 				for (const brawler of player.brawlers) {
-					const rank = oldBrawlers.find((b) => b.id === brawler.id)?.rank;
+					const old = oldBrawlers.find((b) => b.id === brawler.id);
 
 					if (
-						rank == null &&
+						old == null &&
 						(user.brawlNotifications & NotificationType["New Brawler"] ||
 							user.brawlNotifications & NotificationType["All"])
 					)
@@ -168,9 +168,9 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 							],
 						});
 					if (
-						rank !== 51 &&
-						brawler.rank === 51 &&
-						(user.brawlNotifications & NotificationType["Brawler Tier Max"] ||
+						old?.prestigeLevel != null &&
+						brawler.prestigeLevel > old.prestigeLevel &&
+						(user.brawlNotifications & NotificationType["Prestige"] ||
 							user.brawlNotifications & NotificationType["All"])
 					)
 						components.push({
@@ -182,7 +182,7 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 									components: [
 										{
 											type: ComponentType.TextDisplay,
-											content: `## Nuovo Brawler al Rank Massimo!\nHai portato **${brawler.name}** a 1.000 trofei!`,
+											content: `## Nuovo Prestigio sbloccato!\nHai sbloccato il prestigio **${brawler.prestigeLevel}** per **${brawler.name}**!`,
 										},
 									],
 									accessory: {
@@ -200,9 +200,9 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 			components,
 			player: {
 				name: player.name,
-				brawlers: player.brawlers.map(({ id, rank, name }) => ({
+				brawlers: player.brawlers.map(({ id, prestigeLevel, name }) => ({
 					id,
-					rank,
+					prestigeLevel,
 					name,
 				})),
 				highestTrophies: player.highestTrophies,
@@ -257,7 +257,12 @@ export class BrawlNotifications extends WorkflowEntrypoint<Env, Params> {
 		)
 			.bind(
 				player.highestTrophies,
-				JSON.stringify(player.brawlers.map(({ id, rank }) => ({ id, rank }))),
+				JSON.stringify(
+					player.brawlers.map(({ id, prestigeLevel }) => ({
+						id,
+						prestigeLevel,
+					})),
+				),
 				user.id,
 			)
 			.run();

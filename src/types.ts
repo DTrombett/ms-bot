@@ -1024,8 +1024,8 @@ declare global {
 	namespace Brawl {
 		type Player = {
 			club: PlayerClub;
-			isQualifiedFromChampionshipChallenge: boolean;
 			"3vs3Victories": number;
+			isQualifiedFromChampionshipChallenge: boolean;
 			icon: PlayerIcon;
 			tag: string;
 			name: string;
@@ -1033,6 +1033,7 @@ declare global {
 			expLevel: number;
 			expPoints: number;
 			highestTrophies: number;
+			totalPrestigeLevel: number;
 			soloVictories: number;
 			duoVictories: number;
 			bestRoboRumbleTime: number;
@@ -1044,16 +1045,30 @@ declare global {
 		type PlayerIcon = { id: number };
 		type BrawlerStatList = BrawlerStat[];
 		type BrawlerStat = {
-			gadgets: AccessoryList;
 			starPowers: StarPowerList;
+			hyperCharges: HyperChargeList;
+			gadgets: AccessoryList;
+			currentWinStreak: number;
 			id: number;
 			rank: number;
 			trophies: number;
 			highestTrophies: number;
+			prestigeLevel: number;
 			power: number;
+			buffies: BrawlerBuffies;
 			gears: GearStatList;
+			maxWinStreak: number;
 			name: JsonLocalizedName;
+			skin: Skin;
 		};
+		type HyperChargeList = HyperCharge[];
+		type HyperCharge = { name: JsonLocalizedName; id: number };
+		type BrawlerBuffies = {
+			gadget: boolean;
+			starPower: boolean;
+			hyperCharge: boolean;
+		};
+		type Skin = { name: JsonLocalizedName; id: number };
 		type AccessoryList = Accessory[];
 		type Accessory = { id: number; name: JsonLocalizedName };
 		type JsonLocalizedName = string;
