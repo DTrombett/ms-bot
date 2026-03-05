@@ -44,11 +44,6 @@ export class MatchChannel extends Command {
 						max_length: 100,
 					},
 					{
-						name: "role",
-						description: "Un ruolo a cui dare l'accesso",
-						type: ApplicationCommandOptionType.Role,
-					},
-					{
 						name: "user1",
 						description: "Primo utente a cui dare l'accesso",
 						type: ApplicationCommandOptionType.User,
@@ -111,17 +106,31 @@ export class MatchChannel extends Command {
 				allow: String(PermissionFlagsBits.ViewChannel),
 			}));
 
-		if (options.role)
-			permission_overwrites.push({
-				id: options.role,
+		permission_overwrites.push(
+			{
+				// Staff Brawl
+				id: "1446198003470958756",
+				type: 0,
+				allow: String(
+					PermissionFlagsBits.ViewChannel | PermissionFlagsBits.ManageChannels,
+				),
+			},
+			{
+				// Moderatori
+				id: "816433001725427712",
+				type: 0,
+				allow: String(
+					PermissionFlagsBits.ViewChannel | PermissionFlagsBits.ManageChannels,
+				),
+			},
+			{
+				// Helper
+				id: "816433074317426758",
 				type: 0,
 				allow: String(PermissionFlagsBits.ViewChannel),
-			});
-		permission_overwrites.push({
-			id: guild_id,
-			type: 0,
-			deny: String(PermissionFlagsBits.ViewChannel),
-		});
+			},
+			{ id: guild_id, type: 0, deny: String(PermissionFlagsBits.ViewChannel) },
+		);
 		try {
 			return edit({
 				content: `Canale <#${
