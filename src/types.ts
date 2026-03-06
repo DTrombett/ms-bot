@@ -1082,6 +1082,8 @@ declare global {
 			name: JsonLocalizedName;
 			id: number;
 			starPowers: StarPowerList;
+			hyperCharges: HyperChargeList;
+			gears: GearStatList;
 		};
 		type Club = {
 			tag: string;
@@ -1092,6 +1094,7 @@ declare global {
 			members: ClubMemberList;
 			type: "open" | "inviteOnly" | "closed" | "unknown";
 			badgeId: number;
+			isFamilyFriendly: boolean;
 		};
 		type ClubMemberList = ClubMember[];
 		type ClubMember = {

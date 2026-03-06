@@ -861,29 +861,45 @@ export class Brawl extends Command {
 					components: [
 						{
 							type: ComponentType.TextDisplay,
-							content: `## ${brawler.name}\n<:level:1431299161717866536> Lvl. ${
-								brawler.power
-							}\t🏆 ${brawler.trophies}  🔝 ${
-								brawler.highestTrophies
-							}\n- <:gadget:1431298224966336639> **${brawler.gadgets.length}**${
-								brawler.gadgets.length ? ": " : ""
-							}${brawler.gadgets
-								.map((g) =>
-									g.name.toLowerCase().split(" ").map(capitalize).join(" "),
-								)
-								.join(", ")}\n- <:gear:1431298227105300593> **${
-								brawler.gears.length
-							}**${brawler.gears.length ? ": " : ""}${brawler.gears
-								.map((g) =>
-									g.name.toLowerCase().split(" ").map(capitalize).join(" "),
-								)
-								.join(", ")}\n- <:starpower:1431298229328150649> **${
-								brawler.starPowers.length
-							}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers
-								.map((g) =>
-									g.name.toLowerCase().split(" ").map(capitalize).join(" "),
-								)
-								.join(", ")}`,
+							content: template`
+								## ${brawler.name}\n<:level:1431299161717866536> Lvl. ${
+									brawler.power
+								}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}${brawler.prestigeLevel ? `\t<:prestigeLevel:1479095470541242480> ${brawler.prestigeLevel}` : ""}${brawler.currentWinStreak > 1 ? `\t🔥 ${brawler.currentWinStreak}` : ""}\t🔥 MAX ${brawler.maxWinStreak}
+								- <:gear:1431298227105300593> **${
+									brawler.gears.length
+								}**${brawler.gears.length ? ": " : ""}${brawler.gears
+									.map((g) =>
+										g.name.toLowerCase().split(" ").map(capitalize).join(" "),
+									)
+									.join(", ")}
+								- <:gadget:1431298224966336639> **${brawler.gadgets.length}**${
+									brawler.gadgets.length ? ": " : ""
+								}${brawler.gadgets
+									.map((g) =>
+										g.name.toLowerCase().split(" ").map(capitalize).join(" "),
+									)
+									.join(
+										", ",
+									)}\t${brawler.buffies.gadget ? "<:buffed:1479492113250123797>" : ""}
+								- <:starpower:1431298229328150649> **${
+									brawler.starPowers.length
+								}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers
+									.map((g) =>
+										g.name.toLowerCase().split(" ").map(capitalize).join(" "),
+									)
+									.join(
+										", ",
+									)}\t${brawler.buffies.starPower ? "<:buffed:1479492113250123797>" : ""}
+								- <:hyperCharge:1479489310808870983> **${
+									brawler.hyperCharges.length
+								}**${brawler.hyperCharges.length ? ": " : ""}${brawler.hyperCharges
+									.map((g) =>
+										g.name.toLowerCase().split(" ").map(capitalize).join(" "),
+									)
+									.join(
+										", ",
+									)}\t${brawler.buffies.hyperCharge ? "<:buffed:1479492113250123797>" : ""}
+								`,
 						},
 					],
 					accessory: {
