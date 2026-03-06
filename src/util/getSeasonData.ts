@@ -59,7 +59,10 @@ WHERE Users.id = ?
 	AND Predictions.matchId IN (${Array(matches.length).fill("?").join(", ")})`,
 	)
 		.bind(userId, ...matches.map((m) => m.matchId))
-		.all<Pick<Prediction, "matchId" | "prediction"> & Pick<User, "match">>();
+		.all<
+			Pick<Database.Prediction, "matchId" | "prediction"> &
+				Pick<Database.User, "match">
+		>();
 
 	return [matchDayData, matches, existingPredictions] as const;
 };

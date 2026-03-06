@@ -8,7 +8,7 @@ import { calculateWins } from "./calculateWins";
  * 3. Average points - descending
  */
 export const sortLeaderboard = <
-	T extends Pick<User, "dayPoints" | "id" | "matchPointsHistory">,
+	T extends Pick<Database.User, "dayPoints" | "id" | "matchPointsHistory">,
 >(
 	users: T[],
 ): T[] => {

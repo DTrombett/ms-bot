@@ -1359,7 +1359,9 @@ export class Clash extends Command {
 		const userId = options.tag ? undefined : (options.user ?? id);
 
 		options.tag ??=
-			(await env.DB.prepare("SELECT clashTag FROM Users WHERE id = ?")
+			(await env.DB.prepare(
+				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ?",
+			)
 				.bind(userId)
 				.first("clashTag")) ?? undefined;
 		if (!options.tag)

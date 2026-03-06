@@ -1,33 +1,30 @@
-DROP TABLE IF EXISTS Predictions;
-DROP TABLE IF EXISTS Users;
-DROP TABLE IF EXISTS Reminders;
 CREATE TABLE Users (
-	id VARCHAR(31) PRIMARY KEY,
-	brawlTag VARCHAR(15),
-	brawlNotifications INTEGER DEFAULT 0,
-	brawlers TEXT,
-	brawlTrophies INTEGER,
-	clashTag VARCHAR(15),
-	clashNotifications INTEGER DEFAULT 0,
-	cards TEXT,
-	arena INTEGER,
-	league INTEGER,
+	id TEXT PRIMARY KEY,
 	dayPoints INTEGER,
-	match INTEGER,
+	match TEXT,
 	remindMinutes INTEGER,
 	reminded INTEGER DEFAULT 0,
-	matchPointsHistory VARCHAR(255)
+	matchPointsHistory TEXT
+);
+CREATE TABLE SupercellPlayers (
+	tag TEXT NOT NULL,
+	type INTEGER NOT NULL,
+	userId TEXT NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+	notifications INTEGER DEFAULT 0,
+	data TEXT,
+	active BOOLEAN NOT NULL DEFAULT FALSE,
+	PRIMARY KEY (tag, type)
 );
 CREATE TABLE Predictions (
-	matchId VARCHAR(255) NOT NULL,
-	userId VARCHAR(31) NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
-	prediction VARCHAR(255) NOT NULL,
+	matchId TEXT NOT NULL,
+	userId TEXT NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+	prediction TEXT NOT NULL,
 	PRIMARY KEY (userId, matchId)
 );
 CREATE TABLE Reminders (
-	id VARCHAR(63) NOT NULL,
-	date VARCHAR(255) NOT NULL,
-	userId VARCHAR(31) NOT NULL,
-	remind VARCHAR(1023) NOT NULL,
+	id TEXT NOT NULL,
+	date TEXT NOT NULL,
+	userId TEXT NOT NULL,
+	remind TEXT NOT NULL,
 	PRIMARY KEY (id, userId)
 );

@@ -13,3 +13,8 @@ export enum MatchStatus {
 	Cancelled = "Canceled",
 	Abandoned = "Abandoned",
 }
+
+export enum SupercellPlayerType {
+	BrawlStars,
+	ClashRoyale,
+}

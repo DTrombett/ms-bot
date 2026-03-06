@@ -31,6 +31,7 @@ import type {
 } from "discord-api-types/v10";
 import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
+import type { SupercellPlayerType } from "./util/Constants";
 
 declare global {
 	interface ObjectConstructor {
@@ -330,29 +331,36 @@ declare global {
 		maxPoints: number,
 	][];
 
-	type Prediction = { matchId: string; userId: string; prediction: string };
-	type User = {
-		id: string;
-		dayPoints?: number | null;
-		matchPointsHistory?: string | null;
-		match?: string | null;
-		remindMinutes?: number | null;
-		brawlTag?: string;
-		brawlNotifications: number;
-		brawlTrophies?: number | null;
-		brawlers?: string | null;
-		clashTag?: string;
-		clashNotifications: number;
-		arena?: number | null;
-		league?: number | null;
-		cards?: string | null;
-	};
-	type Reminder = { id: string; date: string; userId: string; remind: string };
+	namespace Database {
+		type Prediction = { matchId: string; userId: string; prediction: string };
+		type User = {
+			id: string;
+			dayPoints?: number | null;
+			match?: string | null;
+			remindMinutes?: number | null;
+			reminded: number;
+			matchPointsHistory?: string | null;
+		};
+		type SupercellPlayer = {
+			tag: string;
+			type: SupercellPlayerType;
+			userId: string;
+			notifications: number;
+			data?: string | null;
+			active: boolean;
+		};
+		type Reminder = {
+			id: string;
+			date: string;
+			userId: string;
+			remind: string;
+		};
+	}
 
 	type ResolvedUser = Pick<
-		User,
+		Database.User,
 		"dayPoints" | "id" | "match" | "matchPointsHistory"
-	> & { predictions: Pick<Prediction, "matchId" | "prediction">[] };
+	> & { predictions: Pick<Database.Prediction, "matchId" | "prediction">[] };
 
 	type ExtractOptionType<
 		T extends RecursiveReadonly<APIApplicationCommandOption> =
@@ -1176,7 +1184,7 @@ declare global {
 			};
 		};
 		type JsonLocalizedName = string;
-		type Arena = { name: JsonLocalizedName; id: number; iconUrls?: unknown };
+		type Arena = { name: JsonLocalizedName; id: number; iconUrls?: object };
 		type PlayerLeagueStatistics = {
 			previousSeason: LeagueSeasonResult;
 			bestSeason: LeagueSeasonResult;

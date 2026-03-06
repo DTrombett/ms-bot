@@ -173,7 +173,9 @@ export class Predictions extends Command {
 			`SELECT id, dayPoints, matchPointsHistory, match
 				FROM Users
 				WHERE dayPoints IS NOT NULL`,
-		).all<Pick<User, "dayPoints" | "id" | "matchPointsHistory" | "match">>();
+		).all<
+			Pick<Database.User, "dayPoints" | "id" | "matchPointsHistory" | "match">
+		>();
 		const wins = calculateWins(results);
 		const sortedResults = sortLeaderboard(results);
 
@@ -323,7 +325,7 @@ export class Predictions extends Command {
 		const total = matches.length / 5;
 		const invalid: string[] = [];
 		const resolved: Record<string, string | undefined> = {};
-		const newPredictions: Prediction[] = [];
+		const newPredictions: Database.Prediction[] = [];
 		for (const {
 			components: [field],
 		} of interaction.data.components as ModalSubmitActionRowComponent[]) {
@@ -508,9 +510,12 @@ export class Predictions extends Command {
 					env.DB.prepare(`SELECT id, dayPoints, matchPointsHistory, match
 					FROM Users`),
 				])) as [
-					D1Result<Prediction>,
+					D1Result<Database.Prediction>,
 					D1Result<
-						Pick<User, "dayPoints" | "id" | "match" | "matchPointsHistory">
+						Pick<
+							Database.User,
+							"dayPoints" | "id" | "match" | "matchPointsHistory"
+						>
 					>,
 				];
 			let users: ResolvedUser[] = rawUsers
@@ -638,7 +643,7 @@ export class Predictions extends Command {
 		matchDay: MatchDay,
 		part: number,
 		userId: string,
-		predictions?: Pick<Prediction, "matchId" | "prediction">[],
+		predictions?: Pick<Database.Prediction, "matchId" | "prediction">[],
 		timestamp = Date.parse(matches[0]!.matchDateUtc) - 1_000 * 60 * 5,
 	): APIModalInteractionResponseCallbackData => ({
 		title: `Pronostici ${getMatchDayNumber(matchDay)}ª Giornata (${part}/${

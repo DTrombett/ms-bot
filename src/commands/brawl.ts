@@ -19,6 +19,7 @@ import {
 import { NotificationType } from "../BrawlNotifications";
 import Command from "../Command";
 import capitalize from "../util/capitalize";
+import { SupercellPlayerType } from "../util/Constants";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
 import { template } from "../util/strings";
@@ -1525,9 +1526,11 @@ export class Brawl extends Command {
 			});
 		const userId = options.tag ? undefined : id;
 		options.tag ??=
-			(await env.DB.prepare("SELECT brawlTag FROM Users WHERE id = ?")
-				.bind(id)
-				.first("brawlTag")) ?? undefined;
+			(await env.DB.prepare(
+				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1",
+			)
+				.bind(id, SupercellPlayerType.BrawlStars)
+				.first("tag")) ?? undefined;
 		if (!options.tag)
 			return reply({
 				flags: MessageFlags.Ephemeral,
@@ -1550,9 +1553,11 @@ export class Brawl extends Command {
 			const [player, playerId] = await Promise.all([
 				this.getPlayer(options.tag, { edit }),
 				userId ??
-					env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
-						.bind(options.tag)
-						.first<string>("id"),
+					env.DB.prepare(
+						"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+					)
+						.bind(options.tag, SupercellPlayerType.BrawlStars)
+						.first<string>("userId"),
 			]);
 
 			return edit(
@@ -1579,9 +1584,11 @@ export class Brawl extends Command {
 			const [player, playerId] = await Promise.all([
 				this.getPlayer(options.tag, { edit }),
 				userId ??
-					env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
-						.bind(options.tag)
-						.first<string>("id"),
+					env.DB.prepare(
+						"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+					)
+						.bind(options.tag, SupercellPlayerType.BrawlStars)
+						.first<string>("userId"),
 			]);
 
 			if (playerId)
@@ -1623,10 +1630,10 @@ export class Brawl extends Command {
 		defer();
 		if (!options.tag) {
 			const playerTag = await env.DB.prepare(
-				"SELECT brawlTag FROM Users WHERE id = ?",
+				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1",
 			)
-				.bind(id)
-				.first<string>("brawlTag");
+				.bind(id, SupercellPlayerType.BrawlStars)
+				.first<string>("tag");
 
 			if (playerTag)
 				options.tag = (await this.getPlayer(playerTag, { edit })).club.tag;
@@ -1660,26 +1667,27 @@ export class Brawl extends Command {
 			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, "notify enable">,
 	) => {
-		const result = await env.DB.prepare(
-			`INSERT INTO Users (id, brawlNotifications)
-				VALUES (?1, ?2)
-				ON CONFLICT(id) DO UPDATE
-				SET brawlNotifications = Users.brawlNotifications | ?2
-				RETURNING brawlNotifications, brawlTag`,
+		const notifications = await env.DB.prepare(
+			`UPDATE SupercellPlayers
+				SET notifications = notifications | ?1
+				WHERE id = ?2
+				RETURNING notifications`,
 		)
-			.bind(id, NotificationType[type])
-			.first<{ brawlNotifications: number; brawlTag: string | null }>();
+			.bind(NotificationType[type], id)
+			.first<Database.SupercellPlayer["notifications"]>("notifications");
 
-		return reply({
-			flags: MessageFlags.Ephemeral,
-			content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(
-				result?.brawlNotifications,
-			)}.${
-				!result?.brawlTag ?
-					`\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
-				:	""
-			}`,
-		});
+		if (notifications != null)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: `Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(
+					notifications,
+				)}.`,
+			});
+		else
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: `Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`,
+			});
 	};
 	static "notify disable" = async (
 		{ reply }: ChatInputReplies,
@@ -1713,28 +1721,19 @@ export class Brawl extends Command {
 	};
 	static "notify view" = async (
 		{ reply }: ChatInputReplies,
-		{
-			user: { id },
-			interaction: {
-				data: { id: commandId },
-			},
-		}: ChatInputArgs<typeof Brawl.chatInputData, "notify view">,
+		{ user: { id } }: ChatInputArgs<typeof Brawl.chatInputData, "notify view">,
 	) => {
-		const result = await env.DB.prepare(
-			"SELECT brawlNotifications, brawlTag FROM Users WHERE id = ?",
+		const notifications = await env.DB.prepare(
+			"SELECT notifications FROM SupercellUsers WHERE userId = ? AND type = ? AND active = 1",
 		)
-			.bind(id)
-			.first<{ brawlNotifications: number; brawlTag: string | null }>();
+			.bind(id, SupercellPlayerType.BrawlStars)
+			.first<Database.SupercellPlayer["notifications"]>("notifications");
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
 			content: `Notifiche attive per i seguenti tipi: ${this.calculateFlags(
-				result?.brawlNotifications,
-			)}.${
-				!result?.brawlTag ?
-					`\n-# Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.`
-				:	""
-			}`,
+				notifications ?? 0,
+			)}.`,
 		});
 	};
 	static override async component(
@@ -1906,9 +1905,11 @@ export class Brawl extends Command {
 		defer({ flags: MessageFlags.Ephemeral });
 		const [player, playerId] = await Promise.all([
 			this.getPlayer(tag, { edit }),
-			env.DB.prepare("SELECT id FROM Users WHERE brawlTag = ?")
-				.bind(tag)
-				.first<string>("id"),
+			env.DB.prepare(
+				"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+			)
+				.bind(tag, SupercellPlayerType.BrawlStars)
+				.first<string>("userId"),
 		]);
 
 		return edit(

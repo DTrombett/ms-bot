@@ -2,7 +2,7 @@
  * Calculate the average points per match day for each user
  */
 export const calculateAveragePoints = (
-	users: Pick<User, "id" | "matchPointsHistory">[],
+	users: Pick<Database.User, "id" | "matchPointsHistory">[],
 ): Record<string, number> => {
 	const averages: Record<string, number> = {};
 

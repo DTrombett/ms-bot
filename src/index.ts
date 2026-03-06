@@ -1,14 +1,9 @@
 import { env } from "cloudflare:workers";
-import type {
-	Params as BrawlParams,
-	UserResult as BrawlUserResult,
-} from "./BrawlNotifications";
-import type {
-	Params as ClashParams,
-	UserResult as ClashUserResult,
-} from "./ClashNotifications";
+import type { Params as BrawlParams } from "./BrawlNotifications";
+import type { Params as ClashParams } from "./ClashNotifications";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
+import { SupercellPlayerType } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
 import type { RGB } from "./util/resolveColor";
 
@@ -60,59 +55,26 @@ const server: ExportedHandler<Env> = {
 			]);
 		else if (cron === "*/5 * * * *") {
 			const { results } = await env.DB.prepare(
-				`SELECT id,
-					brawlTag,
-					brawlNotifications,
-					brawlTrophies,
-					brawlers,
-					clashTag,
-					clashNotifications,
-					cards,
-					arena,
-					league
-				FROM Users
-				WHERE (
-						brawlTag IS NOT NULL
-						AND brawlNotifications != 0
-					)
-					OR (
-						clashTag IS NOT NULL
-						AND clashNotifications != 0
-					)`,
-			).all<BrawlUserResult & ClashUserResult>();
+				`SELECT *
+				FROM SupercellPlayers
+				WHERE notifications != 0`,
+			).all<Database.SupercellPlayer>();
 			const brawlBatch: WorkflowInstanceCreateOptions<BrawlParams>[] = results
-				.reduce((arr, v) => {
-					if (!v.brawlTag || !v.brawlNotifications) return arr;
+				.reduce<Database.SupercellPlayer[][]>((arr, v) => {
+					if (v.type !== SupercellPlayerType.BrawlStars) return arr;
 					if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
-					arr
-						.at(-1)!
-						.push({
-							brawlNotifications: v.brawlNotifications,
-							brawlTag: v.brawlTag,
-							brawlTrophies: v.brawlTrophies,
-							id: v.id,
-							brawlers: v.brawlers,
-						});
+					arr.at(-1)!.push(v);
 					return arr;
-				}, [] as BrawlUserResult[][])
-				.map((users) => ({ params: { users } }));
+				}, [])
+				.map((players) => ({ params: { players } }));
 			const clashBatch: WorkflowInstanceCreateOptions<ClashParams>[] = results
-				.reduce((arr, v) => {
-					if (!v.clashTag || !v.clashNotifications) return arr;
+				.reduce<Database.SupercellPlayer[][]>((arr, v) => {
+					if (v.type !== SupercellPlayerType.ClashRoyale) return arr;
 					if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
-					arr
-						.at(-1)!
-						.push({
-							clashNotifications: v.clashNotifications,
-							clashTag: v.clashTag,
-							arena: v.arena,
-							cards: v.cards,
-							id: v.id,
-							league: v.league,
-						});
+					arr.at(-1)!.push(v);
 					return arr;
-				}, [] as ClashUserResult[][])
-				.map((users) => ({ params: { users } }));
+				}, [])
+				.map((players) => ({ params: { players } }));
 
 			for (const result of await Promise.allSettled([
 				brawlBatch.length ?
