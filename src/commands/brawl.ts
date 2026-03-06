@@ -1222,7 +1222,7 @@ export class Brawl extends Command {
 					`**${player.club.name}** (${player.club.tag})`
 				:	"*In nessun club*"
 			}
-			<:totalPrestige:1479095470541242480> Prestigio: ${player.totalPrestigeLevel}
+			<:totalPrestige:1479095470541242480> Prestigio: **${player.totalPrestigeLevel}**
 			${playerId}👤 Discord: <@${playerId}>
 		`,
 		fields: [
