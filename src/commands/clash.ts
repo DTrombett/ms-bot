@@ -1535,7 +1535,7 @@ export class Clash extends Command {
 					ClashNotifications[type],
 					id,
 					SupercellPlayerType.ClashRoyale,
-					tag,
+					...(tag ? [tag] : []),
 				)
 				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
