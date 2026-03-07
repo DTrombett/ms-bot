@@ -1848,7 +1848,7 @@ export class Clash extends Command {
 				"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
 			)
 				.bind(tag, SupercellPlayerType.ClashRoyale)
-				.first<string>("id"),
+				.first<string>("userId"),
 		]);
 
 		return edit(
