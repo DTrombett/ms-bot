@@ -1665,7 +1665,7 @@ export class Clash extends Command {
 	) => {
 		userId ||= id;
 		await env.DB.prepare(
-			`DELETE FROM Users
+			`DELETE FROM SupercellPlayers
 				WHERE tag = ? AND type = ? AND userId = ?`,
 		)
 			.bind(tag, SupercellPlayerType.ClashRoyale, userId)
