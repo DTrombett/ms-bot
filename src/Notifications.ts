@@ -39,7 +39,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 		const results = await Promise.allSettled(
 			players.map(async (user) => {
 				const { body, data } = await step.do(
-					`Process user ${user.userId}`,
+					`Process ${user.tag} (${SupercellPlayerType[user.type]})`,
 					{ retries: { limit: 0, delay: 0 } },
 					(user.type === SupercellPlayerType.BrawlStars ?
 						// eslint-disable-next-line @typescript-eslint/unbound-method
@@ -51,12 +51,12 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 
 				if (body)
 					await step.do(
-						`Send message for user ${user.userId}`,
+						`Send message for ${user.tag} (${SupercellPlayerType[user.type]})`,
 						{ retries: { limit: 0, delay: 0 } },
 						this.sendMessage.bind(this, body),
 					);
 				return step.do(
-					`Update user ${user.userId} data`,
+					`Update ${user.tag} (${SupercellPlayerType[user.type]}) data`,
 					{ retries: { limit: 4, delay: 300, backoff: "exponential" } },
 					this.updatePlayer.bind(this, user, data),
 				);
