@@ -1493,7 +1493,7 @@ export class Clash extends Command {
 					ClashNotifications[type],
 					id,
 					SupercellPlayerType.ClashRoyale,
-					tag,
+					...(tag ? [tag] : []),
 				)
 				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
@@ -1581,7 +1581,7 @@ export class Clash extends Command {
 		results: Pick<Database.SupercellPlayer, "tag" | "notifications">[],
 	): string =>
 		`Ecco le notifiche attualmente attive:\n${results
-			.map((r) => `- **${r.tag}**: ${this.calculateFlags(r.notifications)}`)
+			.map((r) => `- ${r.tag}: ${this.calculateFlags(r.notifications)}`)
 			.join("\n")}`;
 	static override async component(
 		replies: ComponentReplies,

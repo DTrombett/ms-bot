@@ -1702,7 +1702,12 @@ export class Brawl extends Command {
 				${tag}AND tag = ?4
 				RETURNING notifications, tag`,
 			)
-				.bind(BrawlNotifications[type], id, SupercellPlayerType.BrawlStars, tag)
+				.bind(
+					BrawlNotifications[type],
+					id,
+					SupercellPlayerType.BrawlStars,
+					...(tag ? [tag] : []),
+				)
 				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
 			return reply({
@@ -1784,7 +1789,7 @@ export class Brawl extends Command {
 		results: Pick<Database.SupercellPlayer, "tag" | "notifications">[],
 	): string =>
 		`Ecco le notifiche attualmente attive:\n${results
-			.map((r) => `- **${r.tag}**: ${this.calculateFlags(r.notifications)}`)
+			.map((r) => `- ${r.tag}: ${this.calculateFlags(r.notifications)}`)
 			.join("\n")}`;
 	static override async component(
 		replies: ComponentReplies,
