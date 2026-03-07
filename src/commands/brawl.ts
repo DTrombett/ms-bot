@@ -759,6 +759,12 @@ export class Brawl extends Command {
 									"Il tag giocatore (es. #8QJR0YC). Di default viene usato quello salvato",
 								type: ApplicationCommandOptionType.String,
 							},
+							{
+								name: "user",
+								description:
+									"L'utente Discord se non si sa il tag (deve aver salvato il tag).",
+								type: ApplicationCommandOptionType.User,
+							},
 						],
 					},
 					{
@@ -790,6 +796,12 @@ export class Brawl extends Command {
 								description:
 									"Il tag giocatore (es. #8QJR0YC). Di default viene usato quello salvato",
 								type: ApplicationCommandOptionType.String,
+							},
+							{
+								name: "user",
+								description:
+									"L'utente Discord se non si sa il tag (deve aver salvato il tag).",
+								type: ApplicationCommandOptionType.User,
 							},
 							{
 								name: "order",
@@ -1537,12 +1549,13 @@ export class Brawl extends Command {
 				flags: MessageFlags.Ephemeral,
 				content: "Questa opzione è privata!",
 			});
-		const userId = options.tag ? undefined : id;
+		const userId = options.tag ? undefined : (options.user ?? id);
+
 		options.tag ??=
 			(await env.DB.prepare(
 				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1",
 			)
-				.bind(id, SupercellPlayerType.BrawlStars)
+				.bind(userId, SupercellPlayerType.BrawlStars)
 				.first<Database.SupercellPlayer["tag"]>("tag")) ?? undefined;
 		if (!options.tag)
 			return reply({
@@ -1561,7 +1574,6 @@ export class Brawl extends Command {
 		defer({
 			flags: subcommand === "player link" ? MessageFlags.Ephemeral : undefined,
 		});
-
 		if (subcommand === "player view") {
 			const [player, playerId] = await Promise.all([
 				this.getPlayer(options.tag, { edit }),
@@ -1579,7 +1591,9 @@ export class Brawl extends Command {
 					id,
 					playerId ?? undefined,
 					commandId,
-					userId ? false : playerId !== id,
+					playerId === id ? false
+					: playerId ? undefined
+					: true,
 				),
 			);
 		}

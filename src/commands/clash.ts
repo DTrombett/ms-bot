@@ -1411,11 +1411,9 @@ export class Clash extends Command {
 					locale,
 					playerId ?? undefined,
 					commandId,
-					userId ?
-						playerId === id ?
-							false
-						:	undefined
-					:	playerId !== id,
+					playerId === id ? false
+					: playerId ? undefined
+					: true,
 				),
 			);
 		}
