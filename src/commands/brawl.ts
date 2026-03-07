@@ -1552,7 +1552,7 @@ export class Brawl extends Command {
 
 		options.tag ??=
 			(await env.DB.prepare(
-				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1",
+				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1 LIMIT 1",
 			)
 				.bind(userId, SupercellPlayerType.BrawlStars)
 				.first<Database.SupercellPlayer["tag"]>("tag")) ?? undefined;
@@ -1656,7 +1656,7 @@ export class Brawl extends Command {
 		defer();
 		if (!options.tag) {
 			const playerTag = await env.DB.prepare(
-				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1",
+				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1 LIMIT 1",
 			)
 				.bind(id, SupercellPlayerType.BrawlStars)
 				.first<string>("tag");
