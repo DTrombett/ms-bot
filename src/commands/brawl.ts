@@ -69,9 +69,9 @@ enum ResolvedMemberRole {
 
 export class Brawl extends Command {
 	static NOTIFICATION_TYPES = [
-		"Prestige",
-		"New Brawler",
-		"Trophy Road Advancement",
+		"Prestigio",
+		"Nuovo Brawler",
+		"Avanzamento nel cammino dei trofei",
 		"All",
 	] as const;
 	static readonly BRAWLER_EMOJIS: RecursiveReadonly<

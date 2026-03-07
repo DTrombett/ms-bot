@@ -107,10 +107,10 @@ enum BattleType {
 export class Clash extends Command {
 	static "NOTIFICATION_TYPES" = [
 		"All",
-		"New Arena",
-		"New Card",
-		"New Evo",
-		"New League",
+		"Nuova arena raggiunta",
+		"Nuova carta trovata",
+		"Evoluzione sbloccata",
+		"Nuova lega raggiunta",
 	] as const;
 	private static readonly "ERROR_MESSAGES" = {
 		400: "Parametri non validi forniti.",

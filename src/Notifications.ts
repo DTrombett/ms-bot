@@ -88,7 +88,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 		if (!oldPlayer) return { data: JSON.stringify(newPlayer) };
 		if (
 			user.notifications &
-			(BrawlNotifications["Trophy Road Advancement"] |
+			(BrawlNotifications["Avanzamento nel cammino dei trofei"] |
 				BrawlNotifications["All"])
 		) {
 			const newTier =
@@ -128,8 +128,8 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 		}
 		if (
 			user.notifications &
-			(BrawlNotifications["New Brawler"] |
-				BrawlNotifications["Prestige"] |
+			(BrawlNotifications["Nuovo Brawler"] |
+				BrawlNotifications["Prestigio"] |
 				BrawlNotifications["All"])
 		)
 			for (const brawler of newPlayer.brawlers) {
@@ -138,7 +138,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 				if (
 					old == null &&
 					user.notifications &
-						(BrawlNotifications["New Brawler"] | BrawlNotifications["All"])
+						(BrawlNotifications["Nuovo Brawler"] | BrawlNotifications["All"])
 				)
 					components.push({
 						type: ComponentType.Container,
@@ -163,7 +163,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 				if (
 					brawler.prestigeLevel > (old?.prestigeLevel ?? 0) &&
 					user.notifications &
-						(BrawlNotifications["Prestige"] | BrawlNotifications["All"])
+						(BrawlNotifications["Prestigio"] | BrawlNotifications["All"])
 				)
 					components.push({
 						type: ComponentType.Container,
@@ -234,7 +234,8 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 		if (!oldPlayer) return { data: JSON.stringify(newPlayer) };
 		if (
 			user.notifications &
-				(ClashNotifications["New Arena"] | ClashNotifications["All"]) &&
+				(ClashNotifications["Nuova arena raggiunta"] |
+					ClashNotifications["All"]) &&
 			newPlayer.arena.id > oldPlayer.arena.id
 		)
 			embeds.push({
@@ -247,7 +248,8 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 			});
 		if (
 			user.notifications &
-				(ClashNotifications["New League"] | ClashNotifications["All"]) &&
+				(ClashNotifications["Nuova lega raggiunta"] |
+					ClashNotifications["All"]) &&
 			newPlayer.currentPathOfLegendSeasonResult &&
 			newPlayer.currentPathOfLegendSeasonResult.leagueNumber >
 				(oldPlayer.currentPathOfLegendSeasonResult?.leagueNumber ?? 0)
@@ -259,8 +261,8 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 			});
 		if (
 			user.notifications &
-			(ClashNotifications["New Card"] |
-				ClashNotifications["New Evo"] |
+			(ClashNotifications["Nuova carta trovata"] |
+				ClashNotifications["Evoluzione sbloccata"] |
 				ClashNotifications["All"])
 		)
 			for (const card of newPlayer.cards) {
@@ -270,7 +272,8 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 					!oldCard &&
 					(card.rarity === "champion" || card.rarity === "legendary") &&
 					user.notifications &
-						(ClashNotifications["New Card"] | ClashNotifications["All"])
+						(ClashNotifications["Nuova carta trovata"] |
+							ClashNotifications["All"])
 				)
 					embeds.push({
 						title: `Hai trovato ${
@@ -283,7 +286,8 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 					});
 				if (
 					user.notifications &
-					(ClashNotifications["New Evo"] | ClashNotifications["All"])
+					(ClashNotifications["Evoluzione sbloccata"] |
+						ClashNotifications["All"])
 				)
 					embeds.push(
 						...bitSetMap<APIEmbed | null>(
