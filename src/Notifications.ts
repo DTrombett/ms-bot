@@ -53,7 +53,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 					await step.do(
 						`Send message for ${user.tag} (${SupercellPlayerType[user.type]})`,
 						{ retries: { limit: 0, delay: 0 } },
-						this.sendMessage.bind(this, body),
+						this.sendMessage.bind(this, body, user.type),
 					);
 				return step.do(
 					`Update ${user.tag} (${SupercellPlayerType[user.type]}) data`,
@@ -350,10 +350,18 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 		};
 	}
 
-	private async sendMessage(body: RESTPostAPIChannelMessageJSONBody) {
-		await rest.post(Routes.channelMessages(this.env.BRAWL_STARS_CHANNEL), {
-			body,
-		});
+	private async sendMessage(
+		body: RESTPostAPIChannelMessageJSONBody,
+		type: SupercellPlayerType,
+	) {
+		await rest.post(
+			Routes.channelMessages(
+				type === SupercellPlayerType.BrawlStars ?
+					this.env.BRAWL_STARS_CHANNEL
+				:	this.env.CLASH_ROYALE_CHANNEL,
+			),
+			{ body },
+		);
 	}
 
 	private async updatePlayer(user: Database.SupercellPlayer, data: string) {
