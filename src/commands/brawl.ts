@@ -1744,7 +1744,12 @@ export class Brawl extends Command {
 				${tag}AND tag = ?4
 				RETURNING notifications, tag`,
 			)
-				.bind(BrawlNotifications[type], id, SupercellPlayerType.BrawlStars, tag)
+				.bind(
+					BrawlNotifications[type],
+					id,
+					SupercellPlayerType.BrawlStars,
+					...(tag ? [tag] : []),
+				)
 				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
 			return reply({
