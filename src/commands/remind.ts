@@ -180,7 +180,9 @@ export class Remind extends Command {
 				OFFSET ?2`,
 		)
 			.bind(userId, page * 8)
-			.all<Pick<Reminder, "date" | "id" | "remind"> & { count: number }>();
+			.all<
+				Pick<Database.Reminder, "date" | "id" | "remind"> & { count: number }
+			>();
 		const count = results[0]?.count ?? 0;
 
 		return edit({
