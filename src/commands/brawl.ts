@@ -1767,7 +1767,7 @@ export class Brawl extends Command {
 		}: ChatInputArgs<typeof Brawl.chatInputData, "notify view">,
 	) => {
 		const { results } = await env.DB.prepare(
-			"SELECT notifications, tag FROM SupercellUsers WHERE userId = ? AND type = ?",
+			"SELECT notifications, tag FROM SupercellPlayers WHERE userId = ? AND type = ?",
 		)
 			.bind(id, SupercellPlayerType.BrawlStars)
 			.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
