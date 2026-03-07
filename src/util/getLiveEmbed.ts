@@ -118,7 +118,7 @@ export const createFinalLeaderboard = (leaderboard: Leaderboard) => {
 		.join("\n");
 };
 export const resolveStats = (
-	users: Pick<User, "id" | "matchPointsHistory">[],
+	users: Pick<Database.User, "id" | "matchPointsHistory">[],
 ) => {
 	let currentStreaks: { id: string; days: number }[] = [];
 	let totalPoints = 0;

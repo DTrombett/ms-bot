@@ -1,12 +1,4 @@
 import { env } from "cloudflare:workers";
-import type {
-	Params as BrawlParams,
-	UserResult as BrawlUserResult,
-} from "./BrawlNotifications";
-import type {
-	Params as ClashParams,
-	UserResult as ClashUserResult,
-} from "./ClashNotifications";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
@@ -60,80 +52,29 @@ const server: ExportedHandler<Env> = {
 			]);
 		else if (cron === "*/5 * * * *") {
 			const { results } = await env.DB.prepare(
-				`SELECT id,
-					brawlTag,
-					brawlNotifications,
-					brawlTrophies,
-					brawlers,
-					clashTag,
-					clashNotifications,
-					cards,
-					arena,
-					league
-				FROM Users
-				WHERE (
-						brawlTag IS NOT NULL
-						AND brawlNotifications != 0
-					)
-					OR (
-						clashTag IS NOT NULL
-						AND clashNotifications != 0
-					)`,
-			).all<BrawlUserResult & ClashUserResult>();
-			const brawlBatch: WorkflowInstanceCreateOptions<BrawlParams>[] = results
-				.reduce((arr, v) => {
-					if (!v.brawlTag || !v.brawlNotifications) return arr;
-					if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
-					arr
-						.at(-1)!
-						.push({
-							brawlNotifications: v.brawlNotifications,
-							brawlTag: v.brawlTag,
-							brawlTrophies: v.brawlTrophies,
-							id: v.id,
-							brawlers: v.brawlers,
-						});
-					return arr;
-				}, [] as BrawlUserResult[][])
-				.map((users) => ({ params: { users } }));
-			const clashBatch: WorkflowInstanceCreateOptions<ClashParams>[] = results
-				.reduce((arr, v) => {
-					if (!v.clashTag || !v.clashNotifications) return arr;
-					if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
-					arr
-						.at(-1)!
-						.push({
-							clashNotifications: v.clashNotifications,
-							clashTag: v.clashTag,
-							arena: v.arena,
-							cards: v.cards,
-							id: v.id,
-							league: v.league,
-						});
-					return arr;
-				}, [] as ClashUserResult[][])
-				.map((users) => ({ params: { users } }));
+				`SELECT *
+				FROM SupercellPlayers
+				WHERE notifications != 0`,
+			).all<Database.SupercellPlayer>();
+			const instances = await env.NOTIFICATIONS.createBatch(
+				results
+					.reduce<Database.SupercellPlayer[][]>((arr, v) => {
+						if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
+						arr.at(-1)!.push(v);
+						return arr;
+					}, [])
+					.map((players) => ({ params: { players } })),
+			);
 
-			for (const result of await Promise.allSettled([
-				brawlBatch.length ?
-					env.BRAWL_NOTIFICATIONS.createBatch(brawlBatch)
-				:	null,
-				clashBatch.length ?
-					env.CLASH_NOTIFICATIONS.createBatch(clashBatch)
-				:	null,
-			]))
-				if (result.status === "rejected") console.error(result.reason);
-				else
-					console.log(
-						"Started workflow(s) with IDs",
-						...(result.value ?? []).map((r) => r.id),
-					);
+			console.log(
+				"Started workflow(s) with IDs",
+				...instances.map((r) => r.id),
+			);
 		}
 	},
 };
 
-export { BrawlNotifications } from "./BrawlNotifications";
-export { ClashNotifications } from "./ClashNotifications";
+export { Notifications } from "./Notifications";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";
 export { Shorten } from "./Shorten";

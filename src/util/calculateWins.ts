@@ -2,14 +2,11 @@
  * Calculate the number of wins (days where user was top scorer) for each user
  */
 export const calculateWins = (
-	users: Pick<User, "id" | "matchPointsHistory">[],
+	users: Pick<Database.User, "id" | "matchPointsHistory">[],
 ): Record<string, number> => {
 	const wins: Record<string, number> = {};
-	const days: {
-		winners: Set<string>;
-		winnerPoints: number;
-		day: number;
-	}[] = [];
+	const days: { winners: Set<string>; winnerPoints: number; day: number }[] =
+		[];
 
 	for (const user of users) {
 		const matchPointsHistory = user.matchPointsHistory?.split(",");

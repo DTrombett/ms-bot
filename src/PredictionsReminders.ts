@@ -175,7 +175,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				FROM Users u
 				WHERE u.reminded = 0
 				AND u.remindMinutes IS NOT NULL`,
-		).all<Pick<User, "id" | "remindMinutes">>();
+		).all<Pick<Database.User, "id" | "remindMinutes">>();
 
 		return results
 			.sort((a, b) => b.remindMinutes! - a.remindMinutes!)
@@ -246,9 +246,12 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 				this.env.DB.prepare(`SELECT id, dayPoints, matchPointsHistory, match
 					FROM Users`),
 			])) as [
-				D1Result<Prediction>,
+				D1Result<Database.Prediction>,
 				D1Result<
-					Pick<User, "dayPoints" | "id" | "match" | "matchPointsHistory">
+					Pick<
+						Database.User,
+						"dayPoints" | "id" | "match" | "matchPointsHistory"
+					>
 				>,
 			];
 

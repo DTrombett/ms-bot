@@ -15,13 +15,14 @@ import {
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { NotificationType } from "../ClashNotifications";
 import Command from "../Command";
 import { bitSetMap } from "../util/bitSets";
 import capitalize from "../util/capitalize";
+import { ClashNotifications, SupercellPlayerType } from "../util/Constants";
 import { escapeMarkdown } from "../util/formatters";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
+import normalizeError from "../util/normalizeError";
 import { template, toUpperCase } from "../util/strings";
 import { formatShortTime, TimeUnit } from "../util/time";
 import { Brawl } from "./brawl";
@@ -106,10 +107,10 @@ enum BattleType {
 export class Clash extends Command {
 	static "NOTIFICATION_TYPES" = [
 		"All",
-		"New Arena",
-		"New Card",
-		"New Evo",
-		"New League",
+		"Nuova arena raggiunta",
+		"Nuova carta trovata",
+		"Evoluzione sbloccata",
+		"Nuova lega raggiunta",
 	] as const;
 	private static readonly "ERROR_MESSAGES" = {
 		400: "Parametri non validi forniti.",
@@ -198,6 +199,12 @@ export class Clash extends Command {
 									value: type,
 								})),
 							},
+							{
+								name: "tag",
+								description:
+									"Il tag giocatore (es. #22RJCYLUY). Di default le modifiche avvengono su tutti i tuoi tag",
+								type: ApplicationCommandOptionType.String,
+							},
 						],
 					},
 					{
@@ -214,6 +221,12 @@ export class Clash extends Command {
 									name: type,
 									value: type,
 								})),
+							},
+							{
+								name: "tag",
+								description:
+									"Il tag giocatore (es. #22RJCYLUY). Di default le modifiche avvengono su tutti i tuoi tag",
+								type: ApplicationCommandOptionType.String,
 							},
 						],
 					},
@@ -324,11 +337,11 @@ export class Clash extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static "calculateFlags" = (flags = 0) =>
-		flags & NotificationType.All ? "**tutti i tipi**"
+		flags & ClashNotifications.All ? "**tutti i tipi**"
 		: flags ?
-			Object.values(NotificationType)
+			Object.values(ClashNotifications)
 				.filter((v): v is number => typeof v === "number" && (flags & v) !== 0)
-				.map((v) => `**${NotificationType[v]}**`)
+				.map((v) => `**${ClashNotifications[v]}**`)
 				.join(", ")
 		:	"**nessun tipo**";
 	private static "pagination" = <T>(
@@ -1359,9 +1372,11 @@ export class Clash extends Command {
 		const userId = options.tag ? undefined : (options.user ?? id);
 
 		options.tag ??=
-			(await env.DB.prepare("SELECT clashTag FROM Users WHERE id = ?")
-				.bind(userId)
-				.first("clashTag")) ?? undefined;
+			(await env.DB.prepare(
+				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1 LIMIT 1",
+			)
+				.bind(userId, SupercellPlayerType.ClashRoyale)
+				.first<Database.SupercellPlayer["tag"]>("tag")) ?? undefined;
 		if (!options.tag)
 			return reply({
 				flags: MessageFlags.Ephemeral,
@@ -1381,9 +1396,11 @@ export class Clash extends Command {
 			const [player, playerId] = await Promise.all([
 				this.getPlayer(options.tag, { edit }),
 				userId ??
-					env.DB.prepare("SELECT id FROM Users WHERE clashTag = ?")
-						.bind(options.tag)
-						.first<string>("id"),
+					env.DB.prepare(
+						"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+					)
+						.bind(options.tag, SupercellPlayerType.ClashRoyale)
+						.first<Database.SupercellPlayer["userId"]>("userId"),
 			]);
 
 			return edit(
@@ -1393,11 +1410,9 @@ export class Clash extends Command {
 					locale,
 					playerId ?? undefined,
 					commandId,
-					userId ?
-						playerId === id ?
-							false
-						:	undefined
-					:	playerId !== id,
+					playerId === id ? false
+					: playerId ? undefined
+					: true,
 				),
 			);
 		}
@@ -1428,10 +1443,10 @@ export class Clash extends Command {
 		defer();
 		if (!options.tag) {
 			const playerTag = await env.DB.prepare(
-				"SELECT clashTag FROM Users WHERE id = ?",
+				"SELECT tag FROM SupercellPlayers WHERE userId = ? AND type = ? AND active = 1 LIMIT 1",
 			)
-				.bind(id)
-				.first<string>("clashTag");
+				.bind(id, SupercellPlayerType.ClashRoyale)
+				.first<string>("tag");
 
 			if (playerTag)
 				options.tag = (await this.getPlayer(playerTag, { edit })).clan.tag;
@@ -1458,63 +1473,86 @@ export class Clash extends Command {
 	static "notify enable" = async (
 		{ reply }: ChatInputReplies,
 		{
-			options: { type },
+			options: { type, tag },
 			user: { id },
 			interaction: {
 				data: { id: commandId },
 			},
 		}: ChatInputArgs<typeof Clash.chatInputData, "notify enable">,
 	) => {
-		const result = await env.DB.prepare(
-			`INSERT INTO Users (id, clashNotifications)
-				VALUES (?1, ?2)
-				ON CONFLICT(id) DO UPDATE
-				SET clashNotifications = Users.clashNotifications | ?2
-				RETURNING clashNotifications, clashTag`,
-		)
-			.bind(id, NotificationType[type])
-			.first<{ clashNotifications: number; clashTag: string | null }>();
+		try {
+			tag &&= Brawl.normalizeTag(tag);
+			const { results } = await env.DB.prepare(
+				template`UPDATE SupercellPlayers
+						SET notifications = notifications | ?1
+						WHERE userId = ?2 AND type = ?3
+						${tag}AND tag = ?4
+						RETURNING notifications, tag`,
+			)
+				.bind(
+					ClashNotifications[type],
+					id,
+					SupercellPlayerType.ClashRoyale,
+					...(tag ? [tag] : []),
+				)
+				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
-		return reply({
-			flags: MessageFlags.Ephemeral,
-			content: template`
-			Notifiche abilitate per il tipo **${type}**!
-			Attualmente hai attivato le notifiche per ${this.calculateFlags(
-				result?.clashNotifications,
-			)}.
-			${!result?.clashTag}-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.
-			`,
-		});
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content:
+					results.length === 0 ?
+						tag ? `Il tag ${tag} non è associato al tuo profilo!`
+						:	`Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
+					:	`Notifiche abilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
+			});
+		} catch (err) {
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: normalizeError(err).message,
+			});
+		}
 	};
 	static "notify disable" = async (
 		{ reply }: ChatInputReplies,
 		{
-			options: { type },
+			options: { type, tag },
 			user: { id },
 			interaction: {
 				data: { id: commandId },
 			},
 		}: ChatInputArgs<typeof Clash.chatInputData, "notify disable">,
 	) => {
-		const result = await env.DB.prepare(
-			`UPDATE Users
-				SET clashNotifications = Users.clashNotifications & ~?1
-				WHERE id = ?2
-				RETURNING clashNotifications, clashTag`,
-		)
-			.bind(NotificationType[type], id)
-			.first<{ clashNotifications: number; clashTag: string | null }>();
+		try {
+			tag &&= Brawl.normalizeTag(tag);
+			const { results } = await env.DB.prepare(
+				template`UPDATE SupercellPlayers
+				SET notifications = notifications & ~?1
+				WHERE userId = ?2 AND type = ?3
+				${tag}AND tag = ?4
+				RETURNING notifications, tag`,
+			)
+				.bind(
+					ClashNotifications[type],
+					id,
+					SupercellPlayerType.ClashRoyale,
+					...(tag ? [tag] : []),
+				)
+				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
-		return reply({
-			flags: MessageFlags.Ephemeral,
-			content: template`
-			Notifiche disabilitate per il tipo **${type}**!
-			Attualmente hai attivato le notifiche per ${this.calculateFlags(
-				result?.clashNotifications,
-			)}.
-			${!result?.clashTag}-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.
-			`,
-		});
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content:
+					results.length === 0 ?
+						tag ? `Il tag ${tag} non è associato al tuo profilo!`
+						:	`Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
+					:	`Notifiche disabilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
+			});
+		} catch (err) {
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: normalizeError(err).message,
+			});
+		}
 	};
 	static "notify view" = async (
 		{ reply }: ChatInputReplies,
@@ -1525,22 +1563,26 @@ export class Clash extends Command {
 			},
 		}: ChatInputArgs<typeof Clash.chatInputData, "notify view">,
 	) => {
-		const result = await env.DB.prepare(
-			"SELECT clashNotifications, clashTag FROM Users WHERE id = ?",
+		const { results } = await env.DB.prepare(
+			"SELECT notifications, tag FROM SupercellPlayers WHERE userId = ? AND type = ?",
 		)
-			.bind(id)
-			.first<{ clashNotifications: number; clashTag: string | null }>();
+			.bind(id, SupercellPlayerType.ClashRoyale)
+			.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
-			content: template`
-			Notifiche attive per i seguenti tipi: ${this.calculateFlags(
-				result?.clashNotifications,
-			)}.
-			${!result?.clashTag}-# Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash profile:${commandId}> e clicca su **Salva** per iniziare a ricevere le notifiche.
-			`,
+			content:
+				results.length === 0 ?
+					`Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
+				:	this.createNotificationsMessage(results),
 		});
 	};
+	static createNotificationsMessage = (
+		results: Pick<Database.SupercellPlayer, "tag" | "notifications">[],
+	): string =>
+		`Ecco le notifiche attualmente attive:\n${results
+			.map((r) => `- ${r.tag}: ${this.calculateFlags(r.notifications)}`)
+			.join("\n")}`;
 	static override async component(
 		replies: ComponentReplies,
 		args: ComponentArgs,
@@ -1555,62 +1597,83 @@ export class Clash extends Command {
 		});
 	}
 	static "linkComponent" = async (
-		{ update }: ComponentReplies,
+		{ edit, deferUpdate, followup }: ComponentReplies,
 		{
-			args: [tag, commandId],
+			args: [tag, commandId, userId],
 			user: { id },
 			interaction: {
 				message: { components },
 			},
 		}: ComponentArgs,
 	) => {
-		await env.DB.prepare(
-			`INSERT INTO Users (id, clashTag)
-				VALUES (?, ?) ON CONFLICT(id) DO
-				UPDATE
-				SET clashTag = excluded.clashTag`,
+		deferUpdate();
+		userId ||= id;
+		const result = await env.DB.prepare(
+			`INSERT INTO SupercellPlayers (tag, userId, active, type)
+			VALUES (
+				?1,
+				?2,
+				CASE
+					WHEN EXISTS (
+						SELECT 1
+						FROM SupercellPlayers
+						WHERE userId = ?2
+						  AND type = ?3
+						  AND active = 1
+					) THEN 0
+					ELSE 1
+				END,
+				?3
+			)
+			ON CONFLICT(tag, type) DO UPDATE
+			SET active = active
+			RETURNING userId;`,
 		)
-			.bind(id, tag)
-			.run();
+			.bind(tag, userId, SupercellPlayerType.ClashRoyale)
+			.first<Database.SupercellPlayer["userId"]>("userId");
+
+		if (result && result !== userId)
+			return followup({
+				content: `Questo profilo è già collegato a <@${result}>!`,
+				allowed_mentions: { parse: [] },
+				flags: MessageFlags.Ephemeral,
+			});
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
 				type: ComponentType.Button,
-				custom_id: `clash-unlink-${id}-${tag}-${commandId || "0"}`,
+				custom_id: `clash-unlink-${id}-${tag}-${commandId || "0"}-${userId}`,
 				label: "Scollega",
 				emoji: { name: "⛓️‍💥" },
 				style: ButtonStyle.Danger,
 			};
-		return update({
+		return edit({
 			content: `Profilo collegato con successo!\nUsa </clash notify enable:${
 				commandId || "0"
-			}> per attivare le notifiche.`,
+			}> per condividere i tuoi avanzamenti.`,
 			components,
 		});
 	};
 	static "unlinkComponent" = async (
 		{ update }: ComponentReplies,
 		{
-			args: [tag, commandId],
+			args: [tag, commandId, userId],
 			user: { id },
 			interaction: {
 				message: { components },
 			},
 		}: ComponentArgs,
 	) => {
+		userId ||= id;
 		await env.DB.prepare(
-			`UPDATE Users
-				SET clashTag = NULL,
-					arena = NULL,
-					cards = NULL,
-					league = NULL
-				WHERE id = ?`,
+			`DELETE FROM SupercellPlayers
+				WHERE tag = ? AND type = ? AND userId = ?`,
 		)
-			.bind(id)
+			.bind(tag, SupercellPlayerType.ClashRoyale, userId)
 			.run();
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
 				type: ComponentType.Button,
-				custom_id: `clash-link-${id}-${tag}-${commandId || "0"}`,
+				custom_id: `clash-link-${id}-${tag}-${commandId || "0"}-${userId}`,
 				label: "Salva",
 				emoji: { name: "🔗" },
 				style: ButtonStyle.Success,
@@ -1781,9 +1844,11 @@ export class Clash extends Command {
 		else defer({ flags: MessageFlags.Ephemeral });
 		const [player, playerId] = await Promise.all([
 			this.getPlayer(tag, { edit }),
-			env.DB.prepare("SELECT id FROM Users WHERE clashTag = ?")
-				.bind(tag)
-				.first<string>("id"),
+			env.DB.prepare(
+				"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+			)
+				.bind(tag, SupercellPlayerType.ClashRoyale)
+				.first<string>("userId"),
 		]);
 
 		return edit(

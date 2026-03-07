@@ -13,3 +13,22 @@ export enum MatchStatus {
 	Cancelled = "Canceled",
 	Abandoned = "Abandoned",
 }
+
+export enum SupercellPlayerType {
+	BrawlStars,
+	ClashRoyale,
+}
+
+export enum BrawlNotifications {
+	"All" = 1 << 0,
+	"Prestigio" = 1 << 1,
+	"Nuovo Brawler" = 1 << 2,
+	"Avanzamento nel cammino dei trofei" = 1 << 3,
+}
+export enum ClashNotifications {
+	"All" = 1 << 0,
+	"Nuova arena raggiunta" = 1 << 1,
+	"Nuova carta trovata" = 1 << 2,
+	"Evoluzione sbloccata" = 1 << 3,
+	"Nuova lega raggiunta" = 1 << 4,
+}
