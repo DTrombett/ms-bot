@@ -366,8 +366,8 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 
 	private async updatePlayer(user: Database.SupercellPlayer, data: string) {
 		await this.env.DB.prepare(
-			`UPDATE SupercellPlayer
-				SET data = ?1,
+			`UPDATE SupercellPlayers
+				SET data = ?1
 				WHERE tag = ?2 AND type = ?3`,
 		)
 			.bind(data, user.tag, user.type)
