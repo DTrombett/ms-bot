@@ -1626,7 +1626,7 @@ export class Clash extends Command {
 				?3
 			)
 			ON CONFLICT(tag, type) DO UPDATE
-			SET active = Players.active
+			SET active = active
 			RETURNING userId;`,
 		)
 			.bind(tag, userId, SupercellPlayerType.ClashRoyale)
