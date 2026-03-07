@@ -1501,7 +1501,7 @@ export class Clash extends Command {
 					results.length == null ?
 						tag ? `Il tag ${tag} non è associato al tuo profilo!`
 						:	`Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
-					:	`Notifiche abilitate per il tipo **${type}**!\n${Brawl.createNotificationsMessage(results)}`,
+					:	`Notifiche abilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
 			});
 		} catch (err) {
 			return reply({
@@ -1538,7 +1538,7 @@ export class Clash extends Command {
 					results.length == null ?
 						tag ? `Il tag ${tag} non è associato al tuo profilo!`
 						:	`Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
-					:	`Notifiche disabilitate per il tipo **${type}**!\n${Brawl.createNotificationsMessage(results)}`,
+					:	`Notifiche disabilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
 			});
 		} catch (err) {
 			return reply({
@@ -1566,10 +1566,16 @@ export class Clash extends Command {
 			flags: MessageFlags.Ephemeral,
 			content:
 				results.length === 0 ?
-					`Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
-				:	Brawl.createNotificationsMessage(results),
+					`Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
+				:	this.createNotificationsMessage(results),
 		});
 	};
+	static createNotificationsMessage = (
+		results: Pick<Database.SupercellPlayer, "tag" | "notifications">[],
+	): string =>
+		`Ecco le notifiche attualmente attive:\n${results
+			.map((r) => `- **${r.tag}**: ${this.calculateFlags(r.notifications)}`)
+			.join("\n")}`;
 	static override async component(
 		replies: ComponentReplies,
 		args: ComponentArgs,
