@@ -22,6 +22,7 @@ import capitalize from "../util/capitalize";
 import { SupercellPlayerType } from "../util/Constants";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
+import normalizeError from "../util/normalizeError";
 import { template } from "../util/strings";
 
 enum BrawlerOrder {
@@ -704,6 +705,12 @@ export class Brawl extends Command {
 									value: type,
 								})),
 							},
+							{
+								name: "tag",
+								description:
+									"Il tag giocatore (es. #8QJR0YC). Di default le modifiche avvengono su tutti i tuoi tag",
+								type: ApplicationCommandOptionType.String,
+							},
 						],
 					},
 					{
@@ -720,6 +727,12 @@ export class Brawl extends Command {
 									name: type,
 									value: type,
 								})),
+							},
+							{
+								name: "tag",
+								description:
+									"Il tag giocatore (es. #8QJR0YC). Di default le modifiche avvengono su tutti i tuoi tag",
+								type: ApplicationCommandOptionType.String,
 							},
 						],
 					},
@@ -1660,60 +1673,76 @@ export class Brawl extends Command {
 	static "notify enable" = async (
 		{ reply }: ChatInputReplies,
 		{
-			options: { type },
+			options: { type, tag },
 			user: { id },
 			interaction: {
 				data: { id: commandId },
 			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, "notify enable">,
 	) => {
-		const notifications = await env.DB.prepare(
-			`UPDATE SupercellPlayers
+		try {
+			tag &&= this.normalizeTag(tag);
+			const { results } = await env.DB.prepare(
+				template`UPDATE SupercellPlayers
 				SET notifications = notifications | ?1
-				WHERE id = ?2 AND type = ?3
-				RETURNING notifications`,
-		)
-			.bind(NotificationType[type], id, SupercellPlayerType.BrawlStars)
-			.first<Database.SupercellPlayer["notifications"]>("notifications");
+				WHERE userId = ?2 AND type = ?3
+				${tag}AND tag = ?4
+				RETURNING notifications, tag`,
+			)
+				.bind(NotificationType[type], id, SupercellPlayerType.BrawlStars, tag)
+				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
-		return reply({
-			flags: MessageFlags.Ephemeral,
-			content:
-				notifications == null ?
-					`Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
-				:	`Notifiche abilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(
-						notifications,
-					)}.`,
-		});
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content:
+					results.length == null ?
+						tag ? `Il tag ${tag} non è associato al tuo profilo!`
+						:	`Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
+					:	`Notifiche abilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
+			});
+		} catch (err) {
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: normalizeError(err).message,
+			});
+		}
 	};
 	static "notify disable" = async (
 		{ reply }: ChatInputReplies,
 		{
-			options: { type },
+			options: { type, tag },
 			user: { id },
 			interaction: {
 				data: { id: commandId },
 			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, "notify disable">,
 	) => {
-		const notifications = await env.DB.prepare(
-			`UPDATE SupercellPlayers
+		try {
+			tag &&= this.normalizeTag(tag);
+			const { results } = await env.DB.prepare(
+				template`UPDATE SupercellPlayers
 				SET notifications = notifications & ~?1
 				WHERE userId = ?2 AND type = ?3
-				RETURNING notifications`,
-		)
-			.bind(NotificationType[type], id, SupercellPlayerType.BrawlStars)
-			.first<Database.SupercellPlayer["notifications"]>("notifications");
+				${tag}AND tag = ?4
+				RETURNING notifications, tag`,
+			)
+				.bind(NotificationType[type], id, SupercellPlayerType.BrawlStars, tag)
+				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
-		return reply({
-			flags: MessageFlags.Ephemeral,
-			content:
-				notifications == null ?
-					`Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
-				:	`Notifiche disabilitate per il tipo **${type}**!\nAttualmente hai attivato le notifiche per ${this.calculateFlags(
-						notifications,
-					)}.`,
-		});
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content:
+					results.length == null ?
+						tag ? `Il tag ${tag} non è associato al tuo profilo!`
+						:	`Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
+					:	`Notifiche disabilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
+			});
+		} catch (err) {
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: normalizeError(err).message,
+			});
+		}
 	};
 	static "notify view" = async (
 		{ reply }: ChatInputReplies,
@@ -1724,22 +1753,26 @@ export class Brawl extends Command {
 			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, "notify view">,
 	) => {
-		const notifications = await env.DB.prepare(
-			"SELECT notifications FROM SupercellUsers WHERE userId = ? AND type = ? AND active = 1",
+		const { results } = await env.DB.prepare(
+			"SELECT notifications, tag FROM SupercellUsers WHERE userId = ? AND type = ?",
 		)
 			.bind(id, SupercellPlayerType.BrawlStars)
-			.first<Database.SupercellPlayer["notifications"]>("notifications");
+			.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
 		return reply({
 			flags: MessageFlags.Ephemeral,
 			content:
-				notifications == null ?
+				results.length === 0 ?
 					`Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
-				:	`Attualmente hai attivato le notifiche per ${this.calculateFlags(
-						notifications,
-					)}.`,
+				:	this.createNotificationsMessage(results),
 		});
 	};
+	static createNotificationsMessage = (
+		results: Pick<Database.SupercellPlayer, "tag" | "notifications">[],
+	): string =>
+		`Ecco le notifiche attualmente attive:\n${results
+			.map((r) => `- **${r.tag}**: ${this.calculateFlags(r.notifications)}`)
+			.join("\n")}`;
 	static override async component(
 		replies: ComponentReplies,
 		args: ComponentArgs,
