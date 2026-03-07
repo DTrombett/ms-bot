@@ -1,9 +1,6 @@
 import { env } from "cloudflare:workers";
-import type { Params as BrawlParams } from "./BrawlNotifications";
-import type { Params as ClashParams } from "./ClashNotifications";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
-import { SupercellPlayerType } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
 import type { RGB } from "./util/resolveColor";
 
@@ -59,43 +56,25 @@ const server: ExportedHandler<Env> = {
 				FROM SupercellPlayers
 				WHERE notifications != 0`,
 			).all<Database.SupercellPlayer>();
-			const brawlBatch: WorkflowInstanceCreateOptions<BrawlParams>[] = results
-				.reduce<Database.SupercellPlayer[][]>((arr, v) => {
-					if (v.type !== SupercellPlayerType.BrawlStars) return arr;
-					if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
-					arr.at(-1)!.push(v);
-					return arr;
-				}, [])
-				.map((players) => ({ params: { players } }));
-			const clashBatch: WorkflowInstanceCreateOptions<ClashParams>[] = results
-				.reduce<Database.SupercellPlayer[][]>((arr, v) => {
-					if (v.type !== SupercellPlayerType.ClashRoyale) return arr;
-					if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
-					arr.at(-1)!.push(v);
-					return arr;
-				}, [])
-				.map((players) => ({ params: { players } }));
+			const instances = await env.NOTIFICATIONS.createBatch(
+				results
+					.reduce<Database.SupercellPlayer[][]>((arr, v) => {
+						if (!arr.length || arr.at(-1)!.length >= 25) arr.push([]);
+						arr.at(-1)!.push(v);
+						return arr;
+					}, [])
+					.map((players) => ({ params: { players } })),
+			);
 
-			for (const result of await Promise.allSettled([
-				brawlBatch.length ?
-					env.BRAWL_NOTIFICATIONS.createBatch(brawlBatch)
-				:	null,
-				clashBatch.length ?
-					env.CLASH_NOTIFICATIONS.createBatch(clashBatch)
-				:	null,
-			]))
-				if (result.status === "rejected") console.error(result.reason);
-				else
-					console.log(
-						"Started workflow(s) with IDs",
-						...(result.value ?? []).map((r) => r.id),
-					);
+			console.log(
+				"Started workflow(s) with IDs",
+				...instances.map((r) => r.id),
+			);
 		}
 	},
 };
 
-export { BrawlNotifications } from "./BrawlNotifications";
-export { ClashNotifications } from "./ClashNotifications";
+export { Notifications } from "./Notifications";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";
 export { Shorten } from "./Shorten";

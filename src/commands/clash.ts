@@ -15,11 +15,10 @@ import {
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { NotificationType } from "../ClashNotifications";
 import Command from "../Command";
 import { bitSetMap } from "../util/bitSets";
 import capitalize from "../util/capitalize";
-import { SupercellPlayerType } from "../util/Constants";
+import { ClashNotifications, SupercellPlayerType } from "../util/Constants";
 import { escapeMarkdown } from "../util/formatters";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
@@ -338,11 +337,11 @@ export class Clash extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static "calculateFlags" = (flags = 0) =>
-		flags & NotificationType.All ? "**tutti i tipi**"
+		flags & ClashNotifications.All ? "**tutti i tipi**"
 		: flags ?
-			Object.values(NotificationType)
+			Object.values(ClashNotifications)
 				.filter((v): v is number => typeof v === "number" && (flags & v) !== 0)
-				.map((v) => `**${NotificationType[v]}**`)
+				.map((v) => `**${ClashNotifications[v]}**`)
 				.join(", ")
 		:	"**nessun tipo**";
 	private static "pagination" = <T>(
@@ -1490,13 +1489,18 @@ export class Clash extends Command {
 						${tag}AND tag = ?4
 						RETURNING notifications, tag`,
 			)
-				.bind(NotificationType[type], id, SupercellPlayerType.ClashRoyale, tag)
+				.bind(
+					ClashNotifications[type],
+					id,
+					SupercellPlayerType.ClashRoyale,
+					tag,
+				)
 				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content:
-					results.length == null ?
+					results.length === 0 ?
 						tag ? `Il tag ${tag} non è associato al tuo profilo!`
 						:	`Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
 					:	`Notifiche abilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
@@ -1527,13 +1531,18 @@ export class Clash extends Command {
 				${tag}AND tag = ?4
 				RETURNING notifications, tag`,
 			)
-				.bind(NotificationType[type], id, SupercellPlayerType.ClashRoyale, tag)
+				.bind(
+					ClashNotifications[type],
+					id,
+					SupercellPlayerType.ClashRoyale,
+					tag,
+				)
 				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content:
-					results.length == null ?
+					results.length === 0 ?
 						tag ? `Il tag ${tag} non è associato al tuo profilo!`
 						:	`Non hai ancora collegato un profilo Clash Royale! Usa il comando </clash player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
 					:	`Notifiche disabilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,

@@ -16,10 +16,9 @@ import {
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
-import { NotificationType } from "../BrawlNotifications";
 import Command from "../Command";
 import capitalize from "../util/capitalize";
-import { SupercellPlayerType } from "../util/Constants";
+import { BrawlNotifications, SupercellPlayerType } from "../util/Constants";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
@@ -865,11 +864,11 @@ export class Brawl extends Command {
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static calculateFlags = (flags = 0) =>
-		flags & NotificationType.All ? "**tutti i tipi**"
+		flags & BrawlNotifications.All ? "**tutti i tipi**"
 		: flags ?
-			Object.values(NotificationType)
+			Object.values(BrawlNotifications)
 				.filter((v): v is number => typeof v === "number" && (flags & v) !== 0)
-				.map((v) => `**${NotificationType[v]}**`)
+				.map((v) => `**${BrawlNotifications[v]}**`)
 				.join(", ")
 		:	"**nessun tipo**";
 	static createBrawlerComponents = (
@@ -1703,13 +1702,13 @@ export class Brawl extends Command {
 				${tag}AND tag = ?4
 				RETURNING notifications, tag`,
 			)
-				.bind(NotificationType[type], id, SupercellPlayerType.BrawlStars, tag)
+				.bind(BrawlNotifications[type], id, SupercellPlayerType.BrawlStars, tag)
 				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content:
-					results.length == null ?
+					results.length === 0 ?
 						tag ? `Il tag ${tag} non è associato al tuo profilo!`
 						:	`Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
 					:	`Notifiche abilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
@@ -1740,13 +1739,13 @@ export class Brawl extends Command {
 				${tag}AND tag = ?4
 				RETURNING notifications, tag`,
 			)
-				.bind(NotificationType[type], id, SupercellPlayerType.BrawlStars, tag)
+				.bind(BrawlNotifications[type], id, SupercellPlayerType.BrawlStars, tag)
 				.run<Pick<Database.SupercellPlayer, "notifications" | "tag">>();
 
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content:
-					results.length == null ?
+					results.length === 0 ?
 						tag ? `Il tag ${tag} non è associato al tuo profilo!`
 						:	`Non hai ancora collegato un profilo Brawl Stars! Usa il comando </brawl player view:${commandId}> e clicca su **Salva** prima di utilizzare questo comando.`
 					:	`Notifiche disabilitate per il tipo **${type}**!\n${this.createNotificationsMessage(results)}`,
