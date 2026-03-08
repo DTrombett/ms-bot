@@ -1,9 +1,10 @@
 {
-	"include": ["*.js", "*.ts"],
+	"include": ["**/*.js", "**/*.ts", "**/*.tsx"],
 	"compilerOptions": {
 		"allowJs": true,
 		"checkJs": true,
 		"isolatedModules": true,
+		"jsx": "react-jsx",
 		"lib": ["ES2024", "DOM"],
 		"module": "esnext",
 		"moduleResolution": "bundler",

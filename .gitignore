@@ -1,12 +1,12 @@
 _*/
+_query.sql
 .dev.vars
 .env
 .vscode/
+.wrangler/
 *.log
 coverage/
 dist/
+icons/
 node_modules/
 tmp/
-.wrangler/
-_query.sql
-icons/

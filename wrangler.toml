@@ -19,7 +19,7 @@ SEASON_ID = "serie-a%3A%3AFootball_Season%3A%3A5f0e080fc3a44073984b75b3a8e06a8a"
 crons = ["0 0 * * *", "*/5 * * * *"]
 
 [assets]
-directory = "./public"
+directory = "./dist"
 binding = "ASSETS"
 
 [[routes]]

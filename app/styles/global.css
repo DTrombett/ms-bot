@@ -1,0 +1,54 @@
+@font-face {
+	font-family: "ggsans";
+	src: url("../fonts/ggsansvf.woff2") format("woff2");
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscord";
+	src: url("../fonts/GintoDiscord-Regular.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscord";
+	src: url("../fonts/GintoDiscord-RegularItalic.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 400;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscord";
+	src: url("../fonts/GintoDiscord-Medium.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscord";
+	src: url("../fonts/GintoDiscord-MediumItalic.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 500;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscordNord";
+	src: url("../fonts/GintoDiscordNord-Bold.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscordNord";
+	src: url("../fonts/GintoDiscordNord-BoldItalic.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 600;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscordNord";
+	src: url("../fonts/GintoDiscordNord-BlackItalic.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 900;
+	font-display: swap;
+}
