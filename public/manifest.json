@@ -3,21 +3,13 @@
 	"name": "MS Bot Dashboard",
 	"icons": [
 		{
-			"src": "/icons/icons/2750x2750.png",
+			"src": "/icons/2750x2750.png",
 			"type": "image/png",
 			"sizes": "2750x2750",
 			"purpose": "maskable"
 		},
-		{
-			"src": "/icons/icons/512x512.png",
-			"type": "image/png",
-			"sizes": "512x512"
-		},
-		{
-			"src": "/icons/icons/192x192.png",
-			"type": "image/png",
-			"sizes": "192x192"
-		}
+		{ "src": "/icons/512x512.png", "type": "image/png", "sizes": "512x512" },
+		{ "src": "/icons/192x192.png", "type": "image/png", "sizes": "192x192" }
 	],
 	"start_url": "/",
 	"background_color": "#18181B",
@@ -25,40 +17,12 @@
 	"display_override": ["window-controls-overlay"],
 	"theme_color": "#0049FF",
 	"description": "Dashboard per interagire con il bot della community MS! Entra nel server Discord tramite l'invito: https://discord.gg/5aE8gdrF8k",
-	"screenshots": [
-		{
-			"src": "/previews/default.png",
-			"type": "image/png",
-			"sizes": "1290x2220",
-			"form_factor": "narrow"
-		},
-		{
-			"src": "/previews/xl.png",
-			"type": "image/png",
-			"sizes": "1920x1080",
-			"form_factor": "wide"
-		},
-		{
-			"src": "/previews/2xl.png",
-			"type": "image/png",
-			"sizes": "3072x1728",
-			"form_factor": "wide"
-		}
-	],
 	"shortcuts": [
 		{
 			"name": "Gestisci i pronostici",
 			"short_name": "Pronostici",
 			"description": "Aggiungi o modifica i pronostici per la prossima giornata",
-			"url": "/predictions",
-			"icons": [
-				{ "src": "/icons/predictions/36x36.png", "sizes": "36x36" },
-				{ "src": "/icons/predictions/48x48.png", "sizes": "48x48" },
-				{ "src": "/icons/predictions/72x72.png", "sizes": "72x72" },
-				{ "src": "/icons/predictions/96x96.png", "sizes": "96x96" },
-				{ "src": "/icons/predictions/144x144.png", "sizes": "144x144" },
-				{ "src": "/icons/predictions/192x192.png", "sizes": "192x192" }
-			]
+			"url": "/predictions"
 		}
 	]
 }

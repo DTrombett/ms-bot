@@ -60,9 +60,9 @@ const result = await build({
 	outbase: "src/app",
 	outdir,
 	packages: "external",
-	platform: "browser",
-	splitting: true,
-	target: "es2023",
+	platform: "node",
+	publicPath: "/",
+	target: "node24",
 	treeShaking: true,
 	tsconfig: "src/app/tsconfig.json",
 });
@@ -70,7 +70,6 @@ console.log(
 	"Renaming css and dynamic js, creating hydration files and generating static HTML",
 );
 const cssMap: Record<string, string | null> = {};
-const chunks = new Set<string>();
 await Promise.all(
 	Object.entries(result.metafile.outputs).map(async ([k, v]) => {
 		if (!v.entryPoint) return;
@@ -112,16 +111,10 @@ await Promise.all(
 
 			await mkdir(dirname(newPath), { recursive: true });
 			await rename(k, newPath);
-			for (const im of v.imports)
-				if (!im.external && im.kind === "import-statement") chunks.add(im.path);
 			cssMap[k.replace(/^[^/]+\/|\.page\.js$/g, "")] =
 				v.cssBundle?.replace(/^[^/]+/, "") ?? null;
 		}
 	}),
-);
-console.log("Copying js chunks");
-await Promise.all(
-	Array.from(chunks, (path) => cp(path, path.replace(/^[^/]+/, "dist"))),
 );
 console.log("Saving css map");
 await writeFile("dist/cssMap.json", JSON.stringify(cssMap));

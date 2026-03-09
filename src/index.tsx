@@ -49,11 +49,7 @@ const server: ExportedHandler<Env> = {
 				headers: { "Content-Type": "image/png" },
 			});
 		}
-		console.log("Why are we here?");
-		return new Response(null, {
-			headers: { "content-type": "text/html" },
-			status: 404,
-		});
+		return new Response(null, { status: 404 });
 	},
 	scheduled: async ({ cron }) => {
 		if (cron === "0 0 * * *")

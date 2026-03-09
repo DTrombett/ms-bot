@@ -8,6 +8,5 @@ _query.sql
 build/
 coverage/
 dist/
-icons/
 node_modules/
 tmp/
