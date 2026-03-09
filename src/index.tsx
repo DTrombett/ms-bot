@@ -1,4 +1,7 @@
 import { env } from "cloudflare:workers";
+import { renderToReadableStream } from "react-dom/server";
+import cssMap from "../dist/cssMap.json";
+import Index from "../dist/index";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
@@ -12,6 +15,14 @@ const server: ExportedHandler<Env> = {
 	fetch: async (request) => {
 		const url = new URL(request.url);
 
+		if (url.pathname === "/") {
+			if (request.method === "GET")
+				return new Response(
+					await renderToReadableStream(<Index cssBundle={cssMap["index"]} />),
+					{ headers: { "content-type": "text/html" } },
+				);
+			return create405();
+		}
 		if (url.pathname === "/interactions") {
 			if (request.method === "POST")
 				return handler.handleInteraction(request).catch((e) => {
@@ -38,11 +49,11 @@ const server: ExportedHandler<Env> = {
 				headers: { "Content-Type": "image/png" },
 			});
 		}
-		if (url.pathname === "/") {
-			if (request.method === "GET") return new Response("Ready!");
-			return create405();
-		}
-		return new Response(null, { status: 404 });
+		console.log("Why are we here?");
+		return new Response(null, {
+			headers: { "content-type": "text/html" },
+			status: 404,
+		});
 	},
 	scheduled: async ({ cron }) => {
 		if (cron === "0 0 * * *")

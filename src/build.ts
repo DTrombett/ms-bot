@@ -2,152 +2,127 @@ import { build } from "esbuild";
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import {
+	cp,
 	mkdir,
-	readdir,
 	readFile,
 	rename,
 	rm,
+	unlink,
 	writeFile,
 } from "node:fs/promises";
-import { join, parse, resolve } from "node:path";
+import { dirname } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
+import { prerenderToNodeStream } from "react-dom/static";
+import { jsx } from "react/jsx-runtime";
 
-const path = "node_modules/@discordjs/ws/dist/index.mjs";
-console.log("Reading", path);
-const data = await readFile(path, { encoding: "utf-8" });
-console.log("Writing", path);
-await writeFile(
-	path,
-	data
-		// Don't resolve dirname as Workers do not have fs access
-		.replace(/\b(?:var|let|const)\s+__dirname\s*=[^;]+;/, "")
-		// Use built-in WebSocket
-		.replace(/import\s*{\s*WebSocket\s*}\s*from\s*['"]ws["'];?/, "")
-		.replace(
-			/\b(var|let|const)\s+WebSocketConstructor\s*=[^;]+;/,
-			"$1 WebSocketConstructor = globalThis.WebSocket;",
-		),
-);
-console.log("Cleaning output dir and reading app directory");
-const [files] = await Promise.all([
-	readdir("app", { withFileTypes: true, recursive: true }),
+console.time("Build");
+{
+	const path = "node_modules/@discordjs/ws/dist/index.mjs";
+	console.log("Reading @discordjs/ws");
+	const data = await readFile(path, { encoding: "utf-8" });
+
+	console.log("Editing @discordjs/ws");
+	await writeFile(
+		path,
+		data
+			// Don't resolve dirname as Workers do not have fs access
+			.replace(/\b(?:var|let|const)\s+__dirname\s*=[^;]+;/, "")
+			// Use built-in WebSocket
+			.replace(/import\s*{\s*WebSocket\s*}\s*from\s*['"]ws["'];?/, "")
+			.replace(
+				/\b(var|let|const)\s+WebSocketConstructor\s*=[^;]+;/,
+				"$1 WebSocketConstructor = globalThis.WebSocket;",
+			),
+	);
+}
+console.log("Copying static assets");
+const outdir = "build";
+await Promise.all([
+	rm(outdir, { recursive: true, force: true }),
 	rm("dist", { recursive: true, force: true }),
 ]);
-const entries: string[] = [];
-const toHydrate: string[] = [];
-const outMap: Record<string, string> = {};
-const fileExtensions = [".woff2"];
-const hydratePath = pathToFileURL(
-	resolve("app/utils/hydrate.tsx"),
-).pathname.slice(1);
-console.log("Copying assets");
-await Promise.all(
-	files.map(async (e) => {
-		e.parentPath = e.parentPath.replace(/^app[/\\]?/, "");
-		if (
-			!e.isFile() ||
-			e.parentPath.startsWith("utils") ||
-			e.name === "tsconfig.json"
-		)
-			return;
-		const { name, ext } = parse(e.name);
-		const path = join("app", e.parentPath, e.name);
-
-		if ([".css"].includes(ext)) {
-			entries.push(path);
-			return;
-		}
-		if (ext === ".tsx") {
-			const outdir = join("tmp", e.parentPath);
-			const file = join(outdir, e.name);
-
-			await mkdir(outdir, { recursive: true });
-			await writeFile(
-				file,
-				`
-					import hydrate from "${hydratePath}";
-					import App from "${pathToFileURL(path).pathname.slice(1)}";
-
-					hydrate(App);
-				`,
-			);
-			toHydrate.push(file);
-			return;
-		}
-		if (fileExtensions.includes(ext)) return;
-		const hash = createHash("sha256");
-		await Promise.all([
-			pipeline(createReadStream(path), hash),
-			mkdir(join("dist", e.parentPath), { recursive: true }),
-		]);
-		const outFile = join(
-			e.parentPath,
-			`${name}.${hash.digest("base64url")}${ext}`,
-		);
-		outMap[join(e.parentPath, e.name).replaceAll("\\", "/")] = outFile;
-		return pipeline(
-			createReadStream(path),
-			createWriteStream(join("dist", outFile)),
-		);
-	}),
-);
-console.log("Compiling files");
+await cp("public", outdir, { recursive: true, force: true });
+console.log("Compiling tsx and assets");
 const result = await build({
-	assetNames: "[dir]/[name].[hash]",
+	assetNames: `[dir]/[name].[hash]`,
 	bundle: true,
 	charset: "utf8",
-	entryPoints: entries,
-	format: "esm",
-	legalComments: "inline",
-	loader: Object.fromEntries(fileExtensions.map((f) => [f, "file"])),
-	metafile: true,
-	minify: true,
-	outbase: "app",
-	outdir: "dist",
-	platform: "browser",
-	splitting: true,
-	target: "es2020",
-	treeShaking: true,
-	tsconfig: "app/tsconfig.json",
-});
-console.log("Renaming output files");
-await Promise.all(
-	Object.entries(result.metafile.outputs).map(async ([k, v]) => {
-		if (v.entryPoint) {
-			const hash = createHash("sha256");
-			const { name, ext } = parse(k);
-			await pipeline(createReadStream(k), hash);
-			const newPath = join(
-				k,
-				"..",
-				`${name}.${hash.digest("base64url")}${ext}`,
-			);
-
-			outMap[v.entryPoint.replace(/^app[/\\]?/, "")] = newPath.replace(
-				/^dist[/\\]?/,
-				"",
-			);
-			await rename(k, newPath);
-		}
-	}),
-);
-await build({
-	bundle: true,
-	charset: "utf8",
-	define: { ASSETS: JSON.stringify(outMap) },
-	entryPoints: toHydrate,
+	entryPoints: ["src/app/**/*.page.tsx"],
 	format: "esm",
 	jsx: "automatic",
 	legalComments: "inline",
+	loader: Object.fromEntries(
+		[".woff2", ".png", ".jpg", ".avif"].map((f) => [f, "file"]),
+	),
 	metafile: true,
 	minify: true,
-	outbase: "tmp",
-	outdir: "dist",
+	outbase: "src/app",
+	outdir,
+	packages: "external",
 	platform: "browser",
 	splitting: true,
-	target: "es2020",
+	target: "es2023",
 	treeShaking: true,
-	tsconfig: "app/tsconfig.json",
+	tsconfig: "src/app/tsconfig.json",
 });
-console.log(outMap);
+console.log(
+	"Renaming css and dynamic js, creating hydration files and generating static HTML",
+);
+const cssMap: Record<string, string | null> = {};
+const chunks = new Set<string>();
+await Promise.all(
+	Object.entries(result.metafile.outputs).map(async ([k, v]) => {
+		if (!v.entryPoint) return;
+		if (v.cssBundle) {
+			const hash = createHash("sha256");
+
+			await pipeline(createReadStream(v.cssBundle), hash);
+			await rename(
+				v.cssBundle,
+				(v.cssBundle = v.cssBundle.replace(
+					/([^/]+)\.page\.css$/,
+					`$1.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.css`,
+				)),
+			);
+		}
+		if (v.exports.includes("client")) {
+			// hydration
+		}
+		if (v.exports.includes("cache")) {
+			const {
+				default: App,
+			}: { default: React.FunctionComponent<{ cssBundle?: string }> } =
+				await import(pathToFileURL(k).href);
+			const [{ prelude }] = await Promise.all([
+				prerenderToNodeStream(
+					jsx(App, { cssBundle: v.cssBundle?.replace(/^[^/]+/, "") }),
+				),
+				unlink(k),
+			]);
+
+			await pipeline(
+				prelude,
+				createWriteStream(k.replace(/\.page\.js$/, ".html")),
+			);
+		} else {
+			const newPath = k
+				.replace(/^[^/]+/, "dist")
+				.replace(/([^/]+)\.page\.js$/, "$1.js");
+
+			await mkdir(dirname(newPath), { recursive: true });
+			await rename(k, newPath);
+			for (const im of v.imports)
+				if (!im.external && im.kind === "import-statement") chunks.add(im.path);
+			cssMap[k.replace(/^[^/]+\/|\.page\.js$/g, "")] =
+				v.cssBundle?.replace(/^[^/]+/, "") ?? null;
+		}
+	}),
+);
+console.log("Copying js chunks");
+await Promise.all(
+	Array.from(chunks, (path) => cp(path, path.replace(/^[^/]+/, "dist"))),
+);
+console.log("Saving css map");
+await writeFile("dist/cssMap.json", JSON.stringify(cssMap));
+console.timeEnd("Build");

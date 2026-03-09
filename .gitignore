@@ -5,6 +5,7 @@ _query.sql
 .vscode/
 .wrangler/
 *.log
+build/
 coverage/
 dist/
 icons/

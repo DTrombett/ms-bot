@@ -1,15 +1,15 @@
 {
-	"include": ["**/*.js", "**/*.ts", "**/*.tsx"],
+	"include": ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
 	"compilerOptions": {
 		"allowJs": true,
 		"checkJs": true,
 		"isolatedModules": true,
 		"jsx": "react-jsx",
-		"lib": ["ES2024", "DOM"],
-		"module": "esnext",
+		"lib": ["ES2023", "DOM"],
+		"module": "es6",
 		"moduleResolution": "bundler",
 		"noEmit": true,
 		"pretty": true,
-		"target": "esnext"
+		"target": "es2023"
 	}
 }

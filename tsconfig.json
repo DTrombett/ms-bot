@@ -1,5 +1,6 @@
 {
-	"include": ["src/**/*", "*.ts"],
+	"include": ["src/**/*", "*.ts", "*.js"],
+	"exclude": ["src/app"],
 	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
@@ -7,6 +8,7 @@
 		"allowSyntheticDefaultImports": true,
 		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,
+		"jsx": "react-jsx",
 		"lib": ["ESNext"],
 		"module": "esnext",
 		"moduleResolution": "bundler",
