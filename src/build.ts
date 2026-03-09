@@ -45,7 +45,7 @@ await Promise.all([
 await cp("public", outdir, { recursive: true, force: true });
 console.log("Compiling tsx and assets");
 const result = await build({
-	assetNames: `[dir]/[name].[hash]`,
+	assetNames: `static/[dir]/[name].[hash]`,
 	bundle: true,
 	charset: "utf8",
 	entryPoints: ["src/app/**/*.page.tsx"],
@@ -79,10 +79,12 @@ await Promise.all(
 			await pipeline(createReadStream(v.cssBundle), hash);
 			await rename(
 				v.cssBundle,
-				(v.cssBundle = v.cssBundle.replace(
-					/([^/]+)\.page\.css$/,
-					`$1.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.css`,
-				)),
+				(v.cssBundle = v.cssBundle
+					.replace(outdir, `${outdir}/static`)
+					.replace(
+						/([^/]+)\.page\.css$/,
+						`$1.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.css`,
+					)),
 			);
 		}
 		if (v.exports.includes("client")) {
