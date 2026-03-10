@@ -8,8 +8,8 @@ import avatar3 from "./img/avatar/250.avif";
 import avatar4 from "./img/avatar/310.avif";
 import avatar5 from "./img/avatar/386.avif";
 
-export default () => (
-	<Page head={{ fonts: [gintoMedium, ggsans] }}>
+export default ({ styles }: { styles: string[] }) => (
+	<Page head={{ fonts: [gintoMedium, ggsans], styles }}>
 		<Background />
 		<div
 			style={{

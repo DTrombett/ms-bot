@@ -1,23 +1,27 @@
 import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
-import globalStyles from "../styles/global.css";
 import lazyStyles from "../styles/lazy.css";
+import useX from "../utils/useX";
 
 export type HeadOptions = {
 	children?: ReactNode;
 	description?: string;
 	fonts?: string[];
+	styles: string[];
 	title?: string;
 };
+
+// So esbuild moves this to the assets directory
+useX(import("../styles/global.css"));
 
 export const Head = ({
 	children,
 	fonts,
+	styles,
 	description = "Dashboard per interagire con il bot della community MS! Entra nel server Discord tramite l'invito: https://discord.gg/5aE8gdrF8k",
 	title = "MS Bot Dashboard",
 }: HeadOptions) => (
 	<head>
 		{children}
-		<link rel="stylesheet" href={globalStyles} />
 		<noscript
 			dangerouslySetInnerHTML={{
 				__html: `</noscript><link rel="preload" href="${lazyStyles}" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="${lazyStyles}">`,
@@ -32,6 +36,9 @@ export const Head = ({
 				key={font}
 				crossOrigin="anonymous"
 			/>
+		))}
+		{styles?.map((style) => (
+			<link rel="stylesheet" href={style} key={style} />
 		))}
 		<title>{title}</title>
 		<meta name="description" content={description} />

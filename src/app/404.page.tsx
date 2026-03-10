@@ -2,8 +2,8 @@ import Background from "./components/Background";
 import { Page } from "./components/layout";
 import ggsans from "./fonts/ggsansvf.woff2";
 
-export default () => (
-	<Page head={{ fonts: [ggsans] }}>
+export default ({ styles }: { styles: string[] }) => (
+	<Page head={{ fonts: [ggsans], styles }}>
 		<Background />
 		<div
 			style={{

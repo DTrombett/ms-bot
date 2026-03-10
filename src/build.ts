@@ -1,6 +1,5 @@
 import { build } from "esbuild";
-import { createHash } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createWriteStream } from "node:fs";
 import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -80,9 +79,39 @@ const [buildResult] = await Promise.all([
 	}),
 	mkdir(`${outdir}/static/styles`, { recursive: true }),
 ]);
-console.log(
-	"Renaming css and dynamic js, creating hydration files and generating static HTML",
-);
+const inputCssMap = new Map<string, Set<string>>();
+const check = (
+	imports: { path: string; kind: string }[],
+	checked: Set<string>,
+	result = new Set<string>(),
+) => {
+	for (const im of imports) {
+		if (im.path.endsWith(".css") && im.kind === "dynamic-import")
+			result.add(im.path);
+		else if (
+			(im.path.endsWith(".ts") || im.path.endsWith(".tsx")) &&
+			!checked.has(im.path)
+		) {
+			checked.add(im.path);
+			check(
+				buildResult.metafile.inputs[im.path]?.imports ?? [],
+				checked,
+				result,
+			);
+		}
+	}
+	return result;
+};
+for (const [k, { imports }] of Object.entries(buildResult.metafile.inputs))
+	if (k.endsWith(".page.tsx"))
+		inputCssMap.set(k, check(imports, new Set<string>(k)));
+console.log("Renaming css and dynamic js");
+const reverseCssMap: Record<string, string> = {};
+const staticPages: {
+	App: React.FunctionComponent;
+	path: string;
+	entryPoint: string;
+}[] = [];
 await Promise.all(
 	Object.entries(buildResult.metafile.outputs).map(async ([k, v]) => {
 		if (k.endsWith(".css")) {
@@ -90,43 +119,24 @@ await Promise.all(
 
 			if (typeof oldPath !== "string" || !oldPath.endsWith(".css")) return;
 			await rm(k);
-			await rename(oldPath.replace(/src\/app/, outdir), k);
+			await rename(oldPath.replace(/^src\/app/, outdir), k);
+			reverseCssMap[oldPath] = k.replace(/^[^/]+/, "");
 			return;
 		}
 		if (!v.entryPoint) return;
-		if (v.cssBundle) {
-			const hash = createHash("sha256");
-
-			await pipeline(createReadStream(v.cssBundle), hash);
-			await rename(
-				v.cssBundle,
-				(v.cssBundle = v.cssBundle
-					.replace(outdir, `${outdir}/static/styles`)
-					.replace(
-						/([^/]+)\.page\.css$/,
-						`$1.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.css`,
-					)),
-			);
-		}
 		if (v.exports.includes("client")) {
 			// hydration
 		}
 		if (v.exports.includes("cache")) {
-			const {
-				default: App,
-			}: { default: React.FunctionComponent<{ cssBundle?: string }> } =
+			const { default: App }: { default: React.FunctionComponent } =
 				await import(pathToFileURL(k).href);
-			const [{ prelude }] = await Promise.all([
-				prerenderToNodeStream(
-					jsx(App, { cssBundle: v.cssBundle?.replace(/^[^/]+/, "") }),
-				),
-				rm(k),
-			]);
 
-			await pipeline(
-				prelude,
-				createWriteStream(k.replace(/\.page\.js$/, ".html")),
-			);
+			staticPages.push({
+				App,
+				path: k.replace(/\.page\.js$/, ".html"),
+				entryPoint: v.entryPoint,
+			});
+			await rm(k);
 		} else {
 			const newPath = k
 				.replace(/^[^/]+/, "dist")
@@ -137,6 +147,37 @@ await Promise.all(
 		}
 	}),
 );
-console.log("Cleaning up");
-await rm(`${outdir}/styles`, { force: true, recursive: true });
+console.log("Generating static pages");
+await Promise.all(
+	staticPages.map(async ({ App, path, entryPoint }) => {
+		const { prelude } = await prerenderToNodeStream(
+			jsx(App, {
+				styles: Array.from(
+					inputCssMap.get(entryPoint) ?? [],
+					(p) => reverseCssMap[p]!,
+				),
+			}),
+		);
+
+		inputCssMap.delete(entryPoint);
+		await pipeline(prelude, createWriteStream(path));
+	}),
+);
+console.log("Saving css map and cleaning up");
+await Promise.all([
+	rm(`${outdir}/styles`, { force: true, recursive: true }),
+	writeFile(
+		"dist/cssMap.json",
+		JSON.stringify(
+			Object.fromEntries(
+				inputCssMap
+					.entries()
+					.map(([k, v]) => [
+						k.replace(/^src\/app\/|\.page\.tsx$/g, ""),
+						Array.from(v, (p) => reverseCssMap[p]!),
+					]),
+			),
+		),
+	),
+]);
 console.timeEnd("Build");
