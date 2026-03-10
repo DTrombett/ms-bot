@@ -2,6 +2,7 @@ import Background from "./components/Background";
 import { DiscordLogo } from "./components/DiscordLogo";
 import { Page } from "./components/layout";
 import gintoMedium from "./fonts/GintoDiscord-Medium.woff2";
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
 import ggsans from "./fonts/ggsansvf.woff2";
 import avatar1 from "./img/avatar/160.avif";
 import avatar2 from "./img/avatar/200.avif";
@@ -13,7 +14,11 @@ import useX from "./utils/useX";
 useX(import("./styles/index.css"));
 
 export default ({ styles }: { styles: string[] }) => (
-	<Page head={{ fonts: [gintoMedium, ggsans], styles }}>
+	<Page
+		head={{
+			fonts: [gintoMedium, ggsans, { path: luckiestGuy, type: "font/ttf" }],
+			styles,
+		}}>
 		<Background />
 		<div
 			style={{
@@ -65,7 +70,7 @@ export default ({ styles }: { styles: string[] }) => (
 			</div>
 			<span
 				style={{
-					fontFamily: "Luckiest Guy",
+					fontFamily: "LuckiestGuy",
 					fontSize: "3rem",
 					lineHeight: 1,
 					margin: "0.5rem 0",

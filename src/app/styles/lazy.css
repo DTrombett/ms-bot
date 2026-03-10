@@ -52,3 +52,8 @@
 	font-weight: 900;
 	font-display: swap;
 }
+@font-face {
+	font-family: "LuckiestGuy";
+	src: url("../fonts/LuckiestGuy-Regular.ttf") format("truetype");
+	font-display: swap;
+}

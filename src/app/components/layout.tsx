@@ -5,7 +5,7 @@ import useX from "../utils/useX";
 export type HeadOptions = {
 	children?: ReactNode;
 	description?: string;
-	fonts?: string[];
+	fonts?: (string | { path: string; type: string })[];
 	styles: string[];
 	title?: string;
 };
@@ -30,10 +30,10 @@ export const Head = ({
 		{fonts?.map((font) => (
 			<link
 				rel="preload"
-				href={font}
+				href={typeof font === "string" ? font : font.path}
 				as="font"
-				type="font/woff2"
-				key={font}
+				type={typeof font === "string" ? "font/woff2" : font.type}
+				key={typeof font === "string" ? font : font.path}
 				crossOrigin="anonymous"
 			/>
 		))}

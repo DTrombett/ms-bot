@@ -24,3 +24,7 @@ declare module "*.css" {
 	const filename: string;
 	export default filename;
 }
+declare module "*.ttf" {
+	const filename: string;
+	export default filename;
+}

@@ -1,4 +1,4 @@
-import { build } from "esbuild";
+import { build, type BuildOptions } from "esbuild";
 import { createWriteStream } from "node:fs";
 import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -36,46 +36,42 @@ await Promise.all([
 console.log("Copying static assets");
 await cp("public", outdir, { recursive: true, force: true });
 console.log("Compiling css");
-await build({
+const baseOptions: BuildOptions = {
 	assetNames: `static/[dir]/[name].[hash]`,
 	bundle: true,
 	charset: "utf8",
-	entryPoints: ["src/app/styles/**/*.css"],
 	legalComments: "inline",
-	loader: Object.fromEntries(
-		[".woff2", ".png", ".jpg", ".avif"].map((f) => [f, "file"]),
-	),
-	metafile: true,
 	minify: true,
 	outbase: "src/app",
 	outdir,
 	publicPath: "/",
 	treeShaking: true,
 	tsconfig: "src/app/tsconfig.json",
+};
+await build({
+	...baseOptions,
+	entryPoints: ["src/app/styles/**/*.css"],
+	loader: Object.fromEntries(
+		[".woff2", ".png", ".jpg", ".avif", ".ttf"].map((f) => [f, "file"]),
+	),
 });
 console.log("Compiling tsx and assets");
 const [buildResult] = await Promise.all([
 	build({
-		assetNames: `static/[dir]/[name].[hash]`,
-		bundle: true,
-		charset: "utf8",
+		...baseOptions,
 		entryPoints: ["src/app/**/*.page.tsx"],
 		format: "esm",
 		jsx: "automatic",
-		legalComments: "inline",
 		loader: Object.fromEntries(
-			[".woff2", ".png", ".jpg", ".avif", ".css"].map((f) => [f, "file"]),
+			[".css", ".woff2", ".png", ".jpg", ".avif", ".ttf"].map((f) => [
+				f,
+				"file",
+			]),
 		),
 		metafile: true,
-		minify: true,
-		outbase: "src/app",
-		outdir,
 		packages: "external",
 		platform: "node",
-		publicPath: "/",
 		target: "node24",
-		treeShaking: true,
-		tsconfig: "src/app/tsconfig.json",
 	}),
 	mkdir(`${outdir}/static/styles`, { recursive: true }),
 ]);
