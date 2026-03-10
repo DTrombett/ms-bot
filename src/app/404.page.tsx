@@ -2,26 +2,8 @@ import Background from "./components/Background";
 import { Page } from "./components/layout";
 import ggsans from "./fonts/ggsansvf.woff2";
 
-export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
-	<Page
-		head={{
-			cssBundle,
-			children: (
-				<>
-					<link rel="preload" href={ggsans} as="font" type="font/woff2" />
-				</>
-			),
-		}}
-		style={{
-			backgroundColor: "rgb(39 39 42)",
-			fontFamily: "Roboto",
-			display: "flex",
-			flexDirection: "column",
-			height: "100vh",
-			margin: 0,
-			color: "white",
-			padding: "0 1rem",
-		}}>
+export default () => (
+	<Page head={{ fonts: [ggsans] }}>
 		<Background />
 		<div
 			style={{

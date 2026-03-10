@@ -8,27 +8,8 @@ import avatar3 from "./img/avatar/250.avif";
 import avatar4 from "./img/avatar/310.avif";
 import avatar5 from "./img/avatar/386.avif";
 
-export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
-	<Page
-		head={{
-			cssBundle,
-			children: (
-				<>
-					<link rel="preload" href={gintoMedium} as="font" type="font/woff2" />
-					<link rel="preload" href={ggsans} as="font" type="font/woff2" />
-				</>
-			),
-		}}
-		style={{
-			backgroundColor: "rgb(39 39 42)",
-			fontFamily: "Roboto",
-			display: "flex",
-			flexDirection: "column",
-			height: "100vh",
-			margin: 0,
-			color: "white",
-			padding: "0 1rem",
-		}}>
+export default () => (
+	<Page head={{ fonts: [gintoMedium, ggsans] }}>
 		<Background />
 		<div
 			style={{

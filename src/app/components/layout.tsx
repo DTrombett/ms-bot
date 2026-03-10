@@ -1,26 +1,38 @@
 import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
-import "../styles/global.css";
+import globalStyles from "../styles/global.css";
+import lazyStyles from "../styles/lazy.css";
 
 export type HeadOptions = {
-	cssBundle: string;
 	children?: ReactNode;
 	description?: string;
+	fonts?: string[];
 	title?: string;
 };
 
 export const Head = ({
-	cssBundle,
 	children,
+	fonts,
 	description = "Dashboard per interagire con il bot della community MS! Entra nel server Discord tramite l'invito: https://discord.gg/5aE8gdrF8k",
 	title = "MS Bot Dashboard",
 }: HeadOptions) => (
 	<head>
 		{children}
+		<link rel="stylesheet" href={globalStyles} />
 		<noscript
 			dangerouslySetInnerHTML={{
-				__html: `</noscript><link rel="preload" href="${cssBundle}" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="${cssBundle}">`,
+				__html: `</noscript><link rel="preload" href="${lazyStyles}" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="${lazyStyles}">`,
 			}}
 		/>
+		{fonts?.map((font) => (
+			<link
+				rel="preload"
+				href={font}
+				as="font"
+				type="font/woff2"
+				key={font}
+				crossOrigin="anonymous"
+			/>
+		))}
 		<title>{title}</title>
 		<meta name="description" content={description} />
 		<meta name="twitter:description" content={description} />

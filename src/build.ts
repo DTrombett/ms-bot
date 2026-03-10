@@ -1,15 +1,7 @@
 import { build } from "esbuild";
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import {
-	cp,
-	mkdir,
-	readFile,
-	rename,
-	rm,
-	unlink,
-	writeFile,
-} from "node:fs/promises";
+import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
@@ -36,15 +28,34 @@ console.time("Build");
 			),
 	);
 }
-console.log("Copying static assets");
+console.log("Cleaning output directory");
 const outdir = "build";
 await Promise.all([
 	rm(outdir, { recursive: true, force: true }),
 	rm("dist", { recursive: true, force: true }),
 ]);
+console.log("Copying static assets");
 await cp("public", outdir, { recursive: true, force: true });
+console.log("Compiling css");
+await build({
+	assetNames: `static/[dir]/[name].[hash]`,
+	bundle: true,
+	charset: "utf8",
+	entryPoints: ["src/app/styles/**/*.css"],
+	legalComments: "inline",
+	loader: Object.fromEntries(
+		[".woff2", ".png", ".jpg", ".avif"].map((f) => [f, "file"]),
+	),
+	metafile: true,
+	minify: true,
+	outbase: "src/app",
+	outdir,
+	publicPath: "/",
+	treeShaking: true,
+	tsconfig: "src/app/tsconfig.json",
+});
 console.log("Compiling tsx and assets");
-const [result] = await Promise.all([
+const [buildResult] = await Promise.all([
 	build({
 		assetNames: `static/[dir]/[name].[hash]`,
 		bundle: true,
@@ -54,7 +65,7 @@ const [result] = await Promise.all([
 		jsx: "automatic",
 		legalComments: "inline",
 		loader: Object.fromEntries(
-			[".woff2", ".png", ".jpg", ".avif"].map((f) => [f, "file"]),
+			[".woff2", ".png", ".jpg", ".avif", ".css"].map((f) => [f, "file"]),
 		),
 		metafile: true,
 		minify: true,
@@ -72,9 +83,16 @@ const [result] = await Promise.all([
 console.log(
 	"Renaming css and dynamic js, creating hydration files and generating static HTML",
 );
-const cssMap: Record<string, string | null> = {};
 await Promise.all(
-	Object.entries(result.metafile.outputs).map(async ([k, v]) => {
+	Object.entries(buildResult.metafile.outputs).map(async ([k, v]) => {
+		if (k.endsWith(".css")) {
+			const [oldPath] = Object.keys(v.inputs);
+
+			if (typeof oldPath !== "string" || !oldPath.endsWith(".css")) return;
+			await rm(k);
+			await rename(oldPath.replace(/src\/app/, outdir), k);
+			return;
+		}
 		if (!v.entryPoint) return;
 		if (v.cssBundle) {
 			const hash = createHash("sha256");
@@ -102,7 +120,7 @@ await Promise.all(
 				prerenderToNodeStream(
 					jsx(App, { cssBundle: v.cssBundle?.replace(/^[^/]+/, "") }),
 				),
-				unlink(k),
+				rm(k),
 			]);
 
 			await pipeline(
@@ -116,11 +134,9 @@ await Promise.all(
 
 			await mkdir(dirname(newPath), { recursive: true });
 			await rename(k, newPath);
-			cssMap[k.replace(/^[^/]+\/|\.page\.js$/g, "")] =
-				v.cssBundle?.replace(/^[^/]+/, "") ?? null;
 		}
 	}),
 );
-console.log("Saving css map");
-await writeFile("dist/cssMap.json", JSON.stringify(cssMap));
+console.log("Cleaning up");
+await rm(`${outdir}/styles`, { force: true, recursive: true });
 console.timeEnd("Build");

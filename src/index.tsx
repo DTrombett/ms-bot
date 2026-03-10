@@ -1,6 +1,5 @@
 import { env } from "cloudflare:workers";
 import { renderToReadableStream } from "react-dom/server";
-import cssMap from "../dist/cssMap.json";
 import Index from "../dist/index";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
@@ -17,10 +16,9 @@ const server: ExportedHandler<Env> = {
 
 		if (url.pathname === "/") {
 			if (request.method === "GET")
-				return new Response(
-					await renderToReadableStream(<Index cssBundle={cssMap["index"]} />),
-					{ headers: { "content-type": "text/html" } },
-				);
+				return new Response(await renderToReadableStream(<Index />), {
+					headers: { "content-type": "text/html" },
+				});
 			return create405();
 		}
 		if (url.pathname === "/interactions") {

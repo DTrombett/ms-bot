@@ -20,3 +20,7 @@ declare module "*.avif" {
 	const filename: string;
 	export default filename;
 }
+declare module "*.css" {
+	const filename: string;
+	export default filename;
+}
