@@ -1,9 +1,17 @@
-import background from "./img/background.avif";
-import { Page } from "./layout";
+import Background from "./components/Background";
+import { Page } from "./components/layout";
+import ggsans from "./fonts/ggsansvf.woff2";
 
 export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
 	<Page
-		head={{ cssBundle }}
+		head={{
+			cssBundle,
+			children: (
+				<>
+					<link rel="preload" href={ggsans} as="font" type="font/woff2" />
+				</>
+			),
+		}}
 		style={{
 			backgroundColor: "rgb(39 39 42)",
 			fontFamily: "Roboto",
@@ -14,23 +22,7 @@ export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
 			color: "white",
 			padding: "0 1rem",
 		}}>
-		<img
-			alt="background"
-			loading="lazy"
-			width="1090"
-			height="613"
-			decoding="async"
-			style={{
-				left: 0,
-				opacity: 0.25,
-				objectFit: "cover",
-				width: "100vw",
-				height: "100vh",
-				zIndex: -10,
-				position: "fixed",
-			}}
-			src={background}
-		/>
+		<Background />
 		<div
 			style={{
 				alignItems: "center",

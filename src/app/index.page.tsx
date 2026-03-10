@@ -1,10 +1,24 @@
-import avatar from "./img/avatar.avif";
-import background from "./img/background.avif";
-import { Page } from "./layout";
+import Background from "./components/Background";
+import { Page } from "./components/layout";
+import gintoMedium from "./fonts/GintoDiscord-Medium.woff2";
+import ggsans from "./fonts/ggsansvf.woff2";
+import avatar1 from "./img/avatar/160.avif";
+import avatar2 from "./img/avatar/200.avif";
+import avatar3 from "./img/avatar/250.avif";
+import avatar4 from "./img/avatar/310.avif";
+import avatar5 from "./img/avatar/386.avif";
 
 export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
 	<Page
-		head={{ cssBundle }}
+		head={{
+			cssBundle,
+			children: (
+				<>
+					<link rel="preload" href={gintoMedium} as="font" type="font/woff2" />
+					<link rel="preload" href={ggsans} as="font" type="font/woff2" />
+				</>
+			),
+		}}
 		style={{
 			backgroundColor: "rgb(39 39 42)",
 			fontFamily: "Roboto",
@@ -15,23 +29,7 @@ export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
 			color: "white",
 			padding: "0 1rem",
 		}}>
-		<img
-			alt="background"
-			loading="lazy"
-			width="1090"
-			height="613"
-			decoding="async"
-			style={{
-				left: 0,
-				opacity: 0.25,
-				objectFit: "cover",
-				width: "100vw",
-				height: "100vh",
-				zIndex: -10,
-				position: "fixed",
-			}}
-			src={background}
-		/>
+		<Background />
 		<div
 			style={{
 				alignItems: "center",
@@ -43,11 +41,18 @@ export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
 			}}>
 			<img
 				alt="MS Bot avatar"
-				width="192"
-				height="192"
-				decoding="async"
-				style={{ borderRadius: "100%", width: "8rem", height: "auto" }}
-				src={avatar}
+				fetchPriority="high"
+				height="160"
+				width="160"
+				sizes="128px"
+				src={avatar1}
+				srcSet={`${avatar1} 160w, ${avatar2} 200w, ${avatar3} 250w, ${avatar4} 310w, ${avatar5} 386w`}
+				style={{
+					borderRadius: "100%",
+					width: "128px",
+					height: "auto",
+					color: "transparent",
+				}}
 			/>
 			<span
 				style={{
@@ -70,24 +75,23 @@ export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
 				}}>
 				Il bot ufficiale della community MS
 			</span>
-			<button
+			<a
 				style={{
+					alignItems: "center",
 					backgroundColor: "#5865f2",
+					borderRadius: "0.5rem",
+					cursor: "pointer",
+					display: "flex",
+					fontFamily: "ggsans",
+					fontSize: "1.125rem",
 					fontWeight: 600,
+					lineHeight: "1.75rem",
+					margin: "0.75rem 0",
+					padding: "0.5rem 1rem",
+					textDecoration: "none",
 					transitionDuration: "0.2s",
 					transitionProperty: "all",
 					transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-					fontSize: "1.125rem",
-					fontFamily: "ggsans",
-					lineHeight: "1.75rem",
-					padding: "0.5rem 1rem",
-					borderRadius: "0.5rem",
-					alignItems: "center",
-					display: "flex",
-					margin: "0.75rem 0",
-					cursor: "pointer",
-					border: "none",
-					color: "#e0e3ff",
 				}}>
 				<svg
 					id="Discord-Logo"
@@ -108,7 +112,7 @@ export default ({ cssBundle = CSS_BUNDLE }: { cssBundle?: string }) => (
 					/>
 				</svg>
 				<span style={{ marginLeft: "0.75rem" }}>Login</span>
-			</button>
+			</a>
 		</div>
 	</Page>
 );

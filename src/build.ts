@@ -44,28 +44,31 @@ await Promise.all([
 ]);
 await cp("public", outdir, { recursive: true, force: true });
 console.log("Compiling tsx and assets");
-const result = await build({
-	assetNames: `static/[dir]/[name].[hash]`,
-	bundle: true,
-	charset: "utf8",
-	entryPoints: ["src/app/**/*.page.tsx"],
-	format: "esm",
-	jsx: "automatic",
-	legalComments: "inline",
-	loader: Object.fromEntries(
-		[".woff2", ".png", ".jpg", ".avif"].map((f) => [f, "file"]),
-	),
-	metafile: true,
-	minify: true,
-	outbase: "src/app",
-	outdir,
-	packages: "external",
-	platform: "node",
-	publicPath: "/",
-	target: "node24",
-	treeShaking: true,
-	tsconfig: "src/app/tsconfig.json",
-});
+const [result] = await Promise.all([
+	build({
+		assetNames: `static/[dir]/[name].[hash]`,
+		bundle: true,
+		charset: "utf8",
+		entryPoints: ["src/app/**/*.page.tsx"],
+		format: "esm",
+		jsx: "automatic",
+		legalComments: "inline",
+		loader: Object.fromEntries(
+			[".woff2", ".png", ".jpg", ".avif"].map((f) => [f, "file"]),
+		),
+		metafile: true,
+		minify: true,
+		outbase: "src/app",
+		outdir,
+		packages: "external",
+		platform: "node",
+		publicPath: "/",
+		target: "node24",
+		treeShaking: true,
+		tsconfig: "src/app/tsconfig.json",
+	}),
+	mkdir(`${outdir}/static/styles`, { recursive: true }),
+]);
 console.log(
 	"Renaming css and dynamic js, creating hydration files and generating static HTML",
 );
@@ -80,7 +83,7 @@ await Promise.all(
 			await rename(
 				v.cssBundle,
 				(v.cssBundle = v.cssBundle
-					.replace(outdir, `${outdir}/static`)
+					.replace(outdir, `${outdir}/static/styles`)
 					.replace(
 						/([^/]+)\.page\.css$/,
 						`$1.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.css`,

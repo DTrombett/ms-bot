@@ -1,5 +1,5 @@
 import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
-import "./styles/global.css";
+import "../styles/global.css";
 
 export type HeadOptions = {
 	cssBundle: string;
@@ -15,6 +15,18 @@ export const Head = ({
 	title = "MS Bot Dashboard",
 }: HeadOptions) => (
 	<head>
+		{children}
+		<noscript
+			dangerouslySetInnerHTML={{
+				__html: `</noscript><link rel="preload" href="${cssBundle}" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="${cssBundle}">`,
+			}}
+		/>
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:title" content={title} />
 		<link rel="author" href="https://github.com/DTrombett" />
 		<link rel="icon" href="/favicon.ico" />
 		<link rel="manifest" href="/manifest.json" />
@@ -32,14 +44,6 @@ export const Head = ({
 		<meta property="og:locale" content="it" />
 		<meta property="og:site_name" content="MS Bot Dashboard" />
 		<meta property="og:type" content="website" />
-		<meta name="twitter:title" content={title} />
-		<meta property="og:title" content={title} />
-		<meta name="description" content={description} />
-		<meta name="twitter:description" content={description} />
-		<meta property="og:description" content={description} />
-		<link rel="stylesheet" href={cssBundle} />
-		<title>{title}</title>
-		{children}
 	</head>
 );
 
