@@ -1,0 +1,6 @@
+.loginButton:hover {
+	scale: 105%;
+}
+.loginButton:active {
+	scale: 100%;
+}

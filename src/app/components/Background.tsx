@@ -12,7 +12,7 @@ export default () => (
 			height: "100vh",
 			left: 0,
 			objectFit: "cover",
-			opacity: 0.25,
+			opacity: 0.2,
 			position: "fixed",
 			width: "100vw",
 			zIndex: -10,
