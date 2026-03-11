@@ -57,3 +57,10 @@
 	src: url("../fonts/LuckiestGuy-Regular.ttf") format("truetype");
 	font-display: swap;
 }
+
+.loginButton:hover {
+	scale: 105%;
+}
+.loginButton:active {
+	scale: 100%;
+}

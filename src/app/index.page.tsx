@@ -9,9 +9,6 @@ import avatar2 from "./img/avatar/200.avif";
 import avatar3 from "./img/avatar/250.avif";
 import avatar4 from "./img/avatar/310.avif";
 import avatar5 from "./img/avatar/386.avif";
-import useX from "./utils/useX";
-
-useX(import("./styles/index.css"));
 
 export default ({ styles }: { styles: string[] }) => (
 	<Page

@@ -22,7 +22,7 @@ const server: ExportedHandler<Env> = {
 					{
 						headers: {
 							"content-type": "text/html",
-							"cache-control": "no-store",
+							"cache-control": "max-age=300",
 						},
 					},
 				);

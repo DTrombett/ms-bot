@@ -1,9 +1,15 @@
 import Background from "./components/Background";
 import { Page } from "./components/layout";
 import ggsans from "./fonts/ggsansvf.woff2";
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
 
 export default ({ styles }: { styles: string[] }) => (
-	<Page head={{ fonts: [ggsans], styles }}>
+	<Page
+		head={{
+			fonts: [ggsans, luckiestGuy],
+			styles,
+			prefetch: [{ href: "/", as: "document" }],
+		}}>
 		<Background />
 		<div
 			style={{
@@ -17,7 +23,7 @@ export default ({ styles }: { styles: string[] }) => (
 			<span
 				style={{
 					textShadow: "#0049ff 3px 3px",
-					fontFamily: "Luckiest Guy",
+					fontFamily: "LuckiestGuy",
 					fontSize: "3rem",
 					lineHeight: 1,
 					margin: "0.5rem 0",

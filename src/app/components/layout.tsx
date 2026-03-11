@@ -1,21 +1,19 @@
 import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
 import lazyStyles from "../styles/lazy.css";
-import useX from "../utils/useX";
 
 export type HeadOptions = {
 	children?: ReactNode;
 	description?: string;
 	fonts?: (string | { path: string; type: string })[];
+	prefetch?: { href: string; as: string }[];
 	styles: string[];
 	title?: string;
 };
 
-// So esbuild moves this to the assets directory
-useX(import("../styles/global.css"));
-
 export const Head = ({
 	children,
 	fonts,
+	prefetch,
 	styles,
 	description = "Dashboard per interagire con il bot della community MS! Entra nel server Discord tramite l'invito: https://discord.gg/5aE8gdrF8k",
 	title = "MS Bot Dashboard",
@@ -39,6 +37,9 @@ export const Head = ({
 		))}
 		{styles?.map((style) => (
 			<link rel="stylesheet" href={style} key={style} />
+		))}
+		{prefetch?.map((p, i) => (
+			<link rel="prefetch" href={p.href} as={p.as} key={i} />
 		))}
 		<title>{title}</title>
 		<meta name="description" content={description} />
@@ -76,6 +77,20 @@ export const Page = ({
 >) => (
 	<html lang="it">
 		<Head {...head} />
-		<body {...body}>{children}</body>
+		<body
+			{...body}
+			style={{
+				backgroundColor: "#27272a",
+				color: "white",
+				display: "flex",
+				flexDirection: "column",
+				fontFamily: "Roboto",
+				height: "100vh",
+				margin: 0,
+				padding: "0 1rem",
+				...body.style,
+			}}>
+			{children}
+		</body>
 	</html>
 );
