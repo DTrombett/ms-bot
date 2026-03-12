@@ -6,6 +6,7 @@ import Index from "../dist/index";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
+import { textEncoder } from "./util/globals";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
 import type { RGB } from "./util/resolveColor";
@@ -35,11 +36,10 @@ const server: ExportedHandler<Env> = {
 		}
 		if (url.pathname === "/auth/discord/login") {
 			let r = url.searchParams.get("to") ?? request.headers.get("Referer");
-			console.log(r);
 			if (r && URL.canParse(r)) r = new URL(r).pathname;
-			const state = btoa(
-				toSearchParams({ s: crypto.randomUUID(), r }).toString(),
-			);
+			const state = textEncoder
+				.encode(toSearchParams({ s: crypto.randomUUID(), r }).toString())
+				.toBase64({ alphabet: "base64url", omitPadding: true });
 
 			return new Response(null, {
 				headers: {
@@ -95,7 +95,7 @@ const server: ExportedHandler<Env> = {
 				}).toString(),
 				headers: {
 					"Content-Type": "application/x-www-form-urlencoded",
-					Authorization: `Basic ${btoa(`${env.DISCORD_APPLICATION_ID}:${env.DISCORD_CLIENT_SECRET}`)}`,
+					Authorization: `Basic ${textEncoder.encode(`${env.DISCORD_APPLICATION_ID}:${env.DISCORD_CLIENT_SECRET}`).toBase64()}`,
 				},
 				method: "POST",
 			});
@@ -126,8 +126,38 @@ const server: ExportedHandler<Env> = {
 				]);
 				return new Response(null, { status: 303, headers });
 			}
-			console.log(body);
-			headers.push(["Location", `${parsed.get("r") ?? "/"}?login_success`]);
+			const iv = crypto.getRandomValues(new Uint8Array(12));
+			const ciphertext = await crypto.subtle.encrypt(
+				{ name: "AES-GCM", iv },
+				await crypto.subtle.importKey(
+					"raw",
+					Uint8Array.fromBase64(env.SECRET_KEY),
+					{ name: "AES-GCM" },
+					false,
+					["encrypt"],
+				),
+				textEncoder.encode(
+					JSON.stringify({
+						accessToken: body.access_token,
+						refreshToken: body.refresh_token,
+						scopes: body.scope?.split(" "),
+						expires:
+							Math.floor(
+								(Date.parse(res.headers.get("Date")!) || Date.now()) / 1000,
+							) + body.expires_in,
+					}),
+				),
+			);
+			const token = new Uint8Array(iv.length + ciphertext.byteLength);
+			token.set(iv, 0);
+			token.set(new Uint8Array(ciphertext), iv.length);
+			headers.push(
+				["Location", `${parsed.get("r") ?? "/"}?login_success`],
+				[
+					"Set-Cookie",
+					`token=${token.toBase64({ alphabet: "base64url", omitPadding: true })}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+				],
+			);
 			return new Response(null, { status: 303, headers });
 		}
 		if (url.pathname === "/interactions") {
