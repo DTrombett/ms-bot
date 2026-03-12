@@ -6,10 +6,12 @@ import Index from "../dist/index";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
-import { textEncoder } from "./util/globals";
+import { textDecoder, textEncoder } from "./util/globals";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
 import type { RGB } from "./util/resolveColor";
+import { TimeUnit } from "./util/time";
+import tokenFromResponse from "./util/tokenFromResponse";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
@@ -37,6 +39,66 @@ const server: ExportedHandler<Env> = {
 		if (url.pathname === "/auth/discord/login") {
 			let r = url.searchParams.get("to") ?? request.headers.get("Referer");
 			if (r && URL.canParse(r)) r = new URL(r).pathname;
+			try {
+				const decoded = Uint8Array.fromBase64(
+					request.headers.get("cookie")!.match(/(?:^|;\s*)token=([^;]*)/)![1]!,
+					{ alphabet: "base64url" },
+				);
+				const jwt: JWT = JSON.parse(
+					textDecoder.decode(
+						await crypto.subtle.decrypt(
+							{ name: "AES-GCM", iv: decoded.slice(0, 12) },
+							await crypto.subtle.importKey(
+								"raw",
+								Uint8Array.fromBase64(env.SECRET_KEY),
+								{ name: "AES-GCM" },
+								false,
+								["decrypt"],
+							),
+							decoded.slice(12),
+						),
+					),
+				);
+
+				if (jwt.expires * 1000 - 5 * TimeUnit.Minute > Date.now()) {
+					const res = await fetch(
+						RouteBases.api + Routes.oauth2CurrentAuthorization(),
+						{ headers: { Authorization: `Bearer ${jwt.accessToken}` } },
+					);
+
+					void res.body?.cancel();
+					if (res.ok)
+						return new Response(null, {
+							status: 303,
+							headers: { location: `${r ?? "/"}?login_success` },
+						});
+				} else if (jwt.refreshToken) {
+					const token = await tokenFromResponse(
+						await fetch(RouteBases.api + Routes.oauth2TokenExchange(), {
+							body: new URLSearchParams({
+								refresh_token: jwt.refreshToken,
+								grant_type: "refresh_token",
+							}).toString(),
+							headers: {
+								"Content-Type": "application/x-www-form-urlencoded",
+								Authorization: `Basic ${textEncoder.encode(`${env.DISCORD_APPLICATION_ID}:${env.DISCORD_CLIENT_SECRET}`).toBase64()}`,
+							},
+							method: "POST",
+						}),
+					);
+
+					if (typeof token === "string")
+						return new Response(null, {
+							status: 303,
+							headers: {
+								location: `${r ?? "/"}?login_success`,
+								"set-cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+							},
+						});
+				}
+			} catch (err) {
+				// If no token is present or it's invalid, re-request authorization
+			}
 			const state = textEncoder
 				.encode(toSearchParams({ s: crypto.randomUUID(), r }).toString())
 				.toBase64({ alphabet: "base64url", omitPadding: true });
@@ -87,75 +149,33 @@ const server: ExportedHandler<Env> = {
 				]);
 				return new Response(null, { status: 303, headers });
 			}
-			const res = await fetch(RouteBases.api + Routes.oauth2TokenExchange(), {
-				body: new URLSearchParams({
-					code,
-					redirect_uri,
-					grant_type: "authorization_code",
-				}).toString(),
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-					Authorization: `Basic ${textEncoder.encode(`${env.DISCORD_APPLICATION_ID}:${env.DISCORD_CLIENT_SECRET}`).toBase64()}`,
-				},
-				method: "POST",
-			});
-			const body = await res
-				.json<
-					| { error: string; error_description: string }
-					| {
-							token_type: string;
-							access_token: string;
-							expires_in: number;
-							refresh_token: string;
-							scope: string;
-					  }
-					| null
-				>()
-				.catch(() => null);
+			const token = await tokenFromResponse(
+				await fetch(RouteBases.api + Routes.oauth2TokenExchange(), {
+					body: new URLSearchParams({
+						code,
+						redirect_uri,
+						grant_type: "authorization_code",
+					}).toString(),
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded",
+						Authorization: `Basic ${textEncoder.encode(`${env.DISCORD_APPLICATION_ID}:${env.DISCORD_CLIENT_SECRET}`).toBase64()}`,
+					},
+					method: "POST",
+				}),
+			);
 
-			if (
-				!res.ok ||
-				!body ||
-				"error" in body ||
-				!body.access_token ||
-				!body.expires_in
-			) {
+			if (typeof token === "object") {
 				headers.push([
 					"Location",
-					`/?${new URLSearchParams({ error: body && "error" in body && body.error ? body.error : "invalid_response", error_description: body && "error_description" in body && body.error_description ? body.error_description : "Il codice di accesso non è valido o è scaduto. Riprova più tardi" }).toString()}`,
+					`/?${new URLSearchParams(token).toString()}`,
 				]);
 				return new Response(null, { status: 303, headers });
 			}
-			const iv = crypto.getRandomValues(new Uint8Array(12));
-			const ciphertext = await crypto.subtle.encrypt(
-				{ name: "AES-GCM", iv },
-				await crypto.subtle.importKey(
-					"raw",
-					Uint8Array.fromBase64(env.SECRET_KEY),
-					{ name: "AES-GCM" },
-					false,
-					["encrypt"],
-				),
-				textEncoder.encode(
-					JSON.stringify({
-						accessToken: body.access_token,
-						refreshToken: body.refresh_token,
-						scopes: body.scope?.split(" "),
-						expires:
-							Math.floor(
-								(Date.parse(res.headers.get("Date")!) || Date.now()) / 1000,
-							) + body.expires_in,
-					}),
-				),
-			);
-			const token = new Uint8Array(iv.length + ciphertext.byteLength);
-			token.set(iv, 0);
-			token.set(new Uint8Array(ciphertext), iv.length);
 			headers.push(
 				["Location", `${parsed.get("r") ?? "/"}?login_success`],
 				[
 					"Set-Cookie",
-					`token=${token.toBase64({ alphabet: "base64url", omitPadding: true })}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+					`token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax`,
 				],
 			);
 			return new Response(null, { status: 303, headers });

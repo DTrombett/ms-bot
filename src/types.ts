@@ -331,6 +331,13 @@ declare global {
 		maxPoints: number,
 	][];
 
+	type JWT = {
+		accessToken: string;
+		expires: number;
+		refreshToken?: string;
+		scopes?: string[];
+	};
+
 	namespace Database {
 		type Prediction = { matchId: string; userId: string; prediction: string };
 		type User = {
