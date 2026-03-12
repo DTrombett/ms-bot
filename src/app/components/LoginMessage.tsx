@@ -21,6 +21,8 @@ export default ({ url }: { url?: URL }): ReactNode => {
 					maxWidth: "calc(100% - 2rem)",
 					padding: "1rem",
 					position: "fixed",
+					textAlign: "center",
+					textWrap: "balance",
 					transform: "translate(-50%)",
 					userSelect: "none",
 				}}>

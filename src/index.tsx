@@ -108,11 +108,11 @@ const server: ExportedHandler<Env> = {
 				headers: {
 					location: `https://discord.com/oauth2/authorize?${new URLSearchParams(
 						{
+							redirect_uri: new URL(authRedirectPath, url).href,
 							client_id: env.DISCORD_APPLICATION_ID,
-							prompt: "none",
 							response_type: "code",
 							scope: "identify",
-							redirect_uri: new URL(authRedirectPath, url).href,
+							prompt: "none",
 							state,
 						},
 					).toString()}`,
