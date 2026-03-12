@@ -1,5 +1,5 @@
 window.addEventListener("DOMContentLoaded", () => {
-	const url = new URL(window.origin);
+	const url = new URL(window.location.href);
 
 	url.searchParams.delete("login_success");
 	url.searchParams.delete("error");
