@@ -6,10 +6,12 @@ import Index from "../dist/index";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
+import normalizeError from "./util/normalizeError";
+import { toSearchParams } from "./util/objects";
 import type { RGB } from "./util/resolveColor";
 
 const handler = new CommandHandler(Object.values(commands));
-const authRedirectPath = "/auth/callback/discord";
+const authRedirectPath = "/auth/discord/callback";
 const redirect_uri = `http://localhost:8787${authRedirectPath}`;
 const create405 = (allow = "GET") =>
 	new Response(null, { status: 405, headers: { allow } });
@@ -31,8 +33,13 @@ const server: ExportedHandler<Env> = {
 				);
 			return create405();
 		}
-		if (url.pathname === "/auth/login/discord") {
-			const state = crypto.randomUUID();
+		if (url.pathname === "/auth/discord/login") {
+			let r = url.searchParams.get("to") ?? request.headers.get("Referer");
+			console.log(r);
+			if (r && URL.canParse(r)) r = new URL(r).pathname;
+			const state = btoa(
+				toSearchParams({ s: crypto.randomUUID(), r }).toString(),
+			);
 
 			return new Response(null, {
 				headers: {
@@ -46,7 +53,7 @@ const server: ExportedHandler<Env> = {
 							state,
 						},
 					).toString()}`,
-					"set-cookie": `loginState=${state}; Path=${authRedirectPath}; HttpOnly; Secure; SameSite=Lax`,
+					"set-cookie": `loginState=${state}; Path=/auth/discord/; HttpOnly; Secure; SameSite=Lax`,
 				},
 				status: 302,
 			});
@@ -60,13 +67,16 @@ const server: ExportedHandler<Env> = {
 			const headers: [string, string][] = [
 				[
 					"Set-Cookie",
-					`loginState=; Path=${authRedirectPath}; HttpOnly; Secure; SameSite=Lax`,
+					`loginState=; Path=/auth/discord/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`,
 				],
 			];
-			if (loginState !== state || !state) {
+			const parsed = await Promise.try(
+				() => new URLSearchParams(atob(state!)),
+			).catch(normalizeError);
+			if (loginState !== state || !state || parsed instanceof Error) {
 				headers.push([
 					"Location",
-					`/?${new URLSearchParams({ error: "invalid_state", error_description: "La richiesta ha fornito parametri inaspettati: assicurati di non aver aperto più finestre di login" }).toString()}`,
+					`/?${new URLSearchParams({ error: "invalid_state", error_description: "La richiesta ha fornito parametri inaspettati: assicurati di non aver aperto più finestre di login o disattivato i cookie" }).toString()}`,
 				]);
 				return new Response(null, { status: 303, headers });
 			}
@@ -117,7 +127,7 @@ const server: ExportedHandler<Env> = {
 				return new Response(null, { status: 303, headers });
 			}
 			console.log(body);
-			headers.push(["Location", "/?login_success"]);
+			headers.push(["Location", `${parsed.get("r") ?? "/"}?login_success`]);
 			return new Response(null, { status: 303, headers });
 		}
 		if (url.pathname === "/interactions") {

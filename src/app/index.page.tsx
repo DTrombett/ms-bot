@@ -89,7 +89,7 @@ export default ({ styles }: { styles: string[] }) => (
 			</span>
 			<a
 				className="loginButton"
-				href="/auth/login/discord"
+				href="/auth/discord/login"
 				style={{
 					alignItems: "center",
 					backgroundColor: "#5865f2",
