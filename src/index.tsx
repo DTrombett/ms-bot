@@ -15,7 +15,6 @@ import tokenFromResponse from "./util/tokenFromResponse";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
-const redirect_uri = `http://localhost:8787${authRedirectPath}`;
 const create405 = (allow = "GET") =>
 	new Response(null, { status: 405, headers: { allow } });
 
@@ -26,7 +25,9 @@ const server: ExportedHandler<Env> = {
 		if (url.pathname === "/") {
 			if (request.method === "GET")
 				return new Response(
-					await renderToReadableStream(<Index styles={cssMap.index} />),
+					await renderToReadableStream(
+						<Index styles={cssMap.index} url={url} />,
+					),
 					{
 						headers: {
 							"content-type": "text/html",
@@ -111,7 +112,7 @@ const server: ExportedHandler<Env> = {
 							prompt: "none",
 							response_type: "code",
 							scope: "identify",
-							redirect_uri,
+							redirect_uri: new URL(authRedirectPath, url).href,
 							state,
 						},
 					).toString()}`,
@@ -153,7 +154,7 @@ const server: ExportedHandler<Env> = {
 				await fetch(RouteBases.api + Routes.oauth2TokenExchange(), {
 					body: new URLSearchParams({
 						code,
-						redirect_uri,
+						redirect_uri: new URL(authRedirectPath, url).href,
 						grant_type: "authorization_code",
 					}).toString(),
 					headers: {

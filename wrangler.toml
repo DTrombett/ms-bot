@@ -25,7 +25,8 @@ not_found_handling = "404-page"
 run_worker_first = ["/", "/color", "/interactions", "/auth/*"]
 
 [[routes]]
-pattern = "ms-bot.trombett.org"
+# TODO: Change this to ms-bot before merging
+pattern = "test-bot.trombett.org"
 custom_domain = true
 zone_name = "trombett.org"
 

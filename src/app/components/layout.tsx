@@ -1,12 +1,14 @@
 import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
 import lazyStyles from "../styles/lazy.css";
+import removeAuthParams from "../utils/removeAuthParams.js";
+import LoginMessage from "./LoginMessage";
 
 export type HeadOptions = {
 	children?: ReactNode;
 	description?: string;
 	fonts?: (string | { path: string; type: string })[];
 	prefetch?: { href: string; as: string }[];
-	styles: string[];
+	styles?: string[];
 	title?: string;
 };
 
@@ -41,6 +43,7 @@ export const Head = ({
 		{prefetch?.map((p, i) => (
 			<link rel="prefetch" href={p.href} as={p.as} key={i} />
 		))}
+		<script defer type="module" src={removeAuthParams} />
 		<title>{title}</title>
 		<meta name="description" content={description} />
 		<meta name="twitter:description" content={description} />
@@ -68,10 +71,11 @@ export const Head = ({
 );
 
 export const Page = ({
+	url,
 	head,
 	children,
 	...body
-}: { head?: HeadOptions; children?: ReactNode } & DetailedHTMLProps<
+}: { head?: HeadOptions; url?: URL; children?: ReactNode } & DetailedHTMLProps<
 	HTMLAttributes<HTMLBodyElement>,
 	HTMLBodyElement
 >) => (
@@ -91,6 +95,7 @@ export const Page = ({
 				...body.style,
 			}}>
 			{children}
+			<LoginMessage url={url} />
 		</body>
 	</html>
 );

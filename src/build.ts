@@ -52,7 +52,7 @@ await build({
 	...baseOptions,
 	entryPoints: ["src/app/styles/**/*.css"],
 	loader: Object.fromEntries(
-		[".woff2", ".png", ".jpg", ".avif", ".ttf"].map((f) => [f, "file"]),
+		[".woff2", ".png", ".jpg", ".avif", ".ttf", ".js"].map((f) => [f, "file"]),
 	),
 });
 console.log("Compiling tsx and assets");
@@ -63,7 +63,7 @@ const [buildResult] = await Promise.all([
 		format: "esm",
 		jsx: "automatic",
 		loader: Object.fromEntries(
-			[".css", ".woff2", ".png", ".jpg", ".avif", ".ttf"].map((f) => [
+			[".css", ".woff2", ".png", ".jpg", ".avif", ".ttf", ".js"].map((f) => [
 				f,
 				"file",
 			]),

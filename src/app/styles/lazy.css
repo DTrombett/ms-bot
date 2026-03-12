@@ -64,3 +64,30 @@
 .loginButton:active {
 	scale: 100%;
 }
+@keyframes fadeInOut {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, 1rem);
+	}
+	16% {
+		opacity: 0.8;
+		transform: translate(-50%, 0);
+	}
+
+	84% {
+		opacity: 0.8;
+		transform: translate(-50%, 0);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, 1rem);
+		display: none;
+	}
+}
+@keyframes fadeOut {
+	to {
+		opacity: 0;
+		transform: translate(-50%, 1rem);
+		display: none;
+	}
+}

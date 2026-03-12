@@ -10,12 +10,13 @@ import avatar3 from "./img/avatar/250.avif";
 import avatar4 from "./img/avatar/310.avif";
 import avatar5 from "./img/avatar/386.avif";
 
-export default ({ styles }: { styles: string[] }) => (
+export default ({ styles, url }: { styles: string[]; url: URL }) => (
 	<Page
 		head={{
 			fonts: [gintoMedium, ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,
-		}}>
+		}}
+		url={url}>
 		<Background />
 		<div
 			style={{
