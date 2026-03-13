@@ -6,12 +6,13 @@ import Index from "../dist/index";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
-import { textDecoder, textEncoder } from "./util/globals";
+import { textEncoder } from "./util/globals";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
+import { parseToken } from "./util/parseToken";
 import type { RGB } from "./util/resolveColor";
 import { TimeUnit } from "./util/time";
-import tokenFromResponse from "./util/tokenFromResponse";
+import tokenFromResponse, { updateToken } from "./util/tokenFromResponse";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
@@ -23,58 +24,42 @@ const server: ExportedHandler<Env> = {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/") {
+			const headers = {
+				"content-type": "text/html",
+				"cache-control": "max-age=300",
+			};
+
 			if (request.method === "GET")
 				return new Response(
 					await renderToReadableStream(
 						<Index styles={cssMap.index} url={url} />,
 					),
-					{
-						headers: {
-							"content-type": "text/html",
-							"cache-control": "max-age=300",
-						},
-					},
+					{ headers },
 				);
-			return create405();
+			if (request.method === "HEAD") return new Response(null, { headers });
+			return create405("GET, HEAD");
 		}
 		if (url.pathname === "/auth/discord/login") {
 			let r = url.searchParams.get("to") ?? request.headers.get("Referer");
 			if (r && URL.canParse(r)) r = new URL(r).pathname;
 			try {
-				const decoded = Uint8Array.fromBase64(
+				const token = await parseToken(
 					request.headers.get("cookie")!.match(/(?:^|;\s*)token=([^;]*)/)![1]!,
-					{ alphabet: "base64url" },
-				);
-				const jwt: JWT = JSON.parse(
-					textDecoder.decode(
-						await crypto.subtle.decrypt(
-							{ name: "AES-GCM", iv: decoded.slice(0, 12) },
-							await crypto.subtle.importKey(
-								"raw",
-								Uint8Array.fromBase64(env.SECRET_KEY),
-								{ name: "AES-GCM" },
-								false,
-								["decrypt"],
-							),
-							decoded.slice(12),
-						),
-					),
 				);
 
-				if (jwt.expires * 1000 - 5 * TimeUnit.Minute > Date.now()) {
-					const res = await fetch(
-						RouteBases.api + Routes.oauth2CurrentAuthorization(),
-						{ headers: { Authorization: `Bearer ${jwt.accessToken}` } },
-					);
-
-					void res.body?.cancel();
-					if (res.ok)
-						return Response.redirect(`${r ?? "/"}?login_success`, 303);
-				} else if (jwt.refreshToken) {
-					const token = await tokenFromResponse(
+				if (+token.e * 1000 - 5 * TimeUnit.Minute > Date.now())
+					return new Response(null, {
+						status: 303,
+						headers: {
+							location: `${r ?? "/"}?login_success`,
+							"set-cookie": `token=${await updateToken(token)}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+						},
+					});
+				else if (token.r) {
+					const newToken = await tokenFromResponse(
 						await fetch(RouteBases.api + Routes.oauth2TokenExchange(), {
 							body: new URLSearchParams({
-								refresh_token: jwt.refreshToken,
+								refresh_token: token.r,
 								grant_type: "refresh_token",
 							}).toString(),
 							headers: {
@@ -85,12 +70,12 @@ const server: ExportedHandler<Env> = {
 						}),
 					);
 
-					if (typeof token === "string")
+					if (typeof newToken === "string")
 						return new Response(null, {
 							status: 303,
 							headers: {
 								location: `${r ?? "/"}?login_success`,
-								"set-cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+								"set-cookie": `token=${newToken}; Path=/; HttpOnly; Secure; SameSite=Lax`,
 							},
 						});
 				}
@@ -163,10 +148,7 @@ const server: ExportedHandler<Env> = {
 			);
 
 			if (typeof token === "object") {
-				headers.push([
-					"Location",
-					`/?${new URLSearchParams(token).toString()}`,
-				]);
+				headers.push(["Location", `/?${token.toString()}`]);
 				return new Response(null, { status: 303, headers });
 			}
 			headers.push(

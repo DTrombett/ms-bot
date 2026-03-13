@@ -332,10 +332,24 @@ declare global {
 	][];
 
 	type JWT = {
-		accessToken: string;
-		expires: number;
-		refreshToken?: string;
-		scopes?: string[];
+		/** Access Token */
+		a: string;
+		/** Expires time (ISO seconds) */
+		e: number;
+		/** Refresh Token */
+		r?: string;
+		/** Scopes (whitespace separated) */
+		s?: string;
+		/** User ID */
+		i: string;
+		/** Username */
+		u: string;
+		/** Avatar hash */
+		h?: string;
+		/** Global name */
+		d?: string;
+		/** Last updated (ISO seconds) */
+		l: number;
 	};
 
 	namespace Database {
