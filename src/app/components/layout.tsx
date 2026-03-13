@@ -44,6 +44,7 @@ export const Head = ({
 		{prefetch?.map((p, i) => (
 			<link rel="prefetch" href={p.href} as={p.as} key={i} />
 		))}
+		<script type="module" src={removeAuthParams} />
 		<title>{title}</title>
 		<meta name="description" content={description} />
 		<meta name="twitter:description" content={description} />
@@ -101,6 +102,5 @@ export const Page = ({
 			{children}
 			<AuthMessage url={url} />
 		</body>
-		<script defer type="module" src={removeAuthParams} />
 	</html>
 );
