@@ -86,7 +86,8 @@ export const Page = ({
 			{...body}
 			style={{
 				background: `linear-gradient(rgba(39, 39, 42, 0.8), rgba(39, 39, 42, 0.8)), url("${background}"), linear-gradient(rgb(39, 39, 42), rgb(39, 39, 42))`,
-				backgroundAttachment: "fixed",
+				backgroundAttachment: "scroll",
+				backgroundColor: "rgb(39, 39, 42)",
 				backgroundPosition: "center",
 				backgroundSize: "cover",
 				color: "white",

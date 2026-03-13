@@ -58,10 +58,15 @@
 	font-display: swap;
 }
 
-.loginButton:hover {
+.button {
+	transition-duration: 0.2s;
+	transition-property: all;
+	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.button:hover {
 	scale: 105%;
 }
-.loginButton:active {
+.button:active {
 	scale: 100%;
 }
 @keyframes fadeInOut {
