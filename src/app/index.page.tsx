@@ -1,6 +1,8 @@
 import type { APIUser } from "discord-api-types/v10";
+import DefaultAvatar from "./components/DefaultAvatar";
 import { DiscordLogo } from "./components/DiscordLogo";
 import HomeButton from "./components/HomeButton";
+import UserAvatar from "./components/UserAvatar";
 import { Page } from "./components/layout";
 import gintoMedium from "./fonts/GintoDiscord-Medium.woff2";
 import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
@@ -44,39 +46,23 @@ export default ({
 						position: "relative",
 						margin: "0 auto 0.5rem auto",
 					}}>
-					<div
+					<DefaultAvatar
+						size={128}
 						style={{
 							backgroundColor: "#faa61a",
-							borderRadius: "100%",
-							height: "128px",
-							width: "128px",
 							position: "absolute",
 							zIndex: -1,
-						}}>
-						<DiscordLogo
-							style={{
-								width: "77px",
-								height: "100%",
-								margin: "auto",
-								display: "block",
-							}}
-						/>
-					</div>
+						}}
+					/>
 					<img
 						alt=""
-						draggable="false"
 						fetchPriority="high"
 						height="160"
 						width="160"
 						sizes="128px"
 						src={avatar1}
 						srcSet={`${avatar1} 160w, ${avatar2} 200w, ${avatar3} 250w, ${avatar4} 310w, ${avatar5} 386w`}
-						style={{
-							borderRadius: "100%",
-							color: "transparent",
-							height: "128px",
-							width: "128px",
-						}}
+						style={{ borderRadius: "100%", height: "128px", width: "128px" }}
 					/>
 				</div>
 				<span
@@ -165,18 +151,7 @@ export default ({
 				<HomeButton
 					href="/auth/discord/logout"
 					label="Log out"
-					icon={
-						<DiscordLogo
-							style={{
-								boxSizing: "content-box",
-								display: "inline",
-								height: "2rem",
-								overflow: "visible",
-								verticalAlign: "-0.125em",
-								width: "2rem",
-							}}
-						/>
-					}
+					icon={<UserAvatar user={user} size={32} />}
 					style={{ backgroundColor: "#D22D39", width: undefined }}
 				/>
 			:	<HomeButton
