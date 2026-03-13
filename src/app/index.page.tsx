@@ -30,13 +30,9 @@ export default ({ styles, url }: { styles: string[]; url: URL }) => (
 					style={{
 						backgroundColor: "#faa61a",
 						borderRadius: "100%",
-						bottom: "1px",
-						height: "126px",
-						left: "1px",
+						height: "128px",
+						width: "128px",
 						position: "absolute",
-						right: "1px",
-						top: "1px",
-						width: "126px",
 						zIndex: -1,
 					}}>
 					<DiscordLogo
@@ -49,7 +45,7 @@ export default ({ styles, url }: { styles: string[]; url: URL }) => (
 					/>
 				</div>
 				<img
-					alt="MS Bot avatar"
+					alt=""
 					fetchPriority="high"
 					height="160"
 					width="160"
@@ -89,6 +85,7 @@ export default ({ styles, url }: { styles: string[]; url: URL }) => (
 			<a
 				className="loginButton"
 				href="/auth/discord/login"
+				rel="nofollow"
 				style={{
 					alignItems: "center",
 					backgroundColor: "#5865f2",
