@@ -69,10 +69,7 @@ const server: ExportedHandler<Env> = {
 
 					void res.body?.cancel();
 					if (res.ok)
-						return new Response(null, {
-							status: 303,
-							headers: { location: `${r ?? "/"}?login_success` },
-						});
+						return Response.redirect(`${r ?? "/"}?login_success`, 303);
 				} else if (jwt.refreshToken) {
 					const token = await tokenFromResponse(
 						await fetch(RouteBases.api + Routes.oauth2TokenExchange(), {
