@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { RouteBases, Routes } from "discord-api-types/v10";
+import { RouteBases, Routes, type APIUser } from "discord-api-types/v10";
 import { renderToReadableStream } from "react-dom/server";
 import cssMap from "../dist/cssMap.json";
 import Index from "../dist/index";
@@ -9,10 +9,16 @@ import { createSolidPng } from "./util/createSolidPng";
 import { textEncoder } from "./util/globals";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
-import { parseToken } from "./util/parseToken";
 import type { RGB } from "./util/resolveColor";
 import { TimeUnit } from "./util/time";
-import tokenFromResponse, { updateToken } from "./util/tokenFromResponse";
+import {
+	createSetCookie,
+	createToken,
+	parseToken,
+	refreshToken,
+	tokenFromResponse,
+	updateToken,
+} from "./util/token";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
@@ -24,20 +30,37 @@ const server: ExportedHandler<Env> = {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/") {
-			const headers = {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
+			const { setCookie, token } = await createSetCookie(request);
+			const headers: HeadersInit = {
 				"content-type": "text/html",
 				"cache-control": "max-age=300",
+				vary: "Cookie",
+				"set-cookie": setCookie,
 			};
 
-			if (request.method === "GET")
-				return new Response(
+			return new Response(
+				request.method === "GET" ?
 					await renderToReadableStream(
-						<Index styles={cssMap.index} url={url} />,
-					),
-					{ headers },
-				);
-			if (request.method === "HEAD") return new Response(null, { headers });
-			return create405();
+						<Index
+							styles={cssMap.index}
+							url={url}
+							user={
+								(token && {
+									id: token.i,
+									avatar: token.h ?? null,
+									global_name: token.d ?? null,
+									username: token.u,
+								}) satisfies
+									| Pick<APIUser, "id" | "username" | "avatar" | "global_name">
+									| undefined
+							}
+						/>,
+					)
+				:	null,
+				{ headers },
+			);
 		}
 		if (url.pathname === "/auth/discord/login") {
 			if (request.method !== "GET" && request.method !== "HEAD")
@@ -46,41 +69,25 @@ const server: ExportedHandler<Env> = {
 			if (r && URL.canParse(r)) r = new URL(r).pathname;
 			try {
 				const token = await parseToken(
-					request.headers.get("cookie")!.match(/(?:^|;\s*)token=([^;]*)/)![1]!,
+					request.headers.get("cookie")?.match(/(?:^|;\s*)token=([^;]*)/)?.[1],
 				);
 
-				if (+token.e * 1000 - 5 * TimeUnit.Minute > Date.now())
+				if (token && +token.e * 1000 - 5 * TimeUnit.Minute > Date.now())
 					return new Response(null, {
 						status: 303,
 						headers: {
 							location: `${r ?? "/"}?login_success`,
-							"set-cookie": `token=${await updateToken(token)}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+							"set-cookie": `token=${await createToken(await updateToken(token))}; Path=/; HttpOnly; Secure; SameSite=Lax`,
 						},
 					});
-				else if (token.r) {
-					const newToken = await tokenFromResponse(
-						await fetch(RouteBases.api + Routes.oauth2TokenExchange(), {
-							body: new URLSearchParams({
-								refresh_token: token.r,
-								grant_type: "refresh_token",
-							}).toString(),
-							headers: {
-								"Content-Type": "application/x-www-form-urlencoded",
-								Authorization: `Basic ${textEncoder.encode(`${env.DISCORD_APPLICATION_ID}:${env.DISCORD_CLIENT_SECRET}`).toBase64()}`,
-							},
-							method: "POST",
-						}),
-					);
-
-					if (typeof newToken === "string")
-						return new Response(null, {
-							status: 303,
-							headers: {
-								location: `${r ?? "/"}?login_success`,
-								"set-cookie": `token=${newToken}; Path=/; HttpOnly; Secure; SameSite=Lax`,
-							},
-						});
-				}
+				else if (token?.r)
+					return new Response(null, {
+						status: 303,
+						headers: {
+							location: `${r ?? "/"}?login_success`,
+							"set-cookie": `token=${await createToken(await refreshToken(token.r, true))}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+						},
+					});
 			} catch (err) {
 				// If no token is present or it's invalid, re-request authorization
 			}
@@ -103,6 +110,20 @@ const server: ExportedHandler<Env> = {
 					"set-cookie": `loginState=${state}; Path=/auth/discord/; HttpOnly; Secure; SameSite=Lax`,
 				},
 				status: 302,
+			});
+		}
+		if (url.pathname === "/auth/discord/logout") {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
+			let r = url.searchParams.get("to") ?? request.headers.get("Referer");
+
+			if (r && URL.canParse(r)) r = new URL(r).pathname;
+			return new Response(null, {
+				status: 303,
+				headers: {
+					location: `${r ?? "/"}?logout`,
+					"set-cookie": `token=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax`,
+				},
 			});
 		}
 		if (url.pathname === authRedirectPath) {
@@ -151,7 +172,7 @@ const server: ExportedHandler<Env> = {
 				}),
 			);
 
-			if (typeof token === "object") {
+			if (token instanceof URLSearchParams) {
 				headers.push(["Location", `/?${token.toString()}`]);
 				return new Response(null, { status: 303, headers });
 			}
@@ -159,7 +180,7 @@ const server: ExportedHandler<Env> = {
 				["Location", `${parsed.get("r") ?? "/"}?login_success`],
 				[
 					"Set-Cookie",
-					`token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+					`token=${await createToken(token)}; Path=/; HttpOnly; Secure; SameSite=Lax`,
 				],
 			);
 			return new Response(null, { status: 303, headers });

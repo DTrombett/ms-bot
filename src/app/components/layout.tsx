@@ -2,7 +2,7 @@ import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
 import background from "../img/background/background.avif";
 import lazyStyles from "../styles/lazy.css";
 import removeAuthParams from "../utils/removeAuthParams.js";
-import LoginMessage from "./LoginMessage";
+import AuthMessage from "./AuthMessage";
 
 export type HeadOptions = {
 	styles: string[];
@@ -100,7 +100,7 @@ export const Page = ({
 				...body.style,
 			}}>
 			{children}
-			<LoginMessage url={url} />
+			<AuthMessage url={url} />
 		</body>
 	</html>
 );

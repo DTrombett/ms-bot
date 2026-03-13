@@ -1,3 +1,4 @@
+import type { APIUser } from "discord-api-types/v10";
 import { DiscordLogo } from "./components/DiscordLogo";
 import HomeButton from "./components/HomeButton";
 import { Page } from "./components/layout";
@@ -10,7 +11,15 @@ import avatar3 from "./img/avatar/250.avif";
 import avatar4 from "./img/avatar/310.avif";
 import avatar5 from "./img/avatar/386.avif";
 
-export default ({ styles, url }: { styles: string[]; url: URL }) => (
+export default ({
+	styles,
+	url,
+	user,
+}: {
+	styles: string[];
+	url: URL;
+	user?: Pick<APIUser, "id" | "username" | "avatar" | "global_name">;
+}) => (
 	<Page
 		head={{
 			fonts: [gintoMedium, ggsans, { path: luckiestGuy, type: "font/ttf" }],
@@ -91,16 +100,7 @@ export default ({ styles, url }: { styles: string[]; url: URL }) => (
 				}}>
 				Il bot ufficiale della community MS
 			</span>
-			<div
-				style={{
-					display: "flex",
-					gap: "1rem",
-					fontFamily: "ggsans",
-					fontSize: "1.125rem",
-					lineHeight: "1.75rem",
-					userSelect: "none",
-					fontWeight: 600,
-				}}>
+			<div style={{ display: "flex", gap: "1rem" }}>
 				<HomeButton
 					label="Pronostici"
 					href={`/auth/discord/login?to=${encodeURIComponent("/predictions")}`}
@@ -161,37 +161,42 @@ export default ({ styles, url }: { styles: string[]; url: URL }) => (
 					}
 				/>
 			</div>
-			<a
-				className="button"
-				href="/auth/discord/login"
-				rel="nofollow"
-				style={{
-					alignItems: "center",
-					backgroundColor: "#5865f2",
-					borderRadius: "0.5rem",
-					color: "white",
-					cursor: "pointer",
-					display: "flex",
-					fontFamily: "ggsans",
-					fontSize: "1.125rem",
-					fontWeight: 600,
-					lineHeight: "1.75rem",
-					padding: "0.5rem 1rem",
-					textDecoration: "none",
-					userSelect: "none",
-				}}>
-				<DiscordLogo
-					style={{
-						boxSizing: "content-box",
-						display: "inline",
-						height: "2rem",
-						overflow: "visible",
-						verticalAlign: "-0.125em",
-						width: "2rem",
-					}}
+			{user ?
+				<HomeButton
+					href="/auth/discord/logout"
+					label="Log out"
+					icon={
+						<DiscordLogo
+							style={{
+								boxSizing: "content-box",
+								display: "inline",
+								height: "2rem",
+								overflow: "visible",
+								verticalAlign: "-0.125em",
+								width: "2rem",
+							}}
+						/>
+					}
+					style={{ backgroundColor: "#D22D39", width: undefined }}
 				/>
-				<span style={{ marginLeft: "0.75rem" }}>Login</span>
-			</a>
+			:	<HomeButton
+					href="/auth/discord/login"
+					label="Login"
+					icon={
+						<DiscordLogo
+							style={{
+								boxSizing: "content-box",
+								display: "inline",
+								height: "2rem",
+								overflow: "visible",
+								verticalAlign: "-0.125em",
+								width: "2rem",
+							}}
+						/>
+					}
+					style={{ backgroundColor: "#5865f2", width: undefined }}
+				/>
+			}
 		</div>
 	</Page>
 );

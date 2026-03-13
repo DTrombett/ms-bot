@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 const errors: Record<string, string | undefined> = {
 	invalid_grant: "Il codice di accesso non è valido. Riprova",
 	access_denied: "Richiesta di accesso rifiutata",
+	invalid_request: "Impossibile effettuare il login al momento",
 };
 
 export default ({ url }: { url?: URL }): ReactNode => {
@@ -43,9 +44,30 @@ export default ({ url }: { url?: URL }): ReactNode => {
 					opacity: 0,
 					padding: "1rem",
 					position: "fixed",
+					textAlign: "center",
+					textWrap: "balance",
 					userSelect: "none",
 				}}>
 				Accesso riuscito!
+			</div>
+		: url?.searchParams.has("logout") ?
+			<div
+				style={{
+					animation: "fadeInOut 5s ease forwards",
+					backgroundColor: "#008545",
+					borderRadius: "1rem",
+					bottom: "2rem",
+					fontSize: "1.2rem",
+					left: "50%",
+					maxWidth: "calc(100% - 2rem)",
+					opacity: 0,
+					padding: "1rem",
+					position: "fixed",
+					textAlign: "center",
+					textWrap: "balance",
+					userSelect: "none",
+				}}>
+				Disconnessione effettuata con successo!
 			</div>
 		:	null
 	);
