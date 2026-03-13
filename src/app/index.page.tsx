@@ -89,7 +89,11 @@ export default ({
 			<div style={{ display: "flex", gap: "1rem" }}>
 				<HomeButton
 					label="Pronostici"
-					href={`/auth/discord/login?to=${encodeURIComponent("/predictions")}`}
+					href={
+						user ? "/predictions" : (
+							`/auth/discord/login?to=${encodeURIComponent("/predictions")}`
+						)
+					}
 					icon={
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -115,7 +119,7 @@ export default ({
 				/>
 				<HomeButton
 					label="Tornei"
-					href={`/auth/discord/login?to=${encodeURIComponent("/tournaments")}`}
+					href="/tournaments"
 					icon={
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
