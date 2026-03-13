@@ -5,11 +5,11 @@ import removeAuthParams from "../utils/removeAuthParams.js";
 import LoginMessage from "./LoginMessage";
 
 export type HeadOptions = {
+	styles: string[];
 	children?: ReactNode;
 	description?: string;
 	fonts?: (string | { path: string; type: string })[];
 	prefetch?: { href: string; as: string }[];
-	styles?: string[];
 	title?: string;
 };
 
@@ -38,7 +38,7 @@ export const Head = ({
 				crossOrigin="anonymous"
 			/>
 		))}
-		{styles?.map((style) => (
+		{styles.map((style) => (
 			<link rel="stylesheet" href={style} key={style} />
 		))}
 		{prefetch?.map((p, i) => (
@@ -76,7 +76,7 @@ export const Page = ({
 	head,
 	children,
 	...body
-}: { head?: HeadOptions; url?: URL; children?: ReactNode } & DetailedHTMLProps<
+}: { head: HeadOptions; url?: URL; children?: ReactNode } & DetailedHTMLProps<
 	HTMLAttributes<HTMLBodyElement>,
 	HTMLBodyElement
 >) => (

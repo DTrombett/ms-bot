@@ -16,7 +16,7 @@ import tokenFromResponse, { updateToken } from "./util/tokenFromResponse";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
-const create405 = (allow = "GET") =>
+const create405 = (allow = "GET, HEAD") =>
 	new Response(null, { status: 405, headers: { allow } });
 
 const server: ExportedHandler<Env> = {
@@ -37,9 +37,11 @@ const server: ExportedHandler<Env> = {
 					{ headers },
 				);
 			if (request.method === "HEAD") return new Response(null, { headers });
-			return create405("GET, HEAD");
+			return create405();
 		}
 		if (url.pathname === "/auth/discord/login") {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
 			let r = url.searchParams.get("to") ?? request.headers.get("Referer");
 			if (r && URL.canParse(r)) r = new URL(r).pathname;
 			try {
@@ -104,6 +106,8 @@ const server: ExportedHandler<Env> = {
 			});
 		}
 		if (url.pathname === authRedirectPath) {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
 			const code = url.searchParams.get("code"),
 				state = url.searchParams.get("state");
 			const loginState = request.headers
@@ -170,7 +174,8 @@ const server: ExportedHandler<Env> = {
 			return create405("POST");
 		}
 		if (url.pathname === "/color") {
-			if (request.method !== "GET") return create405();
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
 			const rgb = [
 				url.searchParams.get("red"),
 				url.searchParams.get("green"),
@@ -178,13 +183,21 @@ const server: ExportedHandler<Env> = {
 			].map(Number) as RGB;
 
 			if (rgb.some(isNaN))
-				return Response.json(
-					{ error: "Missing 'red', 'green' or 'blue' query parameter" },
-					{ status: 400 },
-				);
-			return new Response(await createSolidPng(256, 256, ...rgb), {
-				headers: { "Content-Type": "image/png" },
-			});
+				return request.method === "GET" ?
+						Response.json(
+							{ error: "Missing 'red', 'green' or 'blue' query parameter" },
+							{ status: 400 },
+						)
+					:	new Response(null, {
+							status: 400,
+							headers: { "content-type": "application/json" },
+						});
+			return new Response(
+				request.method === "GET" ?
+					await createSolidPng(256, 256, ...rgb)
+				:	null,
+				{ headers: { "Content-Type": "image/png" } },
+			);
 		}
 		return new Response(null, { status: 404 });
 	},
