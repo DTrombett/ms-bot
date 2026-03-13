@@ -1,4 +1,3 @@
-import Background from "./components/Background";
 import { Page } from "./components/layout";
 import ggsans from "./fonts/ggsansvf.woff2";
 import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
@@ -10,7 +9,6 @@ export default ({ styles }: { styles: string[] }) => (
 			styles,
 			prefetch: [{ href: "/", as: "document" }],
 		}}>
-		<Background />
 		<div
 			style={{
 				alignItems: "center",

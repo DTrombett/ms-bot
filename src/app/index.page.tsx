@@ -1,4 +1,3 @@
-import Background from "./components/Background";
 import { DiscordLogo } from "./components/DiscordLogo";
 import { Page } from "./components/layout";
 import gintoMedium from "./fonts/GintoDiscord-Medium.woff2";
@@ -17,7 +16,6 @@ export default ({ styles, url }: { styles: string[]; url: URL }) => (
 			styles,
 		}}
 		url={url}>
-		<Background />
 		<div
 			style={{
 				alignItems: "center",

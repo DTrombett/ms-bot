@@ -1,4 +1,5 @@
 import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
+import background from "../img/background/background.avif";
 import lazyStyles from "../styles/lazy.css";
 import removeAuthParams from "../utils/removeAuthParams.js";
 import LoginMessage from "./LoginMessage";
@@ -84,7 +85,10 @@ export const Page = ({
 		<body
 			{...body}
 			style={{
-				backgroundColor: "#27272a",
+				background: `linear-gradient(rgba(39, 39, 42, 0.8), rgba(39, 39, 42, 0.8)), url("${background}")`,
+				backgroundAttachment: "fixed",
+				backgroundPosition: "center",
+				backgroundSize: "cover",
 				color: "white",
 				display: "flex",
 				flexDirection: "column",
