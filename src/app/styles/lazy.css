@@ -57,6 +57,16 @@
 	src: url("../fonts/LuckiestGuy-Regular.ttf") format("truetype");
 	font-display: swap;
 }
+@font-face {
+	font-family: "LilitaOne";
+	src: url("../fonts/LilitaOne-Regular.ttf") format("truetype");
+	font-display: swap;
+}
+@font-face {
+	font-family: "Nougat";
+	src: url("../fonts/Nougat-Regular.ttf") format("truetype");
+	font-display: swap;
+}
 
 * {
 	transition-duration: 0.2s;
@@ -68,6 +78,9 @@
 }
 .button:active {
 	scale: 100%;
+}
+:focus-visible {
+	outline: #ffffff40 solid 0.8px;
 }
 @keyframes fadeInOut {
 	0% {

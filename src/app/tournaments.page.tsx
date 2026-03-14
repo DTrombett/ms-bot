@@ -1,4 +1,3 @@
-import type { APIUser } from "discord-api-types/v10";
 import HomeButton from "./components/HomeButton";
 import { Page } from "./components/layout";
 import ggsans from "./fonts/ggsansvf.woff2";
@@ -8,16 +7,16 @@ export default ({
 	mobile,
 	styles,
 	url,
-	user,
+	admin,
 }: {
 	mobile: boolean;
 	styles: string[];
 	url: URL;
-	user: Pick<APIUser, "id" | "username" | "avatar" | "global_name">;
+	admin: boolean;
 }) => (
 	<Page
 		head={{
-			fonts: [ggsans, luckiestGuy, { path: luckiestGuy, type: "font/ttf" }],
+			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,
 			prefetch: [{ href: "/tournaments/new", as: "document" }],
 		}}
@@ -34,20 +33,22 @@ export default ({
 			}}>
 			TORNEI
 		</span>
-		<HomeButton
-			href="/tournaments/new"
-			label={mobile ? "+" : "Nuovo torneo"}
-			style={{
-				backgroundColor: "#5865f2",
-				borderRadius: mobile ? "8px" : "0.5rem",
-				bottom: mobile ? "24px" : "2rem",
-				fontSize: mobile ? "48px" : "1.5rem",
-				fontWeight: mobile ? "normal" : 600,
-				lineHeight: mobile ? 1 : "2rem",
-				padding: mobile ? "8px 20px" : "0.5rem 1.125rem",
-				position: "fixed",
-				right: mobile ? "24px" : "2rem",
-			}}
-		/>
+		{admin && (
+			<HomeButton
+				href="/tournaments/new"
+				label={mobile ? "+" : "Nuovo torneo"}
+				style={{
+					backgroundColor: "#5865f2",
+					borderRadius: mobile ? "8px" : "0.5rem",
+					bottom: mobile ? "24px" : "2rem",
+					fontSize: mobile ? "48px" : "1.5rem",
+					fontWeight: mobile ? "normal" : 600,
+					lineHeight: mobile ? 1 : "2rem",
+					padding: mobile ? "8px 20px" : "0.5rem 1.125rem",
+					position: "fixed",
+					right: mobile ? "24px" : "2rem",
+				}}
+			/>
+		)}
 	</Page>
 );

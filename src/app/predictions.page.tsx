@@ -5,7 +5,7 @@ import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
 export default ({ styles }: { styles: string[] }) => (
 	<Page
 		head={{
-			fonts: [ggsans, luckiestGuy],
+			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,
 			prefetch: [{ href: "/", as: "document" }],
 		}}>

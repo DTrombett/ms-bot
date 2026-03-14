@@ -27,9 +27,9 @@ export default ({ styles }: { styles: string[] }) => (
 					margin: "0.5rem 0",
 					textAlign: "center",
 				}}>
-				404
+				403
 				<br />
-				NOT FOUND
+				FORBIDDEN
 			</span>
 			<a
 				href="/"
@@ -50,5 +50,3 @@ export default ({ styles }: { styles: string[] }) => (
 		</div>
 	</Page>
 );
-
-export const cache = true;

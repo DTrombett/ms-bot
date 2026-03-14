@@ -1,13 +1,20 @@
 import { env } from "cloudflare:workers";
-import { RouteBases, Routes, type APIUser } from "discord-api-types/v10";
+import {
+	RouteBases,
+	Routes,
+	type APIUser,
+	type RESTGetAPIGuildMemberResult,
+} from "discord-api-types/v10";
 import { renderToReadableStream } from "react-dom/server";
+import Forbidden from "../dist/403";
 import cssMap from "../dist/cssMap.json";
 import Index from "../dist/index";
 import Tournaments from "../dist/tournaments";
+import NewTournament from "../dist/tournaments/new";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
-import { textEncoder } from "./util/globals";
+import { rest, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
@@ -57,6 +64,7 @@ const server: ExportedHandler<Env> = {
 				:	null,
 				{
 					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
 						"cache-control": "private, max-age=300",
 						"content-type": "text/html",
 						"set-cookie": setCookie,
@@ -69,6 +77,11 @@ const server: ExportedHandler<Env> = {
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
 			const { setCookie, token } = await createSetCookie(request);
+			const member =
+				token &&
+				((await rest
+					.get(Routes.guildMember(env.MAIN_GUILD, token.i))
+					.catch(() => null)) as RESTGetAPIGuildMemberResult | null);
 
 			return new Response(
 				request.method === "GET" ?
@@ -76,15 +89,10 @@ const server: ExportedHandler<Env> = {
 						<Tournaments
 							styles={cssMap.tournaments}
 							url={url}
-							user={
-								(token && {
-									id: token.i,
-									avatar: token.h ?? null,
-									global_name: token.d ?? null,
-									username: token.u,
-								}) satisfies
-									| Pick<APIUser, "id" | "username" | "avatar" | "global_name">
-									| undefined
+							admin={
+								!new Set(member?.roles).isDisjointFrom(
+									new Set(env.ALLOWED_ROLES.split(",")),
+								)
 							}
 							mobile={isMobile(request.headers)}
 						/>,
@@ -92,6 +100,71 @@ const server: ExportedHandler<Env> = {
 				:	null,
 				{
 					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						"cache-control": "private, max-age=300",
+						"content-type": "text/html",
+						"set-cookie": setCookie,
+						vary: "Cookie",
+					},
+				},
+			);
+		}
+		if (url.pathname === "/tournaments/new") {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
+			const { setCookie, token } = await createSetCookie(request);
+
+			if (!token)
+				return Response.redirect(
+					`/auth/discord/login?to=${encodeURIComponent(url.pathname)}`,
+				);
+			const member = (await rest
+				.get(Routes.guildMember(env.MAIN_GUILD, token.i))
+				.catch(() => null)) as RESTGetAPIGuildMemberResult | null;
+			if (
+				new Set(member?.roles).isDisjointFrom(
+					new Set(env.ALLOWED_ROLES.split(",")),
+				)
+			)
+				return new Response(
+					request.method === "GET" ?
+						await renderToReadableStream(<Forbidden styles={cssMap["403"]} />)
+					:	null,
+					{
+						status: 403,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"cache-control": "private, max-age=300",
+							"content-type": "text/html",
+							"set-cookie": setCookie,
+							vary: "Cookie",
+						},
+					},
+				);
+			return new Response(
+				request.method === "GET" ?
+					await renderToReadableStream(
+						<NewTournament
+							styles={cssMap["tournaments/new"]}
+							url={url}
+							user={
+								{
+									id: token.i,
+									avatar: token.h ?? null,
+									global_name: token.d ?? null,
+									username: token.u,
+								} satisfies Pick<
+									APIUser,
+									"id" | "username" | "avatar" | "global_name"
+								>
+							}
+							mobile={isMobile(request.headers)}
+						/>,
+					)
+				:	null,
+				{
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
 						"cache-control": "private, max-age=300",
 						"content-type": "text/html",
 						"set-cookie": setCookie,

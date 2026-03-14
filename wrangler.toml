@@ -22,7 +22,7 @@ crons = ["0 0 * * *", "*/5 * * * *"]
 directory = "./build"
 binding = "ASSETS"
 not_found_handling = "404-page"
-run_worker_first = ["/", "/color", "/interactions", "/auth/*", "/tournaments"]
+run_worker_first = ["/", "/color", "/interactions", "/auth/*", "/tournaments", "/tournaments/*"]
 
 [[routes]]
 # TODO: Change this to ms-bot before merging
