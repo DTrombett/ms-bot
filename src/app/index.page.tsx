@@ -26,19 +26,20 @@ export default ({
 		head={{
 			fonts: [gintoMedium, ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,
+			prefetch: [{ href: "/tournaments", as: "document" }],
 		}}
 		url={url}
 		style={{ alignItems: "center", gap: "1.25rem", justifyContent: "center" }}>
 		<div>
 			<div
 				style={{
-					height: "128px",
-					width: "128px",
+					height: "8rem",
+					width: "8rem",
 					position: "relative",
 					margin: "0 auto 0.5rem auto",
 				}}>
 				<DefaultAvatar
-					size={128}
+					size="8rem"
 					style={{
 						backgroundColor: "#faa61a",
 						position: "absolute",
@@ -50,22 +51,23 @@ export default ({
 					fetchPriority="high"
 					height="160"
 					width="160"
-					sizes="128px"
+					sizes="8rem"
 					src={avatar1}
 					srcSet={`${avatar1} 160w, ${avatar2} 200w, ${avatar3} 250w, ${avatar4} 310w, ${avatar5} 386w`}
-					style={{ borderRadius: "100%", height: "128px", width: "128px" }}
+					style={{ borderRadius: "100%", height: "8rem", width: "8rem" }}
 				/>
 			</div>
-			<span
+			<div
 				style={{
 					fontFamily: "LuckiestGuy",
 					fontSize: "3rem",
 					lineHeight: 1,
-					textShadow: "#0049ff 3px 3px",
+					textAlign: "center",
+					textShadow: "#0049ff 0.25rem 0.25rem",
 					userSelect: "none",
 				}}>
 				MS BOT
-			</span>
+			</div>
 		</div>
 		<span
 			style={{
@@ -107,6 +109,7 @@ export default ({
 						/>
 					</svg>
 				}
+				style={{ width: "7rem" }}
 			/>
 			<HomeButton
 				label="Tornei"
@@ -140,14 +143,15 @@ export default ({
 						/>
 					</svg>
 				}
+				style={{ width: "7rem" }}
 			/>
 		</div>
 		{user ?
 			<HomeButton
 				href="/auth/discord/logout"
 				label="Log out"
-				icon={<UserAvatar user={user} size={32} />}
-				style={{ backgroundColor: "#D22D39", width: undefined }}
+				icon={<UserAvatar user={user} size="2rem" />}
+				style={{ backgroundColor: "#D22D39" }}
 			/>
 		:	<HomeButton
 				href="/auth/discord/login"
@@ -164,7 +168,7 @@ export default ({
 						}}
 					/>
 				}
-				style={{ backgroundColor: "#5865f2", width: undefined }}
+				style={{ backgroundColor: "#5865f2" }}
 			/>
 		}
 	</Page>

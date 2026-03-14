@@ -3,10 +3,12 @@ import { RouteBases, Routes, type APIUser } from "discord-api-types/v10";
 import { renderToReadableStream } from "react-dom/server";
 import cssMap from "../dist/cssMap.json";
 import Index from "../dist/index";
+import Tournaments from "../dist/tournaments";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
 import { textEncoder } from "./util/globals";
+import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
 import type { RGB } from "./util/resolveColor";
@@ -50,6 +52,41 @@ const server: ExportedHandler<Env> = {
 									| Pick<APIUser, "id" | "username" | "avatar" | "global_name">
 									| undefined
 							}
+						/>,
+					)
+				:	null,
+				{
+					headers: {
+						"cache-control": "private, max-age=300",
+						"content-type": "text/html",
+						"set-cookie": setCookie,
+						vary: "Cookie",
+					},
+				},
+			);
+		}
+		if (url.pathname === "/tournaments") {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
+			const { setCookie, token } = await createSetCookie(request);
+
+			return new Response(
+				request.method === "GET" ?
+					await renderToReadableStream(
+						<Tournaments
+							styles={cssMap.tournaments}
+							url={url}
+							user={
+								(token && {
+									id: token.i,
+									avatar: token.h ?? null,
+									global_name: token.d ?? null,
+									username: token.u,
+								}) satisfies
+									| Pick<APIUser, "id" | "username" | "avatar" | "global_name">
+									| undefined
+							}
+							mobile={isMobile(request.headers)}
 						/>,
 					)
 				:	null,

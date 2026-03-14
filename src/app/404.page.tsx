@@ -20,7 +20,7 @@ export default ({ styles }: { styles: string[] }) => (
 			}}>
 			<span
 				style={{
-					textShadow: "#0049ff 3px 3px",
+					textShadow: "#0049ff 0.25rem 0.25rem",
 					fontFamily: "LuckiestGuy",
 					fontSize: "3rem",
 					lineHeight: 1,

@@ -5,23 +5,19 @@ export default ({
 	size,
 	...props
 }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
-	size: number;
+	size: string;
 }) => (
 	<div
 		{...props}
 		style={{
 			borderRadius: "100%",
 			display: "flex",
-			height: `${size}px`,
-			width: `${size}px`,
+			height: size,
+			width: size,
 			...props.style,
 		}}>
 		<DiscordLogo
-			style={{
-				width: `calc(${size}px * 0.6)`,
-				margin: "auto",
-				display: "block",
-			}}
+			style={{ width: `calc(${size} * 0.6)`, margin: "auto", display: "block" }}
 		/>
 	</div>
 );

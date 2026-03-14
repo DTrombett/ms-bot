@@ -97,6 +97,7 @@ export const Page = ({
 				fontFamily: "Roboto",
 				height: "100vh",
 				margin: 0,
+				minHeight: "100vh",
 				padding: "0 1rem",
 				...body.style,
 			}}>

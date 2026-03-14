@@ -1,5 +1,5 @@
 import { CDN } from "@discordjs/rest";
-import { APIUser, type ImageSize } from "discord-api-types/v10";
+import { APIUser } from "discord-api-types/v10";
 import type { DetailedHTMLProps, HTMLAttributes } from "react";
 import DefaultAvatar from "./DefaultAvatar";
 
@@ -19,16 +19,11 @@ export default ({
 	...props
 }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 	user: Pick<APIUser, "id" | "avatar">;
-	size: ImageSize;
+	size: string;
 }) => (
 	<div
 		{...props}
-		style={{
-			height: `${size}px`,
-			width: `${size}px`,
-			position: "relative",
-			...props.style,
-		}}>
+		style={{ height: size, width: size, position: "relative", ...props.style }}>
 		<DefaultAvatar
 			size={size}
 			style={{
@@ -40,10 +35,10 @@ export default ({
 			<img
 				alt=""
 				loading="lazy"
-				height={size}
-				width={size}
-				sizes={`${size}px`}
-				src={cdn.avatar(user.id, user.avatar, { size, extension: "webp" })}
+				height={16}
+				width={16}
+				sizes={size}
+				src={cdn.avatar(user.id, user.avatar, { size: 16, extension: "webp" })}
 				srcSet={[16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 					.map(
 						(size) =>
@@ -52,8 +47,8 @@ export default ({
 					.join(", ")}
 				style={{
 					borderRadius: "100%",
-					height: `${size}px`,
-					width: `${size}px`,
+					height: size,
+					width: size,
 					position: "relative",
 					zIndex: 1,
 				}}

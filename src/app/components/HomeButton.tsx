@@ -7,9 +7,10 @@ export default ({
 }: DetailedHTMLProps<
 	AnchorHTMLAttributes<HTMLAnchorElement>,
 	HTMLAnchorElement
-> & { label: string; icon: ReactNode }) => (
+> & { label: string; icon?: ReactNode }) => (
 	<a
 		className="button"
+		role="button"
 		{...props}
 		style={{
 			alignItems: "center",
@@ -25,10 +26,9 @@ export default ({
 			padding: "0.5rem 1rem",
 			textDecoration: "none",
 			userSelect: "none",
-			width: "113px",
 			...props.style,
 		}}>
 		{icon}
-		<span style={{ marginLeft: "0.5rem" }}>{label}</span>
+		<span style={{ marginLeft: icon ? "0.5rem" : undefined }}>{label}</span>
 	</a>
 );
