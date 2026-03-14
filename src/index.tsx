@@ -33,12 +33,6 @@ const server: ExportedHandler<Env> = {
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
 			const { setCookie, token } = await createSetCookie(request);
-			const headers: HeadersInit = {
-				"content-type": "text/html",
-				"cache-control": "max-age=300",
-				vary: "Cookie",
-				"set-cookie": setCookie,
-			};
 
 			return new Response(
 				request.method === "GET" ?
@@ -59,7 +53,14 @@ const server: ExportedHandler<Env> = {
 						/>,
 					)
 				:	null,
-				{ headers },
+				{
+					headers: {
+						"cache-control": "private, max-age=300",
+						"content-type": "text/html",
+						"set-cookie": setCookie,
+						vary: "Cookie",
+					},
+				},
 			);
 		}
 		if (url.pathname === "/auth/discord/login") {
