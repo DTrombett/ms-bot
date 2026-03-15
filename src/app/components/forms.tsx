@@ -1,22 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
-const styles = {
-	textInput: {
-		backgroundColor: "#22232740",
-		borderColor: "rgba(255, 255, 255, 0.2)",
-		borderRadius: "4px",
-		borderStyle: "solid",
-		borderWidth: "0.8px",
-		color: "white",
-		fontFamily: "ggsans",
-		fontSize: "1rem",
-		fontWeight: 500,
-		lineHeight: "1.5rem",
-		marginTop: "0.5rem",
-		maxWidth: "256px",
-		padding: "0.25rem 0.5rem",
-		width: "stretch",
-	},
+export const styles = {
+	boxElement: { display: "flex", alignItems: "center", cursor: "pointer" },
 	boxGroup: {
 		display: "flex",
 		flexDirection: "column",
@@ -27,10 +12,8 @@ const styles = {
 		lineHeight: "1.5rem",
 		marginTop: "0.5rem",
 	},
-	boxElement: { display: "flex", alignItems: "center", cursor: "pointer" },
 	boxInput: { margin: "0 0.5rem 0 0.125rem", cursor: "pointer" },
-	field: { marginBlock: "1em" },
-	label: { display: "block", marginLeft: "0.125rem" },
+	boxLabel: { width: "stretch", cursor: "pointer" },
 	checkbox: {
 		cursor: "pointer",
 		height: "1rem",
@@ -52,7 +35,24 @@ const styles = {
 		marginLeft: "0.25rem",
 		width: "stretch",
 	},
-	boxLabel: { width: "stretch", cursor: "pointer" },
+	field: { marginBlock: "1em" },
+	label: { display: "block", marginLeft: "0.125rem" },
+	textInput: {
+		backgroundColor: "#22232740",
+		borderColor: "rgba(255, 255, 255, 0.2)",
+		borderRadius: "4px",
+		borderStyle: "solid",
+		borderWidth: "0.8px",
+		color: "white",
+		fontFamily: "ggsans",
+		fontSize: "1rem",
+		fontWeight: 500,
+		lineHeight: "1.5rem",
+		marginTop: "0.5rem",
+		maxWidth: "256px",
+		padding: "0.25rem 0.5rem",
+		width: "stretch",
+	},
 } satisfies Record<string, CSSProperties>;
 
 export const Section = ({
@@ -69,17 +69,19 @@ export const Section = ({
 );
 
 export const TextInput = ({
+	label,
 	name,
 	placeholder,
-	label,
-	maxWidth,
 	defaultValue,
+	maxWidth,
+	required,
 }: {
+	label: string;
 	name: string;
 	placeholder: string;
-	label: string;
-	maxWidth?: string;
 	defaultValue?: string;
+	maxWidth?: string;
+	required?: boolean;
 }) => (
 	<div style={styles.field}>
 		<label htmlFor={name} style={styles.label}>
@@ -91,19 +93,22 @@ export const TextInput = ({
 			id={name}
 			placeholder={placeholder}
 			defaultValue={defaultValue}
+			required={required}
 			style={{ ...styles.textInput, ...(maxWidth && { maxWidth }) }}
 		/>
 	</div>
 );
 
 export const CheckboxInput = ({
-	name,
 	label,
+	name,
 	defaultChecked,
+	required,
 }: {
-	name: string;
 	label: string;
+	name: string;
 	defaultChecked?: boolean;
+	required?: boolean;
 }) => (
 	<div style={styles.checkboxField}>
 		<input
@@ -112,6 +117,7 @@ export const CheckboxInput = ({
 			id={name}
 			style={styles.checkbox}
 			defaultChecked={defaultChecked}
+			required={required}
 		/>
 		<label htmlFor={name} style={styles.checkboxLabel}>
 			{label}
@@ -129,8 +135,8 @@ export const RadioInput = ({
 	options: {
 		label: string;
 		value: string | number | readonly string[];
-		id?: string;
 		defaultChecked?: boolean;
+		id?: string;
 	}[];
 }) => (
 	<div style={styles.field}>
@@ -160,7 +166,12 @@ export const CheckboxListInput = ({
 	options,
 }: {
 	label: string;
-	options: { label: string; id: string; defaultChecked?: boolean }[];
+	options: {
+		id: string;
+		label: string;
+		defaultChecked?: boolean;
+		required?: boolean;
+	}[];
 }) => (
 	<div style={styles.field}>
 		<span style={styles.label}>{label}</span>
@@ -173,6 +184,7 @@ export const CheckboxListInput = ({
 						name={op.id}
 						style={styles.boxInput}
 						defaultChecked={op.defaultChecked}
+						required={op.required}
 					/>
 					<label htmlFor={op.id} style={styles.boxLabel}>
 						{op.label}
@@ -184,13 +196,15 @@ export const CheckboxListInput = ({
 );
 
 export const DateTimeInput = ({
-	name,
 	label,
+	name,
 	defaultValue,
+	required,
 }: {
-	name: string;
 	label: string;
+	name: string;
 	defaultValue?: string;
+	required?: boolean;
 }) => (
 	<div style={styles.field}>
 		<label htmlFor={name} style={styles.label}>
@@ -202,6 +216,7 @@ export const DateTimeInput = ({
 			id={name}
 			defaultValue={defaultValue}
 			style={{ ...styles.textInput, width: undefined, maxWidth: "stretch" }}
+			required={required}
 		/>
 	</div>
 );

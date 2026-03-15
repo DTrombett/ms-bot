@@ -98,7 +98,12 @@ export default ({
 				width: "64rem",
 			}}>
 			<Section>
-				<TextInput name="title" label="Nome" placeholder="Il nome del torneo" />
+				<TextInput
+					name="title"
+					label="Nome"
+					placeholder="Il nome del torneo"
+					required
+				/>
 				<RadioInput
 					label="Videogiuoco"
 					name="game"
@@ -121,6 +126,7 @@ export default ({
 					name="mod"
 					label="Modalità"
 					placeholder="La modalità del torneo (es. Duels)"
+					required
 					// TODO: Add autocomplete https://developer.brawlstars.com/api-docs/index.html#/events/getGameModes
 				/>
 			</Section>
@@ -128,9 +134,13 @@ export default ({
 				<CheckboxListInput
 					label="Accetta iscrizioni tramite"
 					options={[
-						{ id: "message", label: "Messaggio con pulsante" },
-						{ id: "dashboard", label: "Dashboard" },
-						{ id: "command", label: "Comando" },
+						{
+							id: "message",
+							label: "Messaggio con pulsante",
+							defaultChecked: true,
+						},
+						{ id: "dashboard", label: "Dashboard", defaultChecked: true },
+						{ id: "command", label: "Comando", defaultChecked: true },
 					]}
 				/>
 				<TextInput
@@ -141,8 +151,34 @@ export default ({
 				/>
 				<DateTimeInput name="registrationStartTime" label="Inizio iscrizioni" />
 				<DateTimeInput name="registrationEndTime" label="Fine iscrizioni" />
-				<CheckboxInput label="Richiedi tag giocatore" name="tagRequired" />
+				<CheckboxInput
+					label="Richiedi tag giocatore"
+					name="tagRequired"
+					defaultChecked
+				/>
 			</Section>
+			<input
+				className="button"
+				type="submit"
+				style={{
+					backgroundColor: "#008545",
+					borderRadius: "0.5rem",
+					fontFamily: "ggsans",
+					fontSize: "1.125rem",
+					fontWeight: 600,
+					lineHeight: "1.75rem",
+					padding: "0.5rem 1rem",
+					textAlign: "center",
+					userSelect: "none",
+					cursor: "pointer",
+					color: "white",
+					width: "fit-content",
+					border: "none",
+					margin: "auto",
+					marginBlockStart: "1em",
+				}}
+				value="Crea torneo"
+			/>
 		</form>
 	</Page>
 );
