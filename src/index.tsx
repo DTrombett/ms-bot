@@ -192,7 +192,7 @@ const server: ExportedHandler<Env> = {
 						status: 303,
 						headers: {
 							location: `${r ?? "/"}?login_success`,
-							"set-cookie": `token=${await createToken(await updateToken(token))}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+							"set-cookie": `token=${await createToken(await updateToken(token))}; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax`,
 						},
 					});
 				else if (token?.r)
@@ -200,7 +200,7 @@ const server: ExportedHandler<Env> = {
 						status: 303,
 						headers: {
 							location: `${r ?? "/"}?login_success`,
-							"set-cookie": `token=${await createToken(await refreshToken(token.r, true))}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+							"set-cookie": `token=${await createToken(await refreshToken(token.r, true))}; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax`,
 						},
 					});
 			} catch (err) {
@@ -295,7 +295,7 @@ const server: ExportedHandler<Env> = {
 				["Location", `${parsed.get("r") ?? "/"}?login_success`],
 				[
 					"Set-Cookie",
-					`token=${await createToken(token)}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+					`token=${await createToken(token)}; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax`,
 				],
 			);
 			return new Response(null, { status: 303, headers });

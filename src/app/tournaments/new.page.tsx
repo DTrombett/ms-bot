@@ -149,6 +149,12 @@ export default ({
 					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
 					maxWidth="690px"
 				/>
+				<TextInput
+					name="roleId"
+					label="ID ruolo iscritti"
+					placeholder="L'ID del ruolo da assegnare agli iscritti"
+					maxWidth="258px"
+				/>
 				<DateTimeInput name="registrationStartTime" label="Inizio iscrizioni" />
 				<DateTimeInput name="registrationEndTime" label="Fine iscrizioni" />
 				<CheckboxInput

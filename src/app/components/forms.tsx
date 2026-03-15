@@ -1,4 +1,9 @@
-import type { CSSProperties, ReactNode } from "react";
+import type {
+	CSSProperties,
+	DetailedHTMLProps,
+	HTMLAttributes,
+	ReactNode,
+} from "react";
 
 export const styles = {
 	boxElement: { display: "flex", alignItems: "center", cursor: "pointer" },
@@ -75,6 +80,7 @@ export const TextInput = ({
 	defaultValue,
 	maxWidth,
 	required,
+	...props
 }: {
 	label: string;
 	name: string;
@@ -82,8 +88,8 @@ export const TextInput = ({
 	defaultValue?: string;
 	maxWidth?: string;
 	required?: boolean;
-}) => (
-	<div style={styles.field}>
+} & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
+	<div {...props} style={{ ...styles.field, ...props.style }}>
 		<label htmlFor={name} style={styles.label}>
 			{label}
 		</label>
@@ -104,13 +110,14 @@ export const CheckboxInput = ({
 	name,
 	defaultChecked,
 	required,
+	...props
 }: {
 	label: string;
 	name: string;
 	defaultChecked?: boolean;
 	required?: boolean;
-}) => (
-	<div style={styles.checkboxField}>
+} & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
+	<div {...props} style={{ ...styles.checkboxField, ...props.style }}>
 		<input
 			type="checkbox"
 			name={name}
@@ -129,6 +136,7 @@ export const RadioInput = ({
 	label,
 	name,
 	options,
+	...props
 }: {
 	label: string;
 	name: string;
@@ -138,8 +146,8 @@ export const RadioInput = ({
 		defaultChecked?: boolean;
 		id?: string;
 	}[];
-}) => (
-	<div style={styles.field}>
+} & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
+	<div {...props} style={{ ...styles.field, ...props.style }}>
 		<span style={styles.label}>{label}</span>
 		<div style={styles.boxGroup}>
 			{options.map((op) => (
@@ -164,6 +172,7 @@ export const RadioInput = ({
 export const CheckboxListInput = ({
 	label,
 	options,
+	...props
 }: {
 	label: string;
 	options: {
@@ -172,8 +181,8 @@ export const CheckboxListInput = ({
 		defaultChecked?: boolean;
 		required?: boolean;
 	}[];
-}) => (
-	<div style={styles.field}>
+} & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
+	<div {...props} style={{ ...styles.field, ...props.style }}>
 		<span style={styles.label}>{label}</span>
 		<div style={styles.boxGroup}>
 			{options.map((op) => (
@@ -200,13 +209,14 @@ export const DateTimeInput = ({
 	name,
 	defaultValue,
 	required,
+	...props
 }: {
 	label: string;
 	name: string;
 	defaultValue?: string;
 	required?: boolean;
-}) => (
-	<div style={styles.field}>
+} & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
+	<div {...props} style={{ ...styles.field, ...props.style }}>
 		<label htmlFor={name} style={styles.label}>
 			{label}
 		</label>

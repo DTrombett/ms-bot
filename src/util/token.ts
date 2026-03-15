@@ -173,14 +173,14 @@ export const createSetCookie = async (
 				if (!token.r) throw new Error("No refresh token");
 				token = await refreshToken(token.r, true);
 				return {
-					setCookie: `token=${await createToken(token)}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+					setCookie: `token=${await createToken(token)}; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax`,
 					token,
 				};
 			}
 			if (Date.now() - +token.l * 1000 > TimeUnit.Day) {
 				token = await updateToken(token);
 				return {
-					setCookie: `token=${await createToken(token)}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+					setCookie: `token=${await createToken(token)}; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax`,
 					token,
 				};
 			}
