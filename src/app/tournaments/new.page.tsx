@@ -45,11 +45,9 @@ export default ({
 		<form
 			method="POST"
 			style={{
-				backgroundColor: "rgba(63, 63, 70, 0.25)",
-				borderColor: "rgba(255, 255, 255, 0.2)",
+				backgroundColor: mobile ? undefined : "rgba(63, 63, 70, 0.25)",
+				border: mobile ? undefined : "0.8px solid rgba(255, 255, 255, 0.2)",
 				borderRadius: "8px",
-				borderStyle: "solid",
-				borderWidth: "0.8px",
 				display: "flex",
 				flexDirection: "column",
 				fontFamily: "LilitaOne",
@@ -58,7 +56,7 @@ export default ({
 				margin: "auto",
 				marginBottom: "2rem",
 				maxWidth: "stretch",
-				padding: mobile ? "0 1.25rem" : "0 2rem",
+				padding: mobile ? "0 	d" : "0 2rem",
 				paddingBlockEnd: "1em",
 				width: "64rem",
 			}}>
@@ -154,12 +152,21 @@ export default ({
 					name="autoChannels"
 					label="Crea canali automaticamente"
 				/>
-				<CheckboxInput
-					label="Crea i canali il prima possibile senza aspettare che finisca il round"
-					name="fastChannels"
+				<RadioInput
+					label="Avanzamento round"
+					name="channelsMode"
+					options={[
+						{ label: "Manuale", value: "manual" },
+						{
+							label: "Automatico a fine round",
+							value: "once",
+							defaultChecked: true,
+						},
+						{ label: "Crea canali il prima possibile", value: "fast" },
+					]}
 				/>
 				<CheckboxInput
-					label="Attiva comando per controllare automaticamente i risultati dal registro battaglie"
+					label="Attiva controllo automatico dei risultati dal registro battaglie"
 					name="autoDetectResults"
 					defaultChecked
 				/>
