@@ -47,6 +47,7 @@ const server: ExportedHandler<Env> = {
 				request.method === "GET" ?
 					await renderToReadableStream(
 						<Index
+							mobile={isMobile(request.headers)}
 							styles={cssMap.index}
 							url={url}
 							user={
@@ -132,7 +133,12 @@ const server: ExportedHandler<Env> = {
 			)
 				return new Response(
 					request.method === "GET" ?
-						await renderToReadableStream(<Forbidden styles={cssMap["403"]} />)
+						await renderToReadableStream(
+							<Forbidden
+								mobile={isMobile(request.headers)}
+								styles={cssMap["403"]}
+							/>,
+						)
 					:	null,
 					{
 						status: 403,
@@ -151,17 +157,6 @@ const server: ExportedHandler<Env> = {
 						<NewTournament
 							styles={cssMap["tournaments/new"]}
 							url={url}
-							user={
-								{
-									id: token.i,
-									avatar: token.h ?? null,
-									global_name: token.d ?? null,
-									username: token.u,
-								} satisfies Pick<
-									APIUser,
-									"id" | "username" | "avatar" | "global_name"
-								>
-							}
 							mobile={isMobile(request.headers)}
 						/>,
 					)
