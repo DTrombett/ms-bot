@@ -27,21 +27,20 @@ export const styles = {
 	},
 	checkboxField: {
 		alignItems: "center",
-		cursor: "pointer",
 		display: "flex",
-		marginBlockStart: "0.25em",
+		marginBlock: "0.25em",
 	},
 	checkboxLabel: {
 		cursor: "pointer",
 		fontFamily: "ggsans",
 		fontSize: "1.125rem",
 		fontWeight: 600,
-		lineHeight: "1.75rem",
+		lineHeight: "normal",
 		marginLeft: "0.25rem",
 		width: "stretch",
 	},
 	field: { marginBlock: "1em" },
-	label: { display: "block", marginLeft: "0.125rem" },
+	label: { display: "block", marginLeft: "0.125rem", cursor: "text" },
 	textInput: {
 		backgroundColor: "#22232740",
 		borderColor: "rgba(255, 255, 255, 0.2)",
@@ -54,7 +53,7 @@ export const styles = {
 		fontWeight: 500,
 		lineHeight: "1.5rem",
 		marginTop: "0.5rem",
-		maxWidth: "256px",
+		maxWidth: "16rem",
 		padding: "0.25rem 0.5rem",
 		width: "stretch",
 	},
@@ -68,7 +67,9 @@ export const Section = ({
 	title?: string;
 }) => (
 	<section>
-		<h2 style={{ fontWeight: "normal", marginBlock: "0 0.5em" }}>{title}</h2>
+		<h2 style={{ fontWeight: "normal", marginBlock: "0.25em 0.5em" }}>
+			{title}
+		</h2>
 		{children}
 	</section>
 );
@@ -79,6 +80,7 @@ export const TextInput = ({
 	placeholder,
 	defaultValue,
 	maxWidth,
+	note,
 	required,
 	...props
 }: {
@@ -87,12 +89,23 @@ export const TextInput = ({
 	placeholder: string;
 	defaultValue?: string;
 	maxWidth?: string;
+	note?: string;
 	required?: boolean;
 } & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
 	<div {...props} style={{ ...styles.field, ...props.style }}>
 		<label htmlFor={name} style={styles.label}>
 			{label}
 		</label>
+		<span
+			style={{
+				color: "yellow",
+				display: "block",
+				fontFamily: "ggsans",
+				fontSize: "1rem",
+				lineHeight: "normal",
+			}}>
+			{note}
+		</span>
 		<input
 			type="text"
 			name={name}

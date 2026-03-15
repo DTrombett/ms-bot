@@ -15,6 +15,7 @@ export default ({
 	admin: boolean;
 }) => (
 	<Page
+		mobile={mobile}
 		head={{
 			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,

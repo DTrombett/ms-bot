@@ -75,11 +75,14 @@ export const Page = ({
 	url,
 	head,
 	children,
+	mobile,
 	...body
-}: { head: HeadOptions; url?: URL; children?: ReactNode } & DetailedHTMLProps<
-	HTMLAttributes<HTMLBodyElement>,
-	HTMLBodyElement
->) => (
+}: {
+	head: HeadOptions;
+	url?: URL;
+	children?: ReactNode;
+	mobile?: boolean;
+} & DetailedHTMLProps<HTMLAttributes<HTMLBodyElement>, HTMLBodyElement>) => (
 	<html lang="it">
 		<Head {...head} />
 		<body
@@ -87,7 +90,7 @@ export const Page = ({
 			{...body}
 			style={{
 				background: `linear-gradient(rgba(39, 39, 42, 0.8), rgba(39, 39, 42, 0.8)), url("${background}"), linear-gradient(rgb(39, 39, 42), rgb(39, 39, 42))`,
-				backgroundAttachment: "scroll",
+				backgroundAttachment: mobile === false ? "fixed" : "scroll",
 				backgroundColor: "rgb(39, 39, 42)",
 				backgroundPosition: "center",
 				backgroundSize: "cover",
@@ -98,6 +101,7 @@ export const Page = ({
 				margin: 0,
 				minHeight: "100vh",
 				padding: "0 1rem",
+				textWrap: "balance",
 				...body.style,
 			}}>
 			{children}

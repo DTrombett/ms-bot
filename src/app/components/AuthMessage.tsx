@@ -23,7 +23,6 @@ export default ({ url }: { url?: URL }): ReactNode => {
 					padding: "1rem",
 					position: "fixed",
 					textAlign: "center",
-					textWrap: "balance",
 					transform: "translate(-50%)",
 					userSelect: "none",
 				}}>
@@ -45,7 +44,6 @@ export default ({ url }: { url?: URL }): ReactNode => {
 					padding: "1rem",
 					position: "fixed",
 					textAlign: "center",
-					textWrap: "balance",
 					userSelect: "none",
 				}}>
 				Accesso riuscito!
@@ -64,7 +62,6 @@ export default ({ url }: { url?: URL }): ReactNode => {
 					padding: "1rem",
 					position: "fixed",
 					textAlign: "center",
-					textWrap: "balance",
 					userSelect: "none",
 				}}>
 				Disconnessione effettuata con successo!

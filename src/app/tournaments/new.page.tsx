@@ -1,5 +1,3 @@
-import type { APIUser } from "discord-api-types/v10";
-import type { CSSProperties } from "react";
 import {
 	CheckboxInput,
 	CheckboxListInput,
@@ -13,50 +11,17 @@ import lilitaOne from "../fonts/LilitaOne-Regular.ttf";
 import nougat from "../fonts/Nougat-Regular.ttf";
 import ggsans from "../fonts/ggsansvf.woff2";
 
-const textInputStyle: CSSProperties = {
-	fontFamily: "ggsans",
-	fontSize: "1rem",
-	lineHeight: "1.5rem",
-	backgroundColor: "#22232740",
-	borderRadius: "4px",
-	marginTop: "0.5rem",
-	padding: "0.25rem 0.5rem",
-	color: "white",
-	fontWeight: 500,
-	borderColor: "rgba(255, 255, 255, 0.2)",
-	borderStyle: "solid",
-	borderWidth: "0.8px",
-	width: "stretch",
-	maxWidth: "256px",
-};
-const radioGroupStyle: CSSProperties = {
-	fontFamily: "ggsans",
-	fontSize: "1rem",
-	lineHeight: "1.5rem",
-	marginTop: "0.5rem",
-	fontWeight: 500,
-	display: "flex",
-	flexDirection: "column",
-	gap: "0.125rem",
-};
-const radioElementStyle: CSSProperties = {
-	display: "flex",
-	alignItems: "center",
-};
-const radioInputStyle: CSSProperties = { margin: "0 0.5rem 0 0.125rem" };
-
 export default ({
 	mobile,
 	styles,
 	url,
-	user,
 }: {
 	mobile: boolean;
 	styles: string[];
 	url: URL;
-	user: Pick<APIUser, "id" | "username" | "avatar" | "global_name">;
 }) => (
 	<Page
+		mobile={mobile}
 		head={{
 			fonts: [
 				{ path: nougat, type: "font/ttf" },
@@ -104,6 +69,12 @@ export default ({
 					placeholder="Il nome del torneo"
 					required
 				/>
+				<TextInput
+					name="logChannel"
+					label="ID canale di log"
+					placeholder="L'ID del canale dove inviare i log"
+					required
+				/>
 				<RadioInput
 					label="Videogiuoco"
 					name="game"
@@ -147,13 +118,19 @@ export default ({
 					name="messageId"
 					label="Link al messaggio di iscrizione"
 					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
-					maxWidth="690px"
+					maxWidth="43.125rem"
+				/>
+				<TextInput
+					name="channelId"
+					label="ID canale iscrizioni"
+					placeholder="L'ID del canale dove verrà mandato il messaggio per iscriversi"
+					maxWidth="26.125rem"
 				/>
 				<TextInput
 					name="roleId"
 					label="ID ruolo iscritti"
 					placeholder="L'ID del ruolo da assegnare agli iscritti"
-					maxWidth="258px"
+					maxWidth="16.125rem"
 				/>
 				<DateTimeInput name="registrationStartTime" label="Inizio iscrizioni" />
 				<DateTimeInput name="registrationEndTime" label="Fine iscrizioni" />
@@ -161,6 +138,47 @@ export default ({
 					label="Richiedi tag giocatore"
 					name="tagRequired"
 					defaultChecked
+				/>
+			</Section>
+			<Section title="Partite">
+				<DateTimeInput
+					name="bracketsTime"
+					label="Crea brackets automaticamente"
+				/>
+				<CheckboxInput
+					label="Rendi pubbliche le brackets"
+					name="publicBrackets"
+					defaultChecked
+				/>
+				<DateTimeInput
+					name="autoChannels"
+					label="Crea canali automaticamente"
+				/>
+				<CheckboxInput
+					label="Crea i canali il prima possibile senza aspettare che finisca il round"
+					name="fastChannels"
+				/>
+				<CheckboxInput
+					label="Attiva comando per controllare automaticamente i risultati dal registro battaglie"
+					name="autoDetectResults"
+					defaultChecked
+				/>
+				<CheckboxInput
+					label="Elimina automaticamente i canali al termine del round (finale esclusa)"
+					name="autoDeleteChannels"
+				/>
+				<TextInput
+					label="ID categoria canali"
+					name="categoryId"
+					placeholder="L'ID della categoria dove creare i canali"
+					maxWidth="16.625rem"
+					note="Impostando una categoria potresti incappare nel limite canali"
+				/>
+				<TextInput
+					name="matchMessageId"
+					label="Link al messaggio da mandare nei canali"
+					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
+					maxWidth="43.125rem"
 				/>
 			</Section>
 			<input

@@ -2,8 +2,9 @@ import { Page } from "./components/layout";
 import ggsans from "./fonts/ggsansvf.woff2";
 import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
 
-export default ({ styles }: { styles: string[] }) => (
+export default ({ styles, mobile }: { styles: string[]; mobile?: boolean }) => (
 	<Page
+		mobile={mobile}
 		head={{
 			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,

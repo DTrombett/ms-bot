@@ -14,15 +14,18 @@ import avatar4 from "./img/avatar/310.avif";
 import avatar5 from "./img/avatar/386.avif";
 
 export default ({
+	mobile,
 	styles,
 	url,
 	user,
 }: {
 	styles: string[];
 	url: URL;
+	mobile?: boolean;
 	user?: Pick<APIUser, "id" | "username" | "avatar" | "global_name">;
 }) => (
 	<Page
+		mobile={mobile}
 		head={{
 			fonts: [gintoMedium, ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,
@@ -75,7 +78,6 @@ export default ({
 				fontWeight: 500,
 				fontSize: "1.25rem",
 				textAlign: "center",
-				textWrap: "balance",
 			}}>
 			Il bot ufficiale della community MS
 		</span>
