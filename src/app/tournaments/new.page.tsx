@@ -56,7 +56,7 @@ export default ({
 				margin: "auto",
 				marginBottom: "2rem",
 				maxWidth: "stretch",
-				padding: mobile ? "0 	d" : "0 2rem",
+				padding: mobile ? "0 1rem" : "0 2rem",
 				paddingBlockEnd: "1em",
 				width: "64rem",
 			}}>
