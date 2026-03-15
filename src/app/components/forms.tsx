@@ -1,50 +1,78 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-const textInputStyle: CSSProperties = {
-	fontFamily: "ggsans",
-	fontSize: "1rem",
-	lineHeight: "1.5rem",
-	backgroundColor: "#22232740",
-	borderRadius: "4px",
-	marginTop: "0.5rem",
-	padding: "0.25rem 0.5rem",
-	color: "white",
-	fontWeight: 500,
-	borderColor: "rgba(255, 255, 255, 0.2)",
-	borderStyle: "solid",
-	borderWidth: "0.8px",
-	width: "stretch",
-	maxWidth: "256px",
-};
-const radioGroupStyle: CSSProperties = {
-	fontFamily: "ggsans",
-	fontSize: "1rem",
-	lineHeight: "1.5rem",
-	marginTop: "0.5rem",
-	fontWeight: 500,
-	display: "flex",
-	flexDirection: "column",
-	gap: "0.125rem",
-};
-const radioElementStyle: CSSProperties = {
-	display: "flex",
-	alignItems: "center",
-};
-const radioInputStyle: CSSProperties = { margin: "0 0.5rem 0 0.125rem" };
-const fieldStyle = { marginBlock: "1em" };
-const labelStyle = { display: "block", marginLeft: "0.125rem" };
+const styles = {
+	textInput: {
+		backgroundColor: "#22232740",
+		borderColor: "rgba(255, 255, 255, 0.2)",
+		borderRadius: "4px",
+		borderStyle: "solid",
+		borderWidth: "0.8px",
+		color: "white",
+		fontFamily: "ggsans",
+		fontSize: "1rem",
+		fontWeight: 500,
+		lineHeight: "1.5rem",
+		marginTop: "0.5rem",
+		maxWidth: "256px",
+		padding: "0.25rem 0.5rem",
+		width: "stretch",
+	},
+	boxGroup: {
+		display: "flex",
+		flexDirection: "column",
+		fontFamily: "ggsans",
+		fontSize: "1rem",
+		fontWeight: 500,
+		gap: "0.125rem",
+		lineHeight: "1.5rem",
+		marginTop: "0.5rem",
+	},
+	boxElement: { display: "flex", alignItems: "center", cursor: "pointer" },
+	boxInput: { margin: "0 0.5rem 0 0.125rem", cursor: "pointer" },
+	field: { marginBlockStart: "1em" },
+	label: { display: "block", marginLeft: "0.125rem" },
+	checkbox: { width: "1rem", height: "1rem", marginLeft: "0.125rem" },
+	checkboxField: {
+		alignItems: "center",
+		display: "flex",
+		marginBlockStart: "0.25em",
+	},
+	checkboxLabel: {
+		fontFamily: "ggsans",
+		fontSize: "1.125rem",
+		fontWeight: 600,
+		lineHeight: "1.75rem",
+		marginLeft: "0.25rem",
+	},
+	boxLabel: { width: "stretch", cursor: "pointer" },
+} satisfies Record<string, CSSProperties>;
+
+export const Section = ({
+	children,
+	title,
+}: {
+	children: ReactNode;
+	title?: string;
+}) => (
+	<section style={{ marginBlockEnd: "1.25em" }}>
+		<h2 style={{ fontWeight: "normal", marginBlock: "0 0.5em" }}>{title}</h2>
+		{children}
+	</section>
+);
 
 export const TextInput = ({
 	name,
 	placeholder,
 	label,
+	maxWidth,
 }: {
 	name: string;
 	placeholder: string;
 	label: string;
+	maxWidth?: string;
 }) => (
-	<div style={fieldStyle}>
-		<label htmlFor={name} style={labelStyle}>
+	<div style={styles.field}>
+		<label htmlFor={name} style={styles.label}>
 			{label}
 		</label>
 		<input
@@ -52,8 +80,23 @@ export const TextInput = ({
 			name={name}
 			id={name}
 			placeholder={placeholder}
-			style={textInputStyle}
+			style={{ ...styles.textInput, ...(maxWidth && { maxWidth }) }}
 		/>
+	</div>
+);
+
+export const CheckboxInput = ({
+	name,
+	label,
+}: {
+	name: string;
+	label: string;
+}) => (
+	<div style={styles.checkboxField}>
+		<input type="checkbox" name={name} id={name} style={styles.checkbox} />
+		<label htmlFor={name} style={styles.checkboxLabel}>
+			{label}
+		</label>
 	</div>
 );
 
@@ -70,19 +113,48 @@ export const RadioInput = ({
 		id?: string;
 	}[];
 }) => (
-	<div style={fieldStyle}>
-		<span style={labelStyle}>{label}</span>
-		<div style={radioGroupStyle}>
+	<div style={styles.field}>
+		<span style={styles.label}>{label}</span>
+		<div style={styles.boxGroup}>
 			{options.map((op) => (
-				<div style={radioElementStyle} key={op.id ?? String(op.value)}>
+				<div style={styles.boxElement} key={op.id ?? String(op.value)}>
 					<input
 						type="radio"
 						id={op.id ?? String(op.value)}
 						name={name}
 						value={op.value}
-						style={radioInputStyle}
+						style={styles.boxInput}
 					/>
-					<label htmlFor={op.id ?? String(op.value)}>{op.label}</label>
+					<label htmlFor={op.id ?? String(op.value)} style={styles.boxLabel}>
+						{op.label}
+					</label>
+				</div>
+			))}
+		</div>
+	</div>
+);
+
+export const CheckboxListInput = ({
+	label,
+	options,
+}: {
+	label: string;
+	options: { label: string; id: string }[];
+}) => (
+	<div style={styles.field}>
+		<span style={styles.label}>{label}</span>
+		<div style={styles.boxGroup}>
+			{options.map((op) => (
+				<div style={styles.boxElement} key={op.id}>
+					<input
+						type="checkbox"
+						id={op.id}
+						name={op.id}
+						style={styles.boxInput}
+					/>
+					<label htmlFor={op.id} style={styles.boxLabel}>
+						{op.label}
+					</label>
 				</div>
 			))}
 		</div>

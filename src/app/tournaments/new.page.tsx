@@ -1,6 +1,11 @@
 import type { APIUser } from "discord-api-types/v10";
 import type { CSSProperties } from "react";
-import { RadioInput, TextInput } from "../components/forms";
+import {
+	CheckboxListInput,
+	RadioInput,
+	Section,
+	TextInput,
+} from "../components/forms";
 import { Page } from "../components/layout";
 import lilitaOne from "../fonts/LilitaOne-Regular.ttf";
 import nougat from "../fonts/Nougat-Regular.ttf";
@@ -83,12 +88,13 @@ export default ({
 				fontFamily: "LilitaOne",
 				fontSize: "1.25rem",
 				lineHeight: "1.75rem",
-				padding: "0 2rem",
-				maxWidth: "stretch",
 				margin: "auto",
-				aspectRatio: 1,
+				marginBottom: "2rem",
+				maxWidth: "stretch",
+				padding: mobile ? "0 1.25rem" : "0 2rem",
+				width: "64rem",
 			}}>
-			<section>
+			<Section>
 				<TextInput name="title" label="Nome" placeholder="Il nome del torneo" />
 				<RadioInput
 					label="Videogiuoco"
@@ -111,10 +117,26 @@ export default ({
 				<TextInput
 					name="mod"
 					label="Modalità"
-					placeholder="La modalità del torneo (es. Duelli)"
+					placeholder="La modalità del torneo (es. Duels)"
 					// TODO: Add autocomplete https://developer.brawlstars.com/api-docs/index.html#/events/getGameModes
 				/>
-			</section>
+			</Section>
+			<Section title="Iscrizioni">
+				<CheckboxListInput
+					label="Accetta iscrizioni tramite"
+					options={[
+						{ id: "message", label: "Messaggio con pulsante" },
+						{ id: "dashboard", label: "Dashboard" },
+						{ id: "command", label: "Comando" },
+					]}
+				/>
+				<TextInput
+					name="messageId"
+					label="Link al messaggio di iscrizione"
+					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
+					maxWidth="690px"
+				/>
+			</Section>
 		</form>
 	</Page>
 );

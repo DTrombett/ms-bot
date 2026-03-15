@@ -95,7 +95,6 @@ export const Page = ({
 				display: "flex",
 				flexDirection: "column",
 				fontFamily: "Roboto",
-				height: "100vh",
 				margin: 0,
 				minHeight: "100vh",
 				padding: "0 1rem",

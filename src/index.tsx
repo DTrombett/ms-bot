@@ -115,9 +115,13 @@ const server: ExportedHandler<Env> = {
 			const { setCookie, token } = await createSetCookie(request);
 
 			if (!token)
-				return Response.redirect(
-					`/auth/discord/login?to=${encodeURIComponent(url.pathname)}`,
-				);
+				return new Response(null, {
+					status: 303,
+					headers: {
+						location: `/auth/discord/login?to=${encodeURIComponent(url.pathname)}`,
+						"set-cookie": setCookie,
+					},
+				});
 			const member = (await rest
 				.get(Routes.guildMember(env.MAIN_GUILD, token.i))
 				.catch(() => null)) as RESTGetAPIGuildMemberResult | null;
