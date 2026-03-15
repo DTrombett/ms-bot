@@ -1,7 +1,9 @@
 import type { APIUser } from "discord-api-types/v10";
 import type { CSSProperties } from "react";
 import {
+	CheckboxInput,
 	CheckboxListInput,
+	DateTimeInput,
 	RadioInput,
 	Section,
 	TextInput,
@@ -92,6 +94,7 @@ export default ({
 				marginBottom: "2rem",
 				maxWidth: "stretch",
 				padding: mobile ? "0 1.25rem" : "0 2rem",
+				paddingBlockEnd: "1em",
 				width: "64rem",
 			}}>
 			<Section>
@@ -100,7 +103,7 @@ export default ({
 					label="Videogiuoco"
 					name="game"
 					options={[
-						{ label: "Brawl Stars", value: "brawlStars" },
+						{ label: "Brawl Stars", value: "brawlStars", defaultChecked: true },
 						{ label: "Clash Royale", value: "clashRoyale" },
 					]}
 				/>
@@ -108,7 +111,7 @@ export default ({
 					label="Dimensione squadra"
 					name="team"
 					options={[
-						{ label: "1v1", value: 1, id: "1v1" },
+						{ label: "1v1", value: 1, id: "1v1", defaultChecked: true },
 						{ label: "2v2", value: 2, id: "2v2" },
 						{ label: "3v3", value: 3, id: "3v3" },
 						{ label: "5v5", value: 5, id: "5v5" },
@@ -136,6 +139,9 @@ export default ({
 					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
 					maxWidth="690px"
 				/>
+				<DateTimeInput name="registrationStartTime" label="Inizio iscrizioni" />
+				<DateTimeInput name="registrationEndTime" label="Fine iscrizioni" />
+				<CheckboxInput label="Richiedi tag giocatore" name="tagRequired" />
 			</Section>
 		</form>
 	</Page>

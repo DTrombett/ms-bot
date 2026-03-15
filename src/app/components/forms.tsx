@@ -29,20 +29,28 @@ const styles = {
 	},
 	boxElement: { display: "flex", alignItems: "center", cursor: "pointer" },
 	boxInput: { margin: "0 0.5rem 0 0.125rem", cursor: "pointer" },
-	field: { marginBlockStart: "1em" },
+	field: { marginBlock: "1em" },
 	label: { display: "block", marginLeft: "0.125rem" },
-	checkbox: { width: "1rem", height: "1rem", marginLeft: "0.125rem" },
+	checkbox: {
+		cursor: "pointer",
+		height: "1rem",
+		marginLeft: "0.125rem",
+		width: "1rem",
+	},
 	checkboxField: {
 		alignItems: "center",
+		cursor: "pointer",
 		display: "flex",
 		marginBlockStart: "0.25em",
 	},
 	checkboxLabel: {
+		cursor: "pointer",
 		fontFamily: "ggsans",
 		fontSize: "1.125rem",
 		fontWeight: 600,
 		lineHeight: "1.75rem",
 		marginLeft: "0.25rem",
+		width: "stretch",
 	},
 	boxLabel: { width: "stretch", cursor: "pointer" },
 } satisfies Record<string, CSSProperties>;
@@ -54,7 +62,7 @@ export const Section = ({
 	children: ReactNode;
 	title?: string;
 }) => (
-	<section style={{ marginBlockEnd: "1.25em" }}>
+	<section>
 		<h2 style={{ fontWeight: "normal", marginBlock: "0 0.5em" }}>{title}</h2>
 		{children}
 	</section>
@@ -65,11 +73,13 @@ export const TextInput = ({
 	placeholder,
 	label,
 	maxWidth,
+	defaultValue,
 }: {
 	name: string;
 	placeholder: string;
 	label: string;
 	maxWidth?: string;
+	defaultValue?: string;
 }) => (
 	<div style={styles.field}>
 		<label htmlFor={name} style={styles.label}>
@@ -80,6 +90,7 @@ export const TextInput = ({
 			name={name}
 			id={name}
 			placeholder={placeholder}
+			defaultValue={defaultValue}
 			style={{ ...styles.textInput, ...(maxWidth && { maxWidth }) }}
 		/>
 	</div>
@@ -88,12 +99,20 @@ export const TextInput = ({
 export const CheckboxInput = ({
 	name,
 	label,
+	defaultChecked,
 }: {
 	name: string;
 	label: string;
+	defaultChecked?: boolean;
 }) => (
 	<div style={styles.checkboxField}>
-		<input type="checkbox" name={name} id={name} style={styles.checkbox} />
+		<input
+			type="checkbox"
+			name={name}
+			id={name}
+			style={styles.checkbox}
+			defaultChecked={defaultChecked}
+		/>
 		<label htmlFor={name} style={styles.checkboxLabel}>
 			{label}
 		</label>
@@ -111,6 +130,7 @@ export const RadioInput = ({
 		label: string;
 		value: string | number | readonly string[];
 		id?: string;
+		defaultChecked?: boolean;
 	}[];
 }) => (
 	<div style={styles.field}>
@@ -124,6 +144,7 @@ export const RadioInput = ({
 						name={name}
 						value={op.value}
 						style={styles.boxInput}
+						defaultChecked={op.defaultChecked}
 					/>
 					<label htmlFor={op.id ?? String(op.value)} style={styles.boxLabel}>
 						{op.label}
@@ -139,7 +160,7 @@ export const CheckboxListInput = ({
 	options,
 }: {
 	label: string;
-	options: { label: string; id: string }[];
+	options: { label: string; id: string; defaultChecked?: boolean }[];
 }) => (
 	<div style={styles.field}>
 		<span style={styles.label}>{label}</span>
@@ -151,6 +172,7 @@ export const CheckboxListInput = ({
 						id={op.id}
 						name={op.id}
 						style={styles.boxInput}
+						defaultChecked={op.defaultChecked}
 					/>
 					<label htmlFor={op.id} style={styles.boxLabel}>
 						{op.label}
@@ -158,5 +180,28 @@ export const CheckboxListInput = ({
 				</div>
 			))}
 		</div>
+	</div>
+);
+
+export const DateTimeInput = ({
+	name,
+	label,
+	defaultValue,
+}: {
+	name: string;
+	label: string;
+	defaultValue?: string;
+}) => (
+	<div style={styles.field}>
+		<label htmlFor={name} style={styles.label}>
+			{label}
+		</label>
+		<input
+			type="datetime-local"
+			name={name}
+			id={name}
+			defaultValue={defaultValue}
+			style={{ ...styles.textInput, width: undefined, maxWidth: "stretch" }}
+		/>
 	</div>
 );
