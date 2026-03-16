@@ -1441,7 +1441,7 @@ export class Brawl extends Command {
 		errors = { ...this.ERROR_MESSAGES, ...errors };
 		const request = new Request(
 			new URL(path, "https://ms-api.trombett.org/proxy/api.brawlstars.com/v1/"),
-			{ headers: { "x-env": env.NODE_ENV } },
+			{ headers: { "x-env": env.NODE_ENV, "accept-language": "it" } },
 		);
 		let res = cache && (await caches.default.match(request));
 
@@ -1483,6 +1483,27 @@ export class Brawl extends Command {
 						err instanceof Error ?
 							err.message
 						:	"Non è stato possibile recuperare il profilo. Riprova più tardi.",
+				});
+			throw err;
+		}
+	};
+	static getModes = async ({
+		edit,
+		cache,
+	}: { edit?: BaseReplies["edit"]; cache?: boolean } = {}) => {
+		try {
+			return (
+				await Brawl.callApi<Brawl.Paginated<Brawl.EventType>>("gamemodes", {
+					cache,
+				})
+			).items;
+		} catch (err) {
+			if (edit)
+				throw await edit({
+					content:
+						err instanceof Error ?
+							err.message
+						:	"Non è stato possibile recuperare le modalità. Riprova più tardi.",
 				});
 			throw err;
 		}

@@ -82,6 +82,18 @@
 :focus-visible {
 	outline: #ffffff40 solid 0.8px;
 }
+input:user-invalid {
+	border-color: red !important;
+}
+@media (width >= 64rem) {
+	:has(> input:user-invalid)::after {
+		color: red;
+		content: attr(data-errormessage);
+		font-family: ggsans;
+		font-size: 0.875rem;
+		margin-left: 0.25rem;
+	}
+}
 @keyframes fadeInOut {
 	0% {
 		opacity: 0;

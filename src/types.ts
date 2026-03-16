@@ -1140,6 +1140,12 @@ declare global {
 				| "senior";
 			nameColor: string;
 		};
+		type EventTypeList = EventType[];
+		type EventType = { name: JsonLocalizedName; id: number };
+		type Paginated<T> = {
+			items: T[];
+			paging: { cursors: { after?: string; before?: string } };
+		};
 	}
 	namespace Clash {
 		type Player = {

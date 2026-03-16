@@ -1,7 +1,11 @@
+import { Suspense } from "react";
+import { Brawl } from "../../commands/brawl";
+import { Mode, ModeWithSuggestions } from "../components/Mode";
 import {
 	CheckboxInput,
 	CheckboxListInput,
 	DateTimeInput,
+	NumberInput,
 	RadioInput,
 	Section,
 	TextInput,
@@ -71,6 +75,8 @@ export default ({
 					name="logChannel"
 					label="ID canale di log"
 					placeholder="L'ID del canale dove inviare i log"
+					pattern="\d{16,32}"
+					errorMessage="ID non valido"
 					required
 				/>
 				<RadioInput
@@ -91,13 +97,6 @@ export default ({
 						{ label: "5v5", value: 5, id: "5v5" },
 					]}
 				/>
-				<TextInput
-					name="mod"
-					label="Modalità"
-					placeholder="La modalità del torneo (es. Duels)"
-					required
-					// TODO: Add autocomplete https://developer.brawlstars.com/api-docs/index.html#/events/getGameModes
-				/>
 			</Section>
 			<Section title="Iscrizioni">
 				<CheckboxListInput
@@ -116,18 +115,24 @@ export default ({
 					name="messageId"
 					label="Link al messaggio di iscrizione"
 					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
+					pattern="https?://(?:[^.]+\.)?discord\.com/channels/\d{16,32}/\d{16,32}/\d{16,32}|\d{16,32}"
+					errorMessage="Link o id non valido"
 					maxWidth="43.125rem"
 				/>
 				<TextInput
 					name="channelId"
 					label="ID canale iscrizioni"
 					placeholder="L'ID del canale dove verrà mandato il messaggio per iscriversi"
+					pattern="\d{16,32}"
+					errorMessage="ID non valido"
 					maxWidth="26.125rem"
 				/>
 				<TextInput
 					name="roleId"
 					label="ID ruolo iscritti"
 					placeholder="L'ID del ruolo da assegnare agli iscritti"
+					pattern="\d{16,32}"
+					errorMessage="ID non valido"
 					maxWidth="16.125rem"
 				/>
 				<DateTimeInput name="registrationStartTime" label="Inizio iscrizioni" />
@@ -190,6 +195,8 @@ export default ({
 					label="ID categoria canali"
 					name="categoryId"
 					placeholder="L'ID della categoria dove creare i canali"
+					pattern="\d{16,32}"
+					errorMessage="ID non valido"
 					maxWidth="16.625rem"
 					note="Impostando una categoria potresti incappare nel limite canali"
 				/>
@@ -197,13 +204,44 @@ export default ({
 					label="ID categoria canali partite concluse"
 					name="endedCategoryId"
 					placeholder="L'ID della categoria dove spostare i canali delle partite concluse"
+					pattern="\d{16,32}"
+					errorMessage="ID non valido"
 					maxWidth="27.25rem"
 				/>
 				<TextInput
 					name="matchMessageId"
 					label="Link al messaggio da mandare nei canali"
 					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
+					pattern="https?://(?:[^.]+\.)?discord\.com/channels/\d{16,32}/\d{16,32}/\d{16,32}|\d{16,32}"
+					errorMessage="Link o id non valido"
 					maxWidth="43.125rem"
+				/>
+			</Section>
+			<Section title="Impostazioni round">
+				<span
+					style={{
+						color: "yellow",
+						display: "block",
+						fontFamily: "ggsans",
+						fontSize: "1rem",
+						lineHeight: "normal",
+					}}>
+					Gli altri round useranno le impostazioni dell'ultimo specificato
+				</span>
+				<h3 style={{ fontWeight: "normal", marginBlock: "0.5em -0.25em" }}>
+					Finale
+				</h3>
+				<Suspense fallback={<Mode required />}>
+					<ModeWithSuggestions usable={Brawl.getModes()} required />
+				</Suspense>
+				<NumberInput
+					name="box"
+					label="Numero partite"
+					placeholder="Best of..."
+					step={2}
+					defaultValue={1}
+					required
+					width="7.25rem"
 				/>
 			</Section>
 			<input

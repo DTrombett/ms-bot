@@ -79,20 +79,29 @@ export const TextInput = ({
 	name,
 	placeholder,
 	defaultValue,
+	errorMessage,
 	maxWidth,
 	note,
+	pattern,
 	required,
+	suggestions,
 	...props
 }: {
 	label: string;
 	name: string;
 	placeholder: string;
 	defaultValue?: string;
+	errorMessage?: string;
 	maxWidth?: string;
 	note?: string;
+	pattern?: string;
 	required?: boolean;
+	suggestions?: { label?: string; value: string }[];
 } & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
-	<div {...props} style={{ ...styles.field, ...props.style }}>
+	<div
+		{...props}
+		style={{ ...styles.field, ...props.style }}
+		data-errormessage={errorMessage}>
 		<label htmlFor={name} style={styles.label}>
 			{label}
 		</label>
@@ -112,9 +121,18 @@ export const TextInput = ({
 			id={name}
 			placeholder={placeholder}
 			defaultValue={defaultValue}
+			list={suggestions && `${name}-list`}
+			pattern={pattern}
 			required={required}
 			style={{ ...styles.textInput, ...(maxWidth && { maxWidth }) }}
 		/>
+		{suggestions && (
+			<datalist id={`${name}-list`}>
+				{suggestions.map((s) => (
+					<option value={s.value} label={s.label} key={s.value} />
+				))}
+			</datalist>
+		)}
 	</div>
 );
 
@@ -239,6 +257,41 @@ export const DateTimeInput = ({
 			id={name}
 			defaultValue={defaultValue}
 			style={{ ...styles.textInput, width: undefined, maxWidth: "stretch" }}
+			required={required}
+		/>
+	</div>
+);
+
+export const NumberInput = ({
+	label,
+	name,
+	placeholder,
+	defaultValue,
+	width,
+	required,
+	step,
+	...props
+}: {
+	label: string;
+	name: string;
+	placeholder: string;
+	defaultValue?: number;
+	required?: boolean;
+	step?: number;
+	width?: string;
+} & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
+	<div {...props} style={{ ...styles.field, ...props.style }}>
+		<label htmlFor={name} style={styles.label}>
+			{label}
+		</label>
+		<input
+			type="number"
+			name={name}
+			placeholder={placeholder}
+			id={name}
+			defaultValue={defaultValue}
+			style={{ ...styles.textInput, width, maxWidth: "stretch" }}
+			step={step}
 			required={required}
 		/>
 	</div>
