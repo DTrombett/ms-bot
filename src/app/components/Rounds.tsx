@@ -10,6 +10,9 @@ export const Rounds = ({ modes }: { modes?: { name: string }[] }) => {
 		<>
 			{Array.from({ length: rounds }, (_, i) => (
 				<Fragment key={i}>
+					<h3 style={{ fontWeight: "normal", marginBlock: "0.5em -0.25em" }}>
+						Round of {2 ** (i + 2)}
+					</h3>
 					<Mode modes={modes} i={i} />
 					<NumberInput
 						name={`box${i}`}
