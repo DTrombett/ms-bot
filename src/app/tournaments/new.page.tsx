@@ -156,12 +156,8 @@ export default ({
 					label="Avanzamento round"
 					name="channelsMode"
 					options={[
-						{ label: "Manuale", value: "manual" },
-						{
-							label: "Automatico a fine round",
-							value: "once",
-							defaultChecked: true,
-						},
+						{ label: "Manuale", value: "manual", defaultChecked: true },
+						{ label: "Automatico", value: "once" },
 						{ label: "Crea canali il prima possibile", value: "fast" },
 					]}
 				/>
@@ -173,6 +169,22 @@ export default ({
 				<CheckboxInput
 					label="Elimina automaticamente i canali al termine del round (finale esclusa)"
 					name="autoDeleteChannels"
+					defaultChecked
+				/>
+				<TextInput
+					label="Nome canali partite"
+					name="channelName"
+					placeholder="Il nome da assegnare ai canali delle partite"
+					maxWidth="18.25rem"
+					note="Puoi usare i placeholder {matchID} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
+					defaultValue="{matchID}-{player1}-vs-{player2}"
+				/>
+				<TextInput
+					label="Nome canali partite concluse"
+					name="endedChannelNames"
+					placeholder="Il nome da assegnare ai canali delle partite concluse"
+					maxWidth="22.25rem"
+					note="Puoi usare i placeholder {matchID} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
 				/>
 				<TextInput
 					label="ID categoria canali"
@@ -180,6 +192,12 @@ export default ({
 					placeholder="L'ID della categoria dove creare i canali"
 					maxWidth="16.625rem"
 					note="Impostando una categoria potresti incappare nel limite canali"
+				/>
+				<TextInput
+					label="ID categoria canali partite concluse"
+					name="endedCategoryId"
+					placeholder="L'ID della categoria dove spostare i canali delle partite concluse"
+					maxWidth="27.25rem"
 				/>
 				<TextInput
 					name="matchMessageId"
