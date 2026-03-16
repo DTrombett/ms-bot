@@ -1,7 +1,8 @@
-import { build, type BuildOptions } from "esbuild";
-import { createWriteStream } from "node:fs";
+import { build, type BuildOptions, type BuildResult } from "esbuild";
+import { createHash } from "node:crypto";
+import { createReadStream, createWriteStream } from "node:fs";
 import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { prerenderToNodeStream } from "react-dom/static";
@@ -36,18 +37,19 @@ await Promise.all([
 console.log("Copying static assets");
 await cp("public", outdir, { recursive: true, force: true });
 console.log("Compiling css");
-const baseOptions: BuildOptions = {
+const baseOptions = {
 	assetNames: `static/[dir]/[name].[hash]`,
 	bundle: true,
 	charset: "utf8",
 	legalComments: "inline",
+	metafile: true,
 	minify: true,
 	outbase: "src/app",
 	outdir,
 	publicPath: "/",
 	treeShaking: true,
 	tsconfig: "src/app/tsconfig.json",
-};
+} as const satisfies BuildOptions;
 await build({
 	...baseOptions,
 	entryPoints: ["src/app/styles/**/*.css"],
@@ -56,7 +58,8 @@ await build({
 	),
 });
 console.log("Compiling tsx and assets");
-const [buildResult] = await Promise.all([
+let buildResult: BuildResult<typeof baseOptions>;
+[buildResult] = await Promise.all([
 	build({
 		...baseOptions,
 		entryPoints: ["src/app/**/*.page.tsx"],
@@ -102,12 +105,18 @@ for (const [k, { imports }] of Object.entries(buildResult.metafile.inputs))
 	if (k.endsWith(".page.tsx"))
 		inputCssMap.set(k, check(imports, new Set<string>(k)));
 console.log("Renaming css and dynamic js");
+const clientComponents = new Set(
+	Object.entries(buildResult.metafile.inputs).flatMap(([k, v]) =>
+		v.imports.some((i) => i.path === "src/app/utils/useClient.tsx") ? k : [],
+	),
+);
 const reverseCssMap: Record<string, string> = {};
 const staticPages: {
 	App: React.FunctionComponent;
 	path: string;
 	entryPoint: string;
 }[] = [];
+const toHydrate: string[] = [];
 await Promise.all(
 	Object.entries(buildResult.metafile.outputs).map(async ([k, v]) => {
 		if (k.endsWith(".css")) {
@@ -120,8 +129,31 @@ await Promise.all(
 			return;
 		}
 		if (!v.entryPoint) return;
-		if (v.exports.includes("client")) {
-			// hydration
+		const components = new Set(Object.keys(v.inputs)).intersection(
+			clientComponents,
+		);
+
+		if (components.size) {
+			const file = v.entryPoint.replace(/\.page\.tsx$/, ".hydrate.tsx");
+
+			await writeFile(
+				file,
+				`
+				import hydrate from "${pathToFileURL(
+					resolve("src/app/hydrate.tsx"),
+				).pathname.slice(1)}";
+				${Array.from(
+					components,
+					(path, i) =>
+						`import component${i} from "${pathToFileURL(resolve(path)).pathname.slice(1)}"`,
+				).join("\n")}
+
+				hydrate({${Array.from(
+					components,
+					(path, i) => `${path.match(/\/([^./]+)[^/]+$/)![1]}:component${i}`,
+				).join(",")}});`,
+			);
+			toHydrate.push(file);
 		}
 		if (v.exports.includes("cache")) {
 			const { default: App }: { default: React.FunctionComponent } =
@@ -143,9 +175,49 @@ await Promise.all(
 		}
 	}),
 );
+console.log("Generating hydration files");
+buildResult = await build({
+	...baseOptions,
+	entryPoints: toHydrate,
+	format: "esm",
+	jsx: "automatic",
+	loader: Object.fromEntries(
+		[".woff2", ".png", ".jpg", ".avif", ".ttf", ".css"].map(
+			(f) => [f, "file"] as const,
+		),
+	),
+	metafile: true,
+	packages: "bundle",
+	platform: "browser",
+	splitting: true,
+	target: "es2022",
+});
+console.log("Renaming hydration files");
+const jsMap = Object.fromEntries(
+	await Promise.all(
+		Object.entries(buildResult.metafile.outputs).map(
+			async ([path, { entryPoint }]) => {
+				const hash = createHash("sha256");
+
+				await pipeline(createReadStream(path), hash);
+				await rename(
+					path,
+					(path = path.replace(
+						/\.hydrate\.js$/,
+						`.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.js`,
+					)),
+				);
+				return [entryPoint!, path.replace(outdir, "")] as const;
+			},
+		),
+	),
+);
 console.log("Generating static pages");
 await Promise.all(
 	staticPages.map(async ({ App, path, entryPoint }) => {
+		const hydrate = entryPoint.replace(/\.page\.tsx$/, ".hydrate.tsx");
+		const bootstrapModule = jsMap[hydrate];
+		if (bootstrapModule) delete jsMap[hydrate];
 		const { prelude } = await prerenderToNodeStream(
 			jsx(App, {
 				styles: Array.from(
@@ -153,19 +225,20 @@ await Promise.all(
 					(p) => reverseCssMap[p]!,
 				),
 			}),
+			{ bootstrapModules: bootstrapModule ? [bootstrapModule] : undefined },
 		);
 
 		inputCssMap.delete(entryPoint);
 		await pipeline(prelude, createWriteStream(path));
 	}),
 );
-console.log("Saving css map and cleaning up");
+console.log("Saving css/js maps and cleaning up");
 await Promise.all([
 	rm(`${outdir}/styles`, { force: true, recursive: true }),
 	writeFile(
-		"dist/cssMap.json",
-		JSON.stringify(
-			Object.fromEntries(
+		"dist/map.json",
+		JSON.stringify({
+			css: Object.fromEntries(
 				inputCssMap
 					.entries()
 					.map(([k, v]) => [
@@ -173,7 +246,14 @@ await Promise.all([
 						Array.from(v, (p) => reverseCssMap[p]!),
 					]),
 			),
-		),
+			js: Object.fromEntries(
+				Object.entries(jsMap).map(([k, v]) => [
+					k.replace(/^src\/app\/|\.hydrate\.tsx$/g, ""),
+					v,
+				]),
+			),
+		}),
 	),
+	...toHydrate.map((path) => rm(path, { force: true })),
 ]);
 console.timeEnd("Build");

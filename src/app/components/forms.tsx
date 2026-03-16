@@ -267,6 +267,8 @@ export const NumberInput = ({
 	name,
 	placeholder,
 	defaultValue,
+	max,
+	min,
 	width,
 	required,
 	step,
@@ -276,6 +278,8 @@ export const NumberInput = ({
 	name: string;
 	placeholder: string;
 	defaultValue?: number;
+	max?: number;
+	min?: number;
 	required?: boolean;
 	step?: number;
 	width?: string;
@@ -290,6 +294,8 @@ export const NumberInput = ({
 			placeholder={placeholder}
 			id={name}
 			defaultValue={defaultValue}
+			max={max}
+			min={min}
 			style={{ ...styles.textInput, width, maxWidth: "stretch" }}
 			step={step}
 			required={required}

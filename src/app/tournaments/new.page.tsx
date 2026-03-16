@@ -1,6 +1,7 @@
 import { Suspense } from "react";
-import { Brawl } from "../../commands/brawl";
 import { Mode, ModeWithSuggestions } from "../components/Mode";
+import { Rounds } from "../components/Rounds";
+import { RoundsServer } from "../components/RoundsServer";
 import {
 	CheckboxInput,
 	CheckboxListInput,
@@ -17,10 +18,12 @@ import ggsans from "../fonts/ggsansvf.woff2";
 
 export default ({
 	mobile,
+	modesPromise,
 	styles,
 	url,
 }: {
 	mobile: boolean;
+	modesPromise: Promise<{ name: string }[]>;
 	styles: string[];
 	url: URL;
 }) => (
@@ -231,8 +234,8 @@ export default ({
 				<h3 style={{ fontWeight: "normal", marginBlock: "0.5em -0.25em" }}>
 					Finale
 				</h3>
-				<Suspense fallback={<Mode required />}>
-					<ModeWithSuggestions usable={Brawl.getModes()} required />
+				<Suspense fallback={<Mode />}>
+					<ModeWithSuggestions usable={modesPromise} required />
 				</Suspense>
 				<NumberInput
 					name="box"
@@ -240,9 +243,13 @@ export default ({
 					placeholder="Best of..."
 					step={2}
 					defaultValue={1}
-					required
+					max={25}
+					min={1}
 					width="7.25rem"
 				/>
+				<Suspense fallback={<Rounds />}>
+					<RoundsServer usable={modesPromise} />
+				</Suspense>
 			</Section>
 			<input
 				className="button"
@@ -269,3 +276,5 @@ export default ({
 		</form>
 	</Page>
 );
+
+export const client = { Rounds };

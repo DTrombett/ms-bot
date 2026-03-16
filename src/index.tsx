@@ -7,10 +7,11 @@ import {
 } from "discord-api-types/v10";
 import { renderToReadableStream } from "react-dom/server";
 import Forbidden from "../dist/403";
-import cssMap from "../dist/cssMap.json";
 import Index from "../dist/index";
+import assetsMap from "../dist/map.json";
 import Tournaments from "../dist/tournaments";
 import NewTournament from "../dist/tournaments/new";
+import { Brawl } from "./commands/brawl";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { createSolidPng } from "./util/createSolidPng";
@@ -48,7 +49,7 @@ const server: ExportedHandler<Env> = {
 					await renderToReadableStream(
 						<Index
 							mobile={isMobile(request.headers)}
-							styles={cssMap.index}
+							styles={assetsMap.css.index}
 							url={url}
 							user={
 								(token && {
@@ -88,7 +89,7 @@ const server: ExportedHandler<Env> = {
 				request.method === "GET" ?
 					await renderToReadableStream(
 						<Tournaments
-							styles={cssMap.tournaments}
+							styles={assetsMap.css.tournaments}
 							url={url}
 							admin={
 								!new Set(member?.roles).isDisjointFrom(
@@ -136,7 +137,7 @@ const server: ExportedHandler<Env> = {
 						await renderToReadableStream(
 							<Forbidden
 								mobile={isMobile(request.headers)}
-								styles={cssMap["403"]}
+								styles={assetsMap.css["403"]}
 							/>,
 						)
 					:	null,
@@ -155,10 +156,12 @@ const server: ExportedHandler<Env> = {
 				request.method === "GET" ?
 					await renderToReadableStream(
 						<NewTournament
-							styles={cssMap["tournaments/new"]}
+							styles={assetsMap.css["tournaments/new"]}
 							url={url}
 							mobile={isMobile(request.headers)}
+							modesPromise={Brawl.getModes()}
 						/>,
+						{ bootstrapModules: [assetsMap.js["tournaments/new"]] },
 					)
 				:	null,
 				{
