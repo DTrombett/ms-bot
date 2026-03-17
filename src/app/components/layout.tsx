@@ -1,7 +1,7 @@
 import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
 import background from "../img/background/background.avif";
+import removeAuthParams from "../js/removeAuthParams.js";
 import lazyStyles from "../styles/lazy.css";
-import removeAuthParams from "../utils/removeAuthParams.js";
 import AuthMessage from "./AuthMessage";
 
 export type HeadOptions = {

@@ -1,7 +1,7 @@
 import { build, type BuildOptions, type BuildResult } from "esbuild";
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
@@ -9,34 +9,15 @@ import { prerenderToNodeStream } from "react-dom/static";
 import { jsx } from "react/jsx-runtime";
 
 console.time("Build");
-{
-	const path = "node_modules/@discordjs/ws/dist/index.mjs";
-	console.log("Reading @discordjs/ws");
-	const data = await readFile(path, { encoding: "utf-8" });
-
-	console.log("Editing @discordjs/ws");
-	await writeFile(
-		path,
-		data
-			// Don't resolve dirname as Workers do not have fs access
-			.replace(/\b(?:var|let|const)\s+__dirname\s*=[^;]+;/, "")
-			// Use built-in WebSocket
-			.replace(/import\s*{\s*WebSocket\s*}\s*from\s*['"]ws["'];?/, "")
-			.replace(
-				/\b(var|let|const)\s+WebSocketConstructor\s*=[^;]+;/,
-				"$1 WebSocketConstructor = globalThis.WebSocket;",
-			),
-	);
-}
 console.log("Cleaning output directory");
 const outdir = "build";
 await Promise.all([
 	rm(outdir, { recursive: true, force: true }),
 	rm("dist", { recursive: true, force: true }),
 ]);
-console.log("Copying static assets");
+console.log("Copying public assets");
 await cp("public", outdir, { recursive: true, force: true });
-console.log("Compiling css");
+console.log("Compiling static assets");
 const baseOptions = {
 	assetNames: `static/[dir]/[name].[hash]`,
 	bundle: true,
@@ -131,7 +112,10 @@ await Promise.all(
 		if (!v.entryPoint) return;
 		const components = Array.from(
 			new Set(Object.keys(v.inputs)).intersection(clientComponents),
-			(path) => ({ path, name: path.match(/\/([^./]+)[^/]+$/)![1] }),
+			(path) => ({
+				path: JSON.stringify(resolve(path)),
+				name: path.match(/\/([^./]+)[^/]+$/)![1],
+			}),
 		);
 
 		if (components.length) {
@@ -141,12 +125,7 @@ await Promise.all(
 				file,
 				`
 				import hydrate from ${JSON.stringify(resolve("src/app/hydrate.tsx"))};
-				${components
-					.map(
-						({ path, name }) =>
-							`import ${name} from ${JSON.stringify(resolve(path))}`,
-					)
-					.join("\n")}
+				${components.map(({ name, path }) => `import ${name} from ${path}`).join("\n")}
 
 				hydrate({${components.map(({ name }) => name).join(",")}});`,
 			);
@@ -196,6 +175,7 @@ const jsMap = Object.fromEntries(
 	await Promise.all(
 		Object.entries(buildResult.metafile.outputs).map(
 			async ([path, { entryPoint }]) => {
+				if (!path.endsWith(".hydrate.js")) return [entryPoint!, path] as const;
 				const hash = createHash("sha256");
 
 				await pipeline(createReadStream(path), hash);

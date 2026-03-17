@@ -20,6 +20,7 @@
 		"deploy": "npm run build && wrangler deploy",
 		"dev": "npm run build && wrangler dev --test-scheduled",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
+		"prepare": "node src/prepare.ts",
 		"test": "npm run build && tsc && eslint --flag unstable_native_nodejs_ts_config src",
 		"types": "wrangler types"
 	},
