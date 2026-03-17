@@ -140,9 +140,7 @@ await Promise.all(
 			await writeFile(
 				file,
 				`
-				import hydrate from "${pathToFileURL(
-					resolve("src/app/hydrate.tsx"),
-				).pathname.slice(1)}";
+				import hydrate from ${JSON.stringify(resolve("src/app/hydrate.tsx"))};
 				${components
 					.map(
 						({ path, name }) =>
