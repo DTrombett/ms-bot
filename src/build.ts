@@ -186,10 +186,12 @@ buildResult = await build({
 		),
 	),
 	metafile: true,
+	outdir: `${outdir}/static/js`,
 	packages: "bundle",
 	platform: "browser",
 	splitting: true,
 	target: "es2022",
+	treeShaking: true,
 });
 console.log("Renaming hydration files");
 const jsMap = Object.fromEntries(
