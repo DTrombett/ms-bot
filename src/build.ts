@@ -129,11 +129,12 @@ await Promise.all(
 			return;
 		}
 		if (!v.entryPoint) return;
-		const components = new Set(Object.keys(v.inputs)).intersection(
-			clientComponents,
+		const components = Array.from(
+			new Set(Object.keys(v.inputs)).intersection(clientComponents),
+			(path) => ({ path, name: path.match(/\/([^./]+)[^/]+$/)![1] }),
 		);
 
-		if (components.size) {
+		if (components.length) {
 			const file = v.entryPoint.replace(/\.page\.tsx$/, ".hydrate.tsx");
 
 			await writeFile(
@@ -142,16 +143,14 @@ await Promise.all(
 				import hydrate from "${pathToFileURL(
 					resolve("src/app/hydrate.tsx"),
 				).pathname.slice(1)}";
-				${Array.from(
-					components,
-					(path, i) =>
-						`import component${i} from "${pathToFileURL(resolve(path)).pathname.slice(1)}"`,
-				).join("\n")}
+				${components
+					.map(
+						({ path, name }) =>
+							`import ${name} from "${pathToFileURL(resolve(path)).pathname.slice(1)}"`,
+					)
+					.join("\n")}
 
-				hydrate({${Array.from(
-					components,
-					(path, i) => `${path.match(/\/([^./]+)[^/]+$/)![1]}:component${i}`,
-				).join(",")}});`,
+				hydrate({${components.map(({ name }) => name).join(",")}});`,
 			);
 			toHydrate.push(file);
 		}

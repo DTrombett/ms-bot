@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { Mode, ModeWithSuggestions } from "../components/Mode";
-import { Rounds } from "../components/Rounds";
-import { RoundsServer } from "../components/RoundsServer";
+import Rounds from "../components/Rounds";
 import {
 	CheckboxInput,
 	CheckboxListInput,
@@ -248,7 +247,7 @@ export default ({
 					width="7.25rem"
 				/>
 				<Suspense fallback={<Rounds />}>
-					<RoundsServer usable={modesPromise} />
+					<Rounds modes={modesPromise} />
 				</Suspense>
 			</Section>
 			<input

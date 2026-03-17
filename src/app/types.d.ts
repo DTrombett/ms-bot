@@ -1,7 +1,7 @@
 declare const CSS_BUNDLE: string;
 
 declare interface Window {
-	PROPS?: object;
+	CP?: { name: string; props: any; id: string }[];
 }
 
 declare module "*.woff2" {

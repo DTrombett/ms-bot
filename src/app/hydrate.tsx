@@ -1,10 +1,12 @@
 import { hydrateRoot } from "react-dom/client";
 
 export default (client: Record<string, React.ComponentType>) => {
-	for (const [elementId, App] of Object.entries(client)) {
-		const container = document.getElementById(elementId);
+	if (window.CP)
+		for (const cp of window.CP) {
+			const container = document.getElementById(cp.id);
+			const App = client[cp.name];
 
-		if (container) hydrateRoot(container, <App {...window.PROPS} />);
-		else console.log("Hydration failed to find element", elementId);
-	}
+			if (container && App) hydrateRoot(container, <App {...cp.props} />);
+			else console.log("Hydration failed to find element or component", cp);
+		}
 };

@@ -1,7 +1,30 @@
-import type { ReactNode } from "react";
+import { use, useId, type FunctionComponent } from "react";
 
-export default <P,>(id: string, Component: React.FunctionComponent<P>) =>
-	(props: P) =>
-		typeof window === "undefined" ?
-			<div id={id}>{Component(props) as ReactNode}</div>
-		:	Component(props);
+export default <P,>(
+	filename: string,
+	Component: React.FunctionComponent<P>,
+): FunctionComponent<{ [K in keyof P]: P[K] | Promise<P[K]> }> =>
+	typeof window !== "undefined" ?
+		(Component as FunctionComponent<{ [K in keyof P]: P[K] | Promise<P[K]> }>)
+	:	(props) => {
+			const id = useId();
+			const newProps = Object.fromEntries(
+				Object.entries(props).map(([k, v]) => [
+					k,
+					v instanceof Promise ? use(v) : v,
+				]),
+			);
+
+			return (
+				<>
+					<div id={id}>
+						<Component {...(newProps as any)} />
+					</div>
+					<script
+						dangerouslySetInnerHTML={{
+							__html: `(window.CP??=[]).push({id:"${id}",name:"${filename}",props:${JSON.stringify(newProps)}})`,
+						}}
+					/>
+				</>
+			);
+		};
