@@ -146,7 +146,7 @@ await Promise.all(
 				${components
 					.map(
 						({ path, name }) =>
-							`import ${name} from "${pathToFileURL(resolve(path)).pathname.slice(1)}"`,
+							`import ${name} from ${JSON.stringify(resolve(path))}`,
 					)
 					.join("\n")}
 
