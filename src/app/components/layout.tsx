@@ -1,11 +1,10 @@
 import type { DetailedHTMLProps, HTMLAttributes, ReactNode } from "react";
-import background from "../img/background/background.avif";
-import removeAuthParams from "../js/removeAuthParams.js";
-import lazyStyles from "../styles/lazy.css";
+import background from "../img/background/background.avif" with { type: "asset" };
+import lazyStyles from "../styles/lazy.css" with { type: "asset" };
 import AuthMessage from "./AuthMessage";
 
 export type HeadOptions = {
-	styles: string[];
+	styles?: string[];
 	children?: ReactNode;
 	description?: string;
 	fonts?: (string | { path: string; type: string })[];
@@ -38,13 +37,12 @@ export const Head = ({
 				crossOrigin="anonymous"
 			/>
 		))}
-		{styles.map((style) => (
+		{styles?.map((style) => (
 			<link rel="stylesheet" href={style} key={style} />
 		))}
 		{prefetch?.map((p, i) => (
 			<link rel="prefetch" href={p.href} as={p.as} key={i} />
 		))}
-		<script type="module" src={removeAuthParams} />
 		<title>{title}</title>
 		<meta name="description" content={description} />
 		<meta name="twitter:description" content={description} />

@@ -4,14 +4,14 @@ import { DiscordLogo } from "./components/DiscordLogo";
 import HomeButton from "./components/HomeButton";
 import UserAvatar from "./components/UserAvatar";
 import { Page } from "./components/layout";
-import gintoMedium from "./fonts/GintoDiscord-Medium.woff2";
-import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
-import ggsans from "./fonts/ggsansvf.woff2";
-import avatar1 from "./img/avatar/160.avif";
-import avatar2 from "./img/avatar/200.avif";
-import avatar3 from "./img/avatar/250.avif";
-import avatar4 from "./img/avatar/310.avif";
-import avatar5 from "./img/avatar/386.avif";
+import gintoMedium from "./fonts/GintoDiscord-Medium.woff2" with { type: "asset" };
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf" with { type: "asset" };
+import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
+import avatar1 from "./img/avatar/160.avif" with { type: "asset" };
+import avatar2 from "./img/avatar/200.avif" with { type: "asset" };
+import avatar3 from "./img/avatar/250.avif" with { type: "asset" };
+import avatar4 from "./img/avatar/310.avif" with { type: "asset" };
+import avatar5 from "./img/avatar/386.avif" with { type: "asset" };
 
 export default ({
 	mobile,
@@ -19,7 +19,7 @@ export default ({
 	url,
 	user,
 }: {
-	styles: string[];
+	styles?: string[];
 	url: URL;
 	mobile?: boolean;
 	user?: Pick<APIUser, "id" | "username" | "avatar" | "global_name">;

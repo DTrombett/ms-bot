@@ -9,7 +9,7 @@ const blackListedResponseHeaders = [
 ];
 
 export const fetchCache = async (
-	input: RequestInfo<CfProperties> | URL,
+	input: RequestInfo | URL,
 	init: Omit<RequestInit<CfProperties>, "method"> = {},
 	ttl: number = 20,
 ): Promise<Response> => {

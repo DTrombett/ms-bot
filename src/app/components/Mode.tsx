@@ -32,6 +32,6 @@ export const ModeWithSuggestions = ({
 	usable,
 	required,
 }: {
-	usable: Promise<{ name: string }[]>;
+	usable: Promise<{ name: string }[] | undefined>;
 	required?: boolean;
 }) => <Mode modes={use(usable)} required={required} />;

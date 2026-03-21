@@ -1,6 +1,5 @@
 {
 	"include": ["src/**/*", "*.ts", "*.js"],
-	"exclude": ["src/app"],
 	"extends": ["@tsconfig/strictest/tsconfig.json"],
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
@@ -9,8 +8,8 @@
 		"exactOptionalPropertyTypes": false,
 		"isolatedModules": true,
 		"jsx": "react-jsx",
-		"lib": ["ESNext"],
-		"module": "esnext",
+		"lib": ["ESNext", "DOM"],
+		"module": "preserve",
 		"moduleResolution": "bundler",
 		"noEmit": true,
 		"noPropertyAccessFromIndexSignature": false,

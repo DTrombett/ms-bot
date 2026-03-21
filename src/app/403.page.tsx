@@ -1,8 +1,8 @@
 import { Page } from "./components/layout";
-import ggsans from "./fonts/ggsansvf.woff2";
-import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
+import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf" with { type: "asset" };
 
-export default ({ styles, mobile }: { styles: string[]; mobile?: boolean }) => (
+export default ({ styles, mobile }: { styles?: string[]; mobile?: boolean }) => (
 	<Page
 		mobile={mobile}
 		head={{

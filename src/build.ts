@@ -1,183 +1,240 @@
-import { build, type BuildOptions, type BuildResult } from "esbuild";
+import { build, buildSync } from "esbuild";
+import { ok } from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
-import { cp, mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { createReadStream, createWriteStream, readFileSync } from "node:fs";
+import {
+	copyFile,
+	cp,
+	mkdir,
+	readdir,
+	readFile,
+	rename,
+	rm,
+	writeFile,
+} from "node:fs/promises";
+import { builtinModules, registerHooks } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, extname, join, parse, relative, resolve } from "node:path";
+import { cwd, env } from "node:process";
 import { pipeline } from "node:stream/promises";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import type { FunctionComponent } from "react";
 import { prerenderToNodeStream } from "react-dom/static";
 import { jsx } from "react/jsx-runtime";
 
 console.time("Build");
-console.log("Cleaning output directory");
-const outdir = "build";
-await Promise.all([
-	rm(outdir, { recursive: true, force: true }),
-	rm("dist", { recursive: true, force: true }),
-]);
-console.log("Copying public assets");
-await cp("public", outdir, { recursive: true, force: true });
-console.log("Compiling static assets");
-const baseOptions = {
-	assetNames: `static/[dir]/[name].[hash]`,
-	bundle: true,
-	charset: "utf8",
-	legalComments: "inline",
-	metafile: true,
-	minify: true,
-	outbase: "src/app",
-	outdir,
-	publicPath: "/",
-	treeShaking: true,
-	tsconfig: "src/app/tsconfig.json",
-} as const satisfies BuildOptions;
-await build({
-	...baseOptions,
-	entryPoints: ["src/app/styles/**/*.css"],
-	loader: Object.fromEntries(
-		[".woff2", ".png", ".jpg", ".avif", ".ttf", ".js"].map((f) => [f, "file"]),
-	),
-});
-console.log("Compiling tsx and assets");
-let buildResult: BuildResult<typeof baseOptions>;
-[buildResult] = await Promise.all([
-	build({
-		...baseOptions,
-		entryPoints: ["src/app/**/*.page.tsx"],
-		format: "esm",
-		jsx: "automatic",
-		loader: Object.fromEntries(
-			[".css", ".woff2", ".png", ".jpg", ".avif", ".ttf", ".js"].map((f) => [
-				f,
-				"file",
-			]),
-		),
-		metafile: true,
-		packages: "external",
-		platform: "node",
-		target: "node24",
-	}),
-	mkdir(`${outdir}/static/styles`, { recursive: true }),
-]);
-const inputCssMap = new Map<string, Set<string>>();
-const check = (
-	imports: { path: string; kind: string }[],
-	checked: Set<string>,
-	result = new Set<string>(),
-) => {
-	for (const im of imports) {
-		if (im.path.endsWith(".css") && im.kind === "dynamic-import")
-			result.add(im.path);
-		else if (
-			(im.path.endsWith(".ts") || im.path.endsWith(".tsx")) &&
-			!checked.has(im.path)
+const isDev = env.WRANGLER_COMMAND === "dev";
+
+if (!isDev) console.log("Registering hooks");
+const assets = new Map<string, { virtual: string; physical: string }>();
+const cwdPath = cwd();
+const imports: Record<string, string[]> = {};
+const buildableExtensions = [
+	".css",
+	".js",
+	".ts",
+	".tsx",
+	".mjs",
+	".cjs",
+	".jsx",
+	".cts",
+	".mts",
+];
+const tsconfigRaw = await readFile("tsconfig.json", "utf8");
+registerHooks({
+	resolve: (specifier, context, nextResolve) => {
+		if (
+			(specifier.startsWith("file://") || specifier.startsWith(".")) &&
+			!context.parentURL?.includes("/node_modules/")
 		) {
-			checked.add(im.path);
-			check(
-				buildResult.metafile.inputs[im.path]?.imports ?? [],
-				checked,
-				result,
+			const url = new URL(specifier, context.parentURL).href;
+
+			if (context.parentURL && !context.importAttributes.type)
+				(imports[context.parentURL] ??= []).push(url);
+			return { url, shortCircuit: true };
+		}
+		return nextResolve(specifier, context);
+	},
+	load: (specifier, context, nextLoad) => {
+		const { ext } = parse(specifier);
+
+		if (context.importAttributes?.type === "asset") {
+			const path = fileURLToPath(specifier);
+			let destPath = join(
+				cwdPath,
+				"build/static",
+				relative(join(cwdPath, "src/app"), path),
 			);
-		}
-	}
-	return result;
-};
-for (const [k, { imports }] of Object.entries(buildResult.metafile.inputs))
-	if (k.endsWith(".page.tsx"))
-		inputCssMap.set(k, check(imports, new Set<string>(k)));
-console.log("Renaming css and dynamic js");
-const clientComponents = new Set(
-	Object.entries(buildResult.metafile.inputs).flatMap(([k, v]) =>
-		v.imports.some((i) => i.path === "src/app/utils/useClient.tsx") ? k : [],
-	),
-);
-const reverseCssMap: Record<string, string> = {};
-const staticPages: {
-	App: React.FunctionComponent;
-	path: string;
-	entryPoint: string;
-}[] = [];
-const toHydrate: string[] = [];
-await Promise.all(
-	Object.entries(buildResult.metafile.outputs).map(async ([k, v]) => {
-		if (k.endsWith(".css")) {
-			const [oldPath] = Object.keys(v.inputs);
+			const { dir, name, ext } = parse(destPath);
+			const value = {
+				physical: (destPath = join(
+					dir,
+					`${name}.${createHash("sha256")
+						.update(readFileSync(path))
+						.digest("base64url")
+						.slice(0, 16)}${ext}`,
+				)),
+				virtual: `/${relative(join(cwdPath, outdir), destPath).replaceAll("\\", "/")}`,
+			};
 
-			if (typeof oldPath !== "string" || !oldPath.endsWith(".css")) return;
-			await rm(k);
-			await rename(oldPath.replace(/^src\/app/, outdir), k);
-			reverseCssMap[oldPath] = k.replace(/^[^/]+/, "");
+			if (!buildableExtensions.includes(ext))
+				mkdir(dir, { recursive: true })
+					.then(copyFile.bind(null, path, destPath, undefined))
+					.catch(console.error);
+			assets.set(path, value);
+			return {
+				format: "module",
+				shortCircuit: true,
+				source: `export default ${JSON.stringify(value.virtual)}`,
+			};
+		}
+		if (
+			!specifier.includes("/node_modules/") &&
+			specifier.startsWith("file://") &&
+			(ext === ".ts" || ext === ".tsx" || ext === "")
+		)
+			return {
+				format: "module",
+				shortCircuit: true,
+				source: buildSync({
+					charset: "utf8",
+					entryPoints: [fileURLToPath(specifier)],
+					platform: "node",
+					sourcemap: "inline",
+					target: "node24",
+					tsconfigRaw,
+					write: false,
+				}).outputFiles[0]!.text,
+			};
+		return nextLoad(specifier, context);
+	},
+});
+
+const outdir = "build";
+if (!isDev && env.WRANGLER_COMMAND !== "types") {
+	console.log("Cleaning output directory");
+	await Promise.all([
+		rm(outdir, { recursive: true, force: true }),
+		rm("dist", { recursive: true, force: true }),
+	]);
+}
+
+if (!isDev) console.log("Copying public assets");
+await cp("public", outdir, { recursive: true, force: true });
+
+if (!isDev) console.log("Analyzing imports");
+const dir = (
+	await readdir("src/app", { recursive: true, withFileTypes: true })
+).filter((dirent) => dirent.isFile() && dirent.name.endsWith(".page.tsx"));
+const staticPages = (
+	await Promise.all(
+		dir.map(async (dirent) => {
+			let path = resolve(dirent.parentPath, dirent.name);
+			const {
+				cache,
+				default: App,
+			}: { cache?: boolean; default: FunctionComponent<{ styles: string[] }> } =
+				await import(pathToFileURL(path).href);
+
+			if (cache) {
+				const route = relative(join(cwdPath, "src/app"), path)
+					.replace(/\.page\.tsx$/, "")
+					.replaceAll("\\", "/");
+
+				path = `${join(cwdPath, outdir, route)}.html`;
+				await mkdir(dirname(path), { recursive: true });
+				return { App, path, route: `/${route}` };
+			}
 			return;
-		}
-		if (!v.entryPoint) return;
-		const components = Array.from(
-			new Set(Object.keys(v.inputs)).intersection(clientComponents),
-			(path) => ({
-				path: JSON.stringify(resolve(path)),
-				name: path.match(/\/([^./]+)[^/]+$/)![1],
-			}),
-		);
+		}),
+	)
+).filter((p): p is NonNullable<typeof p> => Boolean(p));
 
-		if (components.length) {
-			const file = v.entryPoint.replace(/\.page\.tsx$/, ".hydrate.tsx");
+if (!isDev) console.log("Generating hydration files");
+const hydratePath = JSON.stringify(resolve("src/app/hydrate.tsx"));
+const tmp = tmpdir();
+const useClientPath = pathToFileURL("src/app/utils/useClient").href;
+const entryPoints = await Promise.all(
+	Object.keys(imports)
+		.filter((file) => file.endsWith(".page.tsx"))
+		.map((file) => {
+			const visited = new Set<string>();
+			const components = new Set<string>();
+			const stack = [file];
 
+			while (stack.length > 0) {
+				const current = stack.pop()!;
+
+				if (visited.has(current)) continue;
+				visited.add(current);
+				if (imports[current]?.includes(useClientPath)) components.add(current);
+				for (const child of imports[current] ?? [])
+					if (child !== useClientPath && !visited.has(child)) stack.push(child);
+			}
+			return { components, file };
+		})
+		.filter(({ components }) => components.size > 0)
+		.map(({ components, file }) => ({
+			components: Array.from(components, (path) => ({
+				path: JSON.stringify(fileURLToPath(path)),
+				name: path.match(/\/([^/]+?)(?:\.[^./]+)?$/)![1],
+			})),
+			file: join(
+				tmp,
+				"build",
+				relative(
+					"src/app",
+					fileURLToPath(file.replace(/\.page\.tsx$/, ".hydrate.tsx")),
+				),
+			),
+		}))
+		.map(async ({ components, file }) => {
+			await mkdir(dirname(file), { recursive: true });
 			await writeFile(
 				file,
 				`
-				import hydrate from ${JSON.stringify(resolve("src/app/hydrate.tsx"))};
-				${components.map(({ name, path }) => `import ${name} from ${path}`).join("\n")}
-
-				hydrate({${components.map(({ name }) => name).join(",")}});`,
+					import hydrate from ${hydratePath};
+					${components.map(({ name, path }) => `import ${name} from ${path}`).join("\n")}
+					hydrate({${components.map(({ name }) => name).join(",")}});
+				`,
 			);
-			toHydrate.push(file);
-		}
-		if (v.exports.includes("cache")) {
-			const { default: App }: { default: React.FunctionComponent } =
-				await import(pathToFileURL(k).href);
-
-			staticPages.push({
-				App,
-				path: k.replace(/\.page\.js$/, ".html"),
-				entryPoint: v.entryPoint,
-			});
-			await rm(k);
-		} else {
-			const newPath = k
-				.replace(/^[^/]+/, "dist")
-				.replace(/([^/]+)\.page\.js$/, "$1.js");
-
-			await mkdir(dirname(newPath), { recursive: true });
-			await rename(k, newPath);
-		}
-	}),
+			return file;
+		}),
 );
-console.log("Generating hydration files");
-buildResult = await build({
-	...baseOptions,
-	entryPoints: toHydrate,
+
+if (!isDev) console.log("Compiling hydration files");
+const outbase = join(tmp, "build");
+const buildResult = await build({
+	bundle: true,
+	charset: "utf8",
+	entryPoints,
 	format: "esm",
 	jsx: "automatic",
-	loader: Object.fromEntries(
-		[".woff2", ".png", ".jpg", ".avif", ".ttf", ".css"].map(
-			(f) => [f, "file"] as const,
-		),
-	),
+	legalComments: "inline",
 	metafile: true,
+	minify: true,
+	outbase,
 	outdir: `${outdir}/static/js`,
 	packages: "bundle",
 	platform: "browser",
+	publicPath: "/",
 	splitting: true,
 	target: "es2022",
 	treeShaking: true,
+	tsconfigRaw,
 });
-console.log("Renaming hydration files");
 const jsMap = Object.fromEntries(
 	await Promise.all(
-		Object.entries(buildResult.metafile.outputs).map(
-			async ([path, { entryPoint }]) => {
-				if (!path.endsWith(".hydrate.js")) return [entryPoint!, path] as const;
+		Object.entries(buildResult.metafile.outputs)
+			.filter(([, { entryPoint }]) => entryPoint)
+			.map<Promise<[string, string[]]>>(async ([path, { entryPoint }]) => {
+				ok(
+					entryPoint && path.endsWith(".hydrate.js"),
+					`Path: ${path}, entry point: ${entryPoint}`,
+				);
 				const hash = createHash("sha256");
 
+				rm(entryPoint, { force: true }).catch(console.error);
 				await pipeline(createReadStream(path), hash);
 				await rename(
 					path,
@@ -186,53 +243,173 @@ const jsMap = Object.fromEntries(
 						`.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.js`,
 					)),
 				);
-				return [entryPoint!, path.replace(outdir, "")] as const;
+				return [
+					"/" +
+						relative(outbase, entryPoint)
+							.replace(/\.hydrate\.tsx$/, "")
+							.replaceAll("\\", "/"),
+					[path.replace(outdir, "")],
+				];
+			}),
+	),
+);
+
+if (!isDev) console.log("Compiling static assets");
+await build({
+	assetNames: `[dir]/[name].[hash]`,
+	bundle: true,
+	charset: "utf8",
+	format: "esm",
+	jsx: "automatic",
+	legalComments: "inline",
+	metafile: true,
+	minify: true,
+	outbase: "src/app",
+	outdir: `${outdir}/static`,
+	packages: "bundle",
+	platform: "browser",
+	publicPath: "/static",
+	splitting: true,
+	target: "es2022",
+	treeShaking: true,
+	tsconfigRaw,
+	entryPoints: assets
+		.keys()
+		.filter((v) => buildableExtensions.includes(extname(v)))
+		.toArray(),
+	loader: Object.fromEntries(
+		[".woff2", ".png", ".jpg", ".avif", ".ttf"].map((f) => [f, "file"]),
+	),
+	plugins: [
+		{
+			name: "asset-output",
+			setup(build) {
+				build.onResolve({ filter: /.*/ }, (args) => {
+					const { virtual } =
+						assets.get(resolve(args.resolveDir, args.path)) ?? {};
+
+					if (
+						virtual &&
+						!(build.initialOptions.entryPoints as string[]).includes(args.path)
+					)
+						return { path: virtual, namespace: "asset-output", external: true };
+					return;
+				});
+				build.onEnd(async (result) => {
+					ok(result.metafile);
+					await Promise.all(
+						Object.entries(result.metafile.outputs).map(
+							async ([outPath, meta]) => {
+								const path =
+									meta.entryPoint ??
+									(Object.keys(meta.inputs)[0] as string | undefined);
+								if (!path) return;
+								const { physical } = assets.get(resolve(path)) ?? {};
+
+								if (physical) await rename(outPath, physical);
+							},
+						),
+					);
+				});
 			},
+		},
+	],
+	// plugins: [
+	// 	{
+	// 		name: "static-assets",
+	// 		setup: (build) => {
+	// 			build.onResolve({ filter: /.*/ }, (args) => {
+	// 				if (args.with.type === "asset") {
+	// 					console.log(args);
+	// 					// return {
+	// 					// 	path: args.path,
+	// 					// 	namespace: "asset",
+	// 					// 	pluginData: args.pluginData,
+	// 					// };
+	// 				}
+	// 			});
+	// 			// build.onLoad({ filter: /.*/, namespace: "asset" }, (args) => {
+	// 			// 	return { contents };
+	// 			// });
+	// 		},
+	// 	},
+	// ],
+});
+
+if (!isDev) console.log("Generating static pages");
+await Promise.all(
+	staticPages.map(async ({ App, path, route }) =>
+		pipeline(
+			(
+				await prerenderToNodeStream(jsx(App, { styles: [] }), {
+					bootstrapModules: jsMap[route],
+				})
+			).prelude,
+			createWriteStream(path),
 		),
 	),
 );
-console.log("Generating static pages");
-await Promise.all(
-	staticPages.map(async ({ App, path, entryPoint }) => {
-		const hydrate = entryPoint.replace(/\.page\.tsx$/, ".hydrate.tsx");
-		const bootstrapModule = jsMap[hydrate];
-		if (bootstrapModule) delete jsMap[hydrate];
-		const { prelude } = await prerenderToNodeStream(
-			jsx(App, {
-				styles: Array.from(
-					inputCssMap.get(entryPoint) ?? [],
-					(p) => reverseCssMap[p]!,
-				),
-			}),
-			{ bootstrapModules: bootstrapModule ? [bootstrapModule] : undefined },
-		);
 
-		inputCssMap.delete(entryPoint);
-		await pipeline(prelude, createWriteStream(path));
-	}),
-);
-console.log("Saving css/js maps and cleaning up");
-await Promise.all([
-	rm(`${outdir}/styles`, { force: true, recursive: true }),
-	writeFile(
-		"dist/map.json",
-		JSON.stringify({
-			css: Object.fromEntries(
-				inputCssMap
-					.entries()
-					.map(([k, v]) => [
-						k.replace(/^src\/app\/|\.page\.tsx$/g, ""),
-						Array.from(v, (p) => reverseCssMap[p]!),
-					]),
-			),
-			js: Object.fromEntries(
-				Object.entries(jsMap).map(([k, v]) => [
-					k.replace(/^src\/app\/|\.hydrate\.tsx$/g, ""),
-					v,
-				]),
-			),
-		}),
-	),
-	...toHydrate.map((path) => rm(path, { force: true })),
-]);
+if (!isDev) console.log("Building main entry point");
+await build({
+	banner: {
+		js: `import{createRequire}from"module";const require=createRequire(${JSON.stringify(pathToFileURL(join(cwdPath, "dist/index.js")).href)});`,
+	},
+	bundle: true,
+	charset: "utf8",
+	conditions: ["module"],
+	define: {
+		"process.env.NODE_ENV": '"production"',
+		"navigator.userAgent": '"Cloudflare-Workers"',
+		"globalThis.navigator.userAgent": '"Cloudflare-Workers"',
+	},
+	entryPoints: ["src/index.tsx"],
+	external: ["node:*", "cloudflare:*", ...builtinModules],
+	jsx: "automatic",
+	legalComments: "none",
+	mainFields: ["module"],
+	metafile: true,
+	minify: true,
+	outfile: "dist/index.js",
+	packages: "bundle",
+	platform: "neutral",
+	sourcemap: "linked",
+	target: "esnext",
+	treeShaking: true,
+	tsconfigRaw,
+	plugins: [
+		{
+			name: "build",
+			setup: (build) => {
+				build.onResolve({ filter: /.*/ }, (args) => {
+					if (args.with.type === "asset") {
+						const { virtual } =
+							assets.get(resolve(args.resolveDir, args.path)) ?? {};
+
+						if (virtual) return { path: virtual, namespace: "static" };
+					}
+					return;
+				});
+				build.onResolve({ filter: /build:.+/ }, (args) => ({
+					path: args.path.match(/build:(.+)/)![1],
+					namespace: "build",
+					sideEffects: false,
+				}));
+				build.onLoad({ filter: /.*/, namespace: "static" }, (args) => ({
+					contents: args.path,
+					loader: "text",
+				}));
+				build.onLoad({ filter: /js/, namespace: "build" }, () => ({
+					contents: JSON.stringify(jsMap),
+					loader: "json",
+				}));
+				build.onLoad({ filter: /css/, namespace: "build" }, () => ({
+					contents: JSON.stringify({}),
+					loader: "json",
+				}));
+			},
+		},
+	],
+});
+
 console.timeEnd("Build");

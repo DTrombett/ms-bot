@@ -1,7 +1,7 @@
 import HomeButton from "./components/HomeButton";
 import { Page } from "./components/layout";
-import ggsans from "./fonts/ggsansvf.woff2";
-import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
+import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf" with { type: "asset" };
 
 export default ({
 	mobile,
@@ -10,7 +10,7 @@ export default ({
 	admin,
 }: {
 	mobile: boolean;
-	styles: string[];
+	styles?: string[];
 	url: URL;
 	admin: boolean;
 }) => (

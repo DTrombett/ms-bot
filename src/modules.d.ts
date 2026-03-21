@@ -1,5 +1,11 @@
-declare const CSS_BUNDLE: string;
-
+declare module "build:css" {
+	const map: Record<`/${string}`, string[]>;
+	export default map;
+}
+declare module "build:js" {
+	const map: Record<`/${string}`, string[]>;
+	export default map;
+}
 declare interface Window {
 	CP?: { name: string; props: any; id: string }[];
 }

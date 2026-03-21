@@ -1,5 +1,6 @@
 import { use, useId, type FunctionComponent } from "react";
 
+// TODO: Find a way to do this while building
 export default <P,>(
 	filename: string,
 	Component: React.FunctionComponent<P>,

@@ -1,3 +1,5 @@
+import cssMap from "build:css";
+import jsMap from "build:js";
 import { env } from "cloudflare:workers";
 import {
 	RouteBases,
@@ -6,11 +8,10 @@ import {
 	type RESTGetAPIGuildMemberResult,
 } from "discord-api-types/v10";
 import { renderToReadableStream } from "react-dom/server";
-import Forbidden from "../dist/403";
-import Index from "../dist/index";
-import assetsMap from "../dist/map.json";
-import Tournaments from "../dist/tournaments";
-import NewTournament from "../dist/tournaments/new";
+import Forbidden from "./app/403.page";
+import Index from "./app/index.page";
+import Tournaments from "./app/tournaments.page";
+import NewTournament from "./app/tournaments/new.page";
 import { Brawl } from "./commands/brawl";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
@@ -49,7 +50,7 @@ const server: ExportedHandler<Env> = {
 					await renderToReadableStream(
 						<Index
 							mobile={isMobile(request.headers)}
-							styles={assetsMap.css.index}
+							styles={cssMap[url.pathname]}
 							url={url}
 							user={
 								(token && {
@@ -62,6 +63,7 @@ const server: ExportedHandler<Env> = {
 									| undefined
 							}
 						/>,
+						{ bootstrapModules: jsMap[url.pathname] },
 					)
 				:	null,
 				{
@@ -89,7 +91,7 @@ const server: ExportedHandler<Env> = {
 				request.method === "GET" ?
 					await renderToReadableStream(
 						<Tournaments
-							styles={assetsMap.css.tournaments}
+							styles={cssMap[url.pathname]}
 							url={url}
 							admin={
 								!new Set(member?.roles).isDisjointFrom(
@@ -98,6 +100,7 @@ const server: ExportedHandler<Env> = {
 							}
 							mobile={isMobile(request.headers)}
 						/>,
+						{ bootstrapModules: jsMap[url.pathname] },
 					)
 				:	null,
 				{
@@ -137,8 +140,9 @@ const server: ExportedHandler<Env> = {
 						await renderToReadableStream(
 							<Forbidden
 								mobile={isMobile(request.headers)}
-								styles={assetsMap.css["403"]}
+								styles={cssMap[url.pathname]}
 							/>,
+							{ bootstrapModules: jsMap[url.pathname] },
 						)
 					:	null,
 					{
@@ -156,12 +160,14 @@ const server: ExportedHandler<Env> = {
 				request.method === "GET" ?
 					await renderToReadableStream(
 						<NewTournament
-							styles={assetsMap.css["tournaments/new"]}
+							styles={cssMap[url.pathname]}
 							url={url}
 							mobile={isMobile(request.headers)}
-							modesPromise={Brawl.getModes()}
+							modesPromise={Brawl.getModes().catch(
+								(err) => void console.error(err),
+							)}
 						/>,
-						{ bootstrapModules: [assetsMap.js["tournaments/new"]] },
+						{ bootstrapModules: jsMap[url.pathname] },
 					)
 				:	null,
 				{
@@ -328,7 +334,7 @@ const server: ExportedHandler<Env> = {
 						});
 			return new Response(
 				request.method === "GET" ?
-					await createSolidPng(256, 256, ...rgb)
+					((await createSolidPng(256, 256, ...rgb)) as BodyInit)
 				:	null,
 				{ headers: { "Content-Type": "image/png" } },
 			);

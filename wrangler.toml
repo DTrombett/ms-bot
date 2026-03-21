@@ -1,11 +1,15 @@
 name = "ms-bot"
-main = "./src/index.tsx"
-compatibility_date = "2026-03-01"
+main = "./dist/index.js"
+compatibility_date = "2026-03-20"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 preview_urls = true
 upload_source_maps = true
 send_metrics = false
+
+[build]
+command = "node --enable-source-maps src/build.ts"
+watch_dir = "src"
 
 [observability]
 enabled = true

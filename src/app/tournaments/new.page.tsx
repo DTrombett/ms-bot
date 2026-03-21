@@ -11,9 +11,9 @@ import {
 	TextInput,
 } from "../components/forms";
 import { Page } from "../components/layout";
-import lilitaOne from "../fonts/LilitaOne-Regular.ttf";
-import nougat from "../fonts/Nougat-Regular.ttf";
-import ggsans from "../fonts/ggsansvf.woff2";
+import lilitaOne from "../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
+import nougat from "../fonts/Nougat-Regular.ttf" with { type: "asset" };
+import ggsans from "../fonts/ggsansvf.woff2" with { type: "asset" };
 
 export default ({
 	mobile,
@@ -22,8 +22,8 @@ export default ({
 	url,
 }: {
 	mobile: boolean;
-	modesPromise: Promise<{ name: string }[]>;
-	styles: string[];
+	modesPromise: Promise<{ name: string }[] | undefined>;
+	styles?: string[];
 	url: URL;
 }) => (
 	<Page
@@ -96,8 +96,15 @@ export default ({
 						{ label: "1v1", value: 1, id: "1v1", defaultChecked: true },
 						{ label: "2v2", value: 2, id: "2v2" },
 						{ label: "3v3", value: 3, id: "3v3" },
+						{ label: "4v4", value: 4, id: "4v4" },
 						{ label: "5v5", value: 5, id: "5v5" },
 					]}
+				/>
+				<NumberInput
+					label="Minimo partecipanti"
+					name="minPlayers"
+					placeholder=""
+					min={0}
 				/>
 			</Section>
 			<Section title="Iscrizioni">
@@ -275,5 +282,3 @@ export default ({
 		</form>
 	</Page>
 );
-
-export const client = { Rounds };
