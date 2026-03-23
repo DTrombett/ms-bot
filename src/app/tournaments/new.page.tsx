@@ -15,6 +15,16 @@ import lilitaOne from "../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
 import nougat from "../fonts/Nougat-Regular.ttf" with { type: "asset" };
 import ggsans from "../fonts/ggsansvf.woff2" with { type: "asset" };
 
+export enum Game {
+	BrawlStars = 1,
+	ClashRoyale,
+}
+export enum Round {
+	Manual = 1,
+	Once,
+	Fast,
+}
+
 export default ({
 	mobile,
 	modesPromise,
@@ -85,8 +95,17 @@ export default ({
 					label="Videogiuoco"
 					name="game"
 					options={[
-						{ label: "Brawl Stars", value: "brawlStars", defaultChecked: true },
-						{ label: "Clash Royale", value: "clashRoyale" },
+						{
+							label: "Brawl Stars",
+							value: Game.BrawlStars,
+							id: "brawlstars",
+							defaultChecked: true,
+						},
+						{
+							label: "Clash Royale",
+							value: Game.ClashRoyale,
+							id: "clashroyale",
+						},
 					]}
 				/>
 				<RadioInput
@@ -99,12 +118,6 @@ export default ({
 						{ label: "4v4", value: 4, id: "4v4" },
 						{ label: "5v5", value: 5, id: "5v5" },
 					]}
-				/>
-				<NumberInput
-					label="Minimo partecipanti"
-					name="minPlayers"
-					placeholder=""
-					min={0}
 				/>
 			</Section>
 			<Section title="Iscrizioni">
@@ -120,13 +133,19 @@ export default ({
 						{ id: "command", label: "Comando", defaultChecked: true },
 					]}
 				/>
+				<NumberInput
+					label="Minimo partecipanti"
+					name="minPlayers"
+					placeholder=""
+					min={0}
+				/>
 				<TextInput
-					name="messageId"
+					name="messageLink"
 					label="Link al messaggio di iscrizione"
-					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
-					pattern="https?://(?:[^.]+\.)?discord\.com/channels/\d{16,32}/\d{16,32}/\d{16,32}|\d{16,32}"
-					errorMessage="Link o id non valido"
-					maxWidth="43.125rem"
+					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link per preservare immagini e formattazione"
+					pattern="https?://(?:[^.]+\.)?discord\.com/channels/\d{16,32}/\d{16,32}/\d{16,32}"
+					errorMessage="Link non valido"
+					maxWidth="42rem"
 				/>
 				<TextInput
 					name="channelId"
@@ -170,9 +189,18 @@ export default ({
 					label="Avanzamento round"
 					name="channelsMode"
 					options={[
-						{ label: "Manuale", value: "manual", defaultChecked: true },
-						{ label: "Automatico", value: "once" },
-						{ label: "Crea canali il prima possibile", value: "fast" },
+						{
+							label: "Manuale",
+							value: Round.Manual,
+							id: "manual",
+							defaultChecked: true,
+						},
+						{ label: "Automatico", value: Round.Once, id: "once" },
+						{
+							label: "Crea canali il prima possibile",
+							value: Round.Fast,
+							id: "fast",
+						},
 					]}
 				/>
 				<CheckboxInput
@@ -195,7 +223,7 @@ export default ({
 				/>
 				<TextInput
 					label="Nome canali partite concluse"
-					name="endedChannelNames"
+					name="endedChannelName"
 					placeholder="Il nome da assegnare ai canali delle partite concluse"
 					maxWidth="22.25rem"
 					note="Puoi usare i placeholder {matchID} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
@@ -218,12 +246,12 @@ export default ({
 					maxWidth="27.25rem"
 				/>
 				<TextInput
-					name="matchMessageId"
+					name="matchMessageLink"
 					label="Link al messaggio da mandare nei canali"
-					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link/id per preservare immagini e formattazione"
-					pattern="https?://(?:[^.]+\.)?discord\.com/channels/\d{16,32}/\d{16,32}/\d{16,32}|\d{16,32}"
-					errorMessage="Link o id non valido"
-					maxWidth="43.125rem"
+					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link per preservare immagini e formattazione"
+					pattern="https?://(?:[^.]+\.)?discord\.com/channels/\d{16,32}/\d{16,32}/\d{16,32}"
+					errorMessage="Link non valido"
+					maxWidth="42rem"
 				/>
 			</Section>
 			<Section title="Impostazioni round">
@@ -244,7 +272,8 @@ export default ({
 					<ModeWithSuggestions usable={modesPromise} required />
 				</Suspense>
 				<NumberInput
-					name="box"
+					name="bof"
+					id="bof0"
 					label="Numero partite"
 					placeholder="Best of..."
 					step={2}

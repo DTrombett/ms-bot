@@ -15,9 +15,10 @@ export default useClient(
 						<h3 style={{ fontWeight: "normal", marginBlock: "0.5em -0.25em" }}>
 							Round of {2 ** (i + 2)}
 						</h3>
-						<Mode modes={modes} i={i} />
+						<Mode modes={modes} i={i + 1} />
 						<NumberInput
-							name={`box${i}`}
+							id={`bof${i + 1}`}
+							name={"bof"}
 							label="Numero partite"
 							placeholder="Best of..."
 							step={2}

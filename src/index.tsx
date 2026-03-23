@@ -7,24 +7,28 @@ import {
 	type APIUser,
 	type RESTGetAPIGuildMemberResult,
 } from "discord-api-types/v10";
+import { match, ok } from "node:assert/strict";
 import { renderToReadableStream } from "react-dom/server";
-import Forbidden from "./app/403.page";
 import Index from "./app/index.page";
 import Tournaments from "./app/tournaments.page";
 import NewTournament from "./app/tournaments/new.page";
 import { Brawl } from "./commands/brawl";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
+import { RegistrationMode } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
+import { parseForm, ParseType } from "./util/forms";
 import { rest, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
 import type { RGB } from "./util/resolveColor";
+import { create403, create405 } from "./util/responses";
 import { TimeUnit } from "./util/time";
 import {
 	createSetCookie,
 	createToken,
+	isAdmin,
 	parseToken,
 	refreshToken,
 	tokenFromResponse,
@@ -33,8 +37,6 @@ import {
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
-const create405 = (allow = "GET, HEAD") =>
-	new Response(null, { status: 405, headers: { allow } });
 
 const server: ExportedHandler<Env> = {
 	fetch: async (request) => {
@@ -81,11 +83,6 @@ const server: ExportedHandler<Env> = {
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
 			const { setCookie, token } = await createSetCookie(request);
-			const member =
-				token &&
-				((await rest
-					.get(Routes.guildMember(env.MAIN_GUILD, token.i))
-					.catch(() => null)) as RESTGetAPIGuildMemberResult | null);
 
 			return new Response(
 				request.method === "GET" ?
@@ -93,11 +90,7 @@ const server: ExportedHandler<Env> = {
 						<Tournaments
 							styles={cssMap[url.pathname]}
 							url={url}
-							admin={
-								!new Set(member?.roles).isDisjointFrom(
-									new Set(env.ALLOWED_ROLES.split(",")),
-								)
-							}
+							admin={await isAdmin(token)}
 							mobile={isMobile(request.headers)}
 						/>,
 						{ bootstrapModules: jsMap[url.pathname] },
@@ -115,8 +108,248 @@ const server: ExportedHandler<Env> = {
 			);
 		}
 		if (url.pathname === "/tournaments/new") {
+			if (request.method === "POST") {
+				if (!(await isAdmin(request.headers))) return create403(request);
+				const formData = await request.formData();
+				const form = parseForm(formData, {
+					title: ParseType.Text,
+					logChannel: ParseType.Text,
+					game: ParseType.Number,
+					team: ParseType.Number,
+					message: ParseType.Boolean,
+					dashboard: ParseType.Boolean,
+					command: ParseType.Boolean,
+					minPlayers: ParseType.Number,
+					messageLink: ParseType.Text,
+					channelId: ParseType.Text,
+					roleId: ParseType.Text,
+					registrationStartTime: ParseType.DateTime,
+					registrationEndTime: ParseType.DateTime,
+					tagRequired: ParseType.Boolean,
+					bracketsTime: ParseType.DateTime,
+					publicBrackets: ParseType.Boolean,
+					autoChannels: ParseType.DateTime,
+					channelsMode: ParseType.Number,
+					autoDetectResults: ParseType.Boolean,
+					autoDeleteChannels: ParseType.Boolean,
+					channelName: ParseType.Text,
+					endedChannelName: ParseType.Text,
+					categoryId: ParseType.Text,
+					endedCategoryId: ParseType.Text,
+					matchMessageLink: ParseType.Text,
+				});
+				let registrationMode = 0;
+				const bof = formData.getAll("bof");
+				const rounds = formData
+					.getAll("mode")
+					.map((mode, i) => ({
+						mode: (mode as string).toString(),
+						bof: +bof[i]!,
+					}));
+
+				try {
+					const idRegex = /^\d{16,32}$/;
+					const linkRegex =
+						/^https?:\/\/(?:[^.]+\.)?discord\.com\/channels\/\d{16,32}\/\d{16,32}\/\d{16,32}$/;
+
+					ok(form.title, "Il titolo è richiesto");
+					ok(form.logChannel, "Il canale di log è richiesto");
+					match(
+						form.logChannel,
+						idRegex,
+						"L'id del canale di log non è valido",
+					);
+					ok(form.game, "Il gioco è richiesto");
+					ok(!Number.isNaN(form.game), "Il gioco non è valido");
+					ok(form.team, "La dimensione della squadra è richiesta");
+					ok(
+						!Number.isNaN(form.team),
+						"La dimensione della squadra non è valida",
+					);
+					ok(
+						form.team > 0,
+						"La dimensione della squadra deve essere maggiore di 0",
+					);
+					ok(
+						form.team <= 5,
+						"La dimensione della squadra deve essere al massimo di 5",
+					);
+					if (form.message) registrationMode |= RegistrationMode.Message;
+					if (form.dashboard) registrationMode |= RegistrationMode.Dashboard;
+					if (form.command) registrationMode |= RegistrationMode.Command;
+					ok(
+						!form.minPlayers || form.minPlayers > 0,
+						"Il numero minimo di iscritti deve essere maggiore di 0",
+					);
+					if (form.messageLink)
+						match(
+							form.messageLink,
+							linkRegex,
+							"Link al messaggio di iscrizione non valido",
+						);
+					if (form.channelId)
+						match(
+							form.channelId,
+							idRegex,
+							"L'id del canale di iscrizione non è valido",
+						);
+					if (form.roleId)
+						match(
+							form.roleId,
+							idRegex,
+							"L'id del ruolo di iscrizione non è valido",
+						);
+					ok(
+						!Number.isNaN(form.registrationStartTime),
+						"La data di inizio registrazioni non è valida",
+					);
+					ok(
+						!Number.isNaN(form.registrationEndTime),
+						"La data di fine registrazioni non è valida",
+					);
+					ok(
+						(!form.registrationStartTime || form.registrationEndTime) &&
+							(form.registrationStartTime || !form.registrationEndTime),
+						"Devi specificare sia l'inizio che la fine delle registrazioni",
+					);
+					ok(
+						!form.registrationStartTime ||
+							form.registrationEndTime! > form.registrationStartTime,
+						"L'inizio delle registrazioni non può essere successivo alla fine",
+					);
+					ok(
+						!form.registrationEndTime ||
+							!form.bracketsTime ||
+							form.bracketsTime >= form.registrationEndTime,
+						"La data di creazione delle brackets deve essere successiva alla fine delle registrazioni",
+					);
+					ok(
+						!form.autoChannels ||
+							!form.registrationEndTime ||
+							form.autoChannels >= form.registrationEndTime,
+						"La data di creazione dei canali deve essere successiva alla fine delle registrazioni",
+					);
+					ok(
+						!form.autoChannels ||
+							!form.bracketsTime ||
+							form.autoChannels >= form.bracketsTime,
+						"La data di creazione dei canali deve essere successiva alla creazione dei brackets",
+					);
+					ok(
+						!Number.isNaN(form.bracketsTime),
+						"La data di creazione brackets non è valida",
+					);
+					ok(
+						!Number.isNaN(form.autoChannels),
+						"La data di creazione canali non è valida",
+					);
+					ok(
+						!Number.isNaN(form.channelsMode),
+						"La modalità di avanzamento round non è valida",
+					);
+					if (form.categoryId)
+						match(
+							form.categoryId,
+							idRegex,
+							"L'id della categoria in cui creare i canali non è valido",
+						);
+					if (form.endedCategoryId)
+						match(
+							form.endedCategoryId,
+							idRegex,
+							"L'id della categoria in cui spostare i canali non è valido",
+						);
+					if (form.matchMessageLink)
+						match(
+							form.matchMessageLink,
+							linkRegex,
+							"Il link al messaggio da mandare nei canali partite non è valido",
+						);
+					ok(
+						!form.autoChannels || form.channelsMode,
+						"La modalità di avanzamento round è richiesta quando si attiva la creazione automatica dei canali",
+					);
+					ok(
+						!form.message || form.messageLink,
+						"Il link al messaggio di iscrizione è richiesto quando si attiva l'iscrizione tramite messaggio",
+					);
+					ok(
+						!form.message || form.channelId,
+						"Il canale in cui mandare il messaggio è richiesto quando si attiva l'iscrizione tramite messaggio",
+					);
+					ok(
+						!form.autoChannels || form.channelName,
+						"Il nome dei canali delle partite è richiesto quando si attiva la creazione automatica dei canali",
+					);
+					ok(
+						rounds.length > 0,
+						"Devi specificare la modalità almeno per un round",
+					);
+					ok(
+						rounds.every((r) => r.bof && r.bof > 0),
+						"Numero partite non valido",
+					);
+				} catch (err) {
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `/tournaments/new?error=${encodeURIComponent((err as Error).name)}&error_description=${encodeURIComponent((err as Error).message)}`,
+						},
+					});
+				}
+				try {
+					await env.DB.prepare(
+						`INSERT INTO Tournaments
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					)
+						.bind(
+							form.title,
+							form.logChannel,
+							form.game,
+							form.team,
+							registrationMode,
+							form.minPlayers,
+							form.messageLink,
+							form.channelId,
+							form.roleId,
+							form.registrationStartTime,
+							form.registrationEndTime,
+							form.tagRequired,
+							form.bracketsTime,
+							form.publicBrackets,
+							form.autoChannels,
+							form.channelsMode,
+							form.autoDetectResults,
+							form.autoDeleteChannels,
+							form.channelName,
+							form.endedChannelName,
+							form.categoryId,
+							form.endedCategoryId,
+							form.matchMessageLink,
+							JSON.stringify(rounds),
+						)
+						.run();
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: "/tournaments",
+						},
+					});
+				} catch (err) {
+					console.error(err);
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `/tournaments/new?error=${encodeURIComponent((err as Error).name)}`,
+						},
+					});
+				}
+			}
 			if (request.method !== "GET" && request.method !== "HEAD")
-				return create405();
+				return create405("HEAD, GET, POST");
 			const { setCookie, token } = await createSetCookie(request);
 
 			if (!token)
@@ -135,27 +368,13 @@ const server: ExportedHandler<Env> = {
 					new Set(env.ALLOWED_ROLES.split(",")),
 				)
 			)
-				return new Response(
-					request.method === "GET" ?
-						await renderToReadableStream(
-							<Forbidden
-								mobile={isMobile(request.headers)}
-								styles={cssMap[url.pathname]}
-							/>,
-							{ bootstrapModules: jsMap[url.pathname] },
-						)
-					:	null,
-					{
-						status: 403,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							"cache-control": "private, max-age=300",
-							"content-type": "text/html",
-							"set-cookie": setCookie,
-							vary: "Cookie",
-						},
+				return create403(request, {
+					headers: {
+						"cache-control": "private, max-age=300",
+						"set-cookie": setCookie,
+						vary: "Cookie",
 					},
-				);
+				});
 			return new Response(
 				request.method === "GET" ?
 					await renderToReadableStream(

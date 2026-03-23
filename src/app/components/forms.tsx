@@ -80,6 +80,7 @@ export const TextInput = ({
 	placeholder,
 	defaultValue,
 	errorMessage,
+	id,
 	maxWidth,
 	note,
 	pattern,
@@ -92,6 +93,7 @@ export const TextInput = ({
 	placeholder: string;
 	defaultValue?: string;
 	errorMessage?: string;
+	id?: string;
 	maxWidth?: string;
 	note?: string;
 	pattern?: string;
@@ -102,7 +104,7 @@ export const TextInput = ({
 		{...props}
 		style={{ ...styles.field, ...props.style }}
 		data-errormessage={errorMessage}>
-		<label htmlFor={name} style={styles.label}>
+		<label htmlFor={id} style={styles.label}>
 			{label}
 		</label>
 		<span
@@ -118,16 +120,16 @@ export const TextInput = ({
 		<input
 			type="text"
 			name={name}
-			id={name}
+			id={id}
 			placeholder={placeholder}
 			defaultValue={defaultValue}
-			list={suggestions && `${name}-list`}
+			list={suggestions && `${id}-list`}
 			pattern={pattern}
 			required={required}
 			style={{ ...styles.textInput, ...(maxWidth && { maxWidth }) }}
 		/>
 		{suggestions && (
-			<datalist id={`${name}-list`}>
+			<datalist id={`${id}-list`}>
 				{suggestions.map((s) => (
 					<option value={s.value} label={s.label} key={s.value} />
 				))}
@@ -267,6 +269,7 @@ export const NumberInput = ({
 	name,
 	placeholder,
 	defaultValue,
+	id,
 	max,
 	min,
 	width,
@@ -278,6 +281,7 @@ export const NumberInput = ({
 	name: string;
 	placeholder: string;
 	defaultValue?: number;
+	id?: string;
 	max?: number;
 	min?: number;
 	required?: boolean;
@@ -285,14 +289,14 @@ export const NumberInput = ({
 	width?: string;
 } & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
 	<div {...props} style={{ ...styles.field, ...props.style }}>
-		<label htmlFor={name} style={styles.label}>
+		<label htmlFor={id} style={styles.label}>
 			{label}
 		</label>
 		<input
 			type="number"
 			name={name}
 			placeholder={placeholder}
-			id={name}
+			id={id}
 			defaultValue={defaultValue}
 			max={max}
 			min={min}

@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import {
 	RouteBases,
 	Routes,
+	type RESTGetAPIGuildMemberResult,
 	type RESTGetAPIOAuth2CurrentAuthorizationResult,
 	type RESTPostOAuth2AccessTokenResult,
 } from "discord-api-types/v10";
@@ -191,4 +192,23 @@ export const createSetCookie = async (
 			};
 		}
 	return { setCookie: "", token };
+};
+
+export const isAdmin: {
+	(headers: Headers): Promise<boolean>;
+	(token: JWT | undefined): Promise<boolean>;
+} = async (headersOrToken: Headers | JWT | undefined) => {
+	if (!headersOrToken) return false;
+	if (!("i" in headersOrToken))
+		headersOrToken = await parseToken(
+			headersOrToken.get("cookie")?.match(/(?:^|;\s*)token=([^;]*)/)?.[1],
+		);
+	return !new Set(
+		(
+			headersOrToken &&
+			((await rest
+				.get(Routes.guildMember(env.MAIN_GUILD, headersOrToken.i))
+				.catch(() => null)) as RESTGetAPIGuildMemberResult | null)
+		)?.roles,
+	).isDisjointFrom(new Set(env.ALLOWED_ROLES.split(",")));
 };

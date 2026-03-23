@@ -32,3 +32,9 @@ export enum ClashNotifications {
 	"Evoluzione sbloccata" = 1 << 3,
 	"Nuova lega raggiunta" = 1 << 4,
 }
+
+export enum RegistrationMode {
+	Message = 1 << 0,
+	Dashboard = 1 << 1,
+	Command = 1 << 2,
+}

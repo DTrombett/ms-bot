@@ -3,7 +3,7 @@ import { forceCapitalize } from "../../util/capitalize";
 import { TextInput } from "./forms";
 
 export const Mode = ({
-	i,
+	i = 0,
 	modes,
 	required,
 }: {
@@ -17,7 +17,8 @@ export const Mode = ({
 
 	return (
 		<TextInput
-			name={`mode${i ?? ""}`}
+			id={`mode${i}`}
+			name={"mode"}
 			label="Modalità"
 			placeholder="La modalità del torneo (es. Duels)"
 			pattern={modes && Array.from(iterable).join("|")}

@@ -28,3 +28,29 @@ CREATE TABLE Reminders (
 	remind TEXT NOT NULL,
 	PRIMARY KEY (id, userId)
 );
+CREATE TABLE Tournaments (
+	name TEXT PRIMARY KEY,
+	logChannel TEXT NOT NULL,
+	game INTEGER NOT NULL,
+	team INTEGER DEFAULT 1,
+	registrationMode INTEGER DEFAULT 0,
+	minPlayers INTEGER,
+	registrationMessageLink TEXT,
+	registrationChannel TEXT,
+	registrationRole TEXT,
+	registrationStart INTEGER,
+	registrationEnd INTEGER,
+	requireTag BOOLEAN DEFAULT TRUE,
+	bracketsTime INTEGER,
+	publicBrackets BOOLEAN DEFAULT TRUE,
+	channelsTime INTEGER,
+	roundType INTEGER,
+	autoMatch BOOLEAN DEFAULT TRUE,
+	autoDeleteChannels BOOLEAN DEFAULT FALSE,
+	channelName TEXT,
+	endedChannelName TEXT,
+	categoryId TEXT,
+	endedCategoryId TEXT,
+	matchMessageLink TEXT,
+	rounds TEXT NOT NULL
+)
