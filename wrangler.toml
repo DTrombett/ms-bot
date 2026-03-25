@@ -1,6 +1,6 @@
 name = "ms-bot"
 main = "./dist/index.js"
-compatibility_date = "2026-03-20"
+compatibility_date = "2026-03-24"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 preview_urls = true
@@ -68,3 +68,8 @@ class_name = "Shorten"
 name = "websocket"
 binding = "WEBSOCKET"
 class_name = "WebSocket"
+
+[[workflows]]
+name = "tournament"
+binding = "TOURNAMENT"
+class_name = "Tournament"

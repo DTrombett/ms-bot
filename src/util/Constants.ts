@@ -38,3 +38,12 @@ export enum RegistrationMode {
 	Dashboard = 1 << 1,
 	Command = 1 << 2,
 }
+export enum TournamentFlags {
+	TagRequired = 1 << 0,
+	PublicBrackets = 1 << 1,
+	AutoDetectResults = 1 << 2,
+	AutoDeleteChannels = 1 << 3,
+	RegistrationStarted = 1 << 4,
+	BracketsCreated = 1 << 5,
+	Finished = 1 << 6,
+}

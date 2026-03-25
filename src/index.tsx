@@ -15,7 +15,7 @@ import NewTournament from "./app/tournaments/new.page";
 import { Brawl } from "./commands/brawl";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
-import { RegistrationMode } from "./util/Constants";
+import { RegistrationMode, TournamentFlags } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
 import { parseForm, ParseType } from "./util/forms";
 import { rest, textEncoder } from "./util/globals";
@@ -138,7 +138,8 @@ const server: ExportedHandler<Env> = {
 					endedCategoryId: ParseType.Text,
 					matchMessageLink: ParseType.Text,
 				});
-				let registrationMode = 0;
+				let registrationMode = 0,
+					flags = 0;
 				const bof = formData.getAll("bof");
 				const rounds = formData
 					.getAll("mode")
@@ -150,7 +151,7 @@ const server: ExportedHandler<Env> = {
 				try {
 					const idRegex = /^\d{16,32}$/;
 					const linkRegex =
-						/^https?:\/\/(?:[^.]+\.)?discord\.com\/channels\/\d{16,32}\/\d{16,32}\/\d{16,32}$/;
+						/^https?:\/\/(?:[^.]+\.)?discord\.com\/channels\/(?<guild>\d{16,32})\/(?<channel>\d{16,32})\/(?<message>\d{16,32})$/;
 
 					ok(form.title, "Il titolo è richiesto");
 					ok(form.logChannel, "Il canale di log è richiesto");
@@ -174,19 +175,19 @@ const server: ExportedHandler<Env> = {
 						form.team <= 5,
 						"La dimensione della squadra deve essere al massimo di 5",
 					);
-					if (form.message) registrationMode |= RegistrationMode.Message;
-					if (form.dashboard) registrationMode |= RegistrationMode.Dashboard;
-					if (form.command) registrationMode |= RegistrationMode.Command;
 					ok(
 						!form.minPlayers || form.minPlayers > 0,
 						"Il numero minimo di iscritti deve essere maggiore di 0",
 					);
-					if (form.messageLink)
-						match(
-							form.messageLink,
-							linkRegex,
+					if (form.messageLink) {
+						const result = form.messageLink.match(linkRegex);
+
+						ok(
+							result?.groups?.channel && result.groups.message,
 							"Link al messaggio di iscrizione non valido",
 						);
+						form.messageLink = `${result.groups.channel}/${result.groups.message}`;
+					}
 					if (form.channelId)
 						match(
 							form.channelId,
@@ -259,12 +260,15 @@ const server: ExportedHandler<Env> = {
 							idRegex,
 							"L'id della categoria in cui spostare i canali non è valido",
 						);
-					if (form.matchMessageLink)
-						match(
-							form.matchMessageLink,
-							linkRegex,
+					if (form.matchMessageLink) {
+						const result = form.matchMessageLink.match(linkRegex);
+
+						ok(
+							result?.groups?.channel && result.groups.message,
 							"Il link al messaggio da mandare nei canali partite non è valido",
 						);
+						form.matchMessageLink = `${result.groups.channel}/${result.groups.message}`;
+					}
 					ok(
 						!form.autoChannels || form.channelsMode,
 						"La modalità di avanzamento round è richiesta quando si attiva la creazione automatica dei canali",
@@ -289,6 +293,15 @@ const server: ExportedHandler<Env> = {
 						rounds.every((r) => r.bof && r.bof > 0),
 						"Numero partite non valido",
 					);
+					if (form.message) registrationMode |= RegistrationMode.Message;
+					if (form.dashboard) registrationMode |= RegistrationMode.Dashboard;
+					if (form.command) registrationMode |= RegistrationMode.Command;
+					if (form.tagRequired) flags |= TournamentFlags.TagRequired;
+					if (form.publicBrackets) flags |= TournamentFlags.PublicBrackets;
+					if (form.autoDetectResults)
+						flags |= TournamentFlags.AutoDetectResults;
+					if (form.autoDeleteChannels)
+						flags |= TournamentFlags.AutoDeleteChannels;
 				} catch (err) {
 					return new Response(null, {
 						status: 303,
@@ -299,37 +312,62 @@ const server: ExportedHandler<Env> = {
 					});
 				}
 				try {
-					await env.DB.prepare(
-						`INSERT INTO Tournaments
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					const id = crypto.randomUUID();
+					const {
+						meta: { last_row_id },
+					} = await env.DB.prepare(
+						`INSERT INTO Tournaments (
+							name,
+							flags,
+							game,
+							logChannel,
+							registrationMode,
+							rounds,
+							team,
+							bracketsTime,
+							categoryId,
+							channelName,
+							channelsTime,
+							endedCategoryId,
+							endedChannelName,
+							matchMessageLink,
+							minPlayers,
+							registrationChannel,
+							registrationEnd,
+							registrationMessageLink,
+							registrationRole,
+							registrationStart,
+							roundType,
+							workflowId
+						)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					)
 						.bind(
 							form.title,
-							form.logChannel,
+							flags,
 							form.game,
-							form.team,
+							form.logChannel,
 							registrationMode,
+							JSON.stringify(rounds),
+							form.team,
+							form.bracketsTime,
+							form.categoryId,
+							form.channelName,
+							form.autoChannels,
+							form.endedCategoryId,
+							form.endedChannelName,
+							form.matchMessageLink,
 							form.minPlayers,
-							form.messageLink,
 							form.channelId,
+							form.registrationEndTime,
+							form.messageLink,
 							form.roleId,
 							form.registrationStartTime,
-							form.registrationEndTime,
-							form.tagRequired,
-							form.bracketsTime,
-							form.publicBrackets,
-							form.autoChannels,
 							form.channelsMode,
-							form.autoDetectResults,
-							form.autoDeleteChannels,
-							form.channelName,
-							form.endedChannelName,
-							form.categoryId,
-							form.endedCategoryId,
-							form.matchMessageLink,
-							JSON.stringify(rounds),
+							id,
 						)
 						.run();
+					await env.TOURNAMENT.create({ id, params: { id: last_row_id } });
 					return new Response(null, {
 						status: 303,
 						headers: {
@@ -594,6 +632,7 @@ export { Notifications } from "./Notifications";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";
 export { Shorten } from "./Shorten";
+export { Tournament } from "./Tournament";
 export { WebSocket } from "./WebSocket";
 
 export default server;
