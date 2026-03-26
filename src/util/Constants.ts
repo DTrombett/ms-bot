@@ -34,9 +34,8 @@ export enum ClashNotifications {
 }
 
 export enum RegistrationMode {
-	Message = 1 << 0,
+	Discord = 1 << 0,
 	Dashboard = 1 << 1,
-	Command = 1 << 2,
 }
 export enum TournamentFlags {
 	TagRequired = 1 << 0,

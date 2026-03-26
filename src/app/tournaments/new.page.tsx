@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { SupercellPlayerType } from "../../util/Constants";
 import { Mode, ModeWithSuggestions } from "../components/Mode";
 import Rounds from "../components/Rounds";
 import {
@@ -15,10 +16,6 @@ import lilitaOne from "../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
 import nougat from "../fonts/Nougat-Regular.ttf" with { type: "asset" };
 import ggsans from "../fonts/ggsansvf.woff2" with { type: "asset" };
 
-export enum Game {
-	BrawlStars = 1,
-	ClashRoyale,
-}
 export enum Round {
 	Manual = 1,
 	Once,
@@ -97,13 +94,13 @@ export default ({
 					options={[
 						{
 							label: "Brawl Stars",
-							value: Game.BrawlStars,
+							value: SupercellPlayerType.BrawlStars,
 							id: "brawlstars",
 							defaultChecked: true,
 						},
 						{
 							label: "Clash Royale",
-							value: Game.ClashRoyale,
+							value: SupercellPlayerType.ClashRoyale,
 							id: "clashroyale",
 						},
 					]}
@@ -124,13 +121,8 @@ export default ({
 				<CheckboxListInput
 					label="Accetta iscrizioni tramite"
 					options={[
-						{
-							id: "message",
-							label: "Messaggio con pulsante",
-							defaultChecked: true,
-						},
+						{ id: "message", label: "Discord", defaultChecked: true },
 						{ id: "dashboard", label: "Dashboard", defaultChecked: true },
-						{ id: "command", label: "Comando", defaultChecked: true },
 					]}
 				/>
 				<NumberInput

@@ -1408,7 +1408,7 @@ export class Brawl extends Command {
 		if (link)
 			components[0]!.components.unshift({
 				type: ComponentType.Button,
-				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}`,
+				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}--${player.name}`,
 				label: "Salva",
 				emoji: { name: "🔗" },
 				style: ButtonStyle.Success,
@@ -1651,7 +1651,7 @@ export class Brawl extends Command {
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `brawl-link-${id}-${options.tag}-${commandId}-${options.user ?? id}`,
+								custom_id: `brawl-link-${id}-${options.tag}-${commandId}-${options.user ?? id}-${player.name}`,
 								label: "Salva",
 								emoji: { name: "🔗" },
 								style: ButtonStyle.Success,
@@ -1835,7 +1835,7 @@ export class Brawl extends Command {
 	static linkComponent = async (
 		{ edit, deferUpdate, followup }: ComponentReplies,
 		{
-			args: [tag, commandId, userId],
+			args: [tag, commandId, userId, name],
 			user: { id },
 			interaction: {
 				message: { components },
@@ -1845,7 +1845,7 @@ export class Brawl extends Command {
 		deferUpdate();
 		userId ||= id;
 		const result = await env.DB.prepare(
-			`INSERT INTO SupercellPlayers (tag, userId, active, type)
+			`INSERT INTO SupercellPlayers (tag, userId, active, type, name)
 			VALUES (
 				?1,
 				?2,
@@ -1859,13 +1859,14 @@ export class Brawl extends Command {
 					) THEN 0
 					ELSE 1
 				END,
-				?3
+				?3,
+				?4
 			)
 			ON CONFLICT(tag, type) DO UPDATE
 			SET active = active
 			RETURNING userId;`,
 		)
-			.bind(tag, userId, SupercellPlayerType.BrawlStars)
+			.bind(tag, userId, SupercellPlayerType.BrawlStars, name)
 			.first<Database.SupercellPlayer["userId"]>("userId");
 
 		if (result && result !== userId)
@@ -1900,16 +1901,17 @@ export class Brawl extends Command {
 		}: ComponentArgs,
 	) => {
 		userId ||= id;
-		await env.DB.prepare(
+		const name = await env.DB.prepare(
 			`DELETE FROM SupercellPlayers
-				WHERE tag = ? AND type = ? AND userId = ?`,
+				WHERE tag = ? AND type = ? AND userId = ?
+				RETURNING name`,
 		)
 			.bind(tag, SupercellPlayerType.BrawlStars, userId)
-			.run();
+			.first<string>("name");
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
 				type: ComponentType.Button,
-				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}`,
+				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}-${name ?? ""}`,
 				label: "Salva",
 				emoji: { name: "🔗" },
 				style: ButtonStyle.Success,

@@ -367,6 +367,7 @@ declare global {
 			type: SupercellPlayerType;
 			userId: string;
 			notifications: number;
+			name: string;
 			data?: string | null;
 			active: boolean;
 		};
@@ -400,6 +401,12 @@ declare global {
 			roundType?: number | null;
 			workflowId?: number | null;
 			id: number;
+		};
+		type Participant = {
+			tournamentId: number;
+			userId: string;
+			tag?: string | null;
+			team?: number | null;
 		};
 	}
 

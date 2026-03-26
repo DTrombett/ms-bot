@@ -15,6 +15,7 @@ import {
 import { RegistrationMode, TournamentFlags } from "./util/Constants";
 import { rest } from "./util/globals";
 import normalizeError from "./util/normalizeError";
+import { placeholder } from "./util/strings";
 import { TimeUnit } from "./util/time";
 
 export type Params = { id: number };
@@ -44,7 +45,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				return (
 						result?.registrationStart &&
 							!(result.flags & TournamentFlags.RegistrationStarted) &&
-							result.registrationMode & RegistrationMode.Message
+							result.registrationMode & RegistrationMode.Discord
 					) ?
 						result.registrationStart
 					:	null;
@@ -53,11 +54,21 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 
 		if (registrationStart) {
 			if (registrationStart * TimeUnit.Second > Date.now() + TimeUnit.Second)
-				await step.sleepUntil("Wait for registration start", registrationStart);
+				await step.sleepUntil(
+					"Wait for registration start",
+					new Date(registrationStart * TimeUnit.Second),
+				);
 			const registration = await step.do("Get registration data", async () => {
 				const result = await this.env.DB.prepare(
-					`SELECT flags, registrationMode, registrationChannel, registrationMessageLink, logChannel
-				FROM Tournaments WHERE id = ?`,
+					`
+						SELECT flags, name, minPlayers, registrationMode, registrationChannel, registrationMessageLink, logChannel,
+						(
+							SELECT COUNT(*)
+							FROM Participants
+							WHERE tournamentId = Tournaments.id
+						) AS participantCount
+						FROM Tournaments WHERE id = ?
+					`,
 				)
 					.bind(this.tournamentId)
 					.first<
@@ -68,14 +79,16 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 							| "registrationChannel"
 							| "registrationMessageLink"
 							| "registrationMode"
-						>
+							| "name"
+							| "minPlayers"
+						> & { participantCount: number }
 					>();
 
 				return (
 						result?.registrationChannel &&
 							result?.registrationMessageLink &&
 							!(result.flags & TournamentFlags.RegistrationStarted) &&
-							result.registrationMode & RegistrationMode.Message
+							result.registrationMode & RegistrationMode.Discord
 					) ?
 						{
 							logChannel: result.logChannel,
@@ -84,6 +97,9 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 								channelId: string,
 								messageId: string,
 							],
+							count: result.participantCount,
+							name: result.name,
+							minPlayers: result.minPlayers,
 						}
 					:	null;
 			});
@@ -99,8 +115,13 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						if (message.content)
 							components.push({
 								type: ComponentType.TextDisplay,
-								// TODO: Placeholder {iscritti}
-								content: message.content,
+								content: placeholder(message.content, {
+									iscritti: registration.count.toLocaleString("it-IT"),
+									nome: registration.name,
+									minimo: (registration.minPlayers ?? 0).toLocaleString(
+										"it-IT",
+									),
+								}),
 							});
 						if (message.attachments.length)
 							components.push({
@@ -116,7 +137,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 							components: [
 								{
 									type: ComponentType.Button,
-									custom_id: `tournament-register-${this.tournamentId}`,
+									custom_id: `tournament-reg-${this.tournamentId}`,
 									style: ButtonStyle.Success,
 									emoji: {
 										animated: true,
@@ -128,7 +149,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 								},
 								{
 									type: ComponentType.Button,
-									custom_id: `tournament-unregister-${this.tournamentId}`,
+									custom_id: `tournament-unr-${this.tournamentId}`,
 									style: ButtonStyle.Danger,
 									label: "Annulla iscrizione",
 								},

@@ -7,7 +7,7 @@ import {
 	type APIUser,
 	type RESTGetAPIGuildMemberResult,
 } from "discord-api-types/v10";
-import { match, ok } from "node:assert/strict";
+import { match } from "node:assert/strict";
 import { renderToReadableStream } from "react-dom/server";
 import Index from "./app/index.page";
 import Tournaments from "./app/tournaments.page";
@@ -20,6 +20,7 @@ import { createSolidPng } from "./util/createSolidPng";
 import { parseForm, ParseType } from "./util/forms";
 import { rest, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
+import { ok } from "./util/node";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
 import type { RGB } from "./util/resolveColor";
@@ -118,7 +119,6 @@ const server: ExportedHandler<Env> = {
 					team: ParseType.Number,
 					message: ParseType.Boolean,
 					dashboard: ParseType.Boolean,
-					command: ParseType.Boolean,
 					minPlayers: ParseType.Number,
 					messageLink: ParseType.Text,
 					channelId: ParseType.Text,
@@ -160,7 +160,7 @@ const server: ExportedHandler<Env> = {
 						idRegex,
 						"L'id del canale di log non è valido",
 					);
-					ok(form.game, "Il gioco è richiesto");
+					ok(form.game != null, "Il gioco è richiesto");
 					ok(!Number.isNaN(form.game), "Il gioco non è valido");
 					ok(form.team, "La dimensione della squadra è richiesta");
 					ok(
@@ -293,9 +293,8 @@ const server: ExportedHandler<Env> = {
 						rounds.every((r) => r.bof && r.bof > 0),
 						"Numero partite non valido",
 					);
-					if (form.message) registrationMode |= RegistrationMode.Message;
+					if (form.message) registrationMode |= RegistrationMode.Discord;
 					if (form.dashboard) registrationMode |= RegistrationMode.Dashboard;
-					if (form.command) registrationMode |= RegistrationMode.Command;
 					if (form.tagRequired) flags |= TournamentFlags.TagRequired;
 					if (form.publicBrackets) flags |= TournamentFlags.PublicBrackets;
 					if (form.autoDetectResults)
