@@ -92,6 +92,9 @@ const server: ExportedHandler<Env> = {
 							styles={cssMap[url.pathname]}
 							url={url}
 							admin={await isAdmin(token)}
+							tournaments={env.DB.prepare(`SELECT * FROM Tournaments`)
+								.run<Database.Tournament>()
+								.then((r) => r.results)}
 							mobile={isMobile(request.headers)}
 						/>,
 						{ bootstrapModules: jsMap[url.pathname] },

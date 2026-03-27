@@ -79,7 +79,6 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						> & { participantCount: number }
 					>();
 
-				console.log(result);
 				return (
 						result?.registrationChannel &&
 							result?.registrationTemplateLink &&

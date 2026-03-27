@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import HomeButton from "./components/HomeButton";
 import { Page } from "./components/layout";
+import Tournaments from "./components/Tournaments";
 import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
 import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf" with { type: "asset" };
 
@@ -8,11 +10,13 @@ export default ({
 	styles,
 	url,
 	admin,
+	tournaments,
 }: {
 	mobile: boolean;
 	styles?: string[];
 	url: URL;
 	admin: boolean;
+	tournaments: Promise<Database.Tournament[]>;
 }) => (
 	<Page
 		mobile={mobile}
@@ -34,6 +38,9 @@ export default ({
 			}}>
 			TORNEI
 		</span>
+		<Suspense>
+			<Tournaments tournaments={tournaments} />
+		</Suspense>
 		{admin && (
 			<HomeButton
 				href="/tournaments/new"
