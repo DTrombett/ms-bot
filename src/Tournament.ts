@@ -4,19 +4,18 @@ import {
 	type WorkflowStep,
 } from "cloudflare:workers";
 import {
-	ButtonStyle,
 	ComponentType,
 	MessageFlags,
 	Routes,
-	type APIMessageTopLevelComponent,
-	type RESTGetAPIChannelMessageResult,
+	type RESTPatchAPIChannelMessageResult,
 	type RESTPostAPIChannelMessageJSONBody,
+	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
-import { RegistrationMode, TournamentFlags } from "./util/Constants";
+import { RegistrationMode } from "./util/Constants";
 import { rest } from "./util/globals";
 import normalizeError from "./util/normalizeError";
-import { placeholder } from "./util/strings";
 import { TimeUnit } from "./util/time";
+import { createRegistrationMessage } from "./util/tournaments/createRegistrationMessage";
 
 export type Params = { id: number };
 
@@ -31,20 +30,16 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			"Get registration start time",
 			async () => {
 				const result = await this.env.DB.prepare(
-					`SELECT registrationStart, registrationMode, flags
+					`SELECT registrationStart, registrationMode
 					FROM Tournaments WHERE id = ?`,
 				)
 					.bind(this.tournamentId)
 					.first<
-						Pick<
-							Database.Tournament,
-							"registrationStart" | "registrationMode" | "flags"
-						>
+						Pick<Database.Tournament, "registrationStart" | "registrationMode">
 					>();
 
 				return (
 						result?.registrationStart &&
-							!(result.flags & TournamentFlags.RegistrationStarted) &&
 							result.registrationMode & RegistrationMode.Discord
 					) ?
 						result.registrationStart
@@ -61,7 +56,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			const registration = await step.do("Get registration data", async () => {
 				const result = await this.env.DB.prepare(
 					`
-						SELECT flags, name, minPlayers, registrationMode, registrationChannel, registrationMessageLink, logChannel,
+						SELECT name, minPlayers, registrationMode, registrationChannel, registrationTemplateLink, logChannel, registrationMessage,
 						(
 							SELECT COUNT(*)
 							FROM Participants
@@ -74,107 +69,76 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					.first<
 						Pick<
 							Database.Tournament,
-							| "flags"
 							| "logChannel"
 							| "registrationChannel"
-							| "registrationMessageLink"
+							| "registrationTemplateLink"
 							| "registrationMode"
 							| "name"
+							| "registrationMessage"
 							| "minPlayers"
 						> & { participantCount: number }
 					>();
 
+				console.log(result);
 				return (
 						result?.registrationChannel &&
-							result?.registrationMessageLink &&
-							!(result.flags & TournamentFlags.RegistrationStarted) &&
+							result?.registrationTemplateLink &&
 							result.registrationMode & RegistrationMode.Discord
 					) ?
 						{
 							logChannel: result.logChannel,
 							channel: result.registrationChannel,
-							message: result.registrationMessageLink.split("/") as [
-								channelId: string,
-								messageId: string,
-							],
+							template: result.registrationTemplateLink,
 							count: result.participantCount,
 							name: result.name,
 							minPlayers: result.minPlayers,
+							message: result.registrationMessage,
 						}
 					:	null;
 			});
 
 			if (registration)
 				try {
-					await step.do<void>("Send registration message", async () => {
-						const message = (await rest.get(
-							Routes.channelMessage(...registration.message),
-						)) as RESTGetAPIChannelMessageResult;
-						const components: APIMessageTopLevelComponent[] = [];
-
-						if (message.content)
-							components.push({
-								type: ComponentType.TextDisplay,
-								content: placeholder(message.content, {
-									iscritti: registration.count.toLocaleString("it-IT"),
-									nome: registration.name,
-									minimo: (registration.minPlayers ?? 0).toLocaleString(
-										"it-IT",
+					const id = await step.do<string>(
+						"Send registration message",
+						async () =>
+							rest[registration.message ? "patch" : "post"](
+								Routes.channelMessages(registration.channel),
+								{
+									body: await createRegistrationMessage(
+										this.tournamentId,
+										registration.template,
+										registration.count,
+										registration.name,
+										registration.minPlayers,
 									),
-								}),
-							});
-						if (message.attachments.length)
-							components.push({
-								type: ComponentType.MediaGallery,
-								items: message.attachments.map((a) => ({
-									description: a.description,
-									spoiler: a.filename.startsWith("SPOILER_"),
-									media: { url: a.url },
-								})),
-							});
-						components.push({
-							type: ComponentType.ActionRow,
-							components: [
-								{
-									type: ComponentType.Button,
-									custom_id: `tournament-reg-${this.tournamentId}`,
-									style: ButtonStyle.Success,
-									emoji: {
-										animated: true,
-										// TODO: Change this before merging
-										id: "1486438403997175928",
-										name: "verified",
-									},
-									label: "Iscriviti",
 								},
-								{
-									type: ComponentType.Button,
-									custom_id: `tournament-unr-${this.tournamentId}`,
-									style: ButtonStyle.Danger,
-									label: "Annulla iscrizione",
-								},
-							],
-						});
-						await rest.post(Routes.channelMessages(registration.channel), {
-							body: {
-								flags: MessageFlags.IsComponentsV2,
-								components,
-							} satisfies RESTPostAPIChannelMessageJSONBody,
-						});
-					});
-					this.ctx.waitUntil(
-						step.do<void>("Update database flags", () =>
-							this.env.DB.prepare(
-								`UPDATE Tournaments
-								SET flags = flags | ?1
-								WHERE id = ?2
-							`,
-							)
-								.bind(TournamentFlags.RegistrationStarted, this.tournamentId)
-								.run()
-								.then(() => {}),
-						),
+							).then(
+								(m) =>
+									(
+										m as
+											| RESTPostAPIChannelMessageResult
+											// eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
+											| RESTPatchAPIChannelMessageResult
+									).id,
+							),
 					);
+
+					if (!registration.message)
+						this.ctx.waitUntil(
+							step.do<void>("Update database", () =>
+								this.env.DB.prepare(
+									`
+										UPDATE Tournaments
+										SET registrationMessage = ?1
+										WHERE id = ?2
+									`,
+								)
+									.bind(id, this.tournamentId)
+									.run()
+									.then(() => {}),
+							),
+						);
 				} catch (error) {
 					this.sendError(
 						step,

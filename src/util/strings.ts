@@ -40,9 +40,9 @@ export const placeholder = <T extends Record<keyof any, string>>(
 ) =>
 	string.replace(
 		new RegExp(
-			Object.keys(placeholders)
-				.map((v) => `\\{(${RegExp.escape(String(v))})\\}`)
-				.join("|"),
+			`\\{(${Object.keys(placeholders)
+				.map((v) => RegExp.escape(String(v)))
+				.join("|")})\\}`,
 			"giu",
 		),
 		(_, t: keyof T) => placeholders[t]!,

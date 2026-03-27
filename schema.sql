@@ -48,9 +48,10 @@ CREATE TABLE Tournaments (
 	minPlayers INTEGER,
 	registrationChannel TEXT,
 	registrationEnd INTEGER,
-	registrationMessageLink TEXT,
+	registrationTemplateLink TEXT,
 	registrationRole TEXT,
 	registrationStart INTEGER,
+	registrationMessage TEXT,
 	roundType INTEGER,
 	workflowId INTEGER,
 	id INTEGER PRIMARY KEY AUTOINCREMENT

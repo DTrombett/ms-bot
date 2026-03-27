@@ -333,7 +333,7 @@ const server: ExportedHandler<Env> = {
 							minPlayers,
 							registrationChannel,
 							registrationEnd,
-							registrationMessageLink,
+							registrationTemplateLink,
 							registrationRole,
 							registrationStart,
 							roundType,
