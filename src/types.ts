@@ -394,6 +394,7 @@ declare global {
 			matchMessageLink?: string | null;
 			minPlayers?: number | null;
 			registrationChannel?: string | null;
+			registrationChannelName?: string | null;
 			registrationEnd?: number | null;
 			registrationTemplateLink?: string | null;
 			registrationMessage?: string | null;

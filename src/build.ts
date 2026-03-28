@@ -15,7 +15,7 @@ import {
 import { builtinModules, registerHooks } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, parse, relative, resolve } from "node:path";
-import { cwd, env } from "node:process";
+import { cwd, env, loadEnvFile } from "node:process";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { FunctionComponent } from "react";
@@ -26,6 +26,7 @@ console.time("Build");
 const isDev = env.WRANGLER_COMMAND === "dev";
 
 if (!isDev) console.log("Registering hooks");
+loadEnvFile(".dev.vars");
 const assets = new Map<string, { virtual: string; physical: string }>();
 const cwdPath = cwd();
 const imports: Record<string, string[]> = {};
@@ -105,6 +106,12 @@ registerHooks({
 					tsconfigRaw,
 					write: false,
 				}).outputFiles[0]!.text,
+			};
+		if (specifier === "cloudflare:workers")
+			return {
+				format: "module",
+				shortCircuit: true,
+				source: `export const env = ${JSON.stringify(env)}`,
 			};
 		return nextLoad(specifier, context);
 	},

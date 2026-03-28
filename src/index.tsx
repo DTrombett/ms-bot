@@ -5,6 +5,7 @@ import {
 	RouteBases,
 	Routes,
 	type APIUser,
+	type RESTGetAPIChannelResult,
 	type RESTGetAPIGuildMemberResult,
 } from "discord-api-types/v10";
 import { match } from "node:assert/strict";
@@ -335,6 +336,7 @@ const server: ExportedHandler<Env> = {
 							matchMessageLink,
 							minPlayers,
 							registrationChannel,
+							registrationChannelName,
 							registrationEnd,
 							registrationTemplateLink,
 							registrationRole,
@@ -342,7 +344,7 @@ const server: ExportedHandler<Env> = {
 							roundType,
 							workflowId
 						)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					)
 						.bind(
 							form.title,
@@ -361,6 +363,12 @@ const server: ExportedHandler<Env> = {
 							form.matchMessageLink,
 							form.minPlayers,
 							form.channelId,
+							form.channelId &&
+								(
+									(await rest.get(
+										Routes.channel(form.channelId),
+									)) as RESTGetAPIChannelResult
+								).name,
 							form.registrationEndTime,
 							form.messageLink,
 							form.roleId,

@@ -121,3 +121,7 @@ input:user-invalid {
 		display: none;
 	}
 }
+.mention:hover {
+	background-color: #5865f2 !important;
+	color: white !important;
+}

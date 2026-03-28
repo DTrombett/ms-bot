@@ -39,7 +39,7 @@ export default ({
 			TORNEI
 		</span>
 		<Suspense>
-			<Tournaments tournaments={tournaments} />
+			<Tournaments tournaments={tournaments} mobile={mobile} />
 		</Suspense>
 		{admin && (
 			<HomeButton
