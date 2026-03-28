@@ -401,7 +401,7 @@ declare global {
 			registrationRole?: string | null;
 			registrationStart?: number | null;
 			roundType?: number | null;
-			workflowId?: number | null;
+			workflowId?: string | null;
 			id: number;
 		};
 		type Participant = {
@@ -410,6 +410,7 @@ declare global {
 			tag?: string | null;
 			team?: number | null;
 		};
+		type Round = { mode: string; bof: number };
 	}
 
 	type ResolvedUser = Pick<

@@ -4,10 +4,12 @@ import { TextInput } from "./forms";
 
 export const Mode = ({
 	i = 0,
+	defaultValue,
 	modes,
 	required,
 }: {
 	i?: number;
+	defaultValue?: string;
 	modes?: { name: string }[];
 	required?: boolean;
 }) => {
@@ -25,14 +27,19 @@ export const Mode = ({
 			suggestions={modes && Array.from(iterable, (value) => ({ value }))}
 			errorMessage={modes && "Modalità non valida"}
 			required={required}
+			defaultValue={defaultValue}
 		/>
 	);
 };
 
 export const ModeWithSuggestions = ({
 	usable,
+	defaultValue,
 	required,
 }: {
 	usable: Promise<{ name: string }[] | undefined>;
+	defaultValue?: string;
 	required?: boolean;
-}) => <Mode modes={use(usable)} required={required} />;
+}) => (
+	<Mode modes={use(usable)} required={required} defaultValue={defaultValue} />
+);

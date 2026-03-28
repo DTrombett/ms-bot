@@ -1,24 +1,20 @@
-import Tournament from "../components/Tournament";
-import { Page } from "../components/layout";
-import lilitaOne from "../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
-import nougat from "../fonts/Nougat-Regular.ttf" with { type: "asset" };
-import ggsans from "../fonts/ggsansvf.woff2" with { type: "asset" };
-
-export enum Round {
-	Manual = 1,
-	Once,
-	Fast,
-}
+import Tournament from "../../components/Tournament";
+import { Page } from "../../components/layout";
+import lilitaOne from "../../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
+import nougat from "../../fonts/Nougat-Regular.ttf" with { type: "asset" };
+import ggsans from "../../fonts/ggsansvf.woff2" with { type: "asset" };
 
 export default ({
 	mobile,
 	modesPromise,
 	styles,
+	tournament,
 	url,
 }: {
 	mobile: boolean;
 	modesPromise: Promise<{ name: string }[] | undefined>;
 	styles?: string[];
+	tournament: Database.Tournament;
 	url: URL;
 }) => (
 	<Page
@@ -30,9 +26,7 @@ export default ({
 				ggsans,
 			],
 			styles,
-			title: "Nuovo torneo",
-			description:
-				"Crea un nuovo torneo con tutte le impostazioni e personalizzazioni",
+			title: `${tournament.name} - Modifica`,
 		}}
 		url={url}>
 		<span
@@ -44,8 +38,12 @@ export default ({
 				textAlign: "center",
 				userSelect: "none",
 			}}>
-			NUOVO TORNEO
+			MODIFICA TORNEO
 		</span>
-		<Tournament mobile={mobile} modesPromise={modesPromise} />
+		<Tournament
+			mobile={mobile}
+			modesPromise={modesPromise}
+			tournament={tournament}
+		/>
 	</Page>
 );

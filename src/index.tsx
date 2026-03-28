@@ -1,27 +1,23 @@
 import cssMap from "build:css";
 import jsMap from "build:js";
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import {
 	RouteBases,
 	Routes,
 	type APIUser,
-	type RESTGetAPIChannelResult,
 	type RESTGetAPIGuildMemberResult,
 } from "discord-api-types/v10";
-import { match } from "node:assert/strict";
 import { renderToReadableStream } from "react-dom/server";
 import Index from "./app/index.page";
 import Tournaments from "./app/tournaments.page";
+import EditTournament from "./app/tournaments/[id]/edit.page";
 import NewTournament from "./app/tournaments/new.page";
 import { Brawl } from "./commands/brawl";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
-import { RegistrationMode, TournamentFlags } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
-import { parseForm, ParseType } from "./util/forms";
 import { rest, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
-import { ok } from "./util/node";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
 import type { RGB } from "./util/resolveColor";
@@ -36,6 +32,7 @@ import {
 	tokenFromResponse,
 	updateToken,
 } from "./util/token";
+import { parseTournamentData } from "./util/tournaments/parseTournamentData";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
@@ -43,6 +40,7 @@ const authRedirectPath = "/auth/discord/callback";
 const server: ExportedHandler<Env> = {
 	fetch: async (request) => {
 		const url = new URL(request.url);
+		let matchResult: RegExpMatchArray | null;
 
 		if (url.pathname === "/") {
 			if (request.method !== "GET" && request.method !== "HEAD")
@@ -82,239 +80,10 @@ const server: ExportedHandler<Env> = {
 			);
 		}
 		if (url.pathname === "/tournaments") {
-			if (request.method !== "GET" && request.method !== "HEAD")
-				return create405();
-			const { setCookie, token } = await createSetCookie(request);
-
-			return new Response(
-				request.method === "GET" ?
-					await renderToReadableStream(
-						<Tournaments
-							styles={cssMap[url.pathname]}
-							url={url}
-							admin={await isAdmin(token)}
-							tournaments={env.DB.prepare(`SELECT * FROM Tournaments`)
-								.run<Database.Tournament>()
-								.then((r) => r.results)}
-							mobile={isMobile(request.headers)}
-						/>,
-						{ bootstrapModules: jsMap[url.pathname] },
-					)
-				:	null,
-				{
-					headers: {
-						"accept-ch": "Sec-CH-UA-Mobile",
-						"cache-control": "private, max-age=300",
-						"content-type": "text/html",
-						"set-cookie": setCookie,
-						vary: "Cookie",
-					},
-				},
-			);
-		}
-		if (url.pathname === "/tournaments/new") {
-			if (request.method === "POST") {
-				if (!(await isAdmin(request.headers))) return create403(request);
-				const formData = await request.formData();
-				const form = parseForm(formData, {
-					title: ParseType.Text,
-					logChannel: ParseType.Text,
-					game: ParseType.Number,
-					team: ParseType.Number,
-					message: ParseType.Boolean,
-					dashboard: ParseType.Boolean,
-					minPlayers: ParseType.Number,
-					messageLink: ParseType.Text,
-					channelId: ParseType.Text,
-					roleId: ParseType.Text,
-					registrationStartTime: ParseType.DateTime,
-					registrationEndTime: ParseType.DateTime,
-					tagRequired: ParseType.Boolean,
-					bracketsTime: ParseType.DateTime,
-					publicBrackets: ParseType.Boolean,
-					autoChannels: ParseType.DateTime,
-					channelsMode: ParseType.Number,
-					autoDetectResults: ParseType.Boolean,
-					autoDeleteChannels: ParseType.Boolean,
-					channelName: ParseType.Text,
-					endedChannelName: ParseType.Text,
-					categoryId: ParseType.Text,
-					endedCategoryId: ParseType.Text,
-					matchMessageLink: ParseType.Text,
-				});
-				let registrationMode = 0,
-					flags = 0;
-				const bof = formData.getAll("bof");
-				const rounds = formData
-					.getAll("mode")
-					.map((mode, i) => ({
-						mode: (mode as string).toString(),
-						bof: +bof[i]!,
-					}));
-
+			if (request.method === "POST")
 				try {
-					const idRegex = /^\d{16,32}$/;
-					const linkRegex =
-						/^https?:\/\/(?:[^.]+\.)?discord\.com\/channels\/(?<guild>\d{16,32})\/(?<channel>\d{16,32})\/(?<message>\d{16,32})$/;
-
-					ok(form.title, "Il titolo è richiesto");
-					ok(form.logChannel, "Il canale di log è richiesto");
-					match(
-						form.logChannel,
-						idRegex,
-						"L'id del canale di log non è valido",
-					);
-					ok(form.game != null, "Il gioco è richiesto");
-					ok(!Number.isNaN(form.game), "Il gioco non è valido");
-					ok(form.team, "La dimensione della squadra è richiesta");
-					ok(
-						!Number.isNaN(form.team),
-						"La dimensione della squadra non è valida",
-					);
-					ok(
-						form.team > 0,
-						"La dimensione della squadra deve essere maggiore di 0",
-					);
-					ok(
-						form.team <= 5,
-						"La dimensione della squadra deve essere al massimo di 5",
-					);
-					ok(
-						!form.minPlayers || form.minPlayers > 0,
-						"Il numero minimo di iscritti deve essere maggiore di 0",
-					);
-					if (form.messageLink) {
-						const result = form.messageLink.match(linkRegex);
-
-						ok(
-							result?.groups?.channel && result.groups.message,
-							"Link al messaggio di iscrizione non valido",
-						);
-						form.messageLink = `${result.groups.channel}/${result.groups.message}`;
-					}
-					if (form.channelId)
-						match(
-							form.channelId,
-							idRegex,
-							"L'id del canale di iscrizione non è valido",
-						);
-					if (form.roleId)
-						match(
-							form.roleId,
-							idRegex,
-							"L'id del ruolo di iscrizione non è valido",
-						);
-					ok(
-						!Number.isNaN(form.registrationStartTime),
-						"La data di inizio registrazioni non è valida",
-					);
-					ok(
-						!Number.isNaN(form.registrationEndTime),
-						"La data di fine registrazioni non è valida",
-					);
-					ok(
-						(!form.registrationStartTime || form.registrationEndTime) &&
-							(form.registrationStartTime || !form.registrationEndTime),
-						"Devi specificare sia l'inizio che la fine delle registrazioni",
-					);
-					ok(
-						!form.registrationStartTime ||
-							form.registrationEndTime! > form.registrationStartTime,
-						"L'inizio delle registrazioni non può essere successivo alla fine",
-					);
-					ok(
-						!form.registrationEndTime ||
-							!form.bracketsTime ||
-							form.bracketsTime >= form.registrationEndTime,
-						"La data di creazione delle brackets deve essere successiva alla fine delle registrazioni",
-					);
-					ok(
-						!form.autoChannels ||
-							!form.registrationEndTime ||
-							form.autoChannels >= form.registrationEndTime,
-						"La data di creazione dei canali deve essere successiva alla fine delle registrazioni",
-					);
-					ok(
-						!form.autoChannels ||
-							!form.bracketsTime ||
-							form.autoChannels >= form.bracketsTime,
-						"La data di creazione dei canali deve essere successiva alla creazione dei brackets",
-					);
-					ok(
-						!Number.isNaN(form.bracketsTime),
-						"La data di creazione brackets non è valida",
-					);
-					ok(
-						!Number.isNaN(form.autoChannels),
-						"La data di creazione canali non è valida",
-					);
-					ok(
-						!Number.isNaN(form.channelsMode),
-						"La modalità di avanzamento round non è valida",
-					);
-					if (form.categoryId)
-						match(
-							form.categoryId,
-							idRegex,
-							"L'id della categoria in cui creare i canali non è valido",
-						);
-					if (form.endedCategoryId)
-						match(
-							form.endedCategoryId,
-							idRegex,
-							"L'id della categoria in cui spostare i canali non è valido",
-						);
-					if (form.matchMessageLink) {
-						const result = form.matchMessageLink.match(linkRegex);
-
-						ok(
-							result?.groups?.channel && result.groups.message,
-							"Il link al messaggio da mandare nei canali partite non è valido",
-						);
-						form.matchMessageLink = `${result.groups.channel}/${result.groups.message}`;
-					}
-					ok(
-						!form.autoChannels || form.channelsMode,
-						"La modalità di avanzamento round è richiesta quando si attiva la creazione automatica dei canali",
-					);
-					ok(
-						!form.message || form.messageLink,
-						"Il link al messaggio di iscrizione è richiesto quando si attiva l'iscrizione tramite messaggio",
-					);
-					ok(
-						!form.message || form.channelId,
-						"Il canale in cui mandare il messaggio è richiesto quando si attiva l'iscrizione tramite messaggio",
-					);
-					ok(
-						!form.autoChannels || form.channelName,
-						"Il nome dei canali delle partite è richiesto quando si attiva la creazione automatica dei canali",
-					);
-					ok(
-						rounds.length > 0,
-						"Devi specificare la modalità almeno per un round",
-					);
-					ok(
-						rounds.every((r) => r.bof && r.bof > 0),
-						"Numero partite non valido",
-					);
-					if (form.message) registrationMode |= RegistrationMode.Discord;
-					if (form.dashboard) registrationMode |= RegistrationMode.Dashboard;
-					if (form.tagRequired) flags |= TournamentFlags.TagRequired;
-					if (form.publicBrackets) flags |= TournamentFlags.PublicBrackets;
-					if (form.autoDetectResults)
-						flags |= TournamentFlags.AutoDetectResults;
-					if (form.autoDeleteChannels)
-						flags |= TournamentFlags.AutoDeleteChannels;
-				} catch (err) {
-					return new Response(null, {
-						status: 303,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							location: `/tournaments/new?error=${encodeURIComponent((err as Error).name)}&error_description=${encodeURIComponent((err as Error).message)}`,
-						},
-					});
-				}
-				try {
+					const tournament = await parseTournamentData(request, url.pathname);
+					if (tournament instanceof Response) return tournament;
 					const id = crypto.randomUUID();
 					const {
 						meta: { last_row_id },
@@ -347,36 +116,32 @@ const server: ExportedHandler<Env> = {
 						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					)
 						.bind(
-							form.title,
-							flags,
-							form.game,
-							form.logChannel,
-							registrationMode,
-							JSON.stringify(rounds),
-							form.team,
-							form.bracketsTime,
-							form.categoryId,
-							form.channelName,
-							form.autoChannels,
-							form.endedCategoryId,
-							form.endedChannelName,
-							form.matchMessageLink,
-							form.minPlayers,
-							form.channelId,
-							form.channelId &&
-								(
-									(await rest.get(
-										Routes.channel(form.channelId),
-									)) as RESTGetAPIChannelResult
-								).name,
-							form.registrationEndTime,
-							form.messageLink,
-							form.roleId,
-							form.registrationStartTime,
-							form.channelsMode,
+							tournament.name,
+							tournament.flags,
+							tournament.game,
+							tournament.logChannel,
+							tournament.registrationMode,
+							tournament.rounds,
+							tournament.team,
+							tournament.bracketsTime,
+							tournament.categoryId,
+							tournament.channelName,
+							tournament.channelsTime,
+							tournament.endedCategoryId,
+							tournament.endedChannelName,
+							tournament.matchMessageLink,
+							tournament.minPlayers,
+							tournament.registrationChannel,
+							tournament.registrationChannelName,
+							tournament.registrationEnd,
+							tournament.registrationTemplateLink,
+							tournament.registrationRole,
+							tournament.registrationStart,
+							tournament.roundType,
 							id,
 						)
 						.run();
+
 					await env.TOURNAMENT.create({ id, params: { id: last_row_id } });
 					return new Response(null, {
 						status: 303,
@@ -395,9 +160,39 @@ const server: ExportedHandler<Env> = {
 						},
 					});
 				}
-			}
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405("HEAD, GET, POST");
+			const { setCookie, token } = await createSetCookie(request);
+
+			return new Response(
+				request.method === "GET" ?
+					await renderToReadableStream(
+						<Tournaments
+							styles={cssMap[url.pathname]}
+							url={url}
+							admin={await isAdmin(token)}
+							tournaments={env.DB.prepare(`SELECT * FROM Tournaments`)
+								.run<Database.Tournament>()
+								.then((r) => r.results)}
+							mobile={isMobile(request.headers)}
+						/>,
+						{ bootstrapModules: jsMap[url.pathname] },
+					)
+				:	null,
+				{
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						"cache-control": "private, max-age=300",
+						"content-type": "text/html",
+						"set-cookie": setCookie,
+						vary: "Cookie",
+					},
+				},
+			);
+		}
+		if (url.pathname === "/tournaments/new") {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
 			const { setCookie, token } = await createSetCookie(request);
 
 			if (!token)
@@ -435,6 +230,156 @@ const server: ExportedHandler<Env> = {
 							)}
 						/>,
 						{ bootstrapModules: jsMap[url.pathname] },
+					)
+				:	null,
+				{
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						"cache-control": "private, max-age=300",
+						"content-type": "text/html",
+						"set-cookie": setCookie,
+						vary: "Cookie",
+					},
+				},
+			);
+		}
+		if (
+			(matchResult = url.pathname.match(/^\/tournaments\/([^/]+)\/edit\/?$/))
+		) {
+			if (request.method === "POST")
+				try {
+					const tournament = await parseTournamentData(request, url.pathname);
+					if (tournament instanceof Response) return tournament;
+					const id = await env.DB.prepare(
+						`
+							UPDATE Tournaments SET
+								name = ?,
+								flags = ?,
+								game = ?,
+								logChannel = ?,
+								registrationMode = ?,
+								rounds = ?,
+								team = ?,
+								bracketsTime = ?,
+								categoryId = ?,
+								channelName = ?,
+								channelsTime = ?,
+								endedCategoryId = ?,
+								endedChannelName = ?,
+								matchMessageLink = ?,
+								minPlayers = ?,
+								registrationChannel = ?,
+								registrationChannelName = ?,
+								registrationEnd = ?,
+								registrationTemplateLink = ?,
+								registrationRole = ?,
+								registrationStart = ?,
+								roundType = ?
+							WHERE id = ?
+							RETURNING workflowId
+						`,
+					)
+						.bind(
+							tournament.name,
+							tournament.flags,
+							tournament.game,
+							tournament.logChannel,
+							tournament.registrationMode,
+							tournament.rounds,
+							tournament.team,
+							tournament.bracketsTime,
+							tournament.categoryId,
+							tournament.channelName,
+							tournament.channelsTime,
+							tournament.endedCategoryId,
+							tournament.endedChannelName,
+							tournament.matchMessageLink,
+							tournament.minPlayers,
+							tournament.registrationChannel,
+							tournament.registrationChannelName,
+							tournament.registrationEnd,
+							tournament.registrationTemplateLink,
+							tournament.registrationRole,
+							tournament.registrationStart,
+							tournament.roundType,
+							Number(matchResult[1]),
+						)
+						.first<Database.Tournament["workflowId"]>("workflowId");
+
+					if (id)
+						waitUntil(
+							env.TOURNAMENT.get(id).then((workflowInstance) =>
+								workflowInstance.restart(),
+							),
+						);
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: "/tournaments",
+						},
+					});
+				} catch (err) {
+					console.error(err);
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `${url.pathname}?error=${encodeURIComponent((err as Error).name)}`,
+						},
+					});
+				}
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405("HEAD, GET, POST");
+			const { setCookie, token } = await createSetCookie(request);
+
+			if (!token)
+				return new Response(null, {
+					status: 303,
+					headers: {
+						location: `/auth/discord/login?to=${encodeURIComponent(url.pathname)}`,
+						"set-cookie": setCookie,
+					},
+				});
+			const member = (await rest
+				.get(Routes.guildMember(env.MAIN_GUILD, token.i))
+				.catch(() => null)) as RESTGetAPIGuildMemberResult | null;
+			if (
+				new Set(member?.roles).isDisjointFrom(
+					new Set(env.ALLOWED_ROLES.split(",")),
+				)
+			)
+				return create403(request, {
+					headers: {
+						"cache-control": "private, max-age=300",
+						"set-cookie": setCookie,
+						vary: "Cookie",
+					},
+				});
+			const tournament = await env.DB.prepare(
+				`SELECT * FROM Tournaments WHERE id = ?`,
+			)
+				.bind(Number(matchResult[1]))
+				.first<Database.Tournament>();
+
+			if (!tournament)
+				return new Response(null, {
+					status: 303,
+					headers: { location: "/tournaments", "set-cookie": setCookie },
+				});
+			return new Response(
+				request.method === "GET" ?
+					await renderToReadableStream(
+						<EditTournament
+							styles={cssMap["/tournaments/[id]/edit"]}
+							url={url}
+							mobile={isMobile(request.headers)}
+							modesPromise={Brawl.getModes().catch(
+								(err) => void console.error(err),
+							)}
+							tournament={tournament}
+						/>,
+						{ bootstrapModules: jsMap["/tournaments/[id]/edit"] },
 					)
 				:	null,
 				{

@@ -9,6 +9,9 @@ export default ({ styles, mobile }: { styles: string[]; mobile?: boolean }) => (
 			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,
 			prefetch: [{ href: "/", as: "document" }],
+			title: "Pronostici",
+			description:
+				"Invia e modifica i tuoi pronostici calcistici per divertirti con i risultati sportivi",
 		}}>
 		<div
 			style={{

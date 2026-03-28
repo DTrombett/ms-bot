@@ -23,6 +23,7 @@ export default ({
 			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,
 			prefetch: [{ href: "/tournaments/new", as: "document" }],
+			title: "Tornei",
 		}}
 		url={url}>
 		<span
@@ -34,6 +35,7 @@ export default ({
 				textAlign: "center",
 				textShadow: "#0049ff 0.25rem 0.25rem",
 				userSelect: "none",
+				marginBottom: "1.5rem",
 			}}>
 			TORNEI
 		</span>

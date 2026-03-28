@@ -92,7 +92,7 @@ registerHooks({
 		if (
 			!specifier.includes("/node_modules/") &&
 			specifier.startsWith("file://") &&
-			(ext === ".ts" || ext === ".tsx" || ext === "")
+			(ext === ".ts" || ext === ".tsx" || ext === "" || ext === ".page")
 		)
 			return {
 				format: "module",
@@ -224,7 +224,6 @@ const buildResult = await build({
 	outdir: `${outdir}/static/js`,
 	packages: "bundle",
 	platform: "browser",
-	publicPath: "/",
 	splitting: true,
 	target: "es2022",
 	treeShaking: true,
@@ -234,30 +233,35 @@ const jsMap = Object.fromEntries(
 	await Promise.all(
 		Object.entries(buildResult.metafile.outputs)
 			.filter(([, { entryPoint }]) => entryPoint)
-			.map<Promise<[string, string[]]>>(async ([path, { entryPoint }]) => {
-				ok(
-					entryPoint && path.endsWith(".hydrate.js"),
-					`Path: ${path}, entry point: ${entryPoint}`,
-				);
-				const hash = createHash("sha256");
+			.map<Promise<[string, string[]]>>(
+				async ([path, { entryPoint, imports }]) => {
+					ok(
+						entryPoint && path.endsWith(".hydrate.js"),
+						`Path: ${path}, entry point: ${entryPoint}`,
+					);
+					const hash = createHash("sha256");
 
-				rm(entryPoint, { force: true }).catch(console.error);
-				await pipeline(createReadStream(path), hash);
-				await rename(
-					path,
-					(path = path.replace(
-						/\.hydrate\.js$/,
-						`.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.js`,
-					)),
-				);
-				return [
-					"/" +
-						relative(outbase, entryPoint)
-							.replace(/\.hydrate\.tsx$/, "")
-							.replaceAll("\\", "/"),
-					[path.replace(outdir, "")],
-				];
-			}),
+					rm(entryPoint, { force: true }).catch(console.error);
+					await pipeline(createReadStream(path), hash);
+					await rename(
+						path,
+						(path = path.replace(
+							/\.hydrate\.js$/,
+							`.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.js`,
+						)),
+					);
+					return [
+						"/" +
+							relative(outbase, entryPoint)
+								.replace(/\.hydrate\.tsx$/, "")
+								.replaceAll("\\", "/"),
+						imports
+							.map((i) => i.path)
+							.concat(path)
+							.map((path) => path.replace(outdir, "")),
+					];
+				},
+			),
 	),
 );
 

@@ -8,6 +8,7 @@ export default ({ styles }: { styles: string[] }) => (
 			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
 			styles,
 			prefetch: [{ href: "/", as: "document" }],
+			title: "404 - Not Found",
 		}}>
 		<div
 			style={{

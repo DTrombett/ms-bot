@@ -5,24 +5,34 @@ import { Mode } from "./Mode";
 
 export default useClient(
 	"Rounds",
-	({ modes }: { modes?: { name: string }[] }) => {
-		const [rounds, setRounds] = useState(0);
+	({
+		modes,
+		rounds,
+	}: {
+		modes?: { name: string }[];
+		rounds?: Database.Round[];
+	}) => {
+		const [length, setRounds] = useState(rounds?.length ?? 0);
 
 		return (
 			<>
-				{Array.from({ length: rounds }, (_, i) => (
+				{Array.from({ length }, (_, i) => (
 					<Fragment key={i}>
 						<h3 style={{ fontWeight: "normal", marginBlock: "0.5em -0.25em" }}>
 							Round of {2 ** (i + 2)}
 						</h3>
-						<Mode modes={modes} i={i + 1} />
+						<Mode
+							modes={modes}
+							i={i + 1}
+							defaultValue={rounds ? rounds[i]?.mode : undefined}
+						/>
 						<NumberInput
 							id={`bof${i + 1}`}
 							name={"bof"}
 							label="Numero partite"
 							placeholder="Best of..."
 							step={2}
-							defaultValue={1}
+							defaultValue={rounds ? rounds[i]?.bof : 1}
 							max={25}
 							min={1}
 							width="7.25rem"
@@ -46,7 +56,7 @@ export default useClient(
 						color: "white",
 						border: "none",
 					}}>
-					Aggiungi round of {2 ** (rounds + 2)}
+					Aggiungi round of {2 ** (length + 2)}
 				</button>
 			</>
 		);

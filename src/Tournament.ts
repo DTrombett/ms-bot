@@ -102,7 +102,12 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						"Send registration message",
 						async () =>
 							rest[registration.message ? "patch" : "post"](
-								Routes.channelMessages(registration.channel),
+								registration.message ?
+									Routes.channelMessage(
+										registration.channel,
+										registration.message,
+									)
+								:	Routes.channelMessages(registration.channel),
 								{
 									body: await createRegistrationMessage(
 										this.tournamentId,

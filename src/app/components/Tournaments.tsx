@@ -1,4 +1,3 @@
-import { env } from "cloudflare:workers";
 import React, { type CSSProperties } from "react";
 import { bitSetMap } from "../../util/bitSets";
 import { RegistrationMode } from "../../util/Constants";
@@ -81,10 +80,10 @@ export default async ({
 					fontFamily: "LilitaOne",
 					fontSize: "1.5rem",
 					lineHeight: "2rem",
-					margin: "1.5rem auto",
+					margin: "0 auto 1.5rem",
 					maxWidth: "stretch",
 					padding: "1rem",
-					width: "64rem",
+					width: "60rem",
 				}}>
 				<div
 					style={{
@@ -113,9 +112,7 @@ export default async ({
 						label="Modalità"
 						value={Array.from(
 							new Set(
-								(JSON.parse(t.rounds) as { mode: string; bof: number }[]).map(
-									(v) => v.mode,
-								),
+								(JSON.parse(t.rounds) as Database.Round[]).map((v) => v.mode),
 							),
 						).join(", ")}
 					/>
@@ -158,7 +155,7 @@ export default async ({
 							t.registrationChannel && (
 								<a
 									className="mention"
-									href={`${mobile ? "https://discord.com" : "discord://"}/channels/${env.MAIN_GUILD}/${t.registrationChannel}${t.registrationMessage ? `/${t.registrationMessage}` : ""}`}
+									href={`${mobile ? "https://discord.com" : "discord://"}/channels/@me/${t.registrationChannel}${t.registrationMessage ? `/${t.registrationMessage}` : ""}`}
 									style={{
 										color: "#a9bbff",
 										cursor: "pointer",

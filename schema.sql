@@ -54,7 +54,7 @@ CREATE TABLE Tournaments (
 	registrationStart INTEGER,
 	registrationMessage TEXT,
 	roundType INTEGER,
-	workflowId INTEGER,
+	workflowId TEXT,
 	id INTEGER PRIMARY KEY AUTOINCREMENT
 );
 CREATE TABLE TournamentTeams (id INTEGER PRIMARY KEY, name TEXT NOT NULL);

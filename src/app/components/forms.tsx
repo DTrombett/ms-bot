@@ -169,14 +169,15 @@ export const RadioInput = ({
 	label,
 	name,
 	options,
+	default: defaultChecked,
 	...props
 }: {
 	label: string;
 	name: string;
+	default?: string | number | readonly string[];
 	options: {
 		label: string;
 		value: string | number | readonly string[];
-		defaultChecked?: boolean;
 		id?: string;
 	}[];
 } & DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => (
@@ -191,7 +192,7 @@ export const RadioInput = ({
 						name={name}
 						value={op.value}
 						style={styles.boxInput}
-						defaultChecked={op.defaultChecked}
+						defaultChecked={defaultChecked === op.value}
 					/>
 					<label htmlFor={op.id ?? String(op.value)} style={styles.boxLabel}>
 						{op.label}
