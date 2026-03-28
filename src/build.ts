@@ -26,7 +26,7 @@ console.time("Build");
 const isDev = env.WRANGLER_COMMAND === "dev";
 
 if (!isDev) console.log("Registering hooks");
-loadEnvFile(".dev.vars");
+Promise.try(loadEnvFile, ".dev.vars").catch(console.error);
 const assets = new Map<string, { virtual: string; physical: string }>();
 const cwdPath = cwd();
 const imports: Record<string, string[]> = {};
