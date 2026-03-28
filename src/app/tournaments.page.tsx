@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import HomeButton from "./components/HomeButton";
 import { Page } from "./components/layout";
 import Tournaments from "./components/Tournaments";
@@ -38,9 +37,7 @@ export default ({
 			}}>
 			TORNEI
 		</span>
-		<Suspense>
-			<Tournaments tournaments={tournaments} mobile={mobile} />
-		</Suspense>
+		<Tournaments tournaments={tournaments} mobile={mobile} admin={admin} />
 		{admin && (
 			<HomeButton
 				href="/tournaments/new"

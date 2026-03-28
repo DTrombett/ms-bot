@@ -1,7 +1,9 @@
 import { env } from "cloudflare:workers";
-import React, { use, type CSSProperties } from "react";
+import React, { type CSSProperties } from "react";
 import { bitSetMap } from "../../util/bitSets";
+import { RegistrationMode } from "../../util/Constants";
 import { TimeUnit } from "../../util/time";
+import HomeButton from "./HomeButton";
 
 enum TournamentStatus {
 	RegistrationOpen,
@@ -38,16 +40,18 @@ const ListElement = ({
 		</>
 	);
 
-export default ({
+export default async ({
 	tournaments,
 	mobile,
+	admin,
 }: {
 	tournaments: Promise<Database.Tournament[]>;
 	mobile: boolean;
+	admin: boolean;
 }) => {
 	const now = Date.now() / TimeUnit.Second;
 
-	return use(tournaments).map((t) => {
+	return (await tournaments).map((t) => {
 		const status =
 			t.registrationStart && t.registrationStart > now ? TournamentStatus.Soon
 			: t.registrationEnd && t.registrationEnd > now ?
@@ -120,7 +124,7 @@ export default ({
 						value={bitSetMap(
 							t.registrationMode,
 							(bit) => bit && "Discord",
-							(bit) => bit && "dashboard",
+							(bit) => bit && "sito",
 						).join(", ")}
 					/>
 					<ListElement
@@ -166,35 +170,88 @@ export default ({
 										transitionDuration: "0.05s",
 										transitionTimingFunction: "ease-out",
 									}}>
-									<span style={{ whiteSpace: "nowrap" }}>
-										<svg
-											style={{
-												height: "1rem",
-												width: "1rem",
-												verticalAlign: "middle",
-												marginInlineEnd: "0.1rem",
-												marginBottom: "0.1rem",
-											}}
-											aria-label="Channel"
-											aria-hidden="false"
-											role="img"
-											xmlns="http://www.w3.org/2000/svg"
-											width="24"
-											height="24"
-											fill="none"
-											viewBox="0 0 24 24">
-											<path
-												fill="currentColor"
-												fill-rule="evenodd"
-												d="M10.99 3.16A1 1 0 1 0 9 2.84L8.15 8H4a1 1 0 0 0 0 2h3.82l-.67 4H3a1 1 0 1 0 0 2h3.82l-.8 4.84a1 1 0 0 0 1.97.32L8.85 16h4.97l-.8 4.84a1 1 0 0 0 1.97.32l.86-5.16H20a1 1 0 1 0 0-2h-3.82l.67-4H21a1 1 0 1 0 0-2h-3.82l.8-4.84a1 1 0 1 0-1.97-.32L15.15 8h-4.97l.8-4.84ZM14.15 14l.67-4H9.85l-.67 4h4.97Z"
-												clip-rule="evenodd"></path>
-										</svg>
-									</span>
-									<span>{t.registrationChannelName}</span>
+									<svg
+										style={{
+											height: "1rem",
+											width: "1rem",
+											verticalAlign: "middle",
+											marginInlineEnd: "0.1rem",
+											marginBottom: "0.1rem",
+										}}
+										aria-label="Channel"
+										aria-hidden="false"
+										role="img"
+										xmlns="http://www.w3.org/2000/svg"
+										width="24"
+										height="24"
+										fill="none"
+										viewBox="0 0 24 24">
+										<path
+											fill="currentColor"
+											fill-rule="evenodd"
+											d="M10.99 3.16A1 1 0 1 0 9 2.84L8.15 8H4a1 1 0 0 0 0 2h3.82l-.67 4H3a1 1 0 1 0 0 2h3.82l-.8 4.84a1 1 0 0 0 1.97.32L8.85 16h4.97l-.8 4.84a1 1 0 0 0 1.97.32l.86-5.16H20a1 1 0 1 0 0-2h-3.82l.67-4H21a1 1 0 1 0 0-2h-3.82l.8-4.84a1 1 0 1 0-1.97-.32L15.15 8h-4.97l.8-4.84ZM14.15 14l.67-4H9.85l-.67 4h4.97Z"
+											clip-rule="evenodd"></path>
+									</svg>
+									{t.registrationChannelName}
 								</a>
 							)
 						}
 					/>
+					<div
+						style={{
+							display: "flex",
+							marginTop: "0.75rem",
+							justifyContent: "center",
+							gap: "0.75rem",
+						}}>
+						{t.registrationStart &&
+							t.registrationStart < now &&
+							t.registrationEnd! > now &&
+							t.registrationMode & RegistrationMode.Dashboard && (
+								<form action={`/tournaments/${t.id}/register`} method="POST">
+									<input
+										type="submit"
+										className="button"
+										value="Iscriviti"
+										style={{
+											backgroundColor: "#008545",
+											border: "none",
+											borderRadius: "0.5rem",
+											color: "white",
+											cursor: "pointer",
+											fontFamily: "ggsans",
+											fontSize: "1.125rem",
+											fontWeight: 600,
+											lineHeight: "1.75rem",
+											padding: "0.5rem 1rem",
+											textAlign: "center",
+											textDecoration: "none",
+											userSelect: "none",
+										}}
+									/>
+								</form>
+							)}
+					</div>
+					{admin && (
+						<div
+							style={{
+								display: "flex",
+								marginTop: "0.75rem",
+								justifyContent: "center",
+								gap: "1rem",
+							}}>
+							<HomeButton
+								label="Gestisci"
+								style={{ backgroundColor: "#5865f2", lineHeight: "1.75rem" }}
+								href={`/tournaments/${t.id}`}
+							/>
+							<HomeButton
+								label="Modifica"
+								style={{ backgroundColor: "#5865f2", lineHeight: "1.75rem" }}
+								href={`/tournaments/${t.id}/edit`}
+							/>
+						</div>
+					)}
 				</div>
 			</div>
 		);

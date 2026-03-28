@@ -24,6 +24,7 @@ export default ({
 			justifyContent: "center",
 			lineHeight: "1.75rem",
 			padding: "0.5rem 1rem",
+			textAlign: "center",
 			textDecoration: "none",
 			userSelect: "none",
 			...props.style,
