@@ -221,8 +221,7 @@ export class Tournament extends Command {
 							label: "Conferma",
 							emoji: {
 								animated: true,
-								// TODO: Change this before merging
-								id: "1486438403997175928",
+								id: "817094620700868678",
 								name: "verified",
 							},
 							style: ButtonStyle.Success,
@@ -550,8 +549,7 @@ export class Tournament extends Command {
 							label: "Conferma",
 							emoji: {
 								animated: true,
-								// TODO: Change this before merging
-								id: "1486438403997175928",
+								id: "817094620700868678",
 								name: "verified",
 							},
 							style: ButtonStyle.Success,

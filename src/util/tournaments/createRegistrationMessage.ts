@@ -55,12 +55,7 @@ export const createRegistrationMessage = async (
 				type: ComponentType.Button,
 				custom_id: `tournament-reg-${tournamentId}`,
 				style: ButtonStyle.Success,
-				emoji: {
-					animated: true,
-					// TODO: Change this before merging
-					id: "1486438403997175928",
-					name: "verified",
-				},
+				emoji: { animated: true, id: "817094620700868678", name: "verified" },
 				label: "Iscriviti",
 			},
 			{
