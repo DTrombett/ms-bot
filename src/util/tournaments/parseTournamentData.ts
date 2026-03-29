@@ -5,14 +5,17 @@ import { parseForm, ParseType } from "../forms";
 import { rest } from "../globals";
 import { ok } from "../node";
 import { create403 } from "../responses";
-import { isAdmin } from "../token";
+import { createSetCookie, isAdmin } from "../token";
 
 export const parseTournamentData = async (
 	request: Request,
 	pathname: string,
 ): Promise<Response | Omit<Database.Tournament, "id">> => {
-	if (!(await isAdmin(request.headers))) return create403(request);
-	const formData = await request.formData();
+	const formDataPromise = request.formData();
+	const { setCookie, token } = await createSetCookie(request);
+	if (!isAdmin(token))
+		return create403(request, { headers: { "set-cookie": setCookie } });
+	const formData = await formDataPromise;
 	const form = parseForm(formData, {
 		title: ParseType.Text,
 		logChannel: ParseType.Text,
@@ -186,6 +189,7 @@ export const parseTournamentData = async (
 			headers: {
 				"accept-ch": "Sec-CH-UA-Mobile",
 				location: `${pathname}?error=${encodeURIComponent((err as Error).name)}&error_description=${encodeURIComponent((err as Error).message)}`,
+				"set-cookie": setCookie,
 			},
 		});
 	}

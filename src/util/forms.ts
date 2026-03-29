@@ -1,3 +1,5 @@
+import { Temporal } from "temporal-polyfill";
+
 /* eslint-disable no-sparse-arrays */
 export enum ParseType {
 	Text,
@@ -11,7 +13,9 @@ export enum ParseType {
 const parsers: (((v: string) => any) | undefined)[] = [
 	(v) => v,
 	(v) => +v,
-	(v) => Date.parse(v) / 1000,
+	(v) =>
+		Temporal.PlainDateTime.from(v).toZonedDateTime("Europe/Rome")
+			.epochMilliseconds / 1000,
 	,
 	,
 	(v) => v === "on",

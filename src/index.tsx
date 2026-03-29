@@ -15,6 +15,7 @@ import NewTournament from "./app/tournaments/new.page";
 import { Brawl } from "./commands/brawl";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
+import { RegistrationMode, TournamentFlags } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
 import { rest, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
@@ -32,6 +33,7 @@ import {
 	tokenFromResponse,
 	updateToken,
 } from "./util/token";
+import { createRegistrationMessage } from "./util/tournaments/createRegistrationMessage";
 import { parseTournamentData } from "./util/tournaments/parseTournamentData";
 
 const handler = new CommandHandler(Object.values(commands));
@@ -171,8 +173,25 @@ const server: ExportedHandler<Env> = {
 							styles={cssMap[url.pathname]}
 							url={url}
 							admin={await isAdmin(token)}
-							tournaments={env.DB.prepare(`SELECT * FROM Tournaments`)
-								.run<Database.Tournament>()
+							tournaments={(token?.i ?
+								env.DB.prepare(
+									`
+										SELECT t.*, p.userId IS NOT NULL AS isRegistered,
+											EXISTS (
+												SELECT 1 FROM SupercellPlayers sp WHERE sp.userId = ?1
+											) AS hasPlayer
+										FROM Tournaments t
+										LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
+									`,
+								).bind(token.i)
+							:	env.DB.prepare(`SELECT * FROM Tournaments`)
+							)
+								.run<
+									Database.Tournament & {
+										isRegistered?: boolean;
+										hasPlayer?: boolean;
+									}
+								>()
 								.then((r) => r.results)}
 							mobile={isMobile(request.headers)}
 						/>,
@@ -392,6 +411,264 @@ const server: ExportedHandler<Env> = {
 					},
 				},
 			);
+		}
+		if (
+			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/register\/?$/,
+			))
+		) {
+			if (request.method !== "POST") return create405("POST");
+			const { setCookie, token } = await createSetCookie(request);
+			if (!token)
+				return new Response(null, {
+					status: 303,
+					headers: {
+						location: `/auth/discord/login?to=${encodeURIComponent(request.headers.get("Referer") ?? "/tournaments")}`,
+						"set-cookie": setCookie,
+					},
+				});
+			try {
+				const tournament = await env.DB.prepare(
+					`
+						SELECT t.name, t.flags, t.team,
+						(
+							SELECT sp.tag
+							FROM SupercellPlayers sp
+							WHERE sp.userId = ?1 AND sp.type = t.game
+							ORDER BY sp.active DESC
+							LIMIT 1
+						) AS tag
+						FROM Tournaments t
+						WHERE
+							t.id = ?2
+							AND (t.registrationMode & ?3) != 0
+							AND t.registrationStart < unixepoch('now')
+							AND t.registrationEnd > unixepoch('now')
+					`,
+				)
+					.bind(token.i, matchResult[1], RegistrationMode.Dashboard)
+					.first<
+						Pick<Database.Tournament, "name" | "flags" | "team"> &
+							Pick<Database.SupercellPlayer, "tag">
+					>();
+
+				if (!tournament)
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `/tournaments?error=closed&error_description=${encodeURIComponent("Le iscrizioni per questo torneo non sono più disponibili")}`,
+						},
+					});
+				if (tournament.team > 1)
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `/tournaments?error=team&error_description=${encodeURIComponent("Per iscriversi a questo torneo è necessario un team")}`,
+						},
+					});
+				if (!tournament.tag && tournament.flags & TournamentFlags.TagRequired)
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `/tournaments?error=tag&error_description=${encodeURIComponent("Per iscriversi a questo torneo è necessario avere un tag salvato")}`,
+						},
+					});
+				const [, result] = await env.DB.batch<
+					Pick<
+						Database.Tournament,
+						| "minPlayers"
+						| "registrationMessage"
+						| "registrationTemplateLink"
+						| "registrationRole"
+						| "registrationChannel"
+					> & { participantCount: number }
+				>([
+					env.DB.prepare(
+						`
+							INSERT INTO Participants (tournamentId, userId, tag)
+							VALUES (?1, ?2, ?3)
+						`,
+					).bind(matchResult[1], token.i, tournament.tag),
+					env.DB.prepare(
+						`
+							SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole,
+							(
+								SELECT COUNT(*)
+								FROM Participants
+								WHERE tournamentId = Tournaments.id
+							) AS participantCount
+							FROM Tournaments WHERE id = ?
+						`,
+					).bind(matchResult[1]),
+				]);
+				const data = result?.results[0];
+				if (!data)
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `/tournaments?error=tData&error_description=${encodeURIComponent("Non è stato possibile completare l'iscrizione! Riprova o contatta un moderatore")}`,
+						},
+					});
+				await Promise.all([
+					rest.put(
+						Routes.guildMemberRole(
+							env.MAIN_GUILD,
+							token.i,
+							data.registrationRole!,
+						),
+						{ reason: `Iscrizione al torneo ${tournament.name}` },
+					),
+					rest.patch(
+						Routes.channelMessage(
+							data.registrationChannel!,
+							data.registrationMessage!,
+						),
+						{
+							body: await createRegistrationMessage(
+								Number(matchResult[1]),
+								data.registrationTemplateLink!,
+								data.participantCount,
+								tournament.name,
+								data.minPlayers,
+							),
+						},
+					),
+				]);
+				return new Response(null, {
+					status: 303,
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						location: "/tournaments",
+					},
+				});
+			} catch (err) {
+				console.error(err);
+				return new Response(null, {
+					status: 303,
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						location: `${url.pathname}?error=${encodeURIComponent((err as Error).name)}`,
+					},
+				});
+			}
+		}
+		if (
+			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/unregister\/?$/,
+			))
+		) {
+			if (request.method !== "POST") return create405("POST");
+			const { setCookie, token } = await createSetCookie(request);
+			if (!token)
+				return new Response(null, {
+					status: 303,
+					headers: {
+						location: `/auth/discord/login?to=${encodeURIComponent(request.headers.get("Referer") ?? "/tournaments")}`,
+						"set-cookie": setCookie,
+					},
+				});
+			try {
+				const tournament = await env.DB.prepare(
+					`
+						SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, p.userId IS NOT NULL AS participationExists,
+							(
+								SELECT COUNT(*)
+								FROM Participants
+								WHERE tournamentId = t.id
+							) AS participantCount
+						FROM Tournaments t
+						LEFT JOIN Participants p
+							ON p.tournamentId = t.id AND p.userId = ?1
+						WHERE
+							t.id = ?2
+							AND (t.registrationMode & ?3) != 0
+							AND t.registrationStart < unixepoch('now')
+							AND t.registrationEnd > unixepoch('now')
+					`,
+				)
+					.bind(token.i, matchResult[1], RegistrationMode.Dashboard)
+					.first<
+						Pick<
+							Database.Tournament,
+							| "registrationRole"
+							| "name"
+							| "registrationChannel"
+							| "registrationMessage"
+							| "minPlayers"
+							| "registrationTemplateLink"
+						> & { participantCount: number; participationExists: boolean }
+					>();
+
+				if (!tournament)
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `/tournaments?error=closed&error_description=${encodeURIComponent("Le iscrizioni per questo torneo non sono più disponibili")}`,
+						},
+					});
+				if (!tournament.participationExists)
+					return new Response(null, {
+						status: 303,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							location: `/tournaments?error=notRegistered&error_description=${encodeURIComponent("Non risulti iscritto a questo torneo!")}`,
+						},
+					});
+				await Promise.all([
+					rest.delete(
+						Routes.guildMemberRole(
+							env.MAIN_GUILD,
+							token.i,
+							tournament.registrationRole!,
+						),
+						{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
+					),
+					rest.patch(
+						Routes.channelMessage(
+							tournament.registrationChannel!,
+							tournament.registrationMessage!,
+						),
+						{
+							body: await createRegistrationMessage(
+								Number(tournament),
+								tournament.registrationTemplateLink!,
+								tournament.participantCount - 1,
+								tournament.name,
+								tournament.minPlayers,
+							),
+						},
+					),
+					env.DB.prepare(
+						`
+							DELETE FROM Participants
+							WHERE tournamentId = ?1 AND userId = ?2
+						`,
+					)
+						.bind(matchResult[1], token.i)
+						.run(),
+				]);
+				return new Response(null, {
+					status: 303,
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						location: "/tournaments",
+					},
+				});
+			} catch (err) {
+				console.error(err);
+				return new Response(null, {
+					status: 303,
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						location: `${url.pathname}?error=${encodeURIComponent((err as Error).name)}`,
+					},
+				});
+			}
 		}
 		if (url.pathname === "/auth/discord/login") {
 			if (request.method !== "GET" && request.method !== "HEAD")

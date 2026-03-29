@@ -2,6 +2,7 @@ import React, { type CSSProperties } from "react";
 import { bitSetMap } from "../../util/bitSets";
 import { RegistrationMode } from "../../util/Constants";
 import { TimeUnit } from "../../util/time";
+import { DiscordLogo } from "./DiscordLogo";
 import HomeButton from "./HomeButton";
 
 enum TournamentStatus {
@@ -44,7 +45,9 @@ export default async ({
 	mobile,
 	admin,
 }: {
-	tournaments: Promise<Database.Tournament[]>;
+	tournaments: Promise<
+		(Database.Tournament & { isRegistered?: boolean; hasPlayer?: boolean })[]
+	>;
 	mobile: boolean;
 	admin: boolean;
 }) => {
@@ -204,14 +207,37 @@ export default async ({
 						{t.registrationStart &&
 							t.registrationStart < now &&
 							t.registrationEnd! > now &&
-							t.registrationMode & RegistrationMode.Dashboard && (
-								<form action={`/tournaments/${t.id}/register`} method="POST">
+							t.registrationMode & RegistrationMode.Dashboard &&
+							t.hasPlayer !== false &&
+							(t.isRegistered == null ?
+								<HomeButton
+									href="/auth/discord/login"
+									label="Login"
+									icon={
+										<DiscordLogo
+											style={{
+												boxSizing: "content-box",
+												display: "inline",
+												height: "2rem",
+												overflow: "visible",
+												verticalAlign: "-0.125em",
+												width: "2rem",
+											}}
+										/>
+									}
+									style={{ backgroundColor: "#5865f2" }}
+								/>
+							:	<form
+									action={`/tournaments/${t.id}/${
+										t.isRegistered ? "unregister" : "register"
+									}`}
+									method="POST">
 									<input
 										type="submit"
 										className="button"
-										value="Iscriviti"
+										value={t.isRegistered ? "Annulla iscrizione" : "Iscriviti"}
 										style={{
-											backgroundColor: "#008545",
+											backgroundColor: t.isRegistered ? "#D22D39" : "#008545",
 											border: "none",
 											borderRadius: "0.5rem",
 											color: "white",
@@ -226,8 +252,7 @@ export default async ({
 											userSelect: "none",
 										}}
 									/>
-								</form>
-							)}
+								</form>)}
 					</div>
 					{admin && (
 						<div

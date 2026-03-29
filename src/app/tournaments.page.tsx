@@ -2,7 +2,7 @@ import HomeButton from "./components/HomeButton";
 import { Page } from "./components/layout";
 import Tournaments from "./components/Tournaments";
 import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
-import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf" with { type: "asset" };
+import nougat from "./fonts/Nougat-Regular.ttf" with { type: "asset" };
 
 export default ({
 	mobile,
@@ -15,25 +15,26 @@ export default ({
 	styles?: string[];
 	url: URL;
 	admin: boolean;
-	tournaments: Promise<Database.Tournament[]>;
+	tournaments: Promise<
+		(Database.Tournament & { isRegistered?: boolean; hasPlayer?: boolean })[]
+	>;
 }) => (
 	<Page
 		mobile={mobile}
 		head={{
-			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
+			fonts: [ggsans, { path: nougat, type: "font/ttf" }],
 			styles,
 			prefetch: [{ href: "/tournaments/new", as: "document" }],
-			title: "Tornei",
+			title: "MS Bot — Tornei",
 		}}
 		url={url}>
 		<span
 			style={{
-				fontFamily: "LuckiestGuy",
-				fontSize: "4rem",
+				fontFamily: "Nougat",
+				fontSize: "3rem",
 				lineHeight: 1,
 				paddingTop: mobile ? "2rem" : "1rem",
 				textAlign: "center",
-				textShadow: "#0049ff 0.25rem 0.25rem",
 				userSelect: "none",
 				marginBottom: "1.5rem",
 			}}>

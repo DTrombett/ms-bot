@@ -26,11 +26,10 @@ crons = ["0 0 * * *", "*/5 * * * *"]
 directory = "./build"
 binding = "ASSETS"
 not_found_handling = "404-page"
-run_worker_first = ["/", "/color", "/interactions", "/auth/*", "/tournaments", "/tournaments/new", "/tournaments/*/edit"]
+run_worker_first = ["/", "/color", "/interactions", "/auth/*", "/tournaments", "/tournaments/*"]
 
 [[routes]]
-# TODO: Change this to ms-bot before merging
-pattern = "test-bot.trombett.org"
+pattern = "ms-bot.trombett.org"
 custom_domain = true
 zone_name = "trombett.org"
 
