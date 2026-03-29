@@ -13,7 +13,7 @@ export const parseTournamentData = async (
 ): Promise<Response | Omit<Database.Tournament, "id">> => {
 	const formDataPromise = request.formData();
 	const { setCookie, token } = await createSetCookie(request);
-	if (!isAdmin(token))
+	if (!(await isAdmin(token)))
 		return create403(request, { headers: { "set-cookie": setCookie } });
 	const formData = await formDataPromise;
 	const form = parseForm(formData, {

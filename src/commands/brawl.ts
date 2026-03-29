@@ -1408,7 +1408,7 @@ export class Brawl extends Command {
 		if (link)
 			components[0]!.components.unshift({
 				type: ComponentType.Button,
-				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}--${player.name}`,
+				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}`,
 				label: "Salva",
 				emoji: { name: "🔗" },
 				style: ButtonStyle.Success,
@@ -1835,7 +1835,7 @@ export class Brawl extends Command {
 	static linkComponent = async (
 		{ edit, deferUpdate, followup }: ComponentReplies,
 		{
-			args: [tag, commandId, userId, name],
+			args: [tag, commandId, userId],
 			user: { id },
 			interaction: {
 				message: { components },
@@ -1849,16 +1849,11 @@ export class Brawl extends Command {
 			VALUES (
 				?1,
 				?2,
-				CASE
-					WHEN EXISTS (
-						SELECT 1
-						FROM SupercellPlayers
-						WHERE userId = ?2
-						  AND type = ?3
-						  AND active = 1
-					) THEN 0
-					ELSE 1
-				END,
+				NOT EXISTS (
+					SELECT 1
+					FROM SupercellPlayers
+					WHERE userId = ?2 AND type = ?3 AND active = 1
+				),
 				?3,
 				?4
 			)
@@ -1866,7 +1861,12 @@ export class Brawl extends Command {
 			SET active = active
 			RETURNING userId;`,
 		)
-			.bind(tag, userId, SupercellPlayerType.BrawlStars, name)
+			.bind(
+				tag,
+				userId,
+				SupercellPlayerType.BrawlStars,
+				(await Brawl.getPlayer(tag!, { edit })).name,
+			)
 			.first<Database.SupercellPlayer["userId"]>("userId");
 
 		if (result && result !== userId)

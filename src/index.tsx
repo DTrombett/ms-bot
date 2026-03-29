@@ -17,7 +17,7 @@ import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import { RegistrationMode, TournamentFlags } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
-import { rest, textEncoder } from "./util/globals";
+import { rest, textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
@@ -635,7 +635,7 @@ const server: ExportedHandler<Env> = {
 						),
 						{
 							body: await createRegistrationMessage(
-								Number(tournament),
+								Number(matchResult[1]),
 								tournament.registrationTemplateLink!,
 								tournament.participantCount - 1,
 								tournament.name,
@@ -749,7 +749,12 @@ const server: ExportedHandler<Env> = {
 				],
 			];
 			const parsed = await Promise.try(
-				() => new URLSearchParams(atob(state!)),
+				() =>
+					new URLSearchParams(
+						textDecoder.decode(
+							Uint8Array.fromBase64(state!, { alphabet: "base64url" }),
+						),
+					),
 			).catch(normalizeError);
 			if (loginState !== state || !state || parsed instanceof Error) {
 				headers.push([
