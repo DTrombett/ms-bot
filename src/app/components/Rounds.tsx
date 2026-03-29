@@ -42,6 +42,7 @@ export default useClient(
 				<button
 					className="button"
 					form=""
+					type="button"
 					onClick={setRounds.bind(null, (rounds) => rounds + 1)}
 					style={{
 						backgroundColor: "#5865f2",

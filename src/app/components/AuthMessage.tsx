@@ -28,7 +28,7 @@ export default ({ url }: { url?: URL }): ReactNode => {
 				}}>
 				{errors[errorCode] ??
 					url?.searchParams.get("error_description") ??
-					"Impossibile effettuare l'accesso"}
+					"Si è verificato un errore imprevisto"}
 			</div>
 		: url?.searchParams.has("login_success") ?
 			<div

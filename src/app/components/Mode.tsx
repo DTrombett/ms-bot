@@ -23,7 +23,14 @@ export const Mode = ({
 			name={"mode"}
 			label="Modalità"
 			placeholder="La modalità del torneo (es. Duels)"
-			pattern={modes && Array.from(iterable).join("|")}
+			pattern={
+				modes &&
+				Array.from(iterable)
+					.map((v) =>
+						typeof RegExp.escape === "function" ? RegExp.escape(v) : v,
+					)
+					.join("|")
+			}
 			suggestions={modes && Array.from(iterable, (value) => ({ value }))}
 			errorMessage={modes && "Modalità non valida"}
 			required={required}
