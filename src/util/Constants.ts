@@ -32,3 +32,16 @@ export enum ClashNotifications {
 	"Evoluzione sbloccata" = 1 << 3,
 	"Nuova lega raggiunta" = 1 << 4,
 }
+
+export enum RegistrationMode {
+	Discord = 1 << 0,
+	Dashboard = 1 << 1,
+}
+export enum TournamentFlags {
+	TagRequired = 1 << 0,
+	PublicBrackets = 1 << 1,
+	AutoDetectResults = 1 << 2,
+	AutoDeleteChannels = 1 << 3,
+	BracketsCreated = 1 << 4,
+	Finished = 1 << 5,
+}

@@ -227,12 +227,9 @@ export class Dev extends Command {
 		defer({ flags: MessageFlags.Ephemeral });
 		return env.SHORTEN.create({
 			params: {
-				source: (options.source ??= btoa(
-					String.fromCharCode(...crypto.getRandomValues(new Uint8Array(8))),
-				)
-					.replace(/\+/g, "-")
-					.replace(/\//g, "_")
-					.replace(/=+$/, "")),
+				source: (options.source ??= crypto
+					.getRandomValues(new Uint8Array(8))
+					.toBase64({ alphabet: "base64url", omitPadding: true })),
 				url: options.url,
 				status: options.status,
 				preserveQuery: options["preserve-query"],

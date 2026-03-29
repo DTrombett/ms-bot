@@ -5,7 +5,7 @@ import tseslint from "typescript-eslint";
 export default defineConfig([
 	tseslint.configs.recommendedTypeChecked,
 	{
-		files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
+		files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
 		plugins: { js },
 		extends: ["js/recommended"],
 		languageOptions: { parserOptions: { projectService: true } },

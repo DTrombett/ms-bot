@@ -1441,7 +1441,7 @@ export class Brawl extends Command {
 		errors = { ...this.ERROR_MESSAGES, ...errors };
 		const request = new Request(
 			new URL(path, "https://ms-api.trombett.org/proxy/api.brawlstars.com/v1/"),
-			{ headers: { "x-env": env.NODE_ENV } },
+			{ headers: { "x-env": env.NODE_ENV, "accept-language": "it" } },
 		);
 		let res = cache && (await caches.default.match(request));
 
@@ -1483,6 +1483,27 @@ export class Brawl extends Command {
 						err instanceof Error ?
 							err.message
 						:	"Non è stato possibile recuperare il profilo. Riprova più tardi.",
+				});
+			throw err;
+		}
+	};
+	static getModes = async ({
+		edit,
+		cache,
+	}: { edit?: BaseReplies["edit"]; cache?: boolean } = {}) => {
+		try {
+			return (
+				await Brawl.callApi<Brawl.Paginated<Brawl.EventType>>("gamemodes", {
+					cache,
+				})
+			).items;
+		} catch (err) {
+			if (edit)
+				throw await edit({
+					content:
+						err instanceof Error ?
+							err.message
+						:	"Non è stato possibile recuperare le modalità. Riprova più tardi.",
 				});
 			throw err;
 		}
@@ -1630,7 +1651,7 @@ export class Brawl extends Command {
 						components: [
 							{
 								type: ComponentType.Button,
-								custom_id: `brawl-link-${id}-${options.tag}-${commandId}-${options.user ?? id}`,
+								custom_id: `brawl-link-${id}-${options.tag}-${commandId}-${options.user ?? id}-${player.name}`,
 								label: "Salva",
 								emoji: { name: "🔗" },
 								style: ButtonStyle.Success,
@@ -1824,27 +1845,28 @@ export class Brawl extends Command {
 		deferUpdate();
 		userId ||= id;
 		const result = await env.DB.prepare(
-			`INSERT INTO SupercellPlayers (tag, userId, active, type)
+			`INSERT INTO SupercellPlayers (tag, userId, active, type, name)
 			VALUES (
 				?1,
 				?2,
-				CASE
-					WHEN EXISTS (
-						SELECT 1
-						FROM SupercellPlayers
-						WHERE userId = ?2
-						  AND type = ?3
-						  AND active = 1
-					) THEN 0
-					ELSE 1
-				END,
-				?3
+				NOT EXISTS (
+					SELECT 1
+					FROM SupercellPlayers
+					WHERE userId = ?2 AND type = ?3 AND active = 1
+				),
+				?3,
+				?4
 			)
 			ON CONFLICT(tag, type) DO UPDATE
 			SET active = active
 			RETURNING userId;`,
 		)
-			.bind(tag, userId, SupercellPlayerType.BrawlStars)
+			.bind(
+				tag,
+				userId,
+				SupercellPlayerType.BrawlStars,
+				(await Brawl.getPlayer(tag!, { edit })).name,
+			)
 			.first<Database.SupercellPlayer["userId"]>("userId");
 
 		if (result && result !== userId)
@@ -1879,16 +1901,17 @@ export class Brawl extends Command {
 		}: ComponentArgs,
 	) => {
 		userId ||= id;
-		await env.DB.prepare(
+		const name = await env.DB.prepare(
 			`DELETE FROM SupercellPlayers
-				WHERE tag = ? AND type = ? AND userId = ?`,
+				WHERE tag = ? AND type = ? AND userId = ?
+				RETURNING name`,
 		)
 			.bind(tag, SupercellPlayerType.BrawlStars, userId)
-			.run();
+			.first<string>("name");
 		if (components?.[0]?.type === ComponentType.ActionRow)
 			components[0].components[0] = {
 				type: ComponentType.Button,
-				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}`,
+				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}-${name ?? ""}`,
 				label: "Salva",
 				emoji: { name: "🔗" },
 				style: ButtonStyle.Success,

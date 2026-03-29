@@ -14,8 +14,8 @@ import {
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import { decodeHTML } from "entities";
+import { handleTweet } from "../app/handleTweet";
 import Command from "../Command";
-import { handleTweet } from "../dom/handleTweet";
 import { fetchCache } from "../util/fetchCache";
 import { escapeBaseMarkdown } from "../util/formatters";
 import { cloudflare, rest } from "../util/globals";

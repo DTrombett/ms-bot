@@ -12,3 +12,5 @@ export const cloudflare = new Cloudflare({
 	apiToken: env.CLOUDFLARE_API_KEY,
 	maxRetries: 4,
 });
+export const textEncoder = new TextEncoder();
+export const textDecoder = new TextDecoder();
