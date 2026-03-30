@@ -1,3 +1,5 @@
+import { Temporal } from "temporal-polyfill";
+
 export enum TimeUnit {
 	Millisecond = 1,
 	Second = Millisecond * 1000,
@@ -107,14 +109,17 @@ export const parseTime = (str: string): number => {
 	);
 
 	if (match?.groups)
-		return (
-			parseNumber(match.groups.months) * TimeUnit.Month +
-			parseNumber(match.groups.weeks) * TimeUnit.Week +
-			parseNumber(match.groups.days) * TimeUnit.Day +
-			parseNumber(match.groups.hours) * TimeUnit.Hour +
-			parseNumber(match.groups.minutes) * TimeUnit.Minute +
-			parseNumber(match.groups.seconds) * TimeUnit.Second
-		);
+		return Temporal.Duration.from({
+			months: parseNumber(match.groups.months),
+			weeks: parseNumber(match.groups.weeks),
+			days: parseNumber(match.groups.days),
+			hours: parseNumber(match.groups.hours),
+			minutes: parseNumber(match.groups.minutes),
+			seconds: parseNumber(match.groups.seconds),
+		}).total({
+			unit: "milliseconds",
+			relativeTo: Temporal.Now.zonedDateTimeISO("Europe/Rome"),
+		});
 	match = str.match(
 		/^(?:(?<day>\d{1,2})\/(?<month>\d{1,2})(?:\/(?<year>\d{2}|\d{4}))?)?\s*,?\s*(?:(?<hours>\d{1,2}):(?<minutes>\d{1,2})(?::(?<seconds>\d{1,2}))?)?$/,
 	);
@@ -151,5 +156,5 @@ export const parseTime = (str: string): number => {
 		if (date.getTime() < now) date.setUTCDate(date.getUTCDate() + 1);
 		return date.getTime() - now;
 	}
-	return 0;
+	return NaN;
 };

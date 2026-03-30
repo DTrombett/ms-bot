@@ -73,6 +73,11 @@ export class Remind extends Command {
 		}: ChatInputArgs<typeof Remind.chatInputData, "me">,
 	) => {
 		const duration = parseTime(options.in);
+		if (Number.isNaN(duration))
+			return reply({
+				content: "La durata inserita non è valida!",
+				flags: MessageFlags.Ephemeral,
+			});
 		if (duration > TimeUnit.Year)
 			return reply({
 				content: "Non puoi impostare una durata maggiore di 1 anno!",
