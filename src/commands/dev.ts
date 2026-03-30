@@ -12,6 +12,7 @@ import {
 } from "discord-api-types/v10";
 import type { SessionState, Settings } from "node:http2";
 import Command from "../Command";
+import { SupercellPlayerType } from "../util/Constants";
 import { rest } from "../util/globals";
 import normalizeError from "../util/normalizeError";
 import { toSearchParams } from "../util/objects";
@@ -26,6 +27,18 @@ export class Dev extends Command {
 		description: "Developer commands",
 		type: ApplicationCommandType.ChatInput,
 		options: [
+			{
+				name: "update-players",
+				description: "Update players name",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						type: ApplicationCommandOptionType.Number,
+						name: "page",
+						description: "La pagina (default 0)",
+					},
+				],
+			},
 			{
 				name: "register-commands",
 				description: "Register commands",
@@ -175,6 +188,45 @@ export class Dev extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	static "update-players" = async (
+		{ defer, edit }: ChatInputReplies,
+		{ options }: ChatInputArgs<typeof Dev.chatInputData, "update-players">,
+	) => {
+		defer({ flags: MessageFlags.Ephemeral });
+		const errors: string[] = [];
+		const { results } = await env.DB.prepare(
+			`SELECT tag, type FROM SupercellPlayers`,
+		).run<Pick<Database.SupercellPlayer, "tag" | "type">>();
+		const statements: D1PreparedStatement[] = [];
+
+		try {
+			const page = options.page ?? 0;
+
+			for (const { tag, type } of results.slice(page * 32, (page + 1) * 32)) {
+				const { name } = await (
+					type === SupercellPlayerType.BrawlStars ?
+						commandsObj.Brawl
+					:	commandsObj.Clash)
+					.getPlayer(tag, { cache: false })
+					.catch((err) => {
+						errors.push(`${tag}: ${normalizeError(err).message}`);
+						return { name: "<sconosciuto>" };
+					});
+
+				statements.push(
+					env.DB.prepare(
+						`UPDATE SupercellPlayers SET name = ?1 WHERE tag = ?2`,
+					).bind(name, tag),
+				);
+			}
+			await env.DB.batch(statements);
+		} catch (err) {
+			return edit({ content: normalizeError(err).stack });
+		}
+		return edit({
+			content: `Success ${statements.length}/${results.length}!\n${errors.join("\n")}`,
+		});
+	};
 	static "register-commands" = async (
 		{ defer, edit }: ChatInputReplies,
 		{ options }: ChatInputArgs<typeof Dev.chatInputData, "register-commands">,
