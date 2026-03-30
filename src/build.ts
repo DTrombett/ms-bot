@@ -214,6 +214,7 @@ const outbase = join(tmp, "build");
 const buildResult = await build({
 	bundle: true,
 	charset: "utf8",
+	chunkNames: "[name].[hash]",
 	entryPoints,
 	format: "esm",
 	jsx: "automatic",
