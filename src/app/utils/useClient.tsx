@@ -23,6 +23,7 @@ export default <P,>(
 					</div>
 					<script
 						type="application/json"
+						// TODO: move id to data-component-id
 						data-component={filename}
 						dangerouslySetInnerHTML={{
 							__html: JSON.stringify({ id, props: newProps }).replace(

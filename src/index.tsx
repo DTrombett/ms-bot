@@ -77,6 +77,13 @@ const server: ExportedHandler<Env> = {
 						"content-type": "text/html",
 						"set-cookie": setCookie,
 						vary: "Cookie",
+						...((
+							request.headers
+								.get("Cookie")
+								?.includes("__Secure-authjs.session-token")
+						) ?
+							{ "clear-site-data": '"cookies", "storage"' }
+						:	null),
 					},
 				},
 			);
