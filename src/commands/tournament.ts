@@ -651,7 +651,7 @@ export class Tournament extends Command {
 		team?: string;
 	}): APIModalInteractionResponseCallbackData => ({
 		title: "Iscrizione al torneo",
-		custom_id: `tournament-tag-${options.id}-${options.team}`,
+		custom_id: `tournament-tag-${options.id}-${options.team ?? ""}`,
 		components: [
 			{
 				type: ComponentType.Label,

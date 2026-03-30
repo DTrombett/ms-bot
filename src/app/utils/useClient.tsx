@@ -22,8 +22,13 @@ export default <P,>(
 						<Component {...(newProps as any)} />
 					</div>
 					<script
+						type="application/json"
+						data-component={filename}
 						dangerouslySetInnerHTML={{
-							__html: `(window.CP??=[]).push({id:"${id}",name:"${filename}",props:${JSON.stringify(newProps)}})`,
+							__html: JSON.stringify({ id, props: newProps }).replace(
+								/</g,
+								"\\u003c",
+							),
 						}}
 					/>
 				</>

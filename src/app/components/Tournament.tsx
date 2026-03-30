@@ -139,7 +139,7 @@ export default ({
 					errorMessage="Link non valido"
 					maxWidth="42rem"
 					defaultValue={
-						tournament?.registrationMessage ?
+						tournament?.registrationTemplateLink ?
 							`https://discord.com/channels/@me/${tournament.registrationTemplateLink}`
 						:	undefined
 					}

@@ -17,12 +17,14 @@ const statusText = [
 	"Soon™",
 	"Iscrizioni chiuse",
 	"In corso",
+	"",
 ];
 const statusColor: CSSProperties["color"][] = [
 	"#008545",
 	"#5865f2",
 	"#D22D39",
 	"#5865f2",
+	"",
 ];
 const gameName = ["Brawl Stars", "Clash Royale"];
 
