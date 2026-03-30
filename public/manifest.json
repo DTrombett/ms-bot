@@ -1,0 +1,28 @@
+{
+	"short_name": "MS Bot",
+	"name": "MS Bot Dashboard",
+	"icons": [
+		{
+			"src": "/icons/2750x2750.png",
+			"type": "image/png",
+			"sizes": "2750x2750",
+			"purpose": "maskable"
+		},
+		{ "src": "/icons/512x512.png", "type": "image/png", "sizes": "512x512" },
+		{ "src": "/icons/192x192.png", "type": "image/png", "sizes": "192x192" }
+	],
+	"start_url": "/",
+	"background_color": "#18181B",
+	"display": "fullscreen",
+	"display_override": ["window-controls-overlay"],
+	"theme_color": "#0049FF",
+	"description": "Dashboard per interagire con il bot della community MS! Entra nel server Discord tramite l'invito: https://discord.gg/5aE8gdrF8k",
+	"shortcuts": [
+		{
+			"name": "Gestisci i pronostici",
+			"short_name": "Pronostici",
+			"description": "Aggiungi o modifica i pronostici per la prossima giornata",
+			"url": "/predictions"
+		}
+	]
+}

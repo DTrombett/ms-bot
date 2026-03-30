@@ -1,0 +1,56 @@
+import { Page } from "./components/layout";
+import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf" with { type: "asset" };
+
+export default ({ styles, mobile }: { styles: string[]; mobile?: boolean }) => (
+	<Page
+		mobile={mobile}
+		head={{
+			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
+			styles,
+			prefetch: [{ href: "/", as: "document" }],
+			title: "Pronostici",
+			description:
+				"Invia e modifica i tuoi pronostici calcistici per divertirti con i risultati sportivi",
+		}}>
+		<div
+			style={{
+				alignItems: "center",
+				display: "flex",
+				flexDirection: "column",
+				flex: 1,
+				height: "100%",
+				justifyContent: "center",
+			}}>
+			<span
+				style={{
+					textShadow: "#0049ff 0.25rem 0.25rem",
+					fontFamily: "LuckiestGuy",
+					fontSize: "3rem",
+					lineHeight: 1,
+					margin: "0.5rem 0",
+					textAlign: "center",
+				}}>
+				Work in progress
+			</span>
+			<a
+				href="/"
+				style={{
+					fontWeight: 600,
+					fontSize: "1.125rem",
+					fontFamily: "ggsans",
+					lineHeight: "1.75rem",
+					margin: "0.75rem 0",
+					cursor: "pointer",
+					color: "#e0e3ff",
+					textDecoration: "none",
+					borderBottom: "1px solid currentColor",
+				}}>
+				<span>←</span>
+				<span style={{ marginLeft: "1rem" }}>Torna alla home</span>
+			</a>
+		</div>
+	</Page>
+);
+
+export const cache = true;

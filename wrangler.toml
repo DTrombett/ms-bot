@@ -1,11 +1,15 @@
 name = "ms-bot"
-main = "./src/index.ts"
-compatibility_date = "2026-03-01"
-compatibility_flags = ["nodejs_compat"]
+main = "./dist/index.js"
+compatibility_date = "2026-03-27"
+compatibility_flags = ["nodejs_compat", "no_handle_cross_request_promise_resolution"]
 workers_dev = false
 preview_urls = true
 upload_source_maps = true
 send_metrics = false
+
+[build]
+command = "node --enable-source-maps src/build.ts"
+watch_dir = "src"
 
 [observability]
 enabled = true
@@ -19,11 +23,13 @@ SEASON_ID = "serie-a%3A%3AFootball_Season%3A%3A5f0e080fc3a44073984b75b3a8e06a8a"
 crons = ["0 0 * * *", "*/5 * * * *"]
 
 [assets]
-directory = "./public"
+directory = "./build"
 binding = "ASSETS"
+not_found_handling = "404-page"
+run_worker_first = ["/", "/color", "/interactions", "/auth/*", "/tournaments", "/tournaments/*"]
 
 [[routes]]
-pattern = "ms-bot-interactions.trombett.org"
+pattern = "ms-bot.trombett.org"
 custom_domain = true
 zone_name = "trombett.org"
 
@@ -61,3 +67,8 @@ class_name = "Shorten"
 name = "websocket"
 binding = "WEBSOCKET"
 class_name = "WebSocket"
+
+[[workflows]]
+name = "tournament"
+binding = "TOURNAMENT"
+class_name = "Tournament"

@@ -331,6 +331,27 @@ declare global {
 		maxPoints: number,
 	][];
 
+	type JWT = {
+		/** Access Token */
+		a: string;
+		/** Expires time (ISO seconds) */
+		e: number;
+		/** Refresh Token */
+		r?: string;
+		/** Scopes (whitespace separated) */
+		s?: string;
+		/** User ID */
+		i: string;
+		/** Username */
+		u: string;
+		/** Avatar hash */
+		h?: string;
+		/** Global name */
+		d?: string;
+		/** Last updated (ISO seconds) */
+		l: number;
+	};
+
 	namespace Database {
 		type Prediction = { matchId: string; userId: string; prediction: string };
 		type User = {
@@ -346,6 +367,7 @@ declare global {
 			type: SupercellPlayerType;
 			userId: string;
 			notifications: number;
+			name: string;
 			data?: string | null;
 			active: boolean;
 		};
@@ -355,6 +377,40 @@ declare global {
 			userId: string;
 			remind: string;
 		};
+		type Tournament = {
+			name: string;
+			flags: number;
+			game: number;
+			logChannel: string;
+			registrationMode: number;
+			rounds: string;
+			team: number;
+			bracketsTime?: number | null;
+			categoryId?: string | null;
+			channelName?: string | null;
+			channelsTime?: number | null;
+			endedCategoryId?: string | null;
+			endedChannelName?: string | null;
+			matchMessageLink?: string | null;
+			minPlayers?: number | null;
+			registrationChannel?: string | null;
+			registrationChannelName?: string | null;
+			registrationEnd?: number | null;
+			registrationTemplateLink?: string | null;
+			registrationMessage?: string | null;
+			registrationRole?: string | null;
+			registrationStart?: number | null;
+			roundType?: number | null;
+			workflowId?: string | null;
+			id: number;
+		};
+		type Participant = {
+			tournamentId: number;
+			userId: string;
+			tag?: string | null;
+			team?: number | null;
+		};
+		type Round = { mode: string; bof: number };
 	}
 
 	type ResolvedUser = Pick<
@@ -1118,6 +1174,12 @@ declare global {
 				| "unknown"
 				| "senior";
 			nameColor: string;
+		};
+		type EventTypeList = EventType[];
+		type EventType = { name: JsonLocalizedName; id: number };
+		type Paginated<T> = {
+			items: T[];
+			paging: { cursors: { after?: string; before?: string } };
 		};
 	}
 	namespace Clash {

@@ -1,0 +1,127 @@
+@font-face {
+	font-family: "ggsans";
+	src: url("../fonts/ggsansvf.woff2") format("woff2");
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscord";
+	src: url("../fonts/GintoDiscord-Regular.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscord";
+	src: url("../fonts/GintoDiscord-RegularItalic.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 400;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscord";
+	src: url("../fonts/GintoDiscord-Medium.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscord";
+	src: url("../fonts/GintoDiscord-MediumItalic.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 500;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscordNord";
+	src: url("../fonts/GintoDiscordNord-Bold.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscordNord";
+	src: url("../fonts/GintoDiscordNord-BoldItalic.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 600;
+	font-display: swap;
+}
+@font-face {
+	font-family: "GintoDiscordNord";
+	src: url("../fonts/GintoDiscordNord-BlackItalic.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 900;
+	font-display: swap;
+}
+@font-face {
+	font-family: "LuckiestGuy";
+	src: url("../fonts/LuckiestGuy-Regular.ttf") format("truetype");
+	font-display: swap;
+}
+@font-face {
+	font-family: "LilitaOne";
+	src: url("../fonts/LilitaOne-Regular.ttf") format("truetype");
+	font-display: swap;
+}
+@font-face {
+	font-family: "Nougat";
+	src: url("../fonts/Nougat-Regular.ttf") format("truetype");
+	font-display: swap;
+}
+
+* {
+	transition-duration: 0.2s;
+	transition-property: all;
+	transition-timing-function: ease-in-out;
+}
+.button:hover {
+	scale: 105%;
+}
+.button:active {
+	scale: 100%;
+}
+:focus-visible {
+	outline: #ffffff40 solid 0.8px;
+}
+input:user-invalid {
+	border-color: red !important;
+}
+@media (width >= 64rem) {
+	:has(> input:user-invalid)::after {
+		color: red;
+		content: attr(data-errormessage);
+		font-family: ggsans;
+		font-size: 0.875rem;
+		margin-left: 0.25rem;
+	}
+}
+@keyframes fadeInOut {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, 1rem);
+	}
+	16% {
+		opacity: 0.8;
+		transform: translate(-50%, 0);
+	}
+
+	84% {
+		opacity: 0.8;
+		transform: translate(-50%, 0);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, 1rem);
+		display: none;
+	}
+}
+@keyframes fadeOut {
+	to {
+		opacity: 0;
+		transform: translate(-50%, 1rem);
+		display: none;
+	}
+}
+.mention:hover {
+	background-color: #5865f2 !important;
+	color: white !important;
+}

@@ -23,3 +23,4 @@ export * from "./rps";
 export * from "./search";
 export * from "./share";
 export * from "./time";
+export * from "./tournament";

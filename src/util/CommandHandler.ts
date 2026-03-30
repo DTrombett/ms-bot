@@ -11,7 +11,7 @@ import {
 	type RoutesDeclarations,
 } from "discord-api-types/v10";
 import type { Command } from "../Command";
-import { rest } from "./globals";
+import { rest, textEncoder } from "./globals";
 import { hexToUint8Array } from "./strings";
 import { TimeUnit } from "./time";
 
@@ -105,7 +105,7 @@ export class CommandHandler {
 				"Ed25519",
 				discordKey,
 				hexToUint8Array(signature),
-				new TextEncoder().encode(timestamp + body),
+				textEncoder.encode(timestamp + body),
 			)
 		)
 			return JSON.parse(body) as APIInteraction;

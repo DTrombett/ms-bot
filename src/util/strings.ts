@@ -30,6 +30,20 @@ export const template = (strings: TemplateStringsArray, ...values: any[]) => {
 };
 
 export const toUpperCase = <T extends string | undefined>(string: T) =>
-	string?.toUpperCase() as undefined extends T
-		? Uppercase<NonNullable<T>> | undefined
-		: Uppercase<NonNullable<T>>;
+	string?.toUpperCase() as undefined extends T ?
+		Uppercase<NonNullable<T>> | undefined
+	:	Uppercase<NonNullable<T>>;
+
+export const placeholder = <T extends Record<keyof any, string>>(
+	string: string,
+	placeholders: T,
+) =>
+	string.replace(
+		new RegExp(
+			`\\{(${Object.keys(placeholders)
+				.map((v) => RegExp.escape(String(v)))
+				.join("|")})\\}`,
+			"giu",
+		),
+		(_, t: keyof T) => placeholders[t]!,
+	);
