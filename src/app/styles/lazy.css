@@ -125,3 +125,13 @@ input:user-invalid {
 	background-color: #5865f2 !important;
 	color: white !important;
 }
+::-webkit-scrollbar {
+	width: 4px;
+	height: 4px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: #c0c0c048;
+}

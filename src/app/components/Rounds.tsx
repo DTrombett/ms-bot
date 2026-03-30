@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
 import { NumberInput } from "./forms";
 import { Mode } from "./Mode";
@@ -46,7 +47,7 @@ export default useClient(
 						type="button"
 						onClick={setRounds.bind(null, (rounds) => rounds + 1)}
 						style={{
-							backgroundColor: "#5865f2",
+							backgroundColor: Colors.Primary,
 							borderRadius: "0.5rem",
 							fontFamily: "ggsans",
 							fontSize: "1.125rem",
@@ -67,7 +68,7 @@ export default useClient(
 							type="button"
 							onClick={setRounds.bind(null, (rounds) => rounds - 1)}
 							style={{
-								backgroundColor: "#D22D39",
+								backgroundColor: Colors.Danger,
 								borderRadius: "0.5rem",
 								fontFamily: "ggsans",
 								fontSize: "1.125rem",

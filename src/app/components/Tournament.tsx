@@ -17,6 +17,7 @@ import {
 	Section,
 	TextInput,
 } from "./forms";
+import { Colors } from "../utils/Colors";
 
 export default ({
 	mobile,
@@ -378,7 +379,7 @@ export default ({
 				className="button"
 				type="submit"
 				style={{
-					backgroundColor: "#008545",
+					backgroundColor: Colors.Success,
 					borderRadius: "0.5rem",
 					fontFamily: "ggsans",
 					fontSize: "1.125rem",

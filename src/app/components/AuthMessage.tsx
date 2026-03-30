@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Colors } from "../utils/Colors";
 
 const errors: Record<string, string | undefined> = {
 	invalid_grant: "Il codice di accesso non è valido. Riprova",
@@ -34,7 +35,7 @@ export default ({ url }: { url?: URL }): ReactNode => {
 			<div
 				style={{
 					animation: "fadeInOut 5s ease forwards",
-					backgroundColor: "#008545",
+					backgroundColor: Colors.Success,
 					borderRadius: "1rem",
 					bottom: "2rem",
 					fontSize: "1.2rem",
@@ -52,7 +53,7 @@ export default ({ url }: { url?: URL }): ReactNode => {
 			<div
 				style={{
 					animation: "fadeInOut 5s ease forwards",
-					backgroundColor: "#008545",
+					backgroundColor: Colors.Success,
 					borderRadius: "1rem",
 					bottom: "2rem",
 					fontSize: "1.2rem",
