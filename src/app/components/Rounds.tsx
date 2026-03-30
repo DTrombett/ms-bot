@@ -39,26 +39,50 @@ export default useClient(
 						/>
 					</Fragment>
 				))}
-				<button
-					className="button"
-					form=""
-					type="button"
-					onClick={setRounds.bind(null, (rounds) => rounds + 1)}
-					style={{
-						backgroundColor: "#5865f2",
-						borderRadius: "0.5rem",
-						fontFamily: "ggsans",
-						fontSize: "1.125rem",
-						fontWeight: 600,
-						lineHeight: "1.75rem",
-						padding: "0.5rem 1rem",
-						userSelect: "none",
-						cursor: "pointer",
-						color: "white",
-						border: "none",
-					}}>
-					Aggiungi round of {2 ** (length + 2)}
-				</button>
+				<div style={{ display: "flex", gap: "1rem" }}>
+					<button
+						className="button"
+						form=""
+						type="button"
+						onClick={setRounds.bind(null, (rounds) => rounds + 1)}
+						style={{
+							backgroundColor: "#5865f2",
+							borderRadius: "0.5rem",
+							fontFamily: "ggsans",
+							fontSize: "1.125rem",
+							fontWeight: 600,
+							lineHeight: "1.75rem",
+							padding: "0.5rem 1rem",
+							userSelect: "none",
+							cursor: "pointer",
+							color: "white",
+							border: "none",
+						}}>
+						Aggiungi round
+					</button>
+					{length > 0 && (
+						<button
+							className="button"
+							form=""
+							type="button"
+							onClick={setRounds.bind(null, (rounds) => rounds - 1)}
+							style={{
+								backgroundColor: "#D22D39",
+								borderRadius: "0.5rem",
+								fontFamily: "ggsans",
+								fontSize: "1.125rem",
+								fontWeight: 600,
+								lineHeight: "1.75rem",
+								padding: "0.5rem 1rem",
+								userSelect: "none",
+								cursor: "pointer",
+								color: "white",
+								border: "none",
+							}}>
+							Rimuovi round
+						</button>
+					)}
+				</div>
 			</>
 		);
 	},
