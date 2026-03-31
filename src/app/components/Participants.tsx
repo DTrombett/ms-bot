@@ -80,8 +80,11 @@ const DeleteButton = ({
 					});
 				else
 					setError(
-						(await response.json<{ message: string } | null>())?.message ??
-							"Si è verificato un errore sconosciuto",
+						(
+							await response
+								.json<{ message: string } | null>()
+								.catch(() => null)
+						)?.message ?? "Si è verificato un errore sconosciuto",
 					);
 				setActive(false);
 			}}
@@ -155,8 +158,11 @@ const ListUI = ({
 					setSelection(0);
 				} else
 					setError(
-						(await response.json<{ message: string } | null>())?.message ??
-							"Si è verificato un errore sconosciuto",
+						(
+							await response
+								.json<{ message: string } | null>()
+								.catch(() => null)
+						)?.message ?? "Si è verificato un errore sconosciuto",
 					);
 				setDisabled(false);
 			}}
@@ -373,8 +379,11 @@ const AddParticipantUI = ({
 				} else {
 					setDisabled(false);
 					setError(
-						(await response.json<{ message: string } | null>())?.message ??
-							"Si è verificato un errore sconosciuto",
+						(
+							await response
+								.json<{ message: string } | null>()
+								.catch(() => null)
+						)?.message ?? "Si è verificato un errore sconosciuto",
 					);
 				}
 			}}
