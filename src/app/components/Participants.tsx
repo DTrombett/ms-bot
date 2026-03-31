@@ -145,8 +145,8 @@ const ListUI = ({
 				);
 
 				if (response.ok) {
-					setParticipants(
-						participants.filter((v) => !value.includes(v.userId)),
+					setParticipants((prev) =>
+						prev.filter((v) => !value.includes(v.userId)),
 					);
 					setSelection(0);
 				} else
