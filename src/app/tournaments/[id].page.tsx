@@ -4,6 +4,11 @@ import lilitaOne from "../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
 import nougat from "../fonts/Nougat-Regular.ttf" with { type: "asset" };
 import ggsans from "../fonts/ggsansvf.woff2" with { type: "asset" };
 
+export type Participants = (Pick<
+	Database.Participant,
+	"userId" | "tag" | "team"
+> & { name?: Database.SupercellPlayer["name"] | null })[];
+
 export default ({
 	admin,
 	mobile,
@@ -14,10 +19,7 @@ export default ({
 	admin: boolean;
 	mobile: boolean;
 	styles?: string[];
-	tournament: Database.Tournament & {
-		participants: (Pick<Database.Participant, "userId" | "tag" | "team"> &
-			Pick<Database.SupercellPlayer, "name">)[];
-	};
+	tournament: Database.Tournament & { participants: Participants };
 	url: URL;
 }) => (
 	<Page

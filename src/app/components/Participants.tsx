@@ -5,6 +5,7 @@ import {
 	type Dispatch,
 	type SetStateAction,
 } from "react";
+import type { Participants } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
 import { Section, styles, TextInput } from "./forms";
@@ -37,19 +38,15 @@ const DeleteButton = ({
 	mobile,
 	p,
 	setP,
+	setError,
 }: {
 	disabled: boolean;
 	i: number;
 	id: number;
 	mobile: boolean;
-	p: Pick<Database.Participant, "userId"> &
-		Pick<Database.SupercellPlayer, "name">;
-	setP: Dispatch<
-		SetStateAction<
-			(Pick<Database.Participant, "userId" | "tag" | "team"> &
-				Pick<Database.SupercellPlayer, "name">)[]
-		>
-	>;
+	p: Participants[number];
+	setP: Dispatch<SetStateAction<Participants>>;
+	setError: Dispatch<SetStateAction<string | undefined>>;
 }) => {
 	const [active, setActive] = useState(false);
 
@@ -63,14 +60,30 @@ const DeleteButton = ({
 			onClick={async (event) => {
 				if (
 					!event.shiftKey &&
-					!confirm(`Vuoi davvero rimuovere l'iscrizione di ${p.name}?`)
+					!confirm(
+						`Vuoi davvero rimuovere l'iscrizione di ${p.name ?? p.tag ?? p.userId}?`,
+					)
 				)
 					return;
 				setActive(true);
-				await fetch(`/tournaments/${id}/participants/${p.userId}`, {
-					method: "DELETE",
-				});
-				setP((p) => p.toSpliced(i, 1));
+				const response = await fetch(
+					`/tournaments/${id}/participants/${p.userId}`,
+					{ method: "DELETE" },
+				);
+
+				if (response.ok)
+					setP((p) => {
+						const copy = p.slice();
+
+						p.splice(i, 1);
+						return copy;
+					});
+				else
+					setError(
+						(await response.json<{ message: string } | null>())?.message ??
+							"Si è verificato un errore sconosciuto",
+					);
+				setActive(false);
 			}}
 			style={{
 				backgroundColor: "transparent",
@@ -101,17 +114,11 @@ const ListUI = ({
 	setUI,
 	setParticipants,
 }: {
-	participants: (Pick<Database.Participant, "userId" | "tag" | "team"> &
-		Pick<Database.SupercellPlayer, "name">)[];
+	participants: Participants;
 	mobile: boolean;
 	id: number;
 	setUI: Dispatch<SetStateAction<UI>>;
-	setParticipants: Dispatch<
-		SetStateAction<
-			(Pick<Database.Participant, "userId" | "tag" | "team"> &
-				Pick<Database.SupercellPlayer, "name">)[]
-		>
-	>;
+	setParticipants: Dispatch<SetStateAction<Participants>>;
 }) => {
 	const [selection, setSelection] = useState(0);
 	const [disabled, setDisabled] = useState(false);
@@ -131,7 +138,7 @@ const ListUI = ({
 				)
 					return;
 				setDisabled(true);
-				const value = Array.from(new FormData(event.target).keys());
+				const value = Array.from(new FormData(event.currentTarget).keys());
 				const response = await fetch(
 					`/tournaments/${id}/participants/deleteBatch`,
 					{ method: "POST", body: JSON.stringify(value) },
@@ -236,7 +243,7 @@ const ListUI = ({
 								display: !mobile || selection > 0 ? undefined : "none",
 							}}
 							name={p.userId}
-							aria-label={p.name}
+							aria-label={p.name ?? p.tag ?? p.userId}
 							onChange={(event) =>
 								setSelection((s) => s + Math.sign(+event.target.checked - 0.5))
 							}
@@ -272,7 +279,7 @@ const ListUI = ({
 							}}
 							onTouchEnd={() => clearTimeout(timeout.current)}
 							onTouchCancel={() => clearTimeout(timeout.current)}>
-							<span>{p.name}</span>
+							<span>{p.name ?? p.tag ?? p.userId}</span>
 							<div style={{ fontSize: "0.75rem", lineHeight: "1rem" }}>
 								{p.tag}
 							</div>
@@ -283,6 +290,7 @@ const ListUI = ({
 							mobile={mobile}
 							p={p}
 							disabled={disabled}
+							setError={setError}
 							setP={setParticipants}
 						/>
 					</li>
@@ -334,12 +342,7 @@ const AddParticipantUI = ({
 }: {
 	id: number;
 	setUI: Dispatch<SetStateAction<UI>>;
-	setParticipants: Dispatch<
-		SetStateAction<
-			(Pick<Database.Participant, "userId" | "tag" | "team"> &
-				Pick<Database.SupercellPlayer, "name">)[]
-		>
-	>;
+	setParticipants: Dispatch<SetStateAction<Participants>>;
 }) => {
 	const [disabled, setDisabled] = useState(false);
 	const [error, setError] = useState<string>();
@@ -351,14 +354,14 @@ const AddParticipantUI = ({
 				event.preventDefault();
 				const response = await fetch(`/tournaments/${id}/participants`, {
 					method: "POST",
-					body: new FormData(event.target),
+					body: new FormData(event.currentTarget),
 				});
 
 				if (response.ok) {
 					const result = await response.json<{
 						userId: string;
 						tag: string | null;
-						name: string;
+						name?: string | null;
 					}>();
 
 					setParticipants((p) => p.concat(result));
@@ -463,8 +466,7 @@ export default useClient(
 		mobile,
 		id,
 	}: {
-		participants: (Pick<Database.Participant, "userId" | "tag" | "team"> &
-			Pick<Database.SupercellPlayer, "name">)[];
+		participants: Participants;
 		mobile: boolean;
 		id: number;
 	}) => {

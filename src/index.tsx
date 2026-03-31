@@ -666,15 +666,17 @@ const server: ExportedHandler<Env> = {
 							location: `/tournaments?error=notRegistered&error_description=${encodeURIComponent("Non risulti iscritto a questo torneo!")}`,
 						},
 					});
+				tournament.participantCount--;
 				await Promise.all([
-					rest.delete(
-						Routes.guildMemberRole(
-							env.MAIN_GUILD,
-							token.i,
-							tournament.registrationRole!,
+					tournament.registrationRole &&
+						rest.delete(
+							Routes.guildMemberRole(
+								env.MAIN_GUILD,
+								token.i,
+								tournament.registrationRole,
+							),
+							{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
 						),
-						{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
-					),
 					editMessage(tournament),
 					env.DB.prepare(
 						`
@@ -741,6 +743,17 @@ const server: ExportedHandler<Env> = {
 			if (!data.userId)
 				return Response.json(
 					{ message: "L'ID utente è obbligatorio" },
+					{
+						status: 400,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
+			if (!data.userId.match(/^\d{16,32}$/))
+				return Response.json(
+					{ message: "L'ID utente non è valido" },
 					{
 						status: 400,
 						headers: {
@@ -908,13 +921,13 @@ const server: ExportedHandler<Env> = {
 				]);
 				return Response.json(data, {
 					status: 200,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
 				});
 			} catch (err) {
 				console.error(err);
 				return new Response(null, {
 					status: 500,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
 				});
 			}
 		}
@@ -930,15 +943,29 @@ const server: ExportedHandler<Env> = {
 			const { setCookie, token } = await createSetCookie(request);
 
 			if (!token)
-				return new Response(null, {
-					status: 401,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
+				return Response.json(
+					{ message: "Effettua nuovamente il login" },
+					{
+						status: 401,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
 			if (!(await isAdmin(token)))
-				return new Response(null, {
-					status: 403,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
+				return Response.json(
+					{
+						message: "Solo gli amministratori possono effettuare questa azione",
+					},
+					{
+						status: 403,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
 			body = await body;
 			if (!Array.isArray(body))
 				return Response.json(
@@ -951,6 +978,11 @@ const server: ExportedHandler<Env> = {
 						},
 					},
 				);
+			if (!body.length)
+				return new Response(null, {
+					status: 204,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
 			try {
 				const [
 					{
@@ -1005,29 +1037,24 @@ const server: ExportedHandler<Env> = {
 							},
 						},
 					);
-				if (!changed_db)
-					return new Response(null, {
-						status: 204,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							"set-cookie": setCookie,
-						},
-					});
-				await Promise.all([
-					...(tournament.registrationRole ?
-						body.map((id) =>
-							rest.delete(
-								Routes.guildMemberRole(
-									env.MAIN_GUILD,
-									id,
-									tournament.registrationRole!,
+				if (changed_db)
+					await Promise.all([
+						...(tournament.registrationRole ?
+							body.map((id) =>
+								rest.delete(
+									Routes.guildMemberRole(
+										env.MAIN_GUILD,
+										id,
+										tournament.registrationRole!,
+									),
+									{
+										reason: `Rimozione iscrizione al torneo ${tournament.name}`,
+									},
 								),
-								{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
-							),
-						)
-					:	[]),
-					editMessage(tournament),
-				]);
+							)
+						:	[]),
+						editMessage(tournament),
+					]);
 				return new Response(null, {
 					status: 204,
 					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
@@ -1049,16 +1076,30 @@ const server: ExportedHandler<Env> = {
 			const { setCookie, token } = await createSetCookie(request);
 
 			if (!token)
-				return new Response(null, {
-					status: 401,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
+				return Response.json(
+					{ message: "Effettua nuovamente il login" },
+					{
+						status: 401,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
 			const admin = await isAdmin(token);
 			if (token.i !== matchResult[2] && !admin)
-				return new Response(null, {
-					status: 403,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
+				return Response.json(
+					{
+						message: "Solo gli amministratori possono effettuare questa azione",
+					},
+					{
+						status: 403,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
 			try {
 				const [
 					{
@@ -1116,32 +1157,39 @@ const server: ExportedHandler<Env> = {
 					>,
 				];
 
-				if (!changed_db || !tournament)
-					return new Response(null, {
-						status: 404,
-						headers: { "accept-ch": "Sec-CH-UA-Mobile" },
-					});
-				await Promise.all([
-					tournament.registrationRole &&
-						rest.delete(
-							Routes.guildMemberRole(
-								env.MAIN_GUILD,
-								matchResult[2]!,
-								tournament.registrationRole,
+				if (!tournament)
+					return Response.json(
+						{ message: "Torneo non trovato" },
+						{
+							status: 404,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
+				if (changed_db)
+					await Promise.all([
+						tournament.registrationRole &&
+							rest.delete(
+								Routes.guildMemberRole(
+									env.MAIN_GUILD,
+									matchResult[2]!,
+									tournament.registrationRole,
+								),
+								{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
 							),
-							{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
-						),
-					editMessage(tournament),
-				]);
+						editMessage(tournament),
+					]);
 				return new Response(null, {
 					status: 204,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
 				});
 			} catch (err) {
 				console.error(err);
 				return new Response(null, {
 					status: 500,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
 				});
 			}
 		}

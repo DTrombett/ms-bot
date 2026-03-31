@@ -376,6 +376,7 @@ export class Tournament extends Command {
 			return edit({ content: "Le iscrizioni per questo torneo sono chiuse!" });
 		if (!data.participationExists)
 			return edit({ content: "Non risulti iscritto a questo torneo!" });
+		data.participantCount--;
 		await Promise.all([
 			rest.delete(
 				Routes.guildMemberRole(env.MAIN_GUILD, id, data.registrationRole!),
