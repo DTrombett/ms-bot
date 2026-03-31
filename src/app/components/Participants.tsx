@@ -75,7 +75,7 @@ const DeleteButton = ({
 					setP((p) => {
 						const copy = p.slice();
 
-						p.splice(i, 1);
+						copy.splice(i, 1);
 						return copy;
 					});
 				else
@@ -141,12 +141,16 @@ const ListUI = ({
 				const value = Array.from(new FormData(event.currentTarget).keys());
 				const response = await fetch(
 					`/tournaments/${id}/participants/deleteBatch`,
-					{ method: "POST", body: JSON.stringify(value) },
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(value),
+					},
 				);
 
 				if (response.ok) {
-					setParticipants(
-						participants.filter((v) => !value.includes(v.userId)),
+					setParticipants((prev) =>
+						prev.filter((v) => !value.includes(v.userId)),
 					);
 					setSelection(0);
 				} else
