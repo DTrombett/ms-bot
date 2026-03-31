@@ -67,3 +67,13 @@ CREATE TABLE Participants (
 	FOREIGN KEY (tag, userId) REFERENCES SupercellPlayers(tag, userId) ON DELETE RESTRICT,
 	PRIMARY KEY (tournamentId, userId)
 );
+CREATE TABLE Matches (
+	id INTEGER PRIMARY KEY,
+	tournamentId INTEGER NOT NULL REFERENCES Tournaments(id) ON DELETE CASCADE,
+	user1 TEXT NOT NULL,
+	user2 TEXT,
+	channelId TEXT,
+	result INTEGER,
+	FOREIGN KEY (tournamentId, user1) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT,
+	FOREIGN KEY (tournamentId, user2) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT
+);
