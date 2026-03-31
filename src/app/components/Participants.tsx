@@ -141,7 +141,11 @@ const ListUI = ({
 				const value = Array.from(new FormData(event.currentTarget).keys());
 				const response = await fetch(
 					`/tournaments/${id}/participants/deleteBatch`,
-					{ method: "POST", body: JSON.stringify(value) },
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(value),
+					},
 				);
 
 				if (response.ok) {
