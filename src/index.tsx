@@ -927,7 +927,9 @@ const server: ExportedHandler<Env> = {
 								data.userId,
 								tournament.registrationRole,
 							),
-							{ reason: `Iscrizione al torneo ${tournament.name}` },
+							{
+								reason: `Iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
+							},
 						),
 					editMessage(tournament),
 				]);
@@ -1072,7 +1074,7 @@ const server: ExportedHandler<Env> = {
 											tournament.registrationRole!,
 										),
 										{
-											reason: `Rimozione iscrizione al torneo ${tournament.name}`,
+											reason: `Rimozione iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
 										},
 									),
 								),
@@ -1202,7 +1204,9 @@ const server: ExportedHandler<Env> = {
 									matchResult[2]!,
 									tournament.registrationRole,
 								),
-								{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
+								{
+									reason: `Rimozione iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
+								},
 							),
 						editMessage(tournament),
 					]);
