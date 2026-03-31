@@ -75,7 +75,7 @@ const DeleteButton = ({
 					setP((p) => {
 						const copy = p.slice();
 
-						p.splice(i, 1);
+						copy.splice(i, 1);
 						return copy;
 					});
 				else
