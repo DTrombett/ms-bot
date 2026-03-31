@@ -979,9 +979,20 @@ const server: ExportedHandler<Env> = {
 					},
 				);
 			body = await body;
-			if (!Array.isArray(body))
+			if (!Array.isArray(body) || !body.every((i) => /^\d{16,32}$/.test(i)))
 				return Response.json(
 					{ message: "Dati non validi" },
+					{
+						status: 400,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
+			if (body.length > 16)
+				return Response.json(
+					{ message: "Non puoi eliminare più di 16 iscrizioni alla volta" },
 					{
 						status: 400,
 						headers: {
@@ -1049,24 +1060,26 @@ const server: ExportedHandler<Env> = {
 							},
 						},
 					);
-				if (changed_db)
-					await Promise.all([
-						...(tournament.registrationRole ?
-							body.map((id) =>
-								rest.delete(
-									Routes.guildMemberRole(
-										env.MAIN_GUILD,
-										id,
-										tournament.registrationRole!,
+				if (changed_db) {
+					if (tournament.registrationRole)
+						waitUntil(
+							Promise.all(
+								body.map((id) =>
+									rest.delete(
+										Routes.guildMemberRole(
+											env.MAIN_GUILD,
+											id,
+											tournament.registrationRole!,
+										),
+										{
+											reason: `Rimozione iscrizione al torneo ${tournament.name}`,
+										},
 									),
-									{
-										reason: `Rimozione iscrizione al torneo ${tournament.name}`,
-									},
 								),
-							)
-						:	[]),
-						editMessage(tournament),
-					]);
+							),
+						);
+					await editMessage(tournament);
+				}
 				return new Response(null, {
 					status: 204,
 					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
