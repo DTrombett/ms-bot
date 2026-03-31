@@ -717,15 +717,27 @@ const server: ExportedHandler<Env> = {
 			const { setCookie, token } = await createSetCookie(request);
 
 			if (!token)
-				return new Response(null, {
-					status: 401,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
+				return Response.json(
+					{ message: "Effettua nuovamente il login" },
+					{
+						status: 401,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
 			if (!(await isAdmin(token)))
-				return new Response(null, {
-					status: 403,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
+				return Response.json(
+					{ message: "Questa azione è riservata agli amministratori" },
+					{
+						status: 403,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
 			body = await body;
 			if (!body)
 				return Response.json(
