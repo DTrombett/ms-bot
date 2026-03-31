@@ -1,12 +1,7 @@
 import cssMap from "build:css";
 import jsMap from "build:js";
 import { env, waitUntil } from "cloudflare:workers";
-import {
-	RouteBases,
-	Routes,
-	type APIUser,
-	type RESTGetAPIGuildMemberResult,
-} from "discord-api-types/v10";
+import { RouteBases, Routes, type APIUser } from "discord-api-types/v10";
 import { renderToReadableStream } from "react-dom/server";
 import Index from "./app/index.page";
 import Tournaments from "./app/tournaments.page";
@@ -16,8 +11,13 @@ import NewTournament from "./app/tournaments/new.page";
 import { Brawl } from "./commands/brawl";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
-import { RegistrationMode, TournamentFlags } from "./util/Constants";
+import {
+	RegistrationMode,
+	SupercellPlayerType,
+	TournamentFlags,
+} from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
+import { parseForm, ParseType } from "./util/forms";
 import { rest, textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
@@ -230,14 +230,7 @@ const server: ExportedHandler<Env> = {
 						"set-cookie": setCookie,
 					},
 				});
-			const member = (await rest
-				.get(Routes.guildMember(env.MAIN_GUILD, token.i))
-				.catch(() => null)) as RESTGetAPIGuildMemberResult | null;
-			if (
-				new Set(member?.roles).isDisjointFrom(
-					new Set(env.ALLOWED_ROLES.split(",")),
-				)
-			)
+			if (!(await isAdmin(token)))
 				return create403(request, {
 					headers: {
 						"cache-control": "private, max-age=300",
@@ -430,14 +423,7 @@ const server: ExportedHandler<Env> = {
 						"set-cookie": setCookie,
 					},
 				});
-			const member = (await rest
-				.get(Routes.guildMember(env.MAIN_GUILD, token.i))
-				.catch(() => null)) as RESTGetAPIGuildMemberResult | null;
-			if (
-				new Set(member?.roles).isDisjointFrom(
-					new Set(env.ALLOWED_ROLES.split(",")),
-				)
-			)
+			if (!(await isAdmin(token)))
 				return create403(request, {
 					headers: {
 						"cache-control": "private, max-age=300",
@@ -586,14 +572,15 @@ const server: ExportedHandler<Env> = {
 						},
 					});
 				await Promise.all([
-					rest.put(
-						Routes.guildMemberRole(
-							env.MAIN_GUILD,
-							token.i,
-							data.registrationRole!,
+					data.registrationRole &&
+						rest.put(
+							Routes.guildMemberRole(
+								env.MAIN_GUILD,
+								token.i,
+								data.registrationRole,
+							),
+							{ reason: `Iscrizione al torneo ${tournament.name}` },
 						),
-						{ reason: `Iscrizione al torneo ${tournament.name}` },
-					),
 					editMessage(data),
 				]);
 				return new Response(null, {
@@ -718,6 +705,221 @@ const server: ExportedHandler<Env> = {
 		}
 		if (
 			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/participants\/?$/,
+			))
+		) {
+			if (request.method !== "POST") return create405("POST");
+			let body: Promise<FormData | null> | FormData | null = request
+				.formData()
+				.catch(() => null);
+			const { setCookie, token } = await createSetCookie(request);
+
+			if (!token)
+				return new Response(null, {
+					status: 401,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
+			if (!(await isAdmin(token)))
+				return new Response(null, {
+					status: 403,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
+			body = await body;
+			if (!body)
+				return Response.json(
+					{ message: "Dati non validi" },
+					{
+						status: 400,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
+			const data: { userId: string | null; tag: string | null; name?: string } =
+				parseForm(body, { userId: ParseType.Text, tag: ParseType.Text });
+			if (!data.userId)
+				return Response.json(
+					{ message: "L'ID utente è obbligatorio" },
+					{
+						status: 400,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
+			if (data.tag)
+				try {
+					data.tag = Brawl.normalizeTag(data.tag);
+				} catch (err) {
+					return Response.json(
+						{ message: (err as Error).message },
+						{
+							status: 400,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
+				}
+			try {
+				const { results } = await env.DB.prepare(
+					`
+						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink,
+							(
+								SELECT COUNT(*)
+								FROM Participants
+								WHERE tournamentId = t.id
+							) AS participantCount
+						FROM Tournaments t
+						LEFT JOIN Participants p ON p.tournamentId = t.id AND (p.userId = ?1 OR p.tag = ?2)
+						WHERE t.id = ?3
+					`,
+				)
+					.bind(data.userId, data.tag, matchResult[1])
+					.all<
+						Pick<
+							Database.Tournament,
+							| "registrationRole"
+							| "name"
+							| "registrationChannel"
+							| "registrationMessage"
+							| "minPlayers"
+							| "registrationTemplateLink"
+							| "id"
+							| "game"
+						> &
+							Pick<Database.Participant, "tag" | "userId"> & {
+								participantCount: number;
+							}
+					>();
+				const tournament = results[0];
+
+				if (!tournament)
+					return Response.json(
+						{ message: "Torneo non trovato" },
+						{
+							status: 404,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
+				if (results.some((v) => v.userId === data.userId))
+					return Response.json(
+						{ message: "Utente già registrato" },
+						{
+							status: 400,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
+				if (data.tag && results.some((v) => v.tag === data.tag))
+					return Response.json(
+						{
+							message:
+								"Esiste già un altro utente registrato con lo stesso tag",
+						},
+						{
+							status: 400,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
+				if (data.tag) {
+					({ name: data.name } = await (
+						tournament.game === SupercellPlayerType.BrawlStars ?
+							commands.Brawl
+						:	commands.Clash)
+						.getPlayer(data.tag)
+						.catch(() => ({ name: "" })));
+					if (!data.name)
+						return Response.json(
+							{ message: "Non è stato possibile verificare il tag" },
+							{
+								status: 400,
+								headers: {
+									"accept-ch": "Sec-CH-UA-Mobile",
+									"set-cookie": setCookie,
+								},
+							},
+						);
+					const existing = await env.DB.prepare(
+						`
+							INSERT INTO SupercellPlayers (tag, userId, active, type, name)
+							VALUES (
+								?1,
+								?2,
+								NOT EXISTS (
+									SELECT TRUE
+									FROM SupercellPlayers
+									WHERE userId = ?2 AND type = ?3 AND active = TRUE
+								),
+								?3,
+								?4
+							)
+							ON CONFLICT(tag, type) DO UPDATE
+							SET name = excluded.name
+							RETURNING userId
+						`,
+					)
+						.bind(data.tag, data.userId, tournament.game, data.name)
+						.first<Database.SupercellPlayer["userId"]>("userId");
+
+					if (existing && existing !== data.userId)
+						return Response.json(
+							{ message: `Questo tag risulta collegato a ${existing}` },
+							{
+								status: 400,
+								headers: {
+									"accept-ch": "Sec-CH-UA-Mobile",
+									"set-cookie": setCookie,
+								},
+							},
+						);
+				}
+				tournament.participantCount++;
+				await Promise.all([
+					env.DB.prepare(
+						`
+							INSERT INTO Participants (tournamentId, userId, tag)
+							VALUES (?1, ?2, ?3)
+						`,
+					)
+						.bind(tournament.id, data.userId, data.tag)
+						.run(),
+					tournament.registrationRole &&
+						rest.put(
+							Routes.guildMemberRole(
+								env.MAIN_GUILD,
+								data.userId,
+								tournament.registrationRole,
+							),
+							{ reason: `Iscrizione al torneo ${tournament.name}` },
+						),
+					editMessage(tournament),
+				]);
+				return Response.json(data, {
+					status: 200,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+				});
+			} catch (err) {
+				console.error(err);
+				return new Response(null, {
+					status: 500,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+				});
+			}
+		}
+		if (
+			(matchResult = url.pathname.match(
 				/^\/tournaments\/([^/]+)\/participants\/deleteBatch\/?$/,
 			))
 		) {
@@ -792,15 +994,18 @@ const server: ExportedHandler<Env> = {
 						headers: { "accept-ch": "Sec-CH-UA-Mobile" },
 					});
 				await Promise.all([
-					tournament.registrationRole &&
-						rest.delete(
-							Routes.guildMemberRole(
-								env.MAIN_GUILD,
-								token.i,
-								tournament.registrationRole,
+					...(tournament.registrationRole ?
+						body.map((id) =>
+							rest.delete(
+								Routes.guildMemberRole(
+									env.MAIN_GUILD,
+									id,
+									tournament.registrationRole!,
+								),
+								{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
 							),
-							{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
-						),
+						)
+					:	[]),
 					editMessage(tournament),
 				]);
 				return new Response(null, {
@@ -901,7 +1106,7 @@ const server: ExportedHandler<Env> = {
 						rest.delete(
 							Routes.guildMemberRole(
 								env.MAIN_GUILD,
-								token.i,
+								matchResult[2]!,
 								tournament.registrationRole,
 							),
 							{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },

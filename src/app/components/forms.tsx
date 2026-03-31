@@ -61,12 +61,14 @@ export const styles = {
 
 export const Section = ({
 	children,
+	style,
 	title,
 }: {
 	children: ReactNode;
+	style?: CSSProperties;
 	title?: string;
 }) => (
-	<section>
+	<section style={style}>
 		<h2 style={{ fontWeight: "normal", marginBlock: "0.25em 0.5em" }}>
 			{title}
 		</h2>
@@ -104,7 +106,7 @@ export const TextInput = ({
 		{...props}
 		style={{ ...styles.field, ...props.style }}
 		data-errormessage={errorMessage}>
-		<label htmlFor={id} style={styles.label}>
+		<label htmlFor={id ?? name} style={styles.label}>
 			{label}
 		</label>
 		<span
@@ -120,16 +122,16 @@ export const TextInput = ({
 		<input
 			type="text"
 			name={name}
-			id={id}
+			id={id ?? name}
 			placeholder={placeholder}
 			defaultValue={defaultValue}
-			list={suggestions && `${id}-list`}
+			list={suggestions && `${id ?? name}-list`}
 			pattern={pattern}
 			required={required}
 			style={{ ...styles.textInput, ...(maxWidth && { maxWidth }) }}
 		/>
 		{suggestions && (
-			<datalist id={`${id}-list`}>
+			<datalist id={`${id ?? name}-list`}>
 				{suggestions.map((s) => (
 					<option value={s.value} label={s.label} key={s.value} />
 				))}
