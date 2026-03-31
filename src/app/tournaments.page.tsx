@@ -3,6 +3,7 @@ import { Page } from "./components/layout";
 import Tournaments from "./components/Tournaments";
 import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
 import nougat from "./fonts/Nougat-Regular.ttf" with { type: "asset" };
+import { Colors } from "./utils/Colors";
 
 export default ({
 	mobile,
@@ -46,7 +47,7 @@ export default ({
 				href="/tournaments/new"
 				label={mobile ? "+" : "Nuovo torneo"}
 				style={{
-					backgroundColor: "#5865f2",
+					backgroundColor: Colors.Primary,
 					borderRadius: mobile ? "8px" : "0.5rem",
 					bottom: mobile ? "24px" : "2rem",
 					fontSize: mobile ? "48px" : "1.5rem",

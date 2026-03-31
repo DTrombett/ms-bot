@@ -2,6 +2,8 @@ import React, { type CSSProperties } from "react";
 import { bitSetMap } from "../../util/bitSets";
 import { RegistrationMode } from "../../util/Constants";
 import { TimeUnit } from "../../util/time";
+import { Colors } from "../utils/Colors";
+import formatDate from "../utils/formatDate";
 import { DiscordLogo } from "./DiscordLogo";
 import HomeButton from "./HomeButton";
 
@@ -20,10 +22,10 @@ const statusText = [
 	"",
 ];
 const statusColor: CSSProperties["color"][] = [
-	"#008545",
-	"#5865f2",
-	"#D22D39",
-	"#5865f2",
+	Colors.Success,
+	Colors.Primary,
+	Colors.Danger,
+	Colors.Primary,
 	"",
 ];
 const gameName = ["Brawl Stars", "Clash Royale"];
@@ -137,22 +139,16 @@ export default async ({
 						label="Iscrizioni"
 						value={
 							t.registrationStart &&
-							`${new Date(t.registrationStart * 1000).toLocaleString("it-IT")} ― ${new Date(t.registrationEnd! * 1000).toLocaleString("it-IT")}`
+							`${formatDate(t.registrationStart)} ― ${formatDate(t.registrationEnd!)}`
 						}
 					/>
 					<ListElement
 						label="Creazione brackets"
-						value={
-							t.bracketsTime &&
-							new Date(t.bracketsTime * 1000).toLocaleString("it-IT")
-						}
+						value={t.bracketsTime && formatDate(t.bracketsTime)}
 					/>
 					<ListElement
 						label="Inizio torneo"
-						value={
-							t.channelsTime &&
-							new Date(t.channelsTime * 1000).toLocaleString("it-IT")
-						}
+						value={t.channelsTime && formatDate(t.channelsTime)}
 					/>
 					<ListElement
 						label="Canale iscrizioni"
@@ -228,7 +224,7 @@ export default async ({
 											}}
 										/>
 									}
-									style={{ backgroundColor: "#5865f2" }}
+									style={{ backgroundColor: Colors.Primary }}
 								/>
 							:	<form
 									action={`/tournaments/${t.id}/${
@@ -240,7 +236,8 @@ export default async ({
 										className="button"
 										value={t.isRegistered ? "Annulla iscrizione" : "Iscriviti"}
 										style={{
-											backgroundColor: t.isRegistered ? "#D22D39" : "#008545",
+											backgroundColor:
+												t.isRegistered ? Colors.Danger : Colors.Success,
 											border: "none",
 											borderRadius: "0.5rem",
 											color: "white",
@@ -267,12 +264,18 @@ export default async ({
 							}}>
 							<HomeButton
 								label="Gestisci"
-								style={{ backgroundColor: "#5865f2", lineHeight: "1.75rem" }}
+								style={{
+									backgroundColor: Colors.Primary,
+									lineHeight: "1.75rem",
+								}}
 								href={`/tournaments/${t.id}`}
 							/>
 							<HomeButton
 								label="Modifica"
-								style={{ backgroundColor: "#5865f2", lineHeight: "1.75rem" }}
+								style={{
+									backgroundColor: Colors.Primary,
+									lineHeight: "1.75rem",
+								}}
 								href={`/tournaments/${t.id}/edit`}
 							/>
 						</div>

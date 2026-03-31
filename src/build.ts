@@ -214,6 +214,7 @@ const outbase = join(tmp, "build");
 const buildResult = await build({
 	bundle: true,
 	charset: "utf8",
+	chunkNames: "[name].[hash]",
 	entryPoints,
 	format: "esm",
 	jsx: "automatic",
@@ -233,35 +234,30 @@ const jsMap = Object.fromEntries(
 	await Promise.all(
 		Object.entries(buildResult.metafile.outputs)
 			.filter(([, { entryPoint }]) => entryPoint)
-			.map<Promise<[string, string[]]>>(
-				async ([path, { entryPoint, imports }]) => {
-					ok(
-						entryPoint && path.endsWith(".hydrate.js"),
-						`Path: ${path}, entry point: ${entryPoint}`,
-					);
-					const hash = createHash("sha256");
+			.map<Promise<[string, string[]]>>(async ([path, { entryPoint }]) => {
+				ok(
+					entryPoint && path.endsWith(".hydrate.js"),
+					`Path: ${path}, entry point: ${entryPoint}`,
+				);
+				const hash = createHash("sha256");
 
-					rm(entryPoint, { force: true }).catch(console.error);
-					await pipeline(createReadStream(path), hash);
-					await rename(
-						path,
-						(path = path.replace(
-							/\.hydrate\.js$/,
-							`.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.js`,
-						)),
-					);
-					return [
-						"/" +
-							relative(outbase, entryPoint)
-								.replace(/\.hydrate\.tsx$/, "")
-								.replaceAll("\\", "/"),
-						imports
-							.map((i) => i.path)
-							.concat(path)
-							.map((path) => path.replace(outdir, "")),
-					];
-				},
-			),
+				rm(entryPoint, { force: true }).catch(console.error);
+				await pipeline(createReadStream(path), hash);
+				await rename(
+					path,
+					(path = path.replace(
+						/\.hydrate\.js$/,
+						`.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.js`,
+					)),
+				);
+				return [
+					"/" +
+						relative(outbase, entryPoint)
+							.replace(/\.hydrate\.tsx$/, "")
+							.replaceAll("\\", "/"),
+					[path].map((path) => path.replace(outdir, "")),
+				];
+			}),
 	),
 );
 

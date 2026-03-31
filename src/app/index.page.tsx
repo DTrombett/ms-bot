@@ -12,6 +12,7 @@ import avatar2 from "./img/avatar/200.avif" with { type: "asset" };
 import avatar3 from "./img/avatar/250.avif" with { type: "asset" };
 import avatar4 from "./img/avatar/310.avif" with { type: "asset" };
 import avatar5 from "./img/avatar/386.avif" with { type: "asset" };
+import { Colors } from "./utils/Colors";
 
 export default ({
 	mobile,
@@ -153,7 +154,7 @@ export default ({
 				href="/auth/discord/logout"
 				label="Log out"
 				icon={<UserAvatar user={user} size="2rem" />}
-				style={{ backgroundColor: "#D22D39" }}
+				style={{ backgroundColor: Colors.Danger }}
 			/>
 		:	<HomeButton
 				href="/auth/discord/login"
@@ -170,7 +171,7 @@ export default ({
 						}}
 					/>
 				}
-				style={{ backgroundColor: "#5865f2" }}
+				style={{ backgroundColor: Colors.Primary }}
 			/>
 		}
 	</Page>
