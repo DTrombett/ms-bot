@@ -16,7 +16,7 @@ import { RegistrationMode, TournamentFlags } from "../util/Constants";
 import { rest } from "../util/globals";
 import { ok } from "../util/node";
 import { TimeUnit } from "../util/time";
-import { createRegistrationMessage } from "../util/tournaments/createRegistrationMessage";
+import { editMessage } from "../util/tournaments/editMessage";
 import { Brawl } from "./brawl";
 
 export class Tournament extends Command {
@@ -245,6 +245,8 @@ export class Tournament extends Command {
 				| "registrationTemplateLink"
 				| "registrationRole"
 				| "registrationChannel"
+				| "name"
+				| "id"
 			> & { participantCount: number }
 		>([
 			env.DB.prepare(
@@ -255,7 +257,7 @@ export class Tournament extends Command {
 			).bind(tournament.id, userId, tag || null),
 			env.DB.prepare(
 				`
-					SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole,
+					SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
 					(
 						SELECT COUNT(*)
 						FROM Participants
@@ -271,25 +273,12 @@ export class Tournament extends Command {
 				content: `Non è stato possibile completare l'iscrizione! Riprova o contatta un moderatore.`,
 			});
 		await Promise.all([
-			rest.put(
-				Routes.guildMemberRole(env.MAIN_GUILD, userId, data.registrationRole!),
-				{ reason: `Iscrizione al torneo ${tournament.name}` },
-			),
-			rest.patch(
-				Routes.channelMessage(
-					data.registrationChannel!,
-					data.registrationMessage!,
+			data.registrationRole &&
+				rest.put(
+					Routes.guildMemberRole(env.MAIN_GUILD, userId, data.registrationRole),
+					{ reason: `Iscrizione al torneo ${tournament.name}` },
 				),
-				{
-					body: await createRegistrationMessage(
-						tournament.id,
-						data.registrationTemplateLink!,
-						data.participantCount,
-						tournament.name,
-						data.minPlayers,
-					),
-				},
-			),
+			editMessage(data),
 		]);
 		return edit({
 			content: `Ti sei iscritto con successo al torneo **${tournament.name}**!`,
@@ -347,7 +336,7 @@ export class Tournament extends Command {
 		const data = await env.DB.prepare(
 			`
 				SELECT 
-					t.minPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name,
+					t.minPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name, t.id,
 					p.userId IS NOT NULL AS participationExists,
 					(
 						(t.registrationMode & ?1) != 0
@@ -379,6 +368,7 @@ export class Tournament extends Command {
 					| "registrationTemplateLink"
 					| "registrationRole"
 					| "name"
+					| "id"
 				>
 			>();
 
@@ -391,21 +381,7 @@ export class Tournament extends Command {
 				Routes.guildMemberRole(env.MAIN_GUILD, id, data.registrationRole!),
 				{ reason: `Rimozione iscrizione al torneo ${data.name}` },
 			),
-			rest.patch(
-				Routes.channelMessage(
-					data.registrationChannel!,
-					data.registrationMessage!,
-				),
-				{
-					body: await createRegistrationMessage(
-						Number(tournament),
-						data.registrationTemplateLink!,
-						data.participantCount - 1,
-						data.name,
-						data.minPlayers,
-					),
-				},
-			),
+			editMessage(data),
 			env.DB.prepare(
 				`
 					DELETE FROM Participants

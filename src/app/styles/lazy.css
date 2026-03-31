@@ -135,3 +135,10 @@ input:user-invalid {
 ::-webkit-scrollbar-thumb {
 	background: #c0c0c048;
 }
+.deleteButton:hover,
+.activeBg:active {
+	background-color: #ffffff20 !important;
+}
+input:checked {
+	opacity: 1 !important;
+}

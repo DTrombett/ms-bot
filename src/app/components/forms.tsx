@@ -57,7 +57,7 @@ export const styles = {
 		padding: "0.25rem 0.5rem",
 		width: "stretch",
 	},
-} satisfies Record<string, CSSProperties>;
+} as const satisfies Record<string, CSSProperties>;
 
 export const Section = ({
 	children,

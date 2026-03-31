@@ -3,6 +3,7 @@ import { bitSetMap } from "../../util/bitSets";
 import { RegistrationMode } from "../../util/Constants";
 import { TimeUnit } from "../../util/time";
 import { Colors } from "../utils/Colors";
+import formatDate from "../utils/formatDate";
 import { DiscordLogo } from "./DiscordLogo";
 import HomeButton from "./HomeButton";
 
@@ -138,22 +139,16 @@ export default async ({
 						label="Iscrizioni"
 						value={
 							t.registrationStart &&
-							`${new Date(t.registrationStart * 1000).toLocaleString("it-IT")} ― ${new Date(t.registrationEnd! * 1000).toLocaleString("it-IT")}`
+							`${formatDate(t.registrationStart)} ― ${formatDate(t.registrationEnd!)}`
 						}
 					/>
 					<ListElement
 						label="Creazione brackets"
-						value={
-							t.bracketsTime &&
-							new Date(t.bracketsTime * 1000).toLocaleString("it-IT")
-						}
+						value={t.bracketsTime && formatDate(t.bracketsTime)}
 					/>
 					<ListElement
 						label="Inizio torneo"
-						value={
-							t.channelsTime &&
-							new Date(t.channelsTime * 1000).toLocaleString("it-IT")
-						}
+						value={t.channelsTime && formatDate(t.channelsTime)}
 					/>
 					<ListElement
 						label="Canale iscrizioni"

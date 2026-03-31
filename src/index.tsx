@@ -34,7 +34,7 @@ import {
 	tokenFromResponse,
 	updateToken,
 } from "./util/token";
-import { createRegistrationMessage } from "./util/tournaments/createRegistrationMessage";
+import { editMessage } from "./util/tournaments/editMessage";
 import { parseTournamentData } from "./util/tournaments/parseTournamentData";
 
 const handler = new CommandHandler(Object.values(commands));
@@ -276,19 +276,22 @@ const server: ExportedHandler<Env> = {
 			const [tournament, { setCookie, token }] = await Promise.all([
 				env.DB.prepare(
 					`
-						SELECT
-							t.*,
-							json_group_array(json_object(
-								'userId', p.userId,
-								'tag', p.tag,
-								'team', p.team,
-								'name', sp.name
-							)) AS participants
+						SELECT t.*,
+							CASE
+								WHEN p.userId IS NOT NULL THEN json_group_array(
+									json_object(
+										'userId', p.userId,
+										'tag', p.tag,
+										'team', p.team,
+										'name', sp.name
+									)
+								)
+								ELSE '[]'
+							END AS participants
 						FROM Tournaments t
-						LEFT JOIN Participants p
-							ON p.tournamentId = t.id
-						LEFT JOIN SupercellPlayers sp
-							ON sp.userId = p.userId AND sp.tag = p.tag
+							LEFT JOIN Participants p ON p.tournamentId = t.id
+							LEFT JOIN SupercellPlayers sp ON sp.userId = p.userId
+							AND sp.tag = p.tag
 						WHERE t.id = ?
 						GROUP BY t.id
 					`,
@@ -551,6 +554,8 @@ const server: ExportedHandler<Env> = {
 						| "registrationTemplateLink"
 						| "registrationRole"
 						| "registrationChannel"
+						| "id"
+						| "name"
 					> & { participantCount: number }
 				>([
 					env.DB.prepare(
@@ -561,7 +566,7 @@ const server: ExportedHandler<Env> = {
 					).bind(matchResult[1], token.i, tournament.tag),
 					env.DB.prepare(
 						`
-							SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole,
+							SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, id, name,
 							(
 								SELECT COUNT(*)
 								FROM Participants
@@ -589,21 +594,7 @@ const server: ExportedHandler<Env> = {
 						),
 						{ reason: `Iscrizione al torneo ${tournament.name}` },
 					),
-					rest.patch(
-						Routes.channelMessage(
-							data.registrationChannel!,
-							data.registrationMessage!,
-						),
-						{
-							body: await createRegistrationMessage(
-								Number(matchResult[1]),
-								data.registrationTemplateLink!,
-								data.participantCount,
-								tournament.name,
-								data.minPlayers,
-							),
-						},
-					),
+					editMessage(data),
 				]);
 				return new Response(null, {
 					status: 303,
@@ -642,7 +633,7 @@ const server: ExportedHandler<Env> = {
 			try {
 				const tournament = await env.DB.prepare(
 					`
-						SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, p.userId IS NOT NULL AS participationExists,
+						SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id, p.userId IS NOT NULL AS participationExists,
 							(
 								SELECT COUNT(*)
 								FROM Participants
@@ -668,6 +659,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationMessage"
 							| "minPlayers"
 							| "registrationTemplateLink"
+							| "id"
 						> & { participantCount: number; participationExists: boolean }
 					>();
 
@@ -696,21 +688,7 @@ const server: ExportedHandler<Env> = {
 						),
 						{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
 					),
-					rest.patch(
-						Routes.channelMessage(
-							tournament.registrationChannel!,
-							tournament.registrationMessage!,
-						),
-						{
-							body: await createRegistrationMessage(
-								Number(matchResult[1]),
-								tournament.registrationTemplateLink!,
-								tournament.participantCount - 1,
-								tournament.name,
-								tournament.minPlayers,
-							),
-						},
-					),
+					editMessage(tournament),
 					env.DB.prepare(
 						`
 							DELETE FROM Participants
@@ -735,6 +713,105 @@ const server: ExportedHandler<Env> = {
 						"accept-ch": "Sec-CH-UA-Mobile",
 						location: `${url.pathname}?error=${encodeURIComponent((err as Error).name)}`,
 					},
+				});
+			}
+		}
+		if (
+			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/participants\/deleteBatch\/?$/,
+			))
+		) {
+			if (request.method !== "POST") return create405("POST");
+			let body: Promise<string[] | null> | string[] | null = request
+				.json<string[] | null>()
+				.catch(() => null);
+			const { setCookie, token } = await createSetCookie(request);
+
+			if (!token)
+				return new Response(null, {
+					status: 401,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
+			if (!(await isAdmin(token)))
+				return new Response(null, {
+					status: 403,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
+			body = await body;
+			if (!Array.isArray(body))
+				return new Response(null, {
+					status: 400,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
+			try {
+				const [
+					{
+						meta: { changed_db },
+					},
+					{
+						results: [tournament],
+					},
+				] = (await env.DB.batch([
+					env.DB.prepare(
+						`
+							DELETE FROM Participants
+							WHERE tournamentId = ? AND userId in (${Array(body.length).fill("?").join(",")})
+						`,
+					).bind(matchResult[1], ...body),
+					env.DB.prepare(
+						`
+							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id,
+								(
+									SELECT COUNT(*)
+									FROM Participants
+									WHERE tournamentId = t.id
+								) AS participantCount
+							FROM Tournaments t
+							WHERE t.id = ?1
+						`,
+					).bind(matchResult[1]),
+				])) as [
+					D1Result<never>,
+					D1Result<
+						Pick<
+							Database.Tournament,
+							| "registrationRole"
+							| "name"
+							| "registrationChannel"
+							| "registrationMessage"
+							| "minPlayers"
+							| "registrationTemplateLink"
+							| "id"
+						> & { participantCount: number }
+					>,
+				];
+
+				if (!changed_db || !tournament)
+					return new Response(null, {
+						status: 404,
+						headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+					});
+				await Promise.all([
+					tournament.registrationRole &&
+						rest.delete(
+							Routes.guildMemberRole(
+								env.MAIN_GUILD,
+								token.i,
+								tournament.registrationRole,
+							),
+							{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
+						),
+					editMessage(tournament),
+				]);
+				return new Response(null, {
+					status: 204,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+				});
+			} catch (err) {
+				console.error(err);
+				return new Response(null, {
+					status: 500,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
 				});
 			}
 		}
@@ -788,7 +865,7 @@ const server: ExportedHandler<Env> = {
 					),
 					env.DB.prepare(
 						`
-							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink,
+							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id,
 								(
 									SELECT COUNT(*)
 									FROM Participants
@@ -809,6 +886,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationMessage"
 							| "minPlayers"
 							| "registrationTemplateLink"
+							| "id"
 						> & { participantCount: number }
 					>,
 				];
@@ -828,25 +906,7 @@ const server: ExportedHandler<Env> = {
 							),
 							{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
 						),
-					tournament.registrationChannel &&
-						tournament.registrationMessage &&
-						tournament.registrationTemplateLink &&
-						rest.patch(
-							Routes.channelMessage(
-								tournament.registrationChannel,
-								tournament.registrationMessage,
-							),
-							{
-								// TODO: Refactor to a editRegistrationMessage function to avoid awaiting
-								body: await createRegistrationMessage(
-									Number(matchResult[1]),
-									tournament.registrationTemplateLink,
-									tournament.participantCount,
-									tournament.name,
-									tournament.minPlayers,
-								),
-							},
-						),
+					editMessage(tournament),
 				]);
 				return new Response(null, {
 					status: 204,
