@@ -941,10 +941,16 @@ const server: ExportedHandler<Env> = {
 				});
 			body = await body;
 			if (!Array.isArray(body))
-				return new Response(null, {
-					status: 400,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
+				return Response.json(
+					{ message: "Dati non validi" },
+					{
+						status: 400,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
 			try {
 				const [
 					{
@@ -988,10 +994,24 @@ const server: ExportedHandler<Env> = {
 					>,
 				];
 
-				if (!changed_db || !tournament)
+				if (!tournament)
+					return Response.json(
+						{ message: "Torneo non trovato" },
+						{
+							status: 404,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
+				if (!changed_db)
 					return new Response(null, {
-						status: 404,
-						headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+						status: 204,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
 					});
 				await Promise.all([
 					...(tournament.registrationRole ?
@@ -1010,13 +1030,13 @@ const server: ExportedHandler<Env> = {
 				]);
 				return new Response(null, {
 					status: 204,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
 				});
 			} catch (err) {
 				console.error(err);
 				return new Response(null, {
 					status: 500,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
 				});
 			}
 		}

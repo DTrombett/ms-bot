@@ -27,7 +27,7 @@ const style: CSSProperties = {
 	maxWidth: "stretch",
 	padding: "1rem 1.25rem 1rem 1rem",
 	width: "32rem",
-	height: "22.5rem",
+	height: "24rem",
 };
 
 const DeleteButton = ({
@@ -115,6 +115,7 @@ const ListUI = ({
 }) => {
 	const [selection, setSelection] = useState(0);
 	const [disabled, setDisabled] = useState(false);
+	const [error, setError] = useState<string>();
 	const form = useRef<HTMLFormElement>(null);
 	const timeout = useRef<number>(null);
 
@@ -129,15 +130,23 @@ const ListUI = ({
 					)
 				)
 					return;
-				const value = Array.from(new FormData(event.target).keys());
-
 				setDisabled(true);
-				await fetch(`/tournaments/${id}/participants/deleteBatch`, {
-					method: "POST",
-					body: JSON.stringify(value),
-				});
-				setParticipants(participants.filter((v) => !value.includes(v.userId)));
-				setSelection(0);
+				const value = Array.from(new FormData(event.target).keys());
+				const response = await fetch(
+					`/tournaments/${id}/participants/deleteBatch`,
+					{ method: "POST", body: JSON.stringify(value) },
+				);
+
+				if (response.ok) {
+					setParticipants(
+						participants.filter((v) => !value.includes(v.userId)),
+					);
+					setSelection(0);
+				} else
+					setError(
+						(await response.json<{ message: string } | null>())?.message ??
+							"Si è verificato un errore sconosciuto",
+					);
 				setDisabled(false);
 			}}
 			style={style}>
@@ -279,6 +288,19 @@ const ListUI = ({
 					</li>
 				))}
 			</ol>
+			{error && (
+				<span
+					style={{
+						color: Colors.Danger,
+						fontFamily: "ggsans",
+						fontSize: "1rem",
+						fontWeight: "normal",
+						lineHeight: "1.5rem",
+						textAlign: "center",
+					}}>
+					{error}
+				</span>
+			)}
 			<button
 				className="button"
 				form=""
@@ -297,7 +319,7 @@ const ListUI = ({
 					color: "white",
 					border: "none",
 					width: "fit-content",
-					margin: "1rem auto 0",
+					margin: "auto auto 0",
 				}}>
 				Aggiungi partecipante
 			</button>
@@ -343,7 +365,10 @@ const AddParticipantUI = ({
 					setUI(UI.List);
 				} else {
 					setDisabled(false);
-					setError((await response.json<{ message: string }>()).message);
+					setError(
+						(await response.json<{ message: string } | null>())?.message ??
+							"Si è verificato un errore sconosciuto",
+					);
 				}
 			}}
 			style={style}>
