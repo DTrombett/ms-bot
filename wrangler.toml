@@ -29,7 +29,7 @@ not_found_handling = "404-page"
 run_worker_first = ["/", "/color", "/interactions", "/auth/*", "/tournaments", "/tournaments/*"]
 
 [[routes]]
-pattern = "test-bot.trombett.org"
+pattern = "ms-bot.trombett.org"
 custom_domain = true
 zone_name = "trombett.org"
 
