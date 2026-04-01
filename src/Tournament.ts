@@ -11,7 +11,11 @@ import {
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
-import { RegistrationMode, TournamentFlags } from "./util/Constants";
+import {
+	DBMatchStatus,
+	RegistrationMode,
+	TournamentFlags,
+} from "./util/Constants";
 import { rest } from "./util/globals";
 import { ok } from "./util/node";
 import normalizeError from "./util/normalizeError";
@@ -22,6 +26,7 @@ export type Params = { id: number };
 
 export class Tournament extends WorkflowEntrypoint<Env, Params> {
 	private tournamentId!: number;
+
 	override async run(
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
@@ -90,55 +95,10 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				"Wait for registration start",
 				new Date(registrationStart * TimeUnit.Second),
 			);
-		const registration = await step.do("Get registration data", async () => {
-			const result = await this.env.DB.prepare(
-				`
-					SELECT name, flags, minPlayers, registrationMode, registrationChannel, registrationTemplateLink, logChannel, registrationMessage, bracketsTime,
-						(
-							SELECT COUNT(*)
-							FROM Participants
-							WHERE tournamentId = Tournaments.id
-						) AS participantCount
-					FROM Tournaments WHERE id = ?
-				`,
-			)
-				.bind(this.tournamentId)
-				.first<
-					Pick<
-						Database.Tournament,
-						| "bracketsTime"
-						| "flags"
-						| "logChannel"
-						| "minPlayers"
-						| "name"
-						| "registrationChannel"
-						| "registrationMessage"
-						| "registrationMode"
-						| "registrationTemplateLink"
-					> & { participantCount: number }
-				>();
-			const bracketsTime =
-				(result?.flags ?? 0) & TournamentFlags.BracketsCreated ?
-					null
-				:	result?.bracketsTime;
-
-			return (
-					result?.registrationChannel &&
-						result?.registrationTemplateLink &&
-						result.registrationMode & RegistrationMode.Discord
-				) ?
-					{
-						logChannel: result.logChannel,
-						channel: result.registrationChannel,
-						template: result.registrationTemplateLink,
-						count: result.participantCount,
-						name: result.name,
-						minPlayers: result.minPlayers,
-						message: result.registrationMessage,
-						bracketsTime,
-					}
-				:	{ bracketsTime };
-		});
+		const registration = await step.do(
+			"Get registration data",
+			this.getRegistrationData,
+		);
 
 		if (registration.logChannel)
 			try {
@@ -198,6 +158,56 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		return registration.bracketsTime ?? 0;
 	}
 
+	private getRegistrationData = async () => {
+		const result = await this.env.DB.prepare(
+			`
+				SELECT name, flags, minPlayers, registrationMode, registrationChannel, registrationTemplateLink, logChannel, registrationMessage, bracketsTime,
+					(
+						SELECT COUNT(*)
+						FROM Participants
+						WHERE tournamentId = Tournaments.id
+					) AS participantCount
+				FROM Tournaments WHERE id = ?
+			`,
+		)
+			.bind(this.tournamentId)
+			.first<
+				Pick<
+					Database.Tournament,
+					| "bracketsTime"
+					| "flags"
+					| "logChannel"
+					| "minPlayers"
+					| "name"
+					| "registrationChannel"
+					| "registrationMessage"
+					| "registrationMode"
+					| "registrationTemplateLink"
+				> & { participantCount: number }
+			>();
+		const bracketsTime =
+			(result?.flags ?? 0) & TournamentFlags.BracketsCreated ?
+				null
+			:	result?.bracketsTime;
+
+		return (
+				result?.registrationChannel &&
+					result?.registrationTemplateLink &&
+					result.registrationMode & RegistrationMode.Discord
+			) ?
+				{
+					logChannel: result.logChannel,
+					channel: result.registrationChannel,
+					template: result.registrationTemplateLink,
+					count: result.participantCount,
+					name: result.name,
+					minPlayers: result.minPlayers,
+					message: result.registrationMessage,
+					bracketsTime,
+				}
+			:	{ bracketsTime };
+	};
+
 	private async createBrackets(
 		bracketsTime: number,
 		step: WorkflowStep,
@@ -208,42 +218,97 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				"Wait for brackets time",
 				new Date(bracketsTime * TimeUnit.Second),
 			);
-		const participants = await step.do("Get participants", async () => {
-				const { results } = await this.env.DB.prepare(
-					`SELECT userId FROM Participants WHERE tournamentId = ?`,
-				)
-					.bind(this.tournamentId)
-					.run<Pick<Database.Participant, "userId">>();
+		try {
+			const participants = await step.do(
+				"Get and shuffle participants",
+				this.loadParticipants,
+			);
 
-				return results;
-			}),
-			rounds = Math.ceil(Math.log2(participants.length)),
-			participantCount = 2 ** rounds;
-		let currentIndex = participants.length;
-
-		if (currentIndex <= 1) return;
-		while (currentIndex != 0) {
-			const randomIndex = Math.floor(Math.random() * currentIndex--);
-
-			[participants[currentIndex], participants[randomIndex]] = [
-				participants[randomIndex],
-				participants[currentIndex],
-			];
-		}
-		for (let i = 2 ** (rounds - 1); i < participantCount; i++) {
-			// Consider -1
+			if (participants.length > 1)
+				await step.do<void>(
+					"Save participants",
+					this.saveParticipants(participants),
+				);
+		} catch (error) {
+			this.sendError(step, logChannel, error, "Impossibile creare le brackets");
 		}
 	}
 
-	private sendError(
+	private saveParticipants =
+		(participants: Pick<Database.Participant, "userId">[]) => async () => {
+			const length = 2 ** (Math.ceil(Math.log2(participants.length)) - 1),
+				query = this.env.DB.prepare(
+					`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
+				);
+
+			await this.env.DB.batch(
+				Array.from(
+					{ length },
+					this.createMatchQueries(length, participants, query),
+				).concat(
+					this.env.DB.prepare(
+						`UPDATE Tournaments SET flags = flags | ?1 WHERE id = ?2`,
+					).bind(TournamentFlags.BracketsCreated, this.tournamentId),
+				),
+			);
+		};
+
+	private createMatchQueries =
+		(
+			length: number,
+			participants: Pick<Database.Participant, "userId">[],
+			query: D1PreparedStatement,
+		) =>
+		(_: unknown, i: number) => {
+			const match: Database.Match = {
+				id: i + length - 1,
+				status: 0,
+				tournamentId: this.tournamentId,
+				user1: participants[i]!.userId,
+				user2: participants[i + length]?.userId ?? null,
+			};
+
+			if (!match.user2) match.status = DBMatchStatus.Default;
+			return query.bind(
+				match.id,
+				match.status,
+				match.tournamentId,
+				match.user1,
+				match.user2,
+			);
+		};
+
+	private loadParticipants = async () => {
+		const { results } = await this.env.DB.prepare(
+			`SELECT userId FROM Participants WHERE tournamentId = ?`,
+		)
+			.bind(this.tournamentId)
+			.run<Pick<Database.Participant, "userId">>();
+		let currentIndex = results.length;
+
+		if (currentIndex <= 1) return [];
+		while (currentIndex != 0) {
+			const randomIndex = Math.floor(Math.random() * currentIndex--);
+
+			[results[currentIndex], results[randomIndex]] = [
+				results[randomIndex]!,
+				results[currentIndex]!,
+			];
+		}
+		return results;
+	};
+
+	private sendError = (
 		step: WorkflowStep,
 		channelId: string,
 		error: unknown,
 		message = "Si è verificato un errore",
-	) {
+	) => {
+		const id = crypto.randomUUID();
+
 		error = normalizeError(error);
 		this.ctx.waitUntil(
-			step.do<void>("Report error in logs channel", () =>
+			step.do<void>(`Report error ${id} in logs channel`, () =>
 				rest
 					.post(Routes.channelMessages(channelId), {
 						body: {
@@ -255,7 +320,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 									components: [
 										{
 											type: ComponentType.TextDisplay,
-											content: `### ${message}\n\`\`\`\n${(error as Error).stack}\n\`\`\``,
+											content: `### ${message} (${id})\n\`\`\`\n${(error as Error).stack}\n\`\`\``,
 										},
 									],
 								},
@@ -265,5 +330,5 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					.then(() => {}),
 			),
 		);
-	}
+	};
 }

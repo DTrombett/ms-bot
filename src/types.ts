@@ -31,7 +31,7 @@ import type {
 } from "discord-api-types/v10";
 import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
-import type { SupercellPlayerType } from "./util/Constants";
+import type { DBMatchStatus, SupercellPlayerType } from "./util/Constants";
 
 declare global {
 	interface ObjectConstructor {
@@ -411,6 +411,16 @@ declare global {
 			team?: number | null;
 		};
 		type Round = { mode: string; bof: number };
+		type Match = {
+			user1: string;
+			user2?: string | null;
+			id: number;
+			tournamentId: number;
+			status: DBMatchStatus;
+			channelId?: string | null;
+			result1?: number | null;
+			result2?: number | null;
+		};
 	}
 
 	type ResolvedUser = Pick<

@@ -45,3 +45,11 @@ export enum TournamentFlags {
 	BracketsCreated = 1 << 4,
 	Finished = 1 << 5,
 }
+export enum DBMatchStatus {
+	ToBePlayed,
+	Playing,
+	Finished,
+	Default,
+	Abandoned,
+	Postponed,
+}

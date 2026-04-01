@@ -70,10 +70,12 @@ CREATE TABLE Participants (
 CREATE TABLE Matches (
 	id INTEGER PRIMARY KEY,
 	tournamentId INTEGER NOT NULL REFERENCES Tournaments(id) ON DELETE CASCADE,
+	status INTEGER NOT NULL DEFAULT 0,
 	user1 TEXT NOT NULL,
 	user2 TEXT,
 	channelId TEXT,
-	result INTEGER,
+	result1 INTEGER,
+	result2 INTEGER,
 	FOREIGN KEY (tournamentId, user1) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT,
 	FOREIGN KEY (tournamentId, user2) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT
 );
