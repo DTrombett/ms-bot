@@ -29,6 +29,7 @@ import type {
 	RESTPostAPIInteractionFollowupJSONBody,
 	RoutesDeclarations,
 } from "discord-api-types/v10";
+import type { Participants } from "./app/tournaments/[id]/brackets.page";
 import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
 import type { DBMatchStatus, SupercellPlayerType } from "./util/Constants";
@@ -591,6 +592,22 @@ declare global {
 	}[];
 
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
+
+	type Participant = {
+		user: Participants[number];
+		result: string;
+		displayName?: string;
+		player?: Brawl.Player | Clash.Player;
+	};
+
+	type ResolvedMatch = {
+		participant1: Participant;
+		participant2: Participant;
+		channelId?: string | null;
+		id: number;
+		status: DBMatchStatus;
+		channelName?: string;
+	};
 
 	namespace Twitter {
 		type UrlEntity = {
