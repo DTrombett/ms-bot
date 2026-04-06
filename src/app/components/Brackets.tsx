@@ -16,8 +16,6 @@ import { toSearchParams } from "../../util/objects";
 import type { Matches, Participants } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
-import { ChannelMention } from "./Mentions";
-import { ListElement } from "./Tournaments";
 
 const style = {
 	backgroundColor: "rgba(63, 63, 70, 0.25)",
@@ -129,7 +127,12 @@ const resolveMatch = (
 				name: participant1.name ?? undefined,
 				tag: participant1.tag ?? undefined,
 			},
-			result: match ? String(match.result1 ?? 0) : "-",
+			result:
+				match ?
+					match.status === DBMatchStatus.Abandoned && match.result1 == null ?
+						"A"
+					:	String(match.result1 ?? 0)
+				:	"-",
 		},
 		participant2: {
 			userId: participant2.userId,
@@ -140,7 +143,9 @@ const resolveMatch = (
 			result:
 				match ?
 					match.user2 ?
-						String(match.result2 ?? 0)
+						match.status === DBMatchStatus.Abandoned && match.result2 == null ?
+							"A"
+						:	String(match.result2 ?? 0)
 					:	"N"
 				:	"-",
 		},
@@ -148,82 +153,159 @@ const resolveMatch = (
 		id: match?.id ?? 2 ** (brackets.length - i - 1) - 1 + k,
 		status: match?.status ?? DBMatchStatus.ToBePlayed,
 		virtual: !match,
+		round: i,
 	};
 };
 
-const MatchParticipant = (participant: Participant) => (
-	<div
-		style={{
-			display: "flex",
-			flexDirection: "column",
-			justifyContent: "center",
-			alignItems: "center",
-			gap: "1rem",
-		}}>
-		<img
-			alt=""
-			style={{ height: "8rem", width: "8rem", aspectRatio: 1 }}
-			src={`https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${
-				parseFloat(getComputedStyle(document.documentElement).fontSize) * 8
-			}/profile-icons/regular/${
-				participant.player?.tag ?
-					"icon" in participant.player ?
-						participant.player.icon.id
-					:	"28000000"
-				:	"Unknown"
-			}.png`}
-			onError={(event) =>
-				(event.currentTarget.src = `https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${parseFloat(getComputedStyle(document.documentElement).fontSize) * 8}/profile-icons/regular/Unknown.png`)
+const MatchParticipant = ({
+	mobile,
+	admin,
+	match,
+	currentlyPlaying,
+	...participant
+}: Participant & {
+	mobile: boolean;
+	admin: boolean;
+	currentlyPlaying: number;
+	match: ResolvedMatch;
+}) => {
+	const canEdit =
+		admin &&
+		participant.userId !== "" &&
+		match.status !== DBMatchStatus.Default &&
+		!match.virtual &&
+		match.round <= currentlyPlaying &&
+		match.round >= currentlyPlaying - 1;
+
+	return (
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				justifyContent: "flex-start",
+				alignItems: "center",
+				gap: "0.5rem",
+				height: "stretch",
+			}}>
+			<img
+				alt=""
+				style={{ height: "8rem", width: "8rem", aspectRatio: 1 }}
+				src={`https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${parseFloat(getComputedStyle(document.documentElement).fontSize) * 8}/profile-icons/regular/${
+					participant.player?.tag ?
+						"icon" in participant.player ?
+							participant.player.icon.id
+						:	"28000000"
+					:	"Unknown"
+				}.png`}
+				onError={(event) =>
+					(event.currentTarget.src = `https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${parseFloat(getComputedStyle(document.documentElement).fontSize) * 8}/profile-icons/regular/Unknown.png`)
+				}
+			/>
+			<div>
+				<div
+					style={{
+						fontSize: "1.25rem",
+						lineHeight: "1.75rem",
+						width: "12.5rem",
+						textOverflow: "ellipsis",
+						overflowX: "clip",
+					}}>
+					{participant.player?.name ?? "???"}
+				</div>
+				<div
+					style={{
+						fontSize: "0.75rem",
+						lineHeight: "normal",
+						textOverflow: "ellipsis",
+						overflowX: "clip",
+						fontFamily: "ggsans",
+						height: "1rem",
+					}}>
+					{participant.member?.nick ??
+						participant.member?.user.global_name ??
+						participant.member?.user.username}
+				</div>
+			</div>
+			{canEdit && !Number.isNaN(Number(participant.result)) ?
+				<input
+					type="number"
+					name="result"
+					defaultValue={participant.result}
+					min={0}
+					max={100}
+					style={{
+						backgroundColor: "transparent",
+						borderColor: "rgba(255, 255, 255, 0.2)",
+						borderRadius: "4px",
+						borderStyle: "solid",
+						borderWidth: "0.8px",
+						color: "white",
+						fontFamily: "ggsans",
+						fontSize: "1.25rem",
+						fontWeight: 500,
+						lineHeight: "1.5rem",
+						padding: "0.25rem",
+						paddingLeft: mobile ? undefined : "1.25rem",
+						textAlign: "center",
+						textOverflow: "ellipsis",
+						width: "calc(6.5rem - 4.8px)",
+					}}
+					required={true}
+				/>
+			:	<div
+					style={{
+						fontSize: "1.25rem",
+						lineHeight: "1.75rem",
+						overflowX: "clip",
+						textOverflow: "ellipsis",
+					}}>
+					{participant.result}
+				</div>
 			}
-		/>
-		<div>
-			<div
-				style={{
-					fontSize: "1.25rem",
-					lineHeight: "1.75rem",
-					width: "12.5rem",
-					textOverflow: "ellipsis",
-					overflowX: "clip",
-				}}>
-				{participant.player?.name ?? "???"}
-			</div>
-			<div
-				style={{
-					fontSize: "0.75rem",
-					lineHeight: "normal",
-					textOverflow: "ellipsis",
-					overflowX: "clip",
-					fontFamily: "ggsans",
-					height: "1rem",
-				}}>
-				{participant.member?.nick ??
-					participant.member?.user.global_name ??
-					participant.member?.user.username}
-			</div>
-			<div
-				style={{
-					fontSize: "1.25rem",
-					lineHeight: "1.75rem",
-					width: "12.5rem",
-					textOverflow: "ellipsis",
-					overflowX: "clip",
-				}}>
-				{participant.result}
-			</div>
+			{canEdit && (
+				<button
+					className="deleteButton"
+					form=""
+					type="button"
+					onClick={() => {}}
+					style={{
+						backgroundColor: "transparent",
+						border: "none",
+						borderRadius: "0.5rem",
+						color: "white",
+						cursor: "pointer",
+						fontFamily: "ggsans",
+						fontSize: "1rem",
+						fontWeight: 500,
+						lineHeight: "normal",
+						margin: "0 auto",
+						padding: "0.5rem 0.75rem",
+						userSelect: "none",
+						width: "fit-content",
+					}}>
+					{participant.result === "A" ? "Annulla" : "Segna"} abbandono
+				</button>
+			)}
 		</div>
-	</div>
-);
+	);
+};
 const MatchUI = ({
 	active,
 	setActive,
 	mobile,
 	id,
+	admin,
+	currentlyPlaying,
 }: {
 	active: ResolvedMatch;
 	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
 	mobile: boolean;
 	id: number;
+	admin: boolean;
+	currentlyPlaying: number;
 }): ReactNode => {
+	const [disabled, setDisabled] = useState(false);
+
 	useEffect(
 		() =>
 			void (async () => {
@@ -232,7 +314,6 @@ const MatchUI = ({
 					tag1: active.participant1.player?.tag,
 					user2: active.participant2.userId || null,
 					tag2: active.participant2.player?.tag,
-					matchId: active.virtual ? null : active.id,
 				}).toString();
 				if (!params) return;
 				const result = await fetch(
@@ -272,13 +353,13 @@ const MatchUI = ({
 		[],
 	);
 	return (
-		<div
+		<form
 			style={{
 				display: "flex",
 				flexDirection: "column",
 				fontFamily: "LilitaOne",
 				fontSize: "1rem",
-				gap: "0.75rem",
+				gap: "0.5rem",
 				lineHeight: "1.25rem",
 				margin: "0 auto",
 				padding: "0 1rem",
@@ -319,29 +400,106 @@ const MatchUI = ({
 				</button>
 			</div>
 			<div style={{ display: "flex", alignItems: "center" }}>
-				<MatchParticipant {...active.participant1} />
-				<span style={{ fontSize: "3rem", lineHeight: 1 }}>VS</span>
-				<MatchParticipant {...active.participant2} />
+				<MatchParticipant
+					{...active.participant1}
+					mobile={mobile}
+					admin={admin}
+					match={active}
+					currentlyPlaying={currentlyPlaying}
+				/>
+				<div>
+					<div style={{ fontSize: "3rem", lineHeight: 1 }}>VS</div>
+					<div
+						style={{
+							fontSize: "0.75rem",
+							lineHeight: 1,
+							fontFamily: "ggsans",
+						}}>
+						({active.id})
+					</div>
+				</div>
+				<MatchParticipant
+					{...active.participant2}
+					mobile={mobile}
+					admin={admin}
+					match={active}
+					currentlyPlaying={currentlyPlaying}
+				/>
 			</div>
-			<span
-				style={{
-					fontFamily: "ggsans",
-					lineHeight: "normal",
-					textAlign: "left",
-					margin: "0 auto",
-				}}>
-				<ListElement label="ID">{String(active.id)}</ListElement>
-				<ListElement label="Canale">
-					{active.channel?.id ?
-						<ChannelMention
-							channel={`@me/${active.channel.id}`}
-							mobile={mobile}>
-							{active.channelName ?? "unknown"}
-						</ChannelMention>
-					:	<i>non creato</i>}
-				</ListElement>
-			</span>
-		</div>
+			{admin &&
+				active.status !== DBMatchStatus.Default &&
+				!active.virtual &&
+				active.round <= currentlyPlaying &&
+				active.round >= currentlyPlaying - 1 && (
+					<div
+						style={{
+							display: "flex",
+							fontFamily: "ggsans",
+							fontSize: "1.125rem",
+							fontWeight: 500,
+							gap: "0.75rem",
+							marginBottom: "0.5rem",
+							opacity: disabled ? 0.5 : undefined,
+							userSelect: "none",
+							justifyContent: "center",
+							marginTop: "0.25rem",
+						}}>
+						<button
+							className="button"
+							form=""
+							type="button"
+							onClick={() => {}}
+							style={{
+								backgroundColor: Colors.Danger,
+								border: "none",
+								borderRadius: "0.5rem",
+								color: "white",
+								cursor: disabled ? "not-allowed" : "pointer",
+								padding: "0.5rem 0.75rem",
+								fontFamily: "ggsans",
+								fontSize: "1.125rem",
+								fontWeight: 500,
+							}}>
+							Segna abbandono
+						</button>
+						<input
+							value="Invia risultati"
+							className="button"
+							type="submit"
+							disabled={disabled}
+							style={{
+								backgroundColor: Colors.Success,
+								border: "none",
+								borderRadius: "0.5rem",
+								color: "white",
+								cursor: disabled ? "not-allowed" : "pointer",
+								padding: "0.5rem 0.75rem",
+								fontFamily: "ggsans",
+								fontSize: "1.125rem",
+								fontWeight: 500,
+							}}
+						/>
+						<button
+							className="button"
+							form=""
+							type="button"
+							onClick={() => {}}
+							style={{
+								backgroundColor: Colors.Primary,
+								border: "none",
+								borderRadius: "0.5rem",
+								color: "white",
+								cursor: disabled ? "not-allowed" : "pointer",
+								padding: "0.5rem 0.75rem",
+								fontFamily: "ggsans",
+								fontSize: "1.125rem",
+								fontWeight: 500,
+							}}>
+							Invia provvisorio
+						</button>
+					</div>
+				)}
+		</form>
 	);
 };
 
@@ -352,6 +510,7 @@ export default useClient(
 		matches,
 		mobile,
 		id,
+		admin,
 	}: {
 		participants: Participants;
 		matches: Matches;
@@ -488,6 +647,16 @@ export default useClient(
 				)),
 			[],
 		);
+		const currentlyPlaying = useMemo(
+			() =>
+				Math.max(
+					brackets.findLastIndex((b) =>
+						b?.some((p) => p.status !== DBMatchStatus.ToBePlayed),
+					),
+					0,
+				),
+			[brackets],
+		);
 
 		return active ?
 				<MatchUI
@@ -495,6 +664,8 @@ export default useClient(
 					setActive={setActive}
 					mobile={mobile}
 					id={id}
+					admin={admin}
+					currentlyPlaying={currentlyPlaying}
 				/>
 			:	<div
 					id="brackets"

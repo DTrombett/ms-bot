@@ -612,6 +612,7 @@ declare global {
 		status: DBMatchStatus;
 		channelName?: string;
 		virtual: boolean;
+		round: number;
 	};
 
 	namespace Twitter {

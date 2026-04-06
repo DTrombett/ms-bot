@@ -1,7 +1,6 @@
 import Brackets from "../../components/Brackets";
 import { Page } from "../../components/layout";
 import lilitaOne from "../../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
-import nougat from "../../fonts/Nougat-Regular.ttf" with { type: "asset" };
 import ggsans from "../../fonts/ggsansvf.woff2" with { type: "asset" };
 
 export type Participants = (Pick<Database.Participant, "tag" | "userId"> & {
@@ -34,11 +33,7 @@ export default ({
 	<Page
 		mobile={mobile}
 		head={{
-			fonts: [
-				{ path: nougat, type: "font/ttf" },
-				{ path: lilitaOne, type: "font/ttf" },
-				ggsans,
-			],
+			fonts: [{ path: lilitaOne, type: "font/ttf" }, ggsans],
 			styles,
 			title: `${tournament.name} - Brackets`,
 		}}

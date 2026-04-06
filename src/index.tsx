@@ -1344,45 +1344,22 @@ const server: ExportedHandler<Env> = {
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
 			try {
-				const statements: D1PreparedStatement[] = [
-					env.DB.prepare(`SELECT game FROM Tournaments WHERE id = ?`).bind(
-						Number(matchResult[1]),
-					),
-				];
-				const matchId = url.searchParams.get("matchId"),
-					tag1 = url.searchParams.get("tag1"),
+				const tag1 = url.searchParams.get("tag1"),
 					tag2 = url.searchParams.get("tag2"),
 					userId1 = url.searchParams.get("user1"),
 					userId2 = url.searchParams.get("user2");
-				if (matchId)
-					statements.push(
-						env.DB.prepare(
-							`
-								SELECT channelId
-								FROM Matches
-								WHERE tournamentId = ?1 AND id = ?2
-							`,
-						).bind(Number(matchResult[1]), Number(matchId)),
-					);
-				const [
-					{
-						results: [{ game } = {}],
-					},
-					{ results: [{ channelId } = {}] } = { results: [] },
-				] = await (env.DB.batch(statements) as Promise<
-					[
-						D1Result<Pick<Database.Tournament, "game">>,
-						D1Result<Pick<Database.Match, "channelId">> | undefined,
-					]
-				>);
+				const game = await env.DB.prepare(
+					`SELECT game FROM Tournaments WHERE id = ?`,
+				)
+					.bind(Number(matchResult[1]))
+					.first<Database.Tournament["game"]>("game");
 
 				if (game == null)
 					return Response.json(
 						{ message: "Torneo non trovato" },
 						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
 					);
-				const [channel, user1, user2, player1, player2] = await allSettled([
-					channelId && rest.get(Routes.channel(channelId)),
+				const [user1, user2, player1, player2] = await allSettled([
 					userId1 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId1)),
 					userId2 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId2)),
 					tag1 &&
@@ -1397,12 +1374,21 @@ const server: ExportedHandler<Env> = {
 						).getPlayer(tag2),
 				]);
 				return Response.json(
-					{ channel, user1, user2, player1, player2 },
+					{ user1, user2, player1, player2 },
 					{
 						status: 200,
 						headers: {
 							"accept-ch": "Sec-CH-UA-Mobile",
-							"cache-control": "public, max-age=300",
+							"cache-control": `public${
+								(
+									(tag1 && !player1) ||
+									(tag2 && !player2) ||
+									(userId1 && !user1) ||
+									(userId2 && !user2)
+								) ?
+									""
+								:	", max-age=300"
+							}`,
 						},
 					},
 				);
