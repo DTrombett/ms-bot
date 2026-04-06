@@ -224,51 +224,53 @@ const MatchUI = ({
 	mobile: boolean;
 	id: number;
 }): ReactNode => {
-	const effect = async () => {
-		const params = toSearchParams({
-			user1: active.participant1.userId || null,
-			tag1: active.participant1.player?.tag,
-			user2: active.participant2.userId || null,
-			tag2: active.participant2.player?.tag,
-			matchId: active.virtual ? null : active.id,
-		}).toString();
-		if (!params) return;
-		const result = await fetch(`/tournaments/${id}/matchData?${params}`).then(
-			(res) =>
-				res.json<
-					| Partial<{
-							channel: RESTGetAPIChannelResult;
-							user1: RESTGetAPIGuildMemberResult;
-							user2: RESTGetAPIGuildMemberResult;
-							player1: Brawl.Player | Clash.Player;
-							player2: Brawl.Player | Clash.Player;
-							admin: boolean;
-					  }>
-					| { message: string }
-				>(),
-		);
+	useEffect(
+		() =>
+			void (async () => {
+				const params = toSearchParams({
+					user1: active.participant1.userId || null,
+					tag1: active.participant1.player?.tag,
+					user2: active.participant2.userId || null,
+					tag2: active.participant2.player?.tag,
+					matchId: active.virtual ? null : active.id,
+				}).toString();
+				if (!params) return;
+				const result = await fetch(
+					`/tournaments/${id}/matchData?${params}`,
+				).then((res) =>
+					res.json<
+						| Partial<{
+								channel: RESTGetAPIChannelResult;
+								user1: RESTGetAPIGuildMemberResult;
+								user2: RESTGetAPIGuildMemberResult;
+								player1: Brawl.Player | Clash.Player;
+								player2: Brawl.Player | Clash.Player;
+						  }>
+						| { message: string }
+					>(),
+				);
 
-		if ("message" in result) return console.error(result.message);
-		setActive(
-			(active) =>
-				active && {
-					...active,
-					channel: result.channel,
-					participant1: {
-						...active.participant1,
-						member: result.user1,
-						player: result.player1 ?? active.participant1.player,
-					},
-					participant2: {
-						...active.participant2,
-						member: result.user2,
-						player: result.player2 ?? active.participant2.player,
-					},
-				},
-		);
-	};
-
-	useEffect(() => void effect().catch(console.error), []);
+				if ("message" in result) return console.error(result.message);
+				setActive(
+					(active) =>
+						active && {
+							...active,
+							channel: result.channel,
+							participant1: {
+								...active.participant1,
+								member: result.user1,
+								player: result.player1 ?? active.participant1.player,
+							},
+							participant2: {
+								...active.participant2,
+								member: result.user2,
+								player: result.player2 ?? active.participant2.player,
+							},
+						},
+				);
+			})().catch(console.error),
+		[],
+	);
 	return (
 		<div
 			style={{
