@@ -1365,58 +1365,44 @@ const server: ExportedHandler<Env> = {
 						).bind(Number(matchResult[1]), Number(matchId)),
 					);
 				const [
+					{
+						results: [{ game } = {}],
+					},
+					{ results: [{ channelId } = {}] } = { results: [] },
+				] = await (env.DB.batch(statements) as Promise<
 					[
-						{
-							results: [{ game } = {}],
-						},
-						{ results: [{ channelId } = {}] } = { results: [] },
-					],
-					{ setCookie, token },
-				] = await Promise.all([
-					env.DB.batch(statements) as Promise<
-						[
-							D1Result<Pick<Database.Tournament, "game">>,
-							D1Result<Pick<Database.Match, "channelId">> | undefined,
-						]
-					>,
-					createSetCookie(request),
-				]);
+						D1Result<Pick<Database.Tournament, "game">>,
+						D1Result<Pick<Database.Match, "channelId">> | undefined,
+					]
+				>);
 
 				if (game == null)
 					return Response.json(
 						{ message: "Torneo non trovato" },
-						{
-							status: 404,
-							headers: {
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"set-cookie": setCookie,
-							},
-						},
+						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
 					);
-				const [channel, user1, user2, player1, player2, admin] =
-					await allSettled([
-						channelId && rest.get(Routes.channel(channelId)),
-						userId1 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId1)),
-						userId2 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId2)),
-						tag1 &&
-							(game === SupercellPlayerType.BrawlStars ?
-								commands.Brawl
-							:	commands.Clash
-							).getPlayer(tag1),
-						tag2 &&
-							(game === SupercellPlayerType.BrawlStars ?
-								commands.Brawl
-							:	commands.Clash
-							).getPlayer(tag2),
-						isAdmin(token),
-					]);
+				const [channel, user1, user2, player1, player2] = await allSettled([
+					channelId && rest.get(Routes.channel(channelId)),
+					userId1 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId1)),
+					userId2 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId2)),
+					tag1 &&
+						(game === SupercellPlayerType.BrawlStars ?
+							commands.Brawl
+						:	commands.Clash
+						).getPlayer(tag1),
+					tag2 &&
+						(game === SupercellPlayerType.BrawlStars ?
+							commands.Brawl
+						:	commands.Clash
+						).getPlayer(tag2),
+				]);
 				return Response.json(
-					{ channel, user1, user2, player1, player2, admin },
+					{ channel, user1, user2, player1, player2 },
 					{
 						status: 200,
 						headers: {
 							"accept-ch": "Sec-CH-UA-Mobile",
-							"set-cookie": setCookie,
+							"cache-control": "public, max-age=300",
 						},
 					},
 				);

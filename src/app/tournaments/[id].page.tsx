@@ -83,9 +83,8 @@ export default ({
 				<span style={{ marginLeft: "0.25rem" }}>Brackets</span>
 			</div>
 			<iframe
-				height="384"
 				loading="lazy"
-				style={{ border: "none", width: "stretch" }}
+				style={{ border: "none", width: "stretch", height: "24.625rem" }}
 				src={`/tournaments/${tournament.id}/brackets`}
 			/>
 		</div>
