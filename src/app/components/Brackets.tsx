@@ -163,9 +163,18 @@ const MatchParticipant = (participant: Participant) => (
 		<img
 			alt=""
 			style={{ height: "8rem", width: "8rem", aspectRatio: 1 }}
-			src={`https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,dpr=${window.devicePixelRatio},w=${
+			src={`https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${
 				parseFloat(getComputedStyle(document.documentElement).fontSize) * 8
-			}/profile-icons/regular/${participant.player && "icon" in participant.player ? participant.player.icon.id : "28000000"}.png`}
+			}/profile-icons/regular/${
+				participant.player?.tag ?
+					"icon" in participant.player ?
+						participant.player.icon.id
+					:	"28000000"
+				:	"Unknown"
+			}.png`}
+			onError={(event) =>
+				(event.currentTarget.src = `https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${parseFloat(getComputedStyle(document.documentElement).fontSize) * 8}/profile-icons/regular/Unknown.png`)
+			}
 		/>
 		<div>
 			<div
