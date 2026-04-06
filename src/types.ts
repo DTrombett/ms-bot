@@ -6,7 +6,9 @@ import type {
 	APIApplicationCommandOption,
 	APIApplicationCommandSubcommandGroupOption,
 	APIApplicationCommandSubcommandOption,
+	APIChannel,
 	APIChatInputApplicationCommandInteraction,
+	APIGuildMember,
 	APIInteraction,
 	APIInteractionResponse,
 	APIInteractionResponseChannelMessageWithSource,
@@ -29,7 +31,6 @@ import type {
 	RESTPostAPIInteractionFollowupJSONBody,
 	RoutesDeclarations,
 } from "discord-api-types/v10";
-import type { Participants } from "./app/tournaments/[id]/brackets.page";
 import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
 import type { DBMatchStatus, SupercellPlayerType } from "./util/Constants";
@@ -594,19 +595,23 @@ declare global {
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
 
 	type Participant = {
-		user: Participants[number];
+		member?: APIGuildMember;
+		userId: string;
 		result: string;
-		displayName?: string;
-		player?: Brawl.Player | Clash.Player;
+		player?:
+			| Partial<Pick<Brawl.Player | Clash.Player, "name" | "tag">>
+			| Brawl.Player
+			| Clash.Player;
 	};
 
 	type ResolvedMatch = {
 		participant1: Participant;
 		participant2: Participant;
-		channelId?: string | null;
+		channel?: Pick<APIChannel, "id"> | APIChannel;
 		id: number;
 		status: DBMatchStatus;
 		channelName?: string;
+		virtual: boolean;
 	};
 
 	namespace Twitter {

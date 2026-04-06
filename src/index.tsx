@@ -23,6 +23,7 @@ import { rest, textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
+import { allSettled } from "./util/promises";
 import type { RGB } from "./util/resolveColor";
 import { create403, create405 } from "./util/responses";
 import { TimeUnit } from "./util/time";
@@ -1332,6 +1333,98 @@ const server: ExportedHandler<Env> = {
 				return new Response(null, {
 					status: 500,
 					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
+			}
+		}
+		if (
+			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/matchData\/?$/,
+			))
+		) {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
+			try {
+				const statements: D1PreparedStatement[] = [
+					env.DB.prepare(`SELECT game FROM Tournaments WHERE id = ?`).bind(
+						Number(matchResult[1]),
+					),
+				];
+				const matchId = url.searchParams.get("matchId"),
+					tag1 = url.searchParams.get("tag1"),
+					tag2 = url.searchParams.get("tag2"),
+					userId1 = url.searchParams.get("user1"),
+					userId2 = url.searchParams.get("user2");
+				if (matchId)
+					statements.push(
+						env.DB.prepare(
+							`
+								SELECT channelId
+								FROM Matches
+								WHERE tournamentId = ?1 AND id = ?2
+							`,
+						).bind(Number(matchResult[1]), Number(matchId)),
+					);
+				const [
+					[
+						{
+							results: [{ game } = {}],
+						},
+						{ results: [{ channelId } = {}] } = { results: [] },
+					],
+					{ setCookie, token },
+				] = await Promise.all([
+					env.DB.batch(statements) as Promise<
+						[
+							D1Result<Pick<Database.Tournament, "game">>,
+							D1Result<Pick<Database.Match, "channelId">> | undefined,
+						]
+					>,
+					createSetCookie(request),
+				]);
+
+				if (game == null)
+					return Response.json(
+						{ message: "Torneo non trovato" },
+						{
+							status: 404,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
+				const [channel, user1, user2, player1, player2, admin] =
+					await allSettled([
+						channelId && rest.get(Routes.channel(channelId)),
+						userId1 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId1)),
+						userId2 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId2)),
+						tag1 &&
+							(game === SupercellPlayerType.BrawlStars ?
+								commands.Brawl
+							:	commands.Clash
+							).getPlayer(tag1),
+						tag2 &&
+							(game === SupercellPlayerType.BrawlStars ?
+								commands.Brawl
+							:	commands.Clash
+							).getPlayer(tag2),
+						isAdmin(token),
+					]);
+				return Response.json(
+					{ channel, user1, user2, player1, player2, admin },
+					{
+						status: 200,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"set-cookie": setCookie,
+						},
+					},
+				);
+			} catch (err) {
+				console.error(err);
+				return new Response(null, {
+					status: 500,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
 				});
 			}
 		}

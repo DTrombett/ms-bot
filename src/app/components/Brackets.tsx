@@ -1,3 +1,7 @@
+import type {
+	RESTGetAPIChannelResult,
+	RESTGetAPIGuildMemberResult,
+} from "discord-api-types/v10";
 import {
 	useEffect,
 	useMemo,
@@ -8,6 +12,7 @@ import {
 	type SetStateAction,
 } from "react";
 import { DBMatchStatus } from "../../util/Constants";
+import { toSearchParams } from "../../util/objects";
 import type { Matches, Participants } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
@@ -49,7 +54,7 @@ const statusColors: Record<DBMatchStatus, CSSProperties["color"]> = {
 const resolveParticipant = (
 	participantsMap: Record<string, Participants[number]>,
 	id: string,
-) => participantsMap[id] ?? { name: "???", userId: id };
+) => participantsMap[id] ?? { name: undefined, userId: id };
 const resolveMatchParticipant = (
 	participantsMap: Record<string, Participants[number]>,
 	brackets: (Matches | undefined)[],
@@ -101,14 +106,37 @@ const resolveMatch = (
 	k: number,
 ): ResolvedMatch => {
 	const match = brackets[i]?.[k];
+	const participant1 = resolveMatchParticipant(
+		participantsMap,
+		brackets,
+		match,
+		i,
+		k,
+	);
+	const participant2 = resolveMatchParticipant(
+		participantsMap,
+		brackets,
+		match,
+		i,
+		k,
+		2,
+	);
 
 	return {
 		participant1: {
-			user: resolveMatchParticipant(participantsMap, brackets, match, i, k),
+			userId: participant1.userId,
+			player: {
+				name: participant1.name ?? undefined,
+				tag: participant1.tag ?? undefined,
+			},
 			result: match ? String(match.result1 ?? 0) : "-",
 		},
 		participant2: {
-			user: resolveMatchParticipant(participantsMap, brackets, match, i, k, 2),
+			userId: participant2.userId,
+			player: {
+				name: participant2.name ?? undefined,
+				tag: participant2.tag ?? undefined,
+			},
 			result:
 				match ?
 					match.user2 ?
@@ -116,9 +144,10 @@ const resolveMatch = (
 					:	"N"
 				:	"-",
 		},
-		channelId: match?.channelId,
+		channel: match?.channelId ? { id: match.channelId } : undefined,
 		id: match?.id ?? 2 ** (brackets.length - i - 1) - 1 + k,
 		status: match?.status ?? DBMatchStatus.ToBePlayed,
+		virtual: !match,
 	};
 };
 
@@ -147,7 +176,7 @@ const MatchParticipant = (participant: Participant) => (
 					textOverflow: "ellipsis",
 					overflowX: "clip",
 				}}>
-				{participant.user.name}
+				{participant.player?.name ?? "???"}
 			</div>
 			<div
 				style={{
@@ -158,7 +187,9 @@ const MatchParticipant = (participant: Participant) => (
 					fontFamily: "ggsans",
 					height: "1rem",
 				}}>
-				{participant.displayName}
+				{participant.member?.nick ??
+					participant.member?.user.global_name ??
+					participant.member?.user.username}
 			</div>
 			<div
 				style={{
@@ -177,22 +208,55 @@ const MatchUI = ({
 	active,
 	setActive,
 	mobile,
+	id,
 }: {
 	active: ResolvedMatch;
 	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
 	mobile: boolean;
+	id: number;
 }): ReactNode => {
 	const effect = async () => {
-		const toFetch = [active.participant1.user.tag, active.participant2.user.tag]
-			.filter(Boolean)
-			.join(",");
-		if (!toFetch) return;
-		// TODO
-		const match = await fetch(`/players/${toFetch}`).then((res) =>
-			res.json<ResolvedMatch | null>(),
+		const params = toSearchParams({
+			user1: active.participant1.userId || null,
+			tag1: active.participant1.player?.tag,
+			user2: active.participant2.userId || null,
+			tag2: active.participant2.player?.tag,
+			matchId: active.virtual ? null : active.id,
+		}).toString();
+		if (!params) return;
+		const result = await fetch(`/tournaments/${id}/matchData?${params}`).then(
+			(res) =>
+				res.json<
+					| Partial<{
+							channel: RESTGetAPIChannelResult;
+							user1: RESTGetAPIGuildMemberResult;
+							user2: RESTGetAPIGuildMemberResult;
+							player1: Brawl.Player | Clash.Player;
+							player2: Brawl.Player | Clash.Player;
+							admin: boolean;
+					  }>
+					| { message: string }
+				>(),
 		);
 
-		if (match) setActive(match);
+		if ("message" in result) return console.error(result.message);
+		setActive(
+			(active) =>
+				active && {
+					...active,
+					channel: result.channel,
+					participant1: {
+						...active.participant1,
+						member: result.user1,
+						player: result.player1 ?? active.participant1.player,
+					},
+					participant2: {
+						...active.participant2,
+						member: result.user2,
+						player: result.player2 ?? active.participant2.player,
+					},
+				},
+		);
 	};
 
 	useEffect(() => void effect().catch(console.error), []);
@@ -257,8 +321,10 @@ const MatchUI = ({
 				}}>
 				<ListElement label="ID">{String(active.id)}</ListElement>
 				<ListElement label="Canale">
-					{active.channelId ?
-						<ChannelMention channel={`@me/${active.channelId}`} mobile={mobile}>
+					{active.channel?.id ?
+						<ChannelMention
+							channel={`@me/${active.channel.id}`}
+							mobile={mobile}>
 							{active.channelName ?? "unknown"}
 						</ChannelMention>
 					:	<i>non creato</i>}
@@ -274,6 +340,7 @@ export default useClient(
 		participants,
 		matches,
 		mobile,
+		id,
 	}: {
 		participants: Participants;
 		matches: Matches;
@@ -358,7 +425,7 @@ export default useClient(
 												overflowX: "clip",
 												width: "8rem",
 											}}>
-											{match.participant1.user.name}
+											{match.participant1.player?.name ?? "???"}
 										</span>
 										<span
 											style={{
@@ -392,7 +459,7 @@ export default useClient(
 												overflowX: "clip",
 												width: "8rem",
 											}}>
-											{match.participant2.user.name}
+											{match.participant2.player?.name ?? "???"}
 										</span>
 										<span
 											style={{
@@ -412,7 +479,12 @@ export default useClient(
 		);
 
 		return active ?
-				<MatchUI active={active} setActive={setActive} mobile={mobile} />
+				<MatchUI
+					active={active}
+					setActive={setActive}
+					mobile={mobile}
+					id={id}
+				/>
 			:	<div
 					id="brackets"
 					style={{
