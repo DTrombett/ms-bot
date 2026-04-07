@@ -149,31 +149,40 @@ const resolveMatch = (
 					:	"N"
 				:	"-",
 		},
-		channel: match?.channelId ? { id: match.channelId } : undefined,
 		id: match?.id ?? 2 ** (brackets.length - i - 1) - 1 + k,
 		status: match?.status ?? DBMatchStatus.ToBePlayed,
-		virtual: !match,
 		round: i,
+		original: match,
 	};
 };
 
 const MatchParticipant = ({
-	mobile,
 	admin,
-	match,
 	currentlyPlaying,
+	match,
+	mobile,
+	setActive,
+	setDisabled,
+	setError,
+	setMatches,
+	tournamentId,
 	...participant
 }: Participant & {
-	mobile: boolean;
 	admin: boolean;
 	currentlyPlaying: number;
 	match: ResolvedMatch;
+	mobile: boolean;
+	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
+	setDisabled: Dispatch<SetStateAction<boolean>>;
+	setError: Dispatch<SetStateAction<string | undefined>>;
+	setMatches: Dispatch<SetStateAction<Matches>>;
+	tournamentId: number;
 }) => {
 	const canEdit =
 		admin &&
 		participant.userId !== "" &&
 		match.status !== DBMatchStatus.Default &&
-		!match.virtual &&
+		match.original &&
 		match.round <= currentlyPlaying &&
 		match.round >= currentlyPlaying - 1;
 
@@ -229,7 +238,7 @@ const MatchParticipant = ({
 			{canEdit && !Number.isNaN(Number(participant.result)) ?
 				<input
 					type="number"
-					name="result"
+					name={`result${+(participant.userId === match.participant2.userId) + 1}`}
 					defaultValue={participant.result}
 					min={0}
 					max={100}
@@ -267,7 +276,31 @@ const MatchParticipant = ({
 					className="deleteButton"
 					form=""
 					type="button"
-					onClick={() => {}}
+					onClick={async () => {
+						setDisabled(true);
+						const response = await fetch(
+							`/tournaments/${tournamentId}/matches/${match.id}/abandoned?user=${participant.userId}`,
+							{ method: participant.result === "A" ? "DELETE" : "POST" },
+						);
+
+						if (response.ok) {
+							Object.assign(
+								match.original!,
+								await response.json<Partial<Database.Match>>(),
+							);
+							setMatches((m) => m.slice());
+							setActive(undefined);
+						} else {
+							setError(
+								(
+									await response
+										.json<{ message: string } | null>()
+										.catch(() => null)
+								)?.message ?? "Si è verificato un errore sconosciuto",
+							);
+							setDisabled(false);
+						}
+					}}
 					style={{
 						backgroundColor: "transparent",
 						border: "none",
@@ -291,20 +324,23 @@ const MatchParticipant = ({
 };
 const MatchUI = ({
 	active,
-	setActive,
-	mobile,
-	id,
 	admin,
 	currentlyPlaying,
+	id,
+	mobile,
+	setActive,
+	setMatches,
 }: {
 	active: ResolvedMatch;
-	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
-	mobile: boolean;
-	id: number;
 	admin: boolean;
 	currentlyPlaying: number;
+	id: number;
+	mobile: boolean;
+	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
+	setMatches: Dispatch<SetStateAction<Matches>>;
 }): ReactNode => {
 	const [disabled, setDisabled] = useState(false);
+	const [error, setError] = useState<string>();
 
 	useEffect(
 		() =>
@@ -354,6 +390,7 @@ const MatchUI = ({
 	);
 	return (
 		<form
+			id="match"
 			style={{
 				display: "flex",
 				flexDirection: "column",
@@ -366,6 +403,50 @@ const MatchUI = ({
 				textAlign: "center",
 				whiteSpace: "nowrap",
 				width: "fit-content",
+			}}
+			onSubmit={async (event) => {
+				setDisabled(true);
+				event.preventDefault();
+				const urlsp = new URLSearchParams(
+					new FormData(event.currentTarget)
+						.entries()
+						.toArray()
+						.map(([k, v]) => [k, typeof v === "string" ? v : v.name]),
+				);
+				const temp =
+					event.nativeEvent.submitter?.id === "temp" &&
+					active.status !== DBMatchStatus.Finished &&
+					active.status !== DBMatchStatus.Abandoned;
+
+				if (
+					urlsp.get("result1") === urlsp.get("result2") &&
+					!temp &&
+					event.nativeEvent.submitter?.id !== "cancel"
+				) {
+					setError("Non puoi inviare un risultato definitivo pari");
+					return setDisabled(false);
+				}
+				const response = await fetch(
+					`/tournaments/${id}/matches/${active.id}?${urlsp.toString()}${active.status === DBMatchStatus.Abandoned || temp ? "" : `&status=${event.nativeEvent.submitter?.id === "cancel" ? DBMatchStatus.Playing : DBMatchStatus.Finished}`}`,
+					{ method: "PATCH" },
+				);
+				if (response.ok) {
+					Object.assign(
+						active.original!,
+						await response.json<Partial<Database.Match>>(),
+					);
+					setMatches((m) => m.slice());
+					setActive(undefined);
+				} else {
+					setError(
+						(
+							await response
+								.json<{ message: string } | null>()
+								.catch(() => null)
+						)?.message ?? "Si è verificato un errore sconosciuto",
+					);
+					setDisabled(false);
+				}
 			}}>
 			<div
 				style={{
@@ -390,11 +471,11 @@ const MatchUI = ({
 						fontFamily: "ggsans",
 						fontSize: "2.5rem",
 						fontWeight: 600,
-						height: "2.5rem",
+						height: "2rem",
 						lineHeight: 0,
-						padding: "0.25rem",
+						padding: 0,
 						userSelect: "none",
-						width: "2.5rem",
+						width: "2rem",
 					}}>
 					×
 				</button>
@@ -406,6 +487,11 @@ const MatchUI = ({
 					admin={admin}
 					match={active}
 					currentlyPlaying={currentlyPlaying}
+					setMatches={setMatches}
+					setDisabled={setDisabled}
+					setActive={setActive}
+					tournamentId={id}
+					setError={setError}
 				/>
 				<div>
 					<div style={{ fontSize: "3rem", lineHeight: 1 }}>VS</div>
@@ -424,11 +510,16 @@ const MatchUI = ({
 					admin={admin}
 					match={active}
 					currentlyPlaying={currentlyPlaying}
+					setMatches={setMatches}
+					setDisabled={setDisabled}
+					setActive={setActive}
+					tournamentId={id}
+					setError={setError}
 				/>
 			</div>
 			{admin &&
 				active.status !== DBMatchStatus.Default &&
-				!active.virtual &&
+				active.original &&
 				active.round <= currentlyPlaying &&
 				active.round >= currentlyPlaying - 1 && (
 					<div
@@ -438,7 +529,6 @@ const MatchUI = ({
 							fontSize: "1.125rem",
 							fontWeight: 500,
 							gap: "0.75rem",
-							marginBottom: "0.5rem",
 							opacity: disabled ? 0.5 : undefined,
 							userSelect: "none",
 							justifyContent: "center",
@@ -448,7 +538,37 @@ const MatchUI = ({
 							className="button"
 							form=""
 							type="button"
-							onClick={() => {}}
+							disabled={disabled}
+							onClick={async () => {
+								setDisabled(true);
+								const response = await fetch(
+									`/tournaments/${id}/matches/${active.id}/abandoned`,
+									{
+										method:
+											active.status === DBMatchStatus.Abandoned ?
+												"DELETE"
+											:	"POST",
+									},
+								);
+
+								if (response.ok) {
+									Object.assign(
+										active.original!,
+										await response.json<Partial<Database.Match>>(),
+									);
+									setMatches((m) => m.slice());
+									setActive(undefined);
+								} else {
+									setError(
+										(
+											await response
+												.json<{ message: string } | null>()
+												.catch(() => null)
+										)?.message ?? "Si è verificato un errore sconosciuto",
+									);
+									setDisabled(false);
+								}
+							}}
 							style={{
 								backgroundColor: Colors.Danger,
 								border: "none",
@@ -460,7 +580,8 @@ const MatchUI = ({
 								fontSize: "1.125rem",
 								fontWeight: 500,
 							}}>
-							Segna abbandono
+							{active.status === DBMatchStatus.Abandoned ? "Annulla" : "Segna"}{" "}
+							abbandono
 						</button>
 						<input
 							value="Invia risultati"
@@ -479,26 +600,61 @@ const MatchUI = ({
 								fontWeight: 500,
 							}}
 						/>
-						<button
-							className="button"
-							form=""
-							type="button"
-							onClick={() => {}}
-							style={{
-								backgroundColor: Colors.Primary,
-								border: "none",
-								borderRadius: "0.5rem",
-								color: "white",
-								cursor: disabled ? "not-allowed" : "pointer",
-								padding: "0.5rem 0.75rem",
-								fontFamily: "ggsans",
-								fontSize: "1.125rem",
-								fontWeight: 500,
-							}}>
-							Invia provvisorio
-						</button>
+						{active.status === DBMatchStatus.Finished ?
+							<input
+								value="Segna come non finita"
+								className="button"
+								type="submit"
+								id="cancel"
+								disabled={disabled}
+								style={{
+									backgroundColor: Colors.Danger,
+									border: "none",
+									borderRadius: "0.5rem",
+									color: "white",
+									cursor: disabled ? "not-allowed" : "pointer",
+									padding: "0.5rem 0.75rem",
+									fontFamily: "ggsans",
+									fontSize: "1.125rem",
+									fontWeight: 500,
+								}}
+							/>
+						: active.status === DBMatchStatus.Abandoned ?
+							<></>
+						:	<input
+								value="Invia provvisorio"
+								className="button"
+								type="submit"
+								id="temp"
+								disabled={disabled}
+								style={{
+									backgroundColor: Colors.Primary,
+									border: "none",
+									borderRadius: "0.5rem",
+									color: "white",
+									cursor: disabled ? "not-allowed" : "pointer",
+									padding: "0.5rem 0.75rem",
+									fontFamily: "ggsans",
+									fontSize: "1.125rem",
+									fontWeight: 500,
+								}}
+							/>
+						}
 					</div>
 				)}
+			{error && (
+				<span
+					style={{
+						color: Colors.Danger,
+						fontFamily: "ggsans",
+						fontSize: "1rem",
+						fontWeight: "normal",
+						lineHeight: "1.5rem",
+						textAlign: "center",
+					}}>
+					{error}
+				</span>
+			)}
 		</form>
 	);
 };
@@ -520,19 +676,21 @@ export default useClient(
 		embed?: boolean;
 	}) => {
 		const [active, setActive] = useState<ResolvedMatch>();
+		const [currentMatches, setMatches] = useState(matches);
+		const [currentParticipants] = useState(participants);
 		const brackets = useMemo(() => {
 			const brackets: (Matches | undefined)[] = [];
 
-			for (const match of matches) {
+			for (const match of currentMatches) {
 				const level = Math.floor(Math.log2(match.id + 1));
 
 				(brackets[level] ??= [])[match.id - 2 ** level + 1] = match;
 			}
 			return brackets.reverse();
-		}, []);
+		}, [currentMatches]);
 		const participantsMap = useMemo(
-			() => Object.fromEntries(participants.map((p) => [p.userId, p])),
-			[],
+			() => Object.fromEntries(currentParticipants.map((p) => [p.userId, p])),
+			[currentParticipants],
 		);
 		const bracketsElement = useMemo(
 			() =>
@@ -645,7 +803,7 @@ export default useClient(
 						})}
 					</div>
 				)),
-			[],
+			[brackets, participantsMap],
 		);
 		const currentlyPlaying = useMemo(
 			() =>
@@ -666,6 +824,7 @@ export default useClient(
 					id={id}
 					admin={admin}
 					currentlyPlaying={currentlyPlaying}
+					setMatches={setMatches}
 				/>
 			:	<div
 					id="brackets"

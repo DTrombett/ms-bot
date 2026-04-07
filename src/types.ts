@@ -6,7 +6,6 @@ import type {
 	APIApplicationCommandOption,
 	APIApplicationCommandSubcommandGroupOption,
 	APIApplicationCommandSubcommandOption,
-	APIChannel,
 	APIChatInputApplicationCommandInteraction,
 	APIGuildMember,
 	APIInteraction,
@@ -31,6 +30,7 @@ import type {
 	RESTPostAPIInteractionFollowupJSONBody,
 	RoutesDeclarations,
 } from "discord-api-types/v10";
+import type { Matches } from "./app/tournaments/[id].page";
 import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
 import type { DBMatchStatus, SupercellPlayerType } from "./util/Constants";
@@ -607,12 +607,10 @@ declare global {
 	type ResolvedMatch = {
 		participant1: Participant;
 		participant2: Participant;
-		channel?: Pick<APIChannel, "id"> | APIChannel;
 		id: number;
 		status: DBMatchStatus;
-		channelName?: string;
-		virtual: boolean;
 		round: number;
+		original: Matches[number] | undefined;
 	};
 
 	namespace Twitter {
