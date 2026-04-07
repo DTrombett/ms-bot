@@ -44,6 +44,7 @@ export enum TournamentFlags {
 	AutoDeleteChannels = 1 << 3,
 	BracketsCreated = 1 << 4,
 	Finished = 1 << 5,
+	ChannelsCreated = 1 << 6,
 }
 export enum DBMatchStatus {
 	ToBePlayed,

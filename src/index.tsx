@@ -1893,6 +1893,7 @@ const server: ExportedHandler<Env> = {
 	},
 };
 
+export { Channels } from "./Channels";
 export { Notifications } from "./Notifications";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";

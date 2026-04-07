@@ -613,6 +613,13 @@ declare global {
 		original: Matches[number] | undefined;
 	};
 
+	type MatchWithPlayers = Database.Match & {
+		user1Tag: Database.Participant["tag"];
+		user2Tag: Database.Participant["tag"];
+		user1Name: Database.SupercellPlayer["name"] | null;
+		user2Name: Database.SupercellPlayer["name"] | null;
+	};
+
 	namespace Twitter {
 		type UrlEntity = {
 			display_url: string;

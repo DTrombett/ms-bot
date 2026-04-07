@@ -72,3 +72,8 @@ class_name = "WebSocket"
 name = "tournament"
 binding = "TOURNAMENT"
 class_name = "Tournament"
+
+[[workflows]]
+name = "channels"
+binding = "CHANNELS"
+class_name = "Channels"

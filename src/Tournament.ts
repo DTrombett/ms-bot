@@ -41,6 +41,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		ok(tournament, "Tournament not found");
 		await this.sendRegistrationMessage(tournament, step);
 		await this.createBrackets(tournament, step);
+		await this.createChannels(tournament, step);
 	}
 
 	private async sendRegistrationMessage(
@@ -242,6 +243,158 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		}
 		return results;
 	};
+
+	private createChannels = async (
+		tournament: Database.Tournament,
+		step: WorkflowStep,
+	) => {
+		if (
+			!tournament.channelsTime ||
+			tournament.flags & TournamentFlags.ChannelsCreated
+		)
+			return;
+		if (
+			tournament.channelsTime * TimeUnit.Second >
+			Date.now() + TimeUnit.Second
+		)
+			await step.sleepUntil(
+				"Wait for channels time",
+				new Date(tournament.channelsTime * TimeUnit.Second),
+			);
+		const participantCount = await step.do("Get new participant count", () =>
+			this.env.DB.prepare(
+				`
+					SELECT COUNT(*) as participantCount
+					FROM Participants
+					WHERE tournamentId = ?
+				`,
+			)
+				.bind(this.tournamentId)
+				.first<number>("participantCount"),
+		);
+
+		if (!participantCount || participantCount < 2) return;
+		for (
+			let round = Math.ceil(Math.log2(participantCount)) - 1, first = true;
+			round >= 0;
+			round--, first = false
+		) {
+			// TODO: Delete/move old ones
+			const matches = await (first ?
+				step.do(`Get matches for round ${round}`, this.getMatches(round, true))
+			:	step.do(`Create round ${round}`, this.createRound(round)));
+
+			await step.do(`Create channels workflow for round ${round}`, () =>
+				this.env.CHANNELS.create({ params: { matches, tournament } }),
+			);
+			await step.waitForEvent(`Wait for round ${round} to finish`, {
+				type: `round-${round}`,
+			});
+		}
+	};
+
+	private createRound = (round: number) => async () => {
+		const oldMatches: MatchWithPlayers[] = [];
+		for (const match of await this.getMatches(round + 1)())
+			oldMatches[match.id] = match;
+		const matches = Array.from(
+			{ length: 2 ** round },
+			(_, k): MatchWithPlayers | undefined => {
+				const start = 2 ** (round + 1) + k * 2 - 1;
+				let [a, b] = oldMatches.slice(start, start + 2);
+
+				if (!a) {
+					if (!b) return;
+					[a, b] = [b, a];
+				}
+				if (
+					a.status === DBMatchStatus.Postponed ||
+					b?.status === DBMatchStatus.Postponed ||
+					a.status === DBMatchStatus.Playing ||
+					b?.status === DBMatchStatus.Playing ||
+					a.status === DBMatchStatus.ToBePlayed ||
+					b?.status === DBMatchStatus.ToBePlayed
+				)
+					return;
+				if (
+					a.status === DBMatchStatus.Abandoned &&
+					a.result1 == null &&
+					a.result2 == null
+				) {
+					if (
+						!b ||
+						(b.status === DBMatchStatus.Abandoned &&
+							b.result1 == null &&
+							b.result2 == null)
+					)
+						return;
+					[a, b] = [b, a];
+				}
+				const winner1 =
+					a.status === DBMatchStatus.Default ? 1
+					: (a.result2 ?? -1) > (a.result1 ?? -1) ? 2
+					: 1;
+				const winner2 =
+					b ?
+						b.status === DBMatchStatus.Default ? 1
+						: (b.result2 ?? -1) > (b.result1 ?? -1) ? 2
+						: 1
+					:	null;
+
+				return {
+					id: 2 ** round + k - 1,
+					status: winner2 ? DBMatchStatus.Playing : DBMatchStatus.Default,
+					tournamentId: this.tournamentId,
+					user1: a[`user${winner1}`]!,
+					user2: winner2 && a[`user${winner2}`],
+					user1Name: a[`user${winner1}Name`],
+					user2Name: winner2 && a[`user${winner2}Name`],
+					user1Tag: a[`user${winner1}Tag`],
+					user2Tag: winner2 && a[`user${winner2}Tag`],
+				};
+			},
+		).filter((v) => v != null);
+		const query = this.env.DB.prepare(
+			`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
+		);
+
+		await this.env.DB.batch(
+			matches.map((m) =>
+				query.bind(m.id, m.status, m.tournamentId, m.user1, m.user2),
+			),
+		);
+		return matches.filter((m) => m.user2);
+	};
+
+	private getMatches =
+		(round: number, noChannel = false) =>
+		async () => {
+			const { results } = await this.env.DB.prepare(
+				`
+					SELECT m.*,
+						p1.tag AS user1Tag,
+						sp1.name AS user1Name,
+						p2.tag AS user2Tag,
+						sp2.name AS user2Name
+					FROM Matches m
+						LEFT JOIN Participants p1 ON p1.tournamentId = m.tournamentId
+						AND p1.userId = m.user1
+						LEFT JOIN SupercellPlayers sp1 ON sp1.userId = p1.userId
+						AND sp1.tag = p1.tag
+						LEFT JOIN Participants p2 ON p2.tournamentId = m.tournamentId
+						AND p2.userId = m.user2
+						LEFT JOIN SupercellPlayers sp2 ON sp2.userId = p2.userId
+						AND sp2.tag = p2.tag
+					WHERE m.tournamentId = ?1 AND m.id >= ?2 AND m.id <= ?3
+						${noChannel ? `AND m.channelId IS NULL AND m.user2 IS NOT NULL` : ""}
+					ORDER BY m.id
+				`,
+			)
+				.bind(this.tournamentId, 2 ** round - 1, 2 ** (round + 1) - 2)
+				.run<MatchWithPlayers>();
+
+			return results;
+		};
 
 	private sendError = (
 		step: WorkflowStep,
