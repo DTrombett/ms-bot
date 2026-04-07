@@ -32,191 +32,131 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		step: WorkflowStep,
 	) {
 		this.tournamentId = event.payload.id;
-		const { registrationStart, logChannel } = await step.do(
-			"Get registration start time",
-			async () => {
-				const result = await this.env.DB.prepare(
-					`SELECT registrationStart, registrationMode, registrationTemplateLink, registrationChannel, logChannel
-					FROM Tournaments WHERE id = ?`,
-				)
-					.bind(this.tournamentId)
-					.first<
-						Pick<
-							Database.Tournament,
-							| "logChannel"
-							| "registrationStart"
-							| "registrationMode"
-							| "registrationTemplateLink"
-							| "registrationChannel"
-						>
-					>();
-
-				return (
-						result?.registrationStart &&
-							result.registrationChannel &&
-							result.registrationTemplateLink &&
-							result.registrationMode & RegistrationMode.Discord
-					) ?
-						{
-							registrationStart: result.registrationStart,
-							logChannel: result.logChannel,
-						}
-					:	{};
-			},
-		);
-		let bracketsTime: number | null | undefined;
-
-		ok(logChannel, "Tournament not found");
-		if (registrationStart)
-			bracketsTime = await this.sendRegistrationMessage(
-				registrationStart,
-				step,
-			);
-		bracketsTime ??= await step.do("Get brackets time", async () => {
-			const result = await this.env.DB.prepare(
-				`SELECT bracketsTime, flags FROM Tournaments WHERE id = ?`,
-			)
+		const tournament = await step.do("Get tournament data", () =>
+			this.env.DB.prepare(`SELECT * FROM Tournaments WHERE id = ?`)
 				.bind(this.tournamentId)
-				.first<Pick<Database.Tournament, "bracketsTime" | "flags">>();
+				.first<Database.Tournament>(),
+		);
 
-			return (result?.flags ?? 0) & TournamentFlags.BracketsCreated ?
-					null
-				:	result?.bracketsTime;
-		});
-		if (bracketsTime) await this.createBrackets(bracketsTime, step, logChannel);
+		ok(tournament, "Tournament not found");
+		await this.sendRegistrationMessage(tournament, step);
+		await this.createBrackets(tournament, step);
 	}
 
 	private async sendRegistrationMessage(
-		registrationStart: number,
+		tournament: Readonly<Database.Tournament>,
 		step: WorkflowStep,
 	) {
-		if (registrationStart * TimeUnit.Second > Date.now() + TimeUnit.Second)
+		if (
+			!tournament?.registrationStart ||
+			!tournament.registrationChannel ||
+			!tournament.registrationTemplateLink ||
+			(tournament.registrationMode & RegistrationMode.Discord) === 0
+		)
+			return;
+		if (
+			tournament.registrationStart * TimeUnit.Second >
+			Date.now() + TimeUnit.Second
+		)
 			await step.sleepUntil(
 				"Wait for registration start",
-				new Date(registrationStart * TimeUnit.Second),
+				new Date(tournament.registrationStart * TimeUnit.Second),
 			);
-		const registration = await step.do(
-			"Get registration data",
-			this.getRegistrationData,
-		);
 
-		if (registration.logChannel)
-			try {
-				const id = await step.do<string>(
-					"Send registration message",
-					async () =>
-						rest[registration.message ? "patch" : "post"](
-							registration.message ?
-								Routes.channelMessage(
-									registration.channel,
-									registration.message,
-								)
-							:	Routes.channelMessages(registration.channel),
-							{
-								body: await createRegistrationMessage(
-									this.tournamentId,
-									registration.template,
-									registration.count,
-									registration.name,
-									registration.minPlayers,
-								),
-							},
-						).then(
-							(m) =>
-								(
-									m as
-										| RESTPostAPIChannelMessageResult
-										// eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
-										| RESTPatchAPIChannelMessageResult
-								).id,
-						),
-				);
+		try {
+			const participantCount = await step.do("Get participant count", () =>
+				this.env.DB.prepare(
+					`
+						SELECT COUNT(*) as participantCount
+						FROM Participants
+						WHERE tournamentId = ?
+					`,
+				)
+					.bind(this.tournamentId)
+					.first<number>("participantCount"),
+			);
+			const id = await step.do<string>(
+				"Send registration message",
+				this.actuallySendMessage(
+					tournament,
+					tournament.registrationChannel,
+					tournament.registrationTemplateLink,
+					participantCount ?? 0,
+				),
+			);
 
-				if (!registration.message)
-					this.ctx.waitUntil(
-						step.do<void>("Update database", () =>
-							this.env.DB.prepare(
-								`
-									UPDATE Tournaments
-									SET registrationMessage = ?1
-									WHERE id = ?2
-								`,
-							)
-								.bind(id, this.tournamentId)
-								.run()
-								.then(() => {}),
-						),
-					);
-			} catch (error) {
-				this.sendError(
-					step,
-					registration.logChannel,
-					error,
-					"Impossibile inviare il messaggio di iscrizione nel canale specificato",
+			if (!tournament.registrationMessage)
+				this.ctx.waitUntil(
+					step.do<void>("Update database", () =>
+						this.env.DB.prepare(
+							`
+								UPDATE Tournaments
+								SET registrationMessage = ?1
+								WHERE id = ?2
+							`,
+						)
+							.bind(id, this.tournamentId)
+							.run()
+							.then(() => {}),
+					),
 				);
-			}
-		return registration.bracketsTime ?? 0;
+		} catch (error) {
+			this.sendError(
+				step,
+				tournament.logChannel,
+				error,
+				"Impossibile inviare il messaggio di iscrizione nel canale specificato",
+			);
+		}
 	}
 
-	private getRegistrationData = async () => {
-		const result = await this.env.DB.prepare(
-			`
-				SELECT name, flags, minPlayers, registrationMode, registrationChannel, registrationTemplateLink, logChannel, registrationMessage, bracketsTime,
-					(
-						SELECT COUNT(*)
-						FROM Participants
-						WHERE tournamentId = Tournaments.id
-					) AS participantCount
-				FROM Tournaments WHERE id = ?
-			`,
-		)
-			.bind(this.tournamentId)
-			.first<
-				Pick<
-					Database.Tournament,
-					| "bracketsTime"
-					| "flags"
-					| "logChannel"
-					| "minPlayers"
-					| "name"
-					| "registrationChannel"
-					| "registrationMessage"
-					| "registrationMode"
-					| "registrationTemplateLink"
-				> & { participantCount: number }
-			>();
-		const bracketsTime =
-			(result?.flags ?? 0) & TournamentFlags.BracketsCreated ?
-				null
-			:	result?.bracketsTime;
-
-		return (
-				result?.registrationChannel &&
-					result?.registrationTemplateLink &&
-					result.registrationMode & RegistrationMode.Discord
-			) ?
+	private actuallySendMessage =
+		(
+			tournament: Database.Tournament,
+			channelId: string,
+			registrationTemplateLink: string,
+			registrationCount: number,
+		) =>
+		async () => {
+			const { id } = (await rest[
+				tournament.registrationMessage ? "patch" : "post"
+			](
+				tournament.registrationMessage ?
+					Routes.channelMessage(channelId, tournament.registrationMessage)
+				:	Routes.channelMessages(channelId),
 				{
-					logChannel: result.logChannel,
-					channel: result.registrationChannel,
-					template: result.registrationTemplateLink,
-					count: result.participantCount,
-					name: result.name,
-					minPlayers: result.minPlayers,
-					message: result.registrationMessage,
-					bracketsTime,
-				}
-			:	{ bracketsTime };
-	};
+					body: await createRegistrationMessage(
+						this.tournamentId,
+						registrationTemplateLink,
+						registrationCount,
+						tournament.name,
+						tournament.minPlayers,
+					),
+				},
+			)) as
+				| RESTPostAPIChannelMessageResult
+				// eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
+				| RESTPatchAPIChannelMessageResult;
+
+			return id;
+		};
 
 	private async createBrackets(
-		bracketsTime: number,
+		tournament: Database.Tournament,
 		step: WorkflowStep,
-		logChannel: string,
 	) {
-		if (bracketsTime * TimeUnit.Second > Date.now() + TimeUnit.Second)
+		if (
+			!tournament.bracketsTime ||
+			tournament.flags & TournamentFlags.BracketsCreated
+		)
+			return;
+		if (
+			tournament.bracketsTime * TimeUnit.Second >
+			Date.now() + TimeUnit.Second
+		)
 			await step.sleepUntil(
 				"Wait for brackets time",
-				new Date(bracketsTime * TimeUnit.Second),
+				new Date(tournament.bracketsTime * TimeUnit.Second),
 			);
 		try {
 			const participants = await step.do(
@@ -230,7 +170,12 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					this.saveParticipants(participants),
 				);
 		} catch (error) {
-			this.sendError(step, logChannel, error, "Impossibile creare le brackets");
+			this.sendError(
+				step,
+				tournament.logChannel,
+				error,
+				"Impossibile creare le brackets",
+			);
 		}
 	}
 
