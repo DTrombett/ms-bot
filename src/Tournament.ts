@@ -7,6 +7,8 @@ import {
 	ComponentType,
 	MessageFlags,
 	Routes,
+	type APIMessageTopLevelComponent,
+	type RESTGetAPIChannelMessageResult,
 	type RESTPatchAPIChannelMessageResult,
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
@@ -15,6 +17,7 @@ import {
 	DBMatchStatus,
 	RegistrationMode,
 	TournamentFlags,
+	TournamentStatusFlags,
 } from "./util/Constants";
 import { rest } from "./util/globals";
 import { ok } from "./util/node";
@@ -148,7 +151,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 	) {
 		if (
 			!tournament.bracketsTime ||
-			tournament.flags & TournamentFlags.BracketsCreated
+			tournament.statusFlags & TournamentStatusFlags.BracketsCreated
 		)
 			return;
 		if (
@@ -170,6 +173,10 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					"Save participants",
 					this.saveParticipants(participants),
 				);
+			this.log(step, tournament.logChannel, {
+				type: ComponentType.TextDisplay,
+				content: `## Brackets create!\nhttps://ms-bot.trombett.org/tournaments/${this.tournamentId}`,
+			});
 		} catch (error) {
 			this.sendError(
 				step,
@@ -193,8 +200,8 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					this.createMatchQueries(length, participants, query),
 				).concat(
 					this.env.DB.prepare(
-						`UPDATE Tournaments SET flags = flags | ?1 WHERE id = ?2`,
-					).bind(TournamentFlags.BracketsCreated, this.tournamentId),
+						`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,
+					).bind(TournamentStatusFlags.BracketsCreated, this.tournamentId),
 				),
 			);
 		};
@@ -250,7 +257,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 	) => {
 		if (
 			!tournament.channelsTime ||
-			tournament.flags & TournamentFlags.ChannelsCreated
+			tournament.statusFlags & TournamentStatusFlags.ChannelsCreated
 		)
 			return;
 		if (
@@ -279,13 +286,37 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			round >= 0;
 			round--, first = false
 		) {
-			// TODO: Delete/move old ones
-			const matches = await (first ?
-				step.do(`Get matches for round ${round}`, this.getMatches(round, true))
-			:	step.do(`Create round ${round}`, this.createRound(round)));
+			const [matches, message] = await Promise.all([
+				first ?
+					step.do(
+						`Get matches for round ${round}`,
+						this.getMatches(round, true),
+					)
+				:	this.createRoundAndMoveChannels(
+						step,
+						round,
+						tournament.logChannel,
+						tournament.flags,
+					),
+				step.do(
+					`Fetch message for round ${round}`,
+					this.fetchMatchMessage(tournament.matchMessageLink!),
+				),
+			]);
 
-			await step.do(`Create channels workflow for round ${round}`, () =>
-				this.env.CHANNELS.create({ params: { matches, tournament } }),
+			if (!matches.length) continue;
+			await step.do<void>(`Create channels workflows for round ${round}`, () =>
+				this.env.CHANNELS.createBatch(
+					matches
+						.reduce<MatchWithPlayers[][]>((arr, v) => {
+							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+							arr.at(-1)!.push(v);
+							return arr;
+						}, [])
+						.map((matches) => ({
+							params: { ...message, matches, tournament },
+						})),
+				).then(() => {}),
 			);
 			await step.waitForEvent(`Wait for round ${round} to finish`, {
 				type: `round-${round}`,
@@ -293,78 +324,129 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		}
 	};
 
-	private createRound = (round: number) => async () => {
-		const oldMatches: MatchWithPlayers[] = [];
-		for (const match of await this.getMatches(round + 1)())
-			oldMatches[match.id] = match;
-		const matches = Array.from(
-			{ length: 2 ** round },
-			(_, k): MatchWithPlayers | undefined => {
-				const start = 2 ** (round + 1) + k * 2 - 1;
-				let [a, b] = oldMatches.slice(start, start + 2);
+	private createRoundAndMoveChannels = async (
+		step: WorkflowStep,
+		round: number,
+		logChannel: string,
+		flags: number,
+	) => {
+		const oldMatches = await step.do(
+			`Get old matches from round ${round + 1}`,
+			this.getMatches(round + 1),
+		);
+		const [matches] = await Promise.all([
+			step.do(`Create round ${round}`, this.createRound(round, oldMatches)),
+			flags & TournamentFlags.AutoDeleteChannels &&
+				step.do<void>(
+					`Create delete channels workflows from round ${round + 1}`,
+					() =>
+						this.env.DELETE_CHANNELS.createBatch(
+							oldMatches
+								.reduce<string[][]>((arr, v) => {
+									if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+									if (v.channelId) arr.at(-1)!.push(v.channelId);
+									return arr;
+								}, [])
+								.map((channels) => ({ params: { channels, logChannel } })),
+						).then(() => {}),
+				),
+		]);
 
-				if (!a) {
-					if (!b) return;
-					[a, b] = [b, a];
-				}
-				if (
-					a.status === DBMatchStatus.Postponed ||
-					b?.status === DBMatchStatus.Postponed ||
-					a.status === DBMatchStatus.Playing ||
-					b?.status === DBMatchStatus.Playing ||
-					a.status === DBMatchStatus.ToBePlayed ||
-					b?.status === DBMatchStatus.ToBePlayed
-				)
-					return;
-				if (
-					a.status === DBMatchStatus.Abandoned &&
-					a.result1 == null &&
-					a.result2 == null
-				) {
+		return matches;
+	};
+
+	private fetchMatchMessage = (matchMessageLink: string) => async () => {
+		const message = (await rest.get(
+			Routes.channelMessage(
+				...(matchMessageLink.split("/") as [
+					channelId: string,
+					messageId: string,
+				]),
+			),
+		)) as RESTGetAPIChannelMessageResult;
+
+		return {
+			content: message.content,
+			attachments: message.attachments.map((a) => ({
+				description: a.description,
+				spoiler: a.filename.startsWith("SPOILER_"),
+				media: { url: a.url },
+			})),
+		};
+	};
+
+	private createRound =
+		(round: number, oldMatches: MatchWithPlayers[]) => async () => {
+			const resolvedOldMatches: MatchWithPlayers[] = [];
+			for (const match of oldMatches) resolvedOldMatches[match.id] = match;
+			const matches = Array.from(
+				{ length: 2 ** round },
+				(_, k): MatchWithPlayers | undefined => {
+					const start = 2 ** (round + 1) + k * 2 - 1;
+					let [a, b] = resolvedOldMatches.slice(start, start + 2);
+
+					if (!a) {
+						if (!b) return;
+						[a, b] = [b, a];
+					}
 					if (
-						!b ||
-						(b.status === DBMatchStatus.Abandoned &&
-							b.result1 == null &&
-							b.result2 == null)
+						a.status === DBMatchStatus.Postponed ||
+						b?.status === DBMatchStatus.Postponed ||
+						a.status === DBMatchStatus.Playing ||
+						b?.status === DBMatchStatus.Playing ||
+						a.status === DBMatchStatus.ToBePlayed ||
+						b?.status === DBMatchStatus.ToBePlayed
 					)
 						return;
-					[a, b] = [b, a];
-				}
-				const winner1 =
-					a.status === DBMatchStatus.Default ? 1
-					: (a.result2 ?? -1) > (a.result1 ?? -1) ? 2
-					: 1;
-				const winner2 =
-					b ?
-						b.status === DBMatchStatus.Default ? 1
-						: (b.result2 ?? -1) > (b.result1 ?? -1) ? 2
-						: 1
-					:	null;
+					if (
+						a.status === DBMatchStatus.Abandoned &&
+						a.result1 == null &&
+						a.result2 == null
+					) {
+						if (
+							!b ||
+							(b.status === DBMatchStatus.Abandoned &&
+								b.result1 == null &&
+								b.result2 == null)
+						)
+							return;
+						[a, b] = [b, a];
+					}
+					const winner1 =
+						a.status === DBMatchStatus.Default ? 1
+						: (a.result2 ?? -1) > (a.result1 ?? -1) ? 2
+						: 1;
+					const winner2 =
+						b ?
+							b.status === DBMatchStatus.Default ? 1
+							: (b.result2 ?? -1) > (b.result1 ?? -1) ? 2
+							: 1
+						:	null;
 
-				return {
-					id: 2 ** round + k - 1,
-					status: winner2 ? DBMatchStatus.Playing : DBMatchStatus.Default,
-					tournamentId: this.tournamentId,
-					user1: a[`user${winner1}`]!,
-					user2: winner2 && a[`user${winner2}`],
-					user1Name: a[`user${winner1}Name`],
-					user2Name: winner2 && a[`user${winner2}Name`],
-					user1Tag: a[`user${winner1}Tag`],
-					user2Tag: winner2 && a[`user${winner2}Tag`],
-				};
-			},
-		).filter((v) => v != null);
-		const query = this.env.DB.prepare(
-			`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
-		);
+					return {
+						id: 2 ** round + k - 1,
+						status: winner2 ? DBMatchStatus.Playing : DBMatchStatus.Default,
+						tournamentId: this.tournamentId,
+						user1: a[`user${winner1}`]!,
+						user2: winner2 && a[`user${winner2}`],
+						user1Name: a[`user${winner1}Name`],
+						user2Name: winner2 && a[`user${winner2}Name`],
+						user1Tag: a[`user${winner1}Tag`],
+						user2Tag: winner2 && a[`user${winner2}Tag`],
+					};
+				},
+			).filter((v) => v != null);
+			const query = this.env.DB.prepare(
+				`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
+			);
 
-		await this.env.DB.batch(
-			matches.map((m) =>
-				query.bind(m.id, m.status, m.tournamentId, m.user1, m.user2),
-			),
-		);
-		return matches.filter((m) => m.user2);
-	};
+			await this.env.DB.batch(
+				matches.map((m) =>
+					query.bind(m.id, m.status, m.tournamentId, m.user1, m.user2),
+				),
+			);
+			return matches.filter((m) => m.user2);
+		};
 
 	private getMatches =
 		(round: number, noChannel = false) =>
@@ -400,33 +482,54 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		step: WorkflowStep,
 		channelId: string,
 		error: unknown,
-		message = "Si è verificato un errore",
+		message?: string,
 	) => {
 		const id = crypto.randomUUID();
 
 		error = normalizeError(error);
 		this.ctx.waitUntil(
-			step.do<void>(`Report error ${id} in logs channel`, () =>
+			step.do<void>(
+				`Report error ${id} in logs channel`,
+				{ retries: { limit: 1, delay: 5_000 } },
+				() =>
+					rest
+						.post(Routes.channelMessages(channelId), {
+							body: {
+								flags: MessageFlags.IsComponentsV2,
+								components: [
+									{
+										type: ComponentType.Container,
+										accent_color: 0xff0000,
+										components: [
+											{
+												type: ComponentType.TextDisplay,
+												content: `${message ? `### ${message}\n` : ""}\`\`\`\n${(error as Error).stack?.slice(0, 3952 - (message ? message.length + 5 : 0))}\n\`\`\`\n-# ${id}`,
+											},
+										],
+									},
+								],
+							} satisfies RESTPostAPIChannelMessageJSONBody,
+						})
+						.then(() => {}),
+			),
+		);
+	};
+
+	private log = (
+		step: WorkflowStep,
+		channelId: string,
+		...components: APIMessageTopLevelComponent[]
+	) =>
+		this.ctx.waitUntil(
+			step.do<void>(`Send message in logs channel ${crypto.randomUUID()}`, () =>
 				rest
 					.post(Routes.channelMessages(channelId), {
 						body: {
 							flags: MessageFlags.IsComponentsV2,
-							components: [
-								{
-									type: ComponentType.Container,
-									accent_color: 0xff0000,
-									components: [
-										{
-											type: ComponentType.TextDisplay,
-											content: `### ${message} (${id})\n\`\`\`\n${(error as Error).stack}\n\`\`\``,
-										},
-									],
-								},
-							],
+							components,
 						} satisfies RESTPostAPIChannelMessageJSONBody,
 					})
 					.then(() => {}),
 			),
 		);
-	};
 }

@@ -200,6 +200,7 @@ export const parseTournamentData = async (
 		logChannel: form.logChannel,
 		registrationMode,
 		rounds: JSON.stringify(rounds),
+		statusFlags: 0,
 		team: form.team,
 		bracketsTime: form.bracketsTime,
 		categoryId: form.categoryId,

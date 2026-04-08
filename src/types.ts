@@ -386,6 +386,7 @@ declare global {
 			logChannel: string;
 			registrationMode: number;
 			rounds: string;
+			statusFlags: number;
 			team: number;
 			bracketsTime?: number | null;
 			categoryId?: string | null;

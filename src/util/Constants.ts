@@ -42,9 +42,11 @@ export enum TournamentFlags {
 	PublicBrackets = 1 << 1,
 	AutoDetectResults = 1 << 2,
 	AutoDeleteChannels = 1 << 3,
-	BracketsCreated = 1 << 4,
-	Finished = 1 << 5,
-	ChannelsCreated = 1 << 6,
+}
+export enum TournamentStatusFlags {
+	BracketsCreated = 1 << 0,
+	Finished = 1 << 1,
+	ChannelsCreated = 1 << 2,
 }
 export enum DBMatchStatus {
 	ToBePlayed,

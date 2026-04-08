@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
+	ComponentType,
 	MessageFlags,
 	Routes,
 	type APIApplicationCommand,
@@ -27,6 +28,11 @@ export class Dev extends Command {
 		description: "Developer commands",
 		type: ApplicationCommandType.ChatInput,
 		options: [
+			{
+				name: "test",
+				description: "test",
+				type: ApplicationCommandOptionType.Subcommand,
+			},
 			{
 				name: "update-players",
 				description: "Update players name",
@@ -188,6 +194,13 @@ export class Dev extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	static test = async ({ defer, edit }: ChatInputReplies) => {
+		defer();
+		return edit({
+			flags: MessageFlags.IsComponentsV2,
+			components: [{ type: ComponentType.TextDisplay, content: "Fatt" }],
+		});
+	};
 	static "update-players" = async (
 		{ defer, edit }: ChatInputReplies,
 		{ options }: ChatInputArgs<typeof Dev.chatInputData, "update-players">,

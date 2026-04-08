@@ -1894,6 +1894,7 @@ const server: ExportedHandler<Env> = {
 };
 
 export { Channels } from "./Channels";
+export { DeleteChannels } from "./DeleteChannels";
 export { Notifications } from "./Notifications";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";

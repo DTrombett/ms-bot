@@ -37,6 +37,7 @@ CREATE TABLE Tournaments (
 	logChannel TEXT NOT NULL,
 	registrationMode INTEGER NOT NULL DEFAULT 0,
 	rounds TEXT NOT NULL,
+	statusFlags INTEGER NOT NULL DEFAULT 0,
 	team INTEGER NOT NULL DEFAULT 1,
 	bracketsTime INTEGER,
 	categoryId TEXT,
