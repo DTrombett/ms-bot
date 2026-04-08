@@ -5,6 +5,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	PermissionFlagsBits,
 	Routes,
 	TextInputStyle,
 	type APIModalInteractionResponseCallbackData,
@@ -15,6 +16,7 @@ import Command from "../Command";
 import { RegistrationMode, TournamentFlags } from "../util/Constants";
 import { rest } from "../util/globals";
 import { ok } from "../util/node";
+import normalizeError from "../util/normalizeError";
 import { TimeUnit } from "../util/time";
 import { editMessage } from "../util/tournaments/editMessage";
 import { Brawl } from "./brawl";
@@ -574,6 +576,45 @@ export class Tournament extends Command {
 			tag: data.values[0],
 			team,
 		});
+	};
+	static ava = async (
+		{ edit, defer, reply }: ComponentReplies,
+		{
+			args: [tournamentId, round],
+			interaction: { member: { roles, permissions } = { roles: [] } as any },
+		}: ComponentArgs,
+	) => {
+		if (
+			new Set(roles).isDisjointFrom(new Set(env.ALLOWED_ROLES.split(","))) &&
+			!(BigInt(permissions) & PermissionFlagsBits.ManageGuild)
+		)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: "Non hai abbastanza permessi per eseguire questa azione!",
+			});
+		defer();
+		const tournament = await env.DB.prepare(
+			`
+				SELECT workflowId
+				FROM Tournaments
+				WHERE id = ?1
+			`,
+		)
+			.bind(tournamentId)
+			.first<Pick<Database.Tournament, "workflowId">>();
+
+		if (!tournament?.workflowId)
+			return edit({ content: "Torneo non trovato." });
+		try {
+			await (
+				await env.TOURNAMENT.get(tournament.workflowId)
+			).sendEvent({ type: `round-${round}`, payload: null });
+			return edit({ content: "Il round successivo è iniziato!" });
+		} catch (err) {
+			return edit({
+				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,
+			});
+		}
 	};
 	static tag = async (
 		{ defer, edit, reply }: ModalReplies,

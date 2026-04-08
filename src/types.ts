@@ -405,6 +405,7 @@ declare global {
 			registrationStart?: number | null;
 			roundType?: number | null;
 			workflowId?: string | null;
+			currentRound?: number | null;
 			id: number;
 		};
 		type Participant = {

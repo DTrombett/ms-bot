@@ -6,6 +6,7 @@ import {
 	MessageFlags,
 	Routes,
 	type APIApplicationCommand,
+	type RESTGetAPIGuildChannelsResult,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationCommandsJSONBody,
@@ -196,6 +197,11 @@ export class Dev extends Command {
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
 	static test = async ({ defer, edit }: ChatInputReplies) => {
 		defer();
+		for (const channel of (await rest.get(
+			Routes.guildChannels(env.MAIN_GUILD),
+		)) as RESTGetAPIGuildChannelsResult)
+			if (channel.name.match(/^\d+-/))
+				await rest.delete(Routes.channel(channel.id));
 		return edit({
 			flags: MessageFlags.IsComponentsV2,
 			components: [{ type: ComponentType.TextDisplay, content: "Fatt" }],

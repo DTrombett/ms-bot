@@ -1,12 +1,7 @@
 import cssMap from "build:css";
 import jsMap from "build:js";
 import { env, waitUntil } from "cloudflare:workers";
-import {
-	RouteBases,
-	Routes,
-	type APIUser,
-	type RESTPostAPIChannelMessageJSONBody,
-} from "discord-api-types/v10";
+import { RouteBases, Routes, type APIUser } from "discord-api-types/v10";
 import { renderToReadableStream } from "react-dom/server";
 import Index from "./app/index.page";
 import Tournaments from "./app/tournaments.page";
@@ -44,6 +39,7 @@ import {
 } from "./util/token";
 import { editMessage } from "./util/tournaments/editMessage";
 import { parseTournamentData } from "./util/tournaments/parseTournamentData";
+import { patchMatch } from "./util/tournaments/patchMatch";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
@@ -419,11 +415,7 @@ const server: ExportedHandler<Env> = {
 							tournament={tournament}
 							matches={matches}
 							participants={participants}
-							embed={
-								request.headers.get("referer") ===
-									`https://test-bot.trombett.org/tournaments/${matchResult[1]}` &&
-								request.headers.get("sec-fetch-dest") === "iframe"
-							}
+							embed={request.headers.get("sec-fetch-dest") === "iframe"}
 							admin={await isAdmin(token)}
 						/>,
 						{ bootstrapModules: jsMap["/tournaments/[id]/brackets"] },
@@ -1349,166 +1341,65 @@ const server: ExportedHandler<Env> = {
 		) {
 			if (request.method !== "DELETE" && request.method !== "POST")
 				return create405("POST, DELETE");
-			const { setCookie, token } = await createSetCookie(request);
-
-			if (!token)
-				return Response.json(
-					{ message: "Effettua nuovamente il login" },
-					{
-						status: 401,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							"set-cookie": setCookie,
-						},
-					},
-				);
-			const admin = await isAdmin(token);
-			if (!admin)
-				return Response.json(
-					{
-						message: "Solo gli amministratori possono effettuare questa azione",
-					},
-					{
-						status: 403,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							"set-cookie": setCookie,
-						},
-					},
-				);
 			const userId = url.searchParams.get("user");
-			try {
-				const [
-					{
-						meta: { changed_db },
-						results: [match],
-					},
-					{
-						results: [tournament],
-					},
-				] = (await env.DB.batch([
-					env.DB.prepare(
-						`
-							UPDATE Matches
-							SET ${
-								request.method === "POST" ?
-									userId ?
-										`
-								result1 = CASE
-									WHEN user1 = ?3 THEN NULL
-									WHEN user2 = ?3 AND status != ?4 THEN COALESCE(result1, 0)
-									ELSE result1
-								END,
-								result2 = CASE
-									WHEN user2 = ?3 THEN NULL
-									WHEN user1 = ?3 AND status != ?4 THEN COALESCE(result2, 0)
-									ELSE result2
-								END,
-								status = ?4`
-									:	`
-								result1 = NULL,
-								result2 = NULL,
-								status = ?4`
-								: userId ?
-									`
-								status = CASE
-									WHEN (user1 = ?3 AND result2 IS NOT NULL) OR (user2 = ?3 AND result1 IS NOT NULL) THEN ?4
-									ELSE status
-								END,
-								result1 = CASE
-									WHEN user1 = ?3 THEN COALESCE(result1, 0)
-									ELSE result1
-								END,
-								result2 = CASE
-									WHEN user2 = ?3 THEN COALESCE(result2, 0)
-									ELSE result2
-								END`
-								:	`
-								status = ?4,
-								result1 = COALESCE(result1, 0),
-								result2 = COALESCE(result2, 0)`
-							}
-							WHERE tournamentId = ?1 AND id = ?2 ${userId ? "AND (?3 = user1 OR ?3 = user2)" : ""}
-							RETURNING status, result1, result2, user1, user2
-						`,
-					).bind(
-						Number(matchResult[1]),
-						Number(matchResult[2]),
-						userId,
-						request.method === "POST" ?
-							DBMatchStatus.Abandoned
-						:	DBMatchStatus.Playing,
-					),
-					env.DB.prepare(
-						`
-							SELECT logChannel
-							FROM Tournaments
-							WHERE id = ?1
-						`,
-					).bind(Number(matchResult[1])),
-				])) as [
-					D1Result<
-						Pick<
-							Database.Match,
-							"status" | "result1" | "result2" | "user1" | "user2"
-						>
-					>,
-					D1Result<Pick<Database.Tournament, "logChannel">>,
-				];
 
-				if (!match || !tournament)
-					return Response.json(
-						{ message: "Scontro non trovato" },
-						{
-							status: 404,
-							headers: {
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"set-cookie": setCookie,
-							},
-						},
-					);
-				if (changed_db)
-					await Promise.all([
-						rest.post(Routes.channelMessages(tournament.logChannel), {
-							body: {
-								content: `${
-									userId ?
-										`<@${userId}> ${request.method === "POST" ? "ha abbandonato lo scontro" : "è tornato in gioco"}`
-									: request.method === "POST" ?
-										"Nessuno si è presentato allo scontro"
-									:	"I giocatori sono tornati in gioco"
-								}!\n## <@${match.user1}> VS <@${match.user2}>: ${
-									(
-										match.status === DBMatchStatus.Abandoned &&
-										match.result1 == null
-									) ?
-										"A"
-									:	String(match.result1 ?? 0)
-								} - ${
-									match.user2 ?
-										(
-											match.status === DBMatchStatus.Abandoned &&
-											match.result2 == null
-										) ?
-											"A"
-										:	String(match.result2 ?? 0)
-									:	"N"
-								}\n-# <@${token.i}> ha aggiornato lo scontro ${matchResult[2]}`,
-								allowed_mentions: { parse: [] },
-							} satisfies RESTPostAPIChannelMessageJSONBody,
-						}),
-					]);
-				return Response.json(match, {
-					status: 200,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
-			} catch (err) {
-				console.error(err);
-				return new Response(null, {
-					status: 500,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
-			}
+			return patchMatch(
+				request,
+				Number(matchResult[1]),
+				Number(matchResult[2]),
+				env.DB.prepare(
+					`
+						UPDATE Matches
+						SET ${
+							request.method === "POST" ?
+								userId ?
+									`
+							result1 = CASE
+								WHEN user1 = ?3 THEN NULL
+								WHEN user2 = ?3 AND status != ?4 THEN COALESCE(result1, 0)
+								ELSE result1
+							END,
+							result2 = CASE
+								WHEN user2 = ?3 THEN NULL
+								WHEN user1 = ?3 AND status != ?4 THEN COALESCE(result2, 0)
+								ELSE result2
+							END,
+							status = ?4`
+								:	`
+							result1 = NULL,
+							result2 = NULL,
+							status = ?4`
+							: userId ?
+								`
+							status = CASE
+								WHEN (user1 = ?3 AND result2 IS NOT NULL) OR (user2 = ?3 AND result1 IS NOT NULL) THEN ?4
+								ELSE status
+							END,
+							result1 = CASE
+								WHEN user1 = ?3 THEN COALESCE(result1, 0)
+								ELSE result1
+							END,
+							result2 = CASE
+								WHEN user2 = ?3 THEN COALESCE(result2, 0)
+								ELSE result2
+							END`
+							:	`
+							status = ?4,
+							result1 = COALESCE(result1, 0),
+							result2 = COALESCE(result2, 0)`
+						}
+						WHERE tournamentId = ?1 AND id = ?2 ${userId ? "AND (?3 = user1 OR ?3 = user2)" : ""}
+						RETURNING status, result1, result2, user1, user2
+					`,
+				).bind(
+					Number(matchResult[1]),
+					Number(matchResult[2]),
+					userId,
+					request.method === "POST" ?
+						DBMatchStatus.Abandoned
+					:	DBMatchStatus.Playing,
+				),
+			);
 		}
 		if (
 			(matchResult = url.pathname.match(
@@ -1516,123 +1407,27 @@ const server: ExportedHandler<Env> = {
 			))
 		) {
 			if (request.method !== "PATCH") return create405("PATCH");
-			const { setCookie, token } = await createSetCookie(request);
-
-			if (!token)
-				return Response.json(
-					{ message: "Effettua nuovamente il login" },
-					{
-						status: 401,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							"set-cookie": setCookie,
-						},
-					},
-				);
-			const admin = await isAdmin(token);
-			if (!admin)
-				return Response.json(
-					{
-						message: "Solo gli amministratori possono effettuare questa azione",
-					},
-					{
-						status: 403,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							"set-cookie": setCookie,
-						},
-					},
-				);
-			try {
-				const [
-					{
-						meta: { changed_db },
-						results: [match],
-					},
-					{
-						results: [tournament],
-					},
-				] = (await env.DB.batch([
-					env.DB.prepare(
-						`
-							UPDATE Matches
-							SET result1 = COALESCE(?3, result1),
-								result2 = COALESCE(?4, result2),
-								status  = COALESCE(?5, status)
-							WHERE tournamentId = ?1 AND id = ?2
-							RETURNING status, result1, result2, user1, user2
-						`,
-					).bind(
-						Number(matchResult[1]),
-						Number(matchResult[2]),
-						url.searchParams.get("result1"),
-						url.searchParams.get("result2"),
-						url.searchParams.get("status"),
-					),
-					env.DB.prepare(
-						`
-							SELECT logChannel
-							FROM Tournaments
-							WHERE id = ?1
-						`,
-					).bind(Number(matchResult[1])),
-				])) as [
-					D1Result<
-						Pick<
-							Database.Match,
-							"status" | "result1" | "result2" | "user1" | "user2"
-						>
-					>,
-					D1Result<Pick<Database.Tournament, "logChannel">>,
-				];
-
-				if (!match || !tournament)
-					return Response.json(
-						{ message: "Scontro non trovato" },
-						{
-							status: 404,
-							headers: {
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"set-cookie": setCookie,
-							},
-						},
-					);
-				if (changed_db)
-					await Promise.all([
-						rest.post(Routes.channelMessages(tournament.logChannel), {
-							body: {
-								content: `Scontro aggiornato!\n## <@${match.user1}> VS <@${match.user2}>: ${
-									(
-										match.status === DBMatchStatus.Abandoned &&
-										match.result1 == null
-									) ?
-										"A"
-									:	String(match.result1 ?? 0)
-								} - ${
-									match.user2 ?
-										(
-											match.status === DBMatchStatus.Abandoned &&
-											match.result2 == null
-										) ?
-											"A"
-										:	String(match.result2 ?? 0)
-									:	"N"
-								}\n-# <@${token.i}> ha aggiornato lo scontro ${matchResult[2]}`,
-								allowed_mentions: { parse: [] },
-							} satisfies RESTPostAPIChannelMessageJSONBody,
-						}),
-					]);
-				return Response.json(match, {
-					status: 200,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
-			} catch (err) {
-				console.error(err);
-				return new Response(null, {
-					status: 500,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
-			}
+			return patchMatch(
+				request,
+				Number(matchResult[1]),
+				Number(matchResult[2]),
+				env.DB.prepare(
+					`
+						UPDATE Matches
+						SET result1 = COALESCE(?3, result1),
+							result2 = COALESCE(?4, result2),
+							status  = COALESCE(?5, status)
+						WHERE tournamentId = ?1 AND id = ?2
+						RETURNING status, result1, result2, user1, user2
+					`,
+				).bind(
+					Number(matchResult[1]),
+					Number(matchResult[2]),
+					url.searchParams.get("result1"),
+					url.searchParams.get("result2"),
+					url.searchParams.get("status"),
+				),
+			);
 		}
 		if (
 			(matchResult = url.pathname.match(

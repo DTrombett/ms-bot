@@ -24,6 +24,7 @@ import { ok } from "./util/node";
 import normalizeError from "./util/normalizeError";
 import { TimeUnit } from "./util/time";
 import { createRegistrationMessage } from "./util/tournaments/createRegistrationMessage";
+import { resolveWinner } from "./util/tournaments/resolveWinner";
 
 export type Params = { id: number };
 
@@ -91,7 +92,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 
 			if (!tournament.registrationMessage)
 				this.ctx.waitUntil(
-					step.do<void>("Update database", () =>
+					step.do<void>("Add message to database", () =>
 						this.env.DB.prepare(
 							`
 								UPDATE Tournaments
@@ -257,7 +258,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 	) => {
 		if (
 			!tournament.channelsTime ||
-			tournament.statusFlags & TournamentStatusFlags.ChannelsCreated
+			tournament.statusFlags & TournamentStatusFlags.Finished
 		)
 			return;
 		if (
@@ -282,7 +283,9 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 
 		if (!participantCount || participantCount < 2) return;
 		for (
-			let round = Math.ceil(Math.log2(participantCount)) - 1, first = true;
+			let round =
+					tournament.currentRound ?? Math.ceil(Math.log2(participantCount)) - 1,
+				first = true;
 			round >= 0;
 			round--, first = false
 		) {
@@ -302,26 +305,39 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					`Fetch message for round ${round}`,
 					this.fetchMatchMessage(tournament.matchMessageLink!),
 				),
+				step.do<void>(`Set current round to ${round}`, () =>
+					this.env.DB.prepare(
+						`UPDATE Tournaments SET currentRound = ?1 WHERE id = ?2`,
+					)
+						.bind(round, this.tournamentId)
+						.run()
+						.then(() => {}),
+				),
 			]);
 
-			if (!matches.length) continue;
-			await step.do<void>(`Create channels workflows for round ${round}`, () =>
-				this.env.CHANNELS.createBatch(
-					matches
-						.reduce<MatchWithPlayers[][]>((arr, v) => {
-							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-							arr.at(-1)!.push(v);
-							return arr;
-						}, [])
-						.map((matches) => ({
-							params: { ...message, matches, tournament },
-						})),
-				).then(() => {}),
-			);
+			if (matches.length)
+				await step.do<void>(
+					`Create channels workflows for round ${round}`,
+					() =>
+						this.env.CHANNELS.createBatch(
+							matches
+								.reduce<MatchWithPlayers[][]>((arr, v) => {
+									if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+									arr.at(-1)!.push(v);
+									return arr;
+								}, [])
+								.map((matches) => ({
+									params: { ...message, matches, tournament },
+								})),
+						).then(() => {}),
+				);
 			await step.waitForEvent(`Wait for round ${round} to finish`, {
 				type: `round-${round}`,
 			});
 		}
+		this.env.DB.prepare(
+			`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,
+		).bind(TournamentStatusFlags.Finished, this.tournamentId);
 	};
 
 	private createRoundAndMoveChannels = async (
@@ -383,56 +399,40 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				{ length: 2 ** round },
 				(_, k): MatchWithPlayers | undefined => {
 					const start = 2 ** (round + 1) + k * 2 - 1;
-					let [a, b] = resolvedOldMatches.slice(start, start + 2);
+					let [a, b] = resolvedOldMatches
+						.slice(start, start + 2)
+						.map((v) => ({ ...v, winner: resolveWinner(v) }));
 
 					if (!a) {
 						if (!b) return;
 						[a, b] = [b, a];
 					}
-					if (
-						a.status === DBMatchStatus.Postponed ||
-						b?.status === DBMatchStatus.Postponed ||
-						a.status === DBMatchStatus.Playing ||
-						b?.status === DBMatchStatus.Playing ||
-						a.status === DBMatchStatus.ToBePlayed ||
-						b?.status === DBMatchStatus.ToBePlayed
-					)
-						return;
-					if (
-						a.status === DBMatchStatus.Abandoned &&
-						a.result1 == null &&
-						a.result2 == null
-					) {
-						if (
-							!b ||
-							(b.status === DBMatchStatus.Abandoned &&
-								b.result1 == null &&
-								b.result2 == null)
-						)
-							return;
+					if (a.winner === undefined || (b && b?.winner === undefined)) return;
+					if (!a.winner) {
+						if (!b?.winner) return;
 						[a, b] = [b, a];
 					}
-					const winner1 =
-						a.status === DBMatchStatus.Default ? 1
-						: (a.result2 ?? -1) > (a.result1 ?? -1) ? 2
-						: 1;
-					const winner2 =
-						b ?
-							b.status === DBMatchStatus.Default ? 1
-							: (b.result2 ?? -1) > (b.result1 ?? -1) ? 2
-							: 1
-						:	null;
 
 					return {
 						id: 2 ** round + k - 1,
-						status: winner2 ? DBMatchStatus.Playing : DBMatchStatus.Default,
+						status: b?.winner ? DBMatchStatus.Playing : DBMatchStatus.Default,
 						tournamentId: this.tournamentId,
-						user1: a[`user${winner1}`]!,
-						user2: winner2 && a[`user${winner2}`],
-						user1Name: a[`user${winner1}Name`],
-						user2Name: winner2 && a[`user${winner2}Name`],
-						user1Tag: a[`user${winner1}Tag`],
-						user2Tag: winner2 && a[`user${winner2}Tag`],
+						user1: a.winner!,
+						user2: b?.winner,
+						user1Name: a.winner === a.user1 ? a.user1Name : a.user2Name,
+						user2Name:
+							b ?
+								b.winner === b.user1 ?
+									b.user1Name
+								:	b.user2Name
+							:	null,
+						user1Tag: a.winner === a.user1 ? a.user1Tag : a.user2Tag,
+						user2Tag:
+							b ?
+								b.winner === b.user1 ?
+									b.user1Tag
+								:	b.user2Tag
+							:	null,
 					};
 				},
 			).filter((v) => v != null);

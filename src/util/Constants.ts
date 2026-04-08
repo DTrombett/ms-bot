@@ -46,7 +46,6 @@ export enum TournamentFlags {
 export enum TournamentStatusFlags {
 	BracketsCreated = 1 << 0,
 	Finished = 1 << 1,
-	ChannelsCreated = 1 << 2,
 }
 export enum DBMatchStatus {
 	ToBePlayed,

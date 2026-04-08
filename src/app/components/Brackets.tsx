@@ -96,7 +96,6 @@ const resolveMatchParticipant = (
 		},
 	].sort(({ r: a }, { r: b }) => b - a)[0]!.u;
 };
-
 const resolveMatch = (
 	brackets: (Matches | undefined)[],
 	participantsMap: Record<string, Participants[number]>,
@@ -667,6 +666,7 @@ export default useClient(
 		mobile,
 		id,
 		admin,
+		embed,
 	}: {
 		participants: Participants;
 		matches: Matches;
@@ -700,7 +700,7 @@ export default useClient(
 							display: "flex",
 							flexDirection: "column",
 							justifyContent: "space-around",
-							height: `calc((6rem + 2.4px) * ${brackets[0]?.length})`,
+							height: `calc((5rem + 2.4px) * ${brackets[0]?.length})`,
 						}}>
 						{Array.from({ length: 2 ** (brackets.length - 1 - i) }, (_, k) => {
 							const match = resolveMatch(brackets, participantsMap, i, k);
@@ -721,20 +721,20 @@ export default useClient(
 												style={{
 													border: "0.8px solid rgba(255, 255, 255, 0.2)",
 													borderLeft: "none",
-													height: `calc((6rem + 2.4px) * ${2 ** (i - 1)} - 0.8px)`,
-													left: "calc(-4rem - 0.8px)",
+													height: `calc((5rem + 2.4px) * ${2 ** (i - 1)} - 0.8px)`,
+													left: "calc(-3rem - 0.8px)",
 													position: "absolute",
-													top: `calc((-3rem - 1.2px) * ${2 ** (i - 1)} + 2rem)`,
-													width: "2rem",
+													top: `calc((-2.5rem - 1.2px) * ${2 ** (i - 1)} + 2rem)`,
+													width: "1.5rem",
 												}}
 											/>
 											<div
 												style={{
 													borderBottom: "0.8px solid rgba(255, 255, 255, 0.2)",
 													height: "2rem",
-													left: "calc(-2rem)",
+													left: "calc(-1.5rem)",
 													position: "absolute",
-													width: "calc(2rem - 0.8px)",
+													width: "calc(1.5rem - 0.8px)",
 												}}
 											/>
 										</span>
@@ -832,7 +832,7 @@ export default useClient(
 						display: "flex",
 						fontFamily: "LilitaOne",
 						fontSize: "0.875rem",
-						gap: "4rem",
+						gap: "3rem",
 						lineHeight: "1.25rem",
 						margin: "0 auto",
 						padding: "0 1rem",
@@ -840,6 +840,76 @@ export default useClient(
 						whiteSpace: "nowrap",
 						width: "fit-content",
 					}}>
+					<div
+						style={{
+							position: "fixed",
+							top: "1rem",
+							right: "1rem",
+							padding: "0 1rem",
+							display: "flex",
+							gap: "1rem",
+							zIndex: 10,
+						}}>
+						{!embed && (
+							<button
+								className="deleteButton"
+								type="button"
+								onClick={() =>
+									document.fullscreenElement ?
+										document.exitFullscreen()
+									:	document.documentElement.requestFullscreen()
+								}
+								style={{
+									backgroundColor: "transparent",
+									border: "none",
+									borderRadius: "0.5rem",
+									color: "white",
+									cursor: "pointer",
+									fontFamily: "ggsans",
+									fontSize: "2.5rem",
+									fontWeight: 600,
+									height: "2.5rem",
+									lineHeight: 0,
+									marginRight: 0,
+									padding: "0.25rem",
+									userSelect: "none",
+									width: "2.5rem",
+								}}>
+								↕
+							</button>
+						)}
+						<button
+							className="deleteButton"
+							type="button"
+							onClick={
+								typeof window === "undefined" ? undefined : (
+									window.location.reload.bind(window.location)
+								)
+							}
+							style={{
+								backgroundColor: "transparent",
+								border: "none",
+								borderRadius: "0.5rem",
+								color: "white",
+								cursor: "pointer",
+								fontFamily: "ggsans",
+								fontSize: "2.5rem",
+								fontWeight: 600,
+								height: "2.5rem",
+								lineHeight: 0,
+								marginRight: 0,
+								padding: "0.25rem",
+								userSelect: "none",
+								width: "2.5rem",
+							}}>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
+								<path
+									fill="currentColor"
+									d="M22.242 22.242l2.829 2.829c-3.905 3.905-10.237 3.904-14.143-.001-2.247-2.246-3.194-5.296-2.854-8.225l-4.037.367c-.215 3.84 1.128 7.752 4.062 10.687 5.467 5.467 14.333 5.468 19.799 0l2.828 2.828.849-9.334-9.333.849zM27.899 8.1C22.431 2.633 13.568 2.633 8.1 8.1L5.272 5.272l-.849 9.334 9.334-.849-2.829-2.829c3.906-3.905 10.236-3.905 14.142 0 2.248 2.247 3.194 5.297 2.856 8.226l4.036-.366c.216-3.841-1.128-7.753-4.063-10.688z"
+								/>
+							</svg>
+						</button>
+					</div>
 					{bracketsElement}
 				</div>;
 	},

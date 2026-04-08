@@ -1,3 +1,4 @@
+import { TournamentStatusFlags } from "../../util/Constants";
 import Participants from "../components/Participants";
 import { Page } from "../components/layout";
 import lilitaOne from "../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
@@ -58,35 +59,45 @@ export default ({
 				id={tournament.id}
 			/>
 		)}
-		<div
-			style={{
-				backgroundColor: "rgba(63, 63, 70, 0.25)",
-				border: "0.8px solid rgba(255, 255, 255, 0.2)",
-				borderRadius: "8px",
-				display: "flex",
-				flexDirection: "column",
-				fontFamily: "LilitaOne",
-				fontSize: "1.5rem",
-				lineHeight: "2rem",
-				margin: "0 auto 1.5rem",
-				maxWidth: "stretch",
-				padding: "1rem 1.25rem 1rem 1rem",
-				width: `${14 * Math.ceil(Math.log2(participants.length))}rem`,
-				minWidth: "20rem",
-			}}>
+		{tournament.statusFlags & TournamentStatusFlags.BracketsCreated && (
 			<div
 				style={{
+					backgroundColor: "rgba(63, 63, 70, 0.25)",
+					border: "0.8px solid rgba(255, 255, 255, 0.2)",
+					borderRadius: "8px",
 					display: "flex",
-					justifyContent: "space-between",
-					height: "2.25rem",
+					flexDirection: "column",
+					fontFamily: "LilitaOne",
+					fontSize: "1.5rem",
+					lineHeight: "2rem",
+					margin: "0 auto 1.5rem",
+					maxWidth: "stretch",
+					padding: "1rem 1.25rem 1rem 1rem",
+					width: `${13 * Math.ceil(Math.log2(participants.length))}rem`,
+					minWidth: "20rem",
 				}}>
-				<span style={{ marginLeft: "0.25rem" }}>Brackets</span>
+				<div
+					style={{
+						display: "flex",
+						justifyContent: "space-between",
+						height: "2.25rem",
+					}}>
+					<a
+						style={{
+							marginLeft: "0.25rem",
+							color: "currentColor",
+							textDecoration: "none",
+						}}
+						href={`/tournaments/${tournament.id}/brackets`}>
+						Brackets
+					</a>
+				</div>
+				<iframe
+					loading="lazy"
+					style={{ border: "none", width: "stretch", height: "24.625rem" }}
+					src={`/tournaments/${tournament.id}/brackets`}
+				/>
 			</div>
-			<iframe
-				loading="lazy"
-				style={{ border: "none", width: "stretch", height: "24.625rem" }}
-				src={`/tournaments/${tournament.id}/brackets`}
-			/>
-		</div>
+		)}
 	</Page>
 );

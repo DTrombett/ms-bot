@@ -43,6 +43,7 @@ CREATE TABLE Tournaments (
 	categoryId TEXT,
 	channelName TEXT,
 	channelsTime INTEGER,
+	currentRound INTEGER,
 	endedCategoryId TEXT,
 	endedChannelName TEXT,
 	matchMessageLink TEXT,
