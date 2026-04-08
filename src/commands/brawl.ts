@@ -1487,6 +1487,37 @@ export class Brawl extends Command {
 			throw err;
 		}
 	};
+	static getBattleLog = async (
+		tag: string,
+		{
+			edit,
+			cache,
+			query,
+		}: {
+			edit?: BaseReplies["edit"];
+			cache?: boolean;
+			query?: string | URLSearchParams;
+		} = {},
+	) => {
+		try {
+			tag = Brawl.normalizeTag(tag);
+			return (
+				await Brawl.callApi<Brawl.Paginated<Brawl.Battle>>(
+					`players/${encodeURIComponent(tag)}/battlelog?${query?.toString() ?? ""}`,
+					{ errors: { 404: "Giocatore non trovato." }, cache },
+				)
+			).items;
+		} catch (err) {
+			if (edit)
+				throw await edit({
+					content:
+						err instanceof Error ?
+							err.message
+						:	"Non è stato possibile recuperare il registro battaglie. Riprova più tardi.",
+				});
+			throw err;
+		}
+	};
 	static getModes = async ({
 		edit,
 		cache,

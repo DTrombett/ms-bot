@@ -140,7 +140,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 					components: [
 						{
 							type: ComponentType.Button,
-							custom_id: `tournament-che-${match.id}`,
+							custom_id: `tournament-che-${match.id}-${event.payload.tournament.id}`,
 							style: ButtonStyle.Success,
 							emoji: { name: "✅" },
 							label: "Controlla risultati",

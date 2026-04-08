@@ -39,7 +39,7 @@ import {
 } from "./util/token";
 import { editMessage } from "./util/tournaments/editMessage";
 import { parseTournamentData } from "./util/tournaments/parseTournamentData";
-import { patchMatch } from "./util/tournaments/patchMatch";
+import { runPatchRequest } from "./util/tournaments/patchMatch";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
@@ -1343,7 +1343,7 @@ const server: ExportedHandler<Env> = {
 				return create405("POST, DELETE");
 			const userId = url.searchParams.get("user");
 
-			return patchMatch(
+			return runPatchRequest(
 				request,
 				Number(matchResult[1]),
 				Number(matchResult[2]),
@@ -1407,7 +1407,7 @@ const server: ExportedHandler<Env> = {
 			))
 		) {
 			if (request.method !== "PATCH") return create405("PATCH");
-			return patchMatch(
+			return runPatchRequest(
 				request,
 				Number(matchResult[1]),
 				Number(matchResult[2]),

@@ -1217,6 +1217,23 @@ declare global {
 		};
 		type EventTypeList = EventType[];
 		type EventType = { name: JsonLocalizedName; id: number };
+		type BattleList = Battle[];
+		type Battle = { event: Event; battleTime: string; battle: BattleResult };
+		type Event = { mode: string; modeId: number; id: number; map: string };
+		type BattlePlayer = {
+			tag: string;
+			name: string;
+			brawler: { id: number; name: string; power: number; trophies: number };
+		};
+		type BattleResult = {
+			mode: string;
+			type: string;
+			result: string;
+			duration: number;
+			trophyChange: number;
+			starPlayer: BattlePlayer;
+			teams: BattlePlayer[][];
+		};
 		type Paginated<T> = {
 			items: T[];
 			paging: { cursors: { after?: string; before?: string } };

@@ -13,12 +13,17 @@ import {
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import { RegistrationMode, TournamentFlags } from "../util/Constants";
+import {
+	DBMatchStatus,
+	RegistrationMode,
+	TournamentFlags,
+} from "../util/Constants";
 import { rest } from "../util/globals";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
 import { TimeUnit } from "../util/time";
 import { editMessage } from "../util/tournaments/editMessage";
+import { patchMatch } from "../util/tournaments/patchMatch";
 import { Brawl } from "./brawl";
 
 export class Tournament extends Command {
@@ -610,6 +615,104 @@ export class Tournament extends Command {
 				await env.TOURNAMENT.get(tournament.workflowId)
 			).sendEvent({ type: `round-${round}`, payload: null });
 			return edit({ content: "Il round successivo è iniziato!" });
+		} catch (err) {
+			return edit({
+				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,
+			});
+		}
+	};
+	static che = async (
+		{ edit, defer }: ComponentReplies,
+		{ args: [matchId, tournamentId], user: { id: userId } }: ComponentArgs,
+	) => {
+		defer();
+		const match = await env.DB.prepare(
+			`
+				SELECT 
+				    m.*,
+					t.game, t.rounds, t.flags, t.id as tournamentId,
+				    sp1.tag AS user1Tag, sp2.tag AS user2Tag
+				FROM Matches m
+				JOIN Tournaments t ON m.tournamentId = t.id
+				LEFT JOIN SupercellPlayers sp1 ON sp1.userId = m.user1
+				LEFT JOIN SupercellPlayers sp2 ON sp2.userId = m.user2
+				WHERE m.id = ?1 AND m.tournamentId = ?2
+			`,
+		)
+			.bind(matchId, tournamentId)
+			.first<
+				Database.Match &
+					Pick<Database.Tournament, "game" | "rounds" | "flags"> & {
+						tournamentId: Database.Tournament["id"];
+					} & Partial<{
+						user1Tag: Database.SupercellPlayer["tag"];
+						user2Tag: Database.SupercellPlayer["tag"];
+					}>
+			>();
+
+		if (!match?.user1Tag) return edit({ content: "Torneo non trovato." });
+		if ((match.flags & TournamentFlags.AutoDetectResults) === 0)
+			return edit({
+				content:
+					"Il controllo dei risultati tramite registro battaglie non è attivato per questo torneo!",
+			});
+		try {
+			const round = (JSON.parse(match.rounds) as Database.Round[]).at(
+				Math.floor(Math.log2(match.id + 1)),
+			)!;
+			round.mode = round.mode
+				.toLowerCase()
+				.split(/\s+/)
+				.reduce((a, b) => a + (b[0]?.toUpperCase() ?? "") + b.slice(1));
+			const battleLog = (await Brawl.getBattleLog(match.user1Tag)).filter(
+				(b) =>
+					b.event.mode === round.mode &&
+					(b.battle.result === "defeat" || b.battle.result === "victory") &&
+					b.battle.teams.every(
+						(t) =>
+							t.length === 1 &&
+							[match.user1Tag, match.user2Tag].includes(t[0]?.tag),
+					),
+			);
+
+			if (!battleLog.length)
+				return edit({ content: "Non risulta alcuna partita corrispondente!" });
+			const result = battleLog.reduce<[number, number]>(
+				(result, { battle }) =>
+					battle.result === "defeat" ?
+						[result[0], result[1] + 1]
+					:	[result[0], result[1] + 1],
+				[0, 0],
+			);
+			const newMatch = await patchMatch(
+				match.tournamentId,
+				match.id,
+				env.DB.prepare(
+					`
+						UPDATE Matches
+						SET result1 = ?3,
+							result2 = ?4,
+							status  = ?5
+						WHERE tournamentId = ?1 AND id = ?2
+						RETURNING status, result1, result2, user1, user2
+					`,
+				).bind(
+					match.tournamentId,
+					match.id,
+					result[0],
+					result[1],
+					battleLog.length > round.bof / 2 ?
+						DBMatchStatus.Finished
+					:	DBMatchStatus.Playing,
+				),
+				userId,
+			);
+
+			if (newMatch)
+				return edit({
+					content: `## <@${newMatch.user1}> VS <@${newMatch.user2}>: ${newMatch.result1} - ${newMatch.result2} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+					allowed_mentions: { parse: [] },
+				});
 		} catch (err) {
 			return edit({
 				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,

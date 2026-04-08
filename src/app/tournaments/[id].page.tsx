@@ -59,7 +59,7 @@ export default ({
 				id={tournament.id}
 			/>
 		)}
-		{tournament.statusFlags & TournamentStatusFlags.BracketsCreated && (
+		{(tournament.statusFlags & TournamentStatusFlags.BracketsCreated) !== 0 && (
 			<div
 				style={{
 					backgroundColor: "rgba(63, 63, 70, 0.25)",
