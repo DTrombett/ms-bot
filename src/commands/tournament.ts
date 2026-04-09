@@ -631,7 +631,8 @@ export class Tournament extends Command {
 				SELECT 
 				    m.*,
 					t.game, t.rounds, t.flags, t.id as tournamentId,
-				    sp1.tag AS user1Tag, sp2.tag AS user2Tag
+				    sp1.tag AS user1Tag, sp2.tag AS user2Tag,
+				    sp1.name AS user1Name, sp2.name AS user2Name,
 				FROM Matches m
 				JOIN Tournaments t ON m.tournamentId = t.id
 				LEFT JOIN SupercellPlayers sp1 ON sp1.userId = m.user1
@@ -647,6 +648,8 @@ export class Tournament extends Command {
 					} & Partial<{
 						user1Tag: Database.SupercellPlayer["tag"];
 						user2Tag: Database.SupercellPlayer["tag"];
+						user1Name: Database.SupercellPlayer["name"];
+						user2Name: Database.SupercellPlayer["name"];
 					}>
 			>();
 
@@ -676,7 +679,9 @@ export class Tournament extends Command {
 			);
 
 			if (!battleLog.length)
-				return edit({ content: "Non risulta alcuna partita corrispondente!" });
+				return edit({
+					content: `Non risulta alcuna partita corrispondente!\n-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Name} e ${match.user2Name} vengono considerate\n`,
+				});
 			const result = battleLog.reduce<[number, number]>(
 				(result, { battle }) =>
 					battle.result === "defeat" ?
