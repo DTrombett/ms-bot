@@ -56,10 +56,13 @@ export const runPatchRequest = async (
 			headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
 		});
 	} catch (err) {
-		return Response.json(normalizeError(err), {
-			status: 500,
-			headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-		});
+		return Response.json(
+			{ message: normalizeError(err).message },
+			{
+				status: 500,
+				headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+			},
+		);
 	}
 };
 
