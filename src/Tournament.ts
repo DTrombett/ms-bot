@@ -301,10 +301,11 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						tournament.logChannel,
 						tournament.flags,
 					),
-				step.do(
-					`Fetch message for round ${round}`,
-					this.fetchMatchMessage(tournament.matchMessageLink!),
-				),
+				tournament.matchMessageLink &&
+					step.do(
+						`Fetch message for round ${round}`,
+						this.fetchMatchMessage(tournament.matchMessageLink),
+					),
 				step.do<void>(`Set current round to ${round}`, () =>
 					this.env.DB.prepare(
 						`UPDATE Tournaments SET currentRound = ?1 WHERE id = ?2`,
@@ -335,9 +336,14 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				type: `round-${round}`,
 			});
 		}
-		this.env.DB.prepare(
-			`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,
-		).bind(TournamentStatusFlags.Finished, this.tournamentId);
+		await step.do<void>("Finish tournament", () =>
+			this.env.DB.prepare(
+				`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,
+			)
+				.bind(TournamentStatusFlags.Finished, this.tournamentId)
+				.run()
+				.then(() => {}),
+		);
 	};
 
 	private createRoundAndMoveChannels = async (

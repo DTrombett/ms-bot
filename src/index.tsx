@@ -1407,6 +1407,10 @@ const server: ExportedHandler<Env> = {
 			))
 		) {
 			if (request.method !== "PATCH") return create405("PATCH");
+			const result1 = url.searchParams.get("result1"),
+				result2 = url.searchParams.get("result2"),
+				status = url.searchParams.get("status");
+
 			return runPatchRequest(
 				request,
 				Number(matchResult[1]),
@@ -1423,9 +1427,9 @@ const server: ExportedHandler<Env> = {
 				).bind(
 					Number(matchResult[1]),
 					Number(matchResult[2]),
-					url.searchParams.get("result1"),
-					url.searchParams.get("result2"),
-					url.searchParams.get("status"),
+					result1 ? +result1 : null,
+					result2 ? +result2 : null,
+					status ? +status : null,
 				),
 			);
 		}

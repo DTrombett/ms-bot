@@ -25,8 +25,8 @@ import { placeholder } from "./util/strings";
 export type Params = {
 	matches: MatchWithPlayers[];
 	tournament: Database.Tournament;
-	content: string;
-	attachments: APIMediaGalleryItem[];
+	content?: string;
+	attachments?: APIMediaGalleryItem[];
 };
 
 export class Channels extends WorkflowEntrypoint<Env, Params> {
@@ -130,7 +130,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 							player2: match.user2Name ?? "",
 						}),
 					});
-				if (event.payload.attachments.length)
+				if (event.payload.attachments?.length)
 					components.push({
 						type: ComponentType.MediaGallery,
 						items: event.payload.attachments,
@@ -147,21 +147,22 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 						},
 					],
 				});
-				values.push(
-					step.do<void>(
-						`Send message to channel ${channelId}`,
-						{ retries: { limit: 1, delay: 5_000 } },
-						() =>
-							rest
-								.post(Routes.channelMessages(channelId), {
-									body: {
-										flags: MessageFlags.IsComponentsV2,
-										components,
-									} satisfies RESTPostAPIChannelMessageJSONBody,
-								})
-								.then(() => {}),
-					),
-				);
+				if (components.length > 1)
+					values.push(
+						step.do<void>(
+							`Send message to channel ${channelId}`,
+							{ retries: { limit: 1, delay: 5_000 } },
+							() =>
+								rest
+									.post(Routes.channelMessages(channelId), {
+										body: {
+											flags: MessageFlags.IsComponentsV2,
+											components,
+										} satisfies RESTPostAPIChannelMessageJSONBody,
+									})
+									.then(() => {}),
+						),
+					);
 			} catch (err) {
 				this.sendError(
 					step,
