@@ -38,7 +38,9 @@ export const ListElement = ({
 	label: string;
 	children: React.ReactNode;
 }) =>
-	children && (
+	children != null &&
+	children !== false &&
+	children !== "" && (
 		<>
 			<span style={{ fontWeight: 600 }}>{label}</span>: {children}
 			<br />

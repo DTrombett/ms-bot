@@ -407,10 +407,10 @@ const MatchUI = ({
 				setDisabled(true);
 				event.preventDefault();
 				const urlsp = new URLSearchParams(
-					new FormData(event.currentTarget)
-						.entries()
-						.toArray()
-						.map(([k, v]) => [k, typeof v === "string" ? v : v.name]),
+					Array.from(new FormData(event.currentTarget).entries(), ([k, v]) => [
+						k,
+						typeof v === "string" ? v : v.name,
+					]),
 				);
 				const temp =
 					event.nativeEvent.submitter?.id === "temp" &&

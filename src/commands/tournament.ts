@@ -631,7 +631,7 @@ export class Tournament extends Command {
 				    m.*,
 					t.game, t.rounds, t.flags, t.id as tournamentId,
 				    sp1.tag AS user1Tag, sp2.tag AS user2Tag,
-				    sp1.name AS user1Name, sp2.name AS user2Name,
+				    sp1.name AS user1Name, sp2.name AS user2Name
 				FROM Matches m
 				JOIN Tournaments t ON m.tournamentId = t.id
 				LEFT JOIN SupercellPlayers sp1 ON sp1.userId = m.user1
