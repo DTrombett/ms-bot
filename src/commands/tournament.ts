@@ -622,7 +622,11 @@ export class Tournament extends Command {
 	};
 	static che = async (
 		{ edit, defer }: ComponentReplies,
-		{ args: [matchId, tournamentId], user: { id: userId } }: ComponentArgs,
+		{
+			args: [matchId, tournamentId],
+			user: { id: userId },
+			interaction: { member: { roles, permissions } = { roles: [] } as any },
+		}: ComponentArgs,
 	) => {
 		defer();
 		const match = await env.DB.prepare(
@@ -657,6 +661,17 @@ export class Tournament extends Command {
 			return edit({
 				content:
 					"Il controllo dei risultati tramite registro battaglie non è attivato per questo torneo!",
+			});
+		if (
+			match.status !== DBMatchStatus.Playing &&
+			match.status !== DBMatchStatus.ToBePlayed &&
+			new Set(roles).isDisjointFrom(new Set(env.ALLOWED_ROLES.split(","))) &&
+			!(BigInt(permissions) & PermissionFlagsBits.ManageGuild)
+		)
+			return edit({
+				flags: MessageFlags.Ephemeral,
+				content:
+					"Solo gli amministratori possono aggiornare i risultati dopo che la partita è terminata!",
 			});
 		try {
 			const round = (JSON.parse(match.rounds) as Database.Round[]).at(
