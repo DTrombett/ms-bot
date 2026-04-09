@@ -37,11 +37,13 @@ CREATE TABLE Tournaments (
 	logChannel TEXT NOT NULL,
 	registrationMode INTEGER NOT NULL DEFAULT 0,
 	rounds TEXT NOT NULL,
+	statusFlags INTEGER NOT NULL DEFAULT 0,
 	team INTEGER NOT NULL DEFAULT 1,
 	bracketsTime INTEGER,
 	categoryId TEXT,
 	channelName TEXT,
 	channelsTime INTEGER,
+	currentRound INTEGER,
 	endedCategoryId TEXT,
 	endedChannelName TEXT,
 	matchMessageLink TEXT,
@@ -66,4 +68,17 @@ CREATE TABLE Participants (
 	UNIQUE (tournamentId, tag),
 	FOREIGN KEY (tag, userId) REFERENCES SupercellPlayers(tag, userId) ON DELETE RESTRICT,
 	PRIMARY KEY (tournamentId, userId)
+);
+CREATE TABLE Matches (
+	id INTEGER,
+	tournamentId INTEGER NOT NULL REFERENCES Tournaments(id) ON DELETE CASCADE,
+	status INTEGER NOT NULL DEFAULT 0,
+	user1 TEXT NOT NULL,
+	user2 TEXT,
+	channelId TEXT,
+	result1 INTEGER,
+	result2 INTEGER,
+	PRIMARY KEY (id, tournamentId),
+	FOREIGN KEY (tournamentId, user1) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT,
+	FOREIGN KEY (tournamentId, user2) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT
 );

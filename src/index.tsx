@@ -6,12 +6,14 @@ import { renderToReadableStream } from "react-dom/server";
 import Index from "./app/index.page";
 import Tournaments from "./app/tournaments.page";
 import Tournament from "./app/tournaments/[id].page";
+import Brackets from "./app/tournaments/[id]/brackets.page";
 import EditTournament from "./app/tournaments/[id]/edit.page";
 import NewTournament from "./app/tournaments/new.page";
 import { Brawl } from "./commands/brawl";
 import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import {
+	DBMatchStatus,
 	RegistrationMode,
 	SupercellPlayerType,
 	TournamentFlags,
@@ -22,6 +24,7 @@ import { rest, textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
+import { allSettled } from "./util/promises";
 import type { RGB } from "./util/resolveColor";
 import { create403, create405 } from "./util/responses";
 import { TimeUnit } from "./util/time";
@@ -36,6 +39,7 @@ import {
 } from "./util/token";
 import { editMessage } from "./util/tournaments/editMessage";
 import { parseTournamentData } from "./util/tournaments/parseTournamentData";
+import { runPatchRequest } from "./util/tournaments/patchMatch";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
@@ -266,32 +270,37 @@ const server: ExportedHandler<Env> = {
 		if ((matchResult = url.pathname.match(/^\/tournaments\/([^/]+)\/?$/))) {
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
-			const [tournament, { setCookie, token }] = await Promise.all([
-				env.DB.prepare(
-					`
-						SELECT t.*,
-							CASE
-								WHEN p.userId IS NOT NULL THEN json_group_array(
-									json_object(
-										'userId', p.userId,
-										'tag', p.tag,
-										'team', p.team,
-										'name', sp.name
-									)
-								)
-								ELSE '[]'
-							END AS participants
-						FROM Tournaments t
-							LEFT JOIN Participants p ON p.tournamentId = t.id
-							LEFT JOIN SupercellPlayers sp ON sp.userId = p.userId
-							AND sp.tag = p.tag
-						WHERE t.id = ?
-						GROUP BY t.id
-					`,
-				)
-					.bind(Number(matchResult[1]))
-					.first<Database.Tournament & { participants: string }>(),
+			const [
+				{ setCookie, token },
+				[
+					{
+						results: [tournament],
+					},
+					{ results: participants },
+				],
+			] = await Promise.all([
 				createSetCookie(request),
+				env.DB.batch([
+					env.DB.prepare(`SELECT * FROM Tournaments WHERE id = ?`).bind(
+						Number(matchResult[1]),
+					),
+					env.DB.prepare(
+						`
+							SELECT p.*, sp.name
+							FROM Participants p
+							LEFT JOIN SupercellPlayers sp ON sp.userId = p.userId AND sp.tag = p.tag
+							WHERE p.tournamentId = ?
+						`,
+					).bind(Number(matchResult[1])),
+				]) as Promise<
+					[
+						D1Result<Database.Tournament>,
+						D1Result<
+							Pick<Database.Participant, "tag" | "userId"> &
+								Pick<Database.SupercellPlayer, "name">
+						>,
+					]
+				>,
 			]);
 
 			if (!tournament)
@@ -306,12 +315,110 @@ const server: ExportedHandler<Env> = {
 							styles={cssMap["/tournaments/[id]"]}
 							url={url}
 							mobile={isMobile(request.headers)}
-							tournament={Object.assign(tournament, {
-								participants: JSON.parse(tournament.participants),
-							})}
+							tournament={tournament}
+							participants={participants}
 							admin={await isAdmin(token)}
 						/>,
 						{ bootstrapModules: jsMap["/tournaments/[id]"] },
+					)
+				:	null,
+				{
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						"cache-control": "private, max-age=300",
+						"content-type": "text/html",
+						"set-cookie": setCookie,
+						vary: "Cookie",
+					},
+				},
+			);
+		}
+		if (
+			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/brackets\/?$/,
+			))
+		) {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
+			const [
+				{ setCookie, token },
+				[
+					{
+						results: [tournament],
+					},
+					{ results: matches },
+					{ results: participants },
+				],
+			] = await Promise.all([
+				createSetCookie(request),
+				env.DB.batch([
+					env.DB.prepare(`SELECT name, id FROM Tournaments WHERE id = ?`).bind(
+						Number(matchResult[1]),
+					),
+					env.DB.prepare(
+						`
+							SELECT
+								channelId,
+								id,
+								result1,
+								result2,
+								status,
+								user1,
+								user2
+							FROM Matches WHERE tournamentId = ?
+							ORDER BY id
+						`,
+					).bind(Number(matchResult[1])),
+					env.DB.prepare(
+						`
+							SELECT p.*, sp.name
+							FROM Participants p
+							LEFT JOIN SupercellPlayers sp ON sp.userId = p.userId AND sp.tag = p.tag
+							WHERE p.tournamentId = ?
+						`,
+					).bind(Number(matchResult[1])),
+				]) as Promise<
+					[
+						D1Result<Pick<Database.Tournament, "name" | "id">>,
+						D1Result<
+							Pick<
+								Database.Match,
+								| "channelId"
+								| "id"
+								| "result1"
+								| "result2"
+								| "status"
+								| "user1"
+								| "user2"
+							>
+						>,
+						D1Result<
+							Pick<Database.Participant, "tag" | "userId"> &
+								Pick<Database.SupercellPlayer, "name">
+						>,
+					]
+				>,
+			]);
+
+			if (!tournament)
+				return new Response(null, {
+					status: 303,
+					headers: { location: "/tournaments", "set-cookie": setCookie },
+				});
+			return new Response(
+				request.method === "GET" ?
+					await renderToReadableStream(
+						<Brackets
+							styles={cssMap["/tournaments/[id]/brackets"]}
+							url={url}
+							mobile={isMobile(request.headers)}
+							tournament={tournament}
+							matches={matches}
+							participants={participants}
+							embed={request.headers.get("sec-fetch-dest") === "iframe"}
+							admin={await isAdmin(token)}
+						/>,
+						{ bootstrapModules: jsMap["/tournaments/[id]/brackets"] },
 					)
 				:	null,
 				{
@@ -750,8 +857,12 @@ const server: ExportedHandler<Env> = {
 						},
 					},
 				);
-			const data: { userId: string | null; tag: string | null; name?: string } =
-				parseForm(body, { userId: ParseType.Text, tag: ParseType.Text });
+			const data: {
+				userId: string | null;
+				tag: string | null;
+				name?: string;
+				tournamentId?: number;
+			} = parseForm(body, { userId: ParseType.Text, tag: ParseType.Text });
 			if (!data.userId)
 				return Response.json(
 					{ message: "L'ID utente è obbligatorio" },
@@ -774,6 +885,7 @@ const server: ExportedHandler<Env> = {
 						},
 					},
 				);
+			data.tournamentId = Number(matchResult[1]);
 			if (data.tag)
 				try {
 					data.tag = Brawl.normalizeTag(data.tag);
@@ -927,7 +1039,9 @@ const server: ExportedHandler<Env> = {
 								data.userId,
 								tournament.registrationRole,
 							),
-							{ reason: `Iscrizione al torneo ${tournament.name}` },
+							{
+								reason: `Iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
+							},
 						),
 					editMessage(tournament),
 				]);
@@ -1072,7 +1186,7 @@ const server: ExportedHandler<Env> = {
 											tournament.registrationRole!,
 										),
 										{
-											reason: `Rimozione iscrizione al torneo ${tournament.name}`,
+											reason: `Rimozione iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
 										},
 									),
 								),
@@ -1202,7 +1316,9 @@ const server: ExportedHandler<Env> = {
 									matchResult[2]!,
 									tournament.registrationRole,
 								),
-								{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
+								{
+									reason: `Rimozione iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
+								},
 							),
 						editMessage(tournament),
 					]);
@@ -1215,6 +1331,169 @@ const server: ExportedHandler<Env> = {
 				return new Response(null, {
 					status: 500,
 					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
+			}
+		}
+		if (
+			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/matches\/([^/]+)\/abandoned\/?$/,
+			))
+		) {
+			if (request.method !== "DELETE" && request.method !== "POST")
+				return create405("POST, DELETE");
+			const userId = url.searchParams.get("user");
+
+			return runPatchRequest(
+				request,
+				Number(matchResult[1]),
+				Number(matchResult[2]),
+				env.DB.prepare(
+					`
+						UPDATE Matches
+						SET ${
+							request.method === "POST" ?
+								userId ?
+									`
+							result1 = CASE
+								WHEN user1 = ?3 THEN NULL
+								WHEN user2 = ?3 AND status != ?4 THEN COALESCE(result1, 0)
+								ELSE result1
+							END,
+							result2 = CASE
+								WHEN user2 = ?3 THEN NULL
+								WHEN user1 = ?3 AND status != ?4 THEN COALESCE(result2, 0)
+								ELSE result2
+							END,
+							status = ?4`
+								:	`
+							result1 = NULL,
+							result2 = NULL,
+							status = ?4`
+							: userId ?
+								`
+							status = CASE
+								WHEN (user1 = ?3 AND result2 IS NOT NULL) OR (user2 = ?3 AND result1 IS NOT NULL) THEN ?4
+								ELSE status
+							END,
+							result1 = CASE
+								WHEN user1 = ?3 THEN COALESCE(result1, 0)
+								ELSE result1
+							END,
+							result2 = CASE
+								WHEN user2 = ?3 THEN COALESCE(result2, 0)
+								ELSE result2
+							END`
+							:	`
+							status = ?4,
+							result1 = COALESCE(result1, 0),
+							result2 = COALESCE(result2, 0)`
+						}
+						WHERE tournamentId = ?1 AND id = ?2 ${userId ? "AND (?3 = user1 OR ?3 = user2)" : ""}
+						RETURNING status, result1, result2, user1, user2
+					`,
+				).bind(
+					Number(matchResult[1]),
+					Number(matchResult[2]),
+					userId,
+					request.method === "POST" ?
+						DBMatchStatus.Abandoned
+					:	DBMatchStatus.Playing,
+				),
+			);
+		}
+		if (
+			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/matches\/([^/]+)\/?$/,
+			))
+		) {
+			if (request.method !== "PATCH") return create405("PATCH");
+			const result1 = url.searchParams.get("result1"),
+				result2 = url.searchParams.get("result2"),
+				status = url.searchParams.get("status");
+
+			return runPatchRequest(
+				request,
+				Number(matchResult[1]),
+				Number(matchResult[2]),
+				env.DB.prepare(
+					`
+						UPDATE Matches
+						SET result1 = COALESCE(?3, result1),
+							result2 = COALESCE(?4, result2),
+							status  = COALESCE(?5, status)
+						WHERE tournamentId = ?1 AND id = ?2
+						RETURNING status, result1, result2, user1, user2
+					`,
+				).bind(
+					Number(matchResult[1]),
+					Number(matchResult[2]),
+					result1 ? +result1 : null,
+					result2 ? +result2 : null,
+					status ? +status : null,
+				),
+			);
+		}
+		if (
+			(matchResult = url.pathname.match(
+				/^\/tournaments\/([^/]+)\/matchData\/?$/,
+			))
+		) {
+			if (request.method !== "GET" && request.method !== "HEAD")
+				return create405();
+			try {
+				const tag1 = url.searchParams.get("tag1"),
+					tag2 = url.searchParams.get("tag2"),
+					userId1 = url.searchParams.get("user1"),
+					userId2 = url.searchParams.get("user2");
+				const game = await env.DB.prepare(
+					`SELECT game FROM Tournaments WHERE id = ?`,
+				)
+					.bind(Number(matchResult[1]))
+					.first<Database.Tournament["game"]>("game");
+
+				if (game == null)
+					return Response.json(
+						{ message: "Torneo non trovato" },
+						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
+					);
+				const [user1, user2, player1, player2] = await allSettled([
+					userId1 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId1)),
+					userId2 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId2)),
+					tag1 &&
+						(game === SupercellPlayerType.BrawlStars ?
+							commands.Brawl
+						:	commands.Clash
+						).getPlayer(tag1),
+					tag2 &&
+						(game === SupercellPlayerType.BrawlStars ?
+							commands.Brawl
+						:	commands.Clash
+						).getPlayer(tag2),
+				]);
+				return Response.json(
+					{ user1, user2, player1, player2 },
+					{
+						status: 200,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"cache-control": `public${
+								(
+									(tag1 && !player1) ||
+									(tag2 && !player2) ||
+									(userId1 && !user1) ||
+									(userId2 && !user2)
+								) ?
+									""
+								:	", max-age=300"
+							}`,
+						},
+					},
+				);
+			} catch (err) {
+				console.error(err);
+				return new Response(null, {
+					status: 500,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
 				});
 			}
 		}
@@ -1413,6 +1692,8 @@ const server: ExportedHandler<Env> = {
 	},
 };
 
+export { Channels } from "./Channels";
+export { DeleteChannels } from "./DeleteChannels";
 export { Notifications } from "./Notifications";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";

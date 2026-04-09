@@ -4,8 +4,9 @@ import {
 	RegistrationMode,
 	SupercellPlayerType,
 	TournamentFlags,
+	TournamentRoundMode,
 } from "../../util/Constants";
-import { Round } from "../tournaments/new.page";
+import { Colors } from "../utils/Colors";
 import { Mode, ModeWithSuggestions } from "./Mode";
 import Rounds from "./Rounds";
 import {
@@ -17,7 +18,6 @@ import {
 	Section,
 	TextInput,
 } from "./forms";
-import { Colors } from "../utils/Colors";
 
 export default ({
 	mobile,
@@ -254,13 +254,21 @@ export default ({
 				<RadioInput
 					label="Avanzamento round"
 					name="channelsMode"
-					default={tournament?.roundType ?? Round.Manual}
+					default={tournament?.roundType ?? TournamentRoundMode.Manual}
 					options={[
-						{ label: "Manuale", value: Round.Manual, id: "manual" },
-						{ label: "Automatico", value: Round.Once, id: "once" },
+						{
+							label: "Manuale",
+							value: TournamentRoundMode.Manual,
+							id: "manual",
+						},
+						{
+							label: "Automatico",
+							value: TournamentRoundMode.Once,
+							id: "once",
+						},
 						{
 							label: "Crea canali il prima possibile",
-							value: Round.Fast,
+							value: TournamentRoundMode.Fast,
 							id: "fast",
 						},
 					]}

@@ -373,6 +373,7 @@ await build({
 	entryPoints: ["src/index.tsx"],
 	external: ["node:*", "cloudflare:*", ...builtinModules],
 	jsx: "automatic",
+	keepNames: true,
 	legalComments: "none",
 	mainFields: ["module"],
 	metafile: true,

@@ -7,6 +7,7 @@ import type {
 	APIApplicationCommandSubcommandGroupOption,
 	APIApplicationCommandSubcommandOption,
 	APIChatInputApplicationCommandInteraction,
+	APIGuildMember,
 	APIInteraction,
 	APIInteractionResponse,
 	APIInteractionResponseChannelMessageWithSource,
@@ -29,9 +30,14 @@ import type {
 	RESTPostAPIInteractionFollowupJSONBody,
 	RoutesDeclarations,
 } from "discord-api-types/v10";
+import type { Matches } from "./app/tournaments/[id].page";
 import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
-import type { SupercellPlayerType } from "./util/Constants";
+import type {
+	DBMatchStatus,
+	SupercellPlayerType,
+	TournamentRoundMode,
+} from "./util/Constants";
 
 declare global {
 	interface ObjectConstructor {
@@ -380,10 +386,11 @@ declare global {
 		type Tournament = {
 			name: string;
 			flags: number;
-			game: number;
+			game: SupercellPlayerType;
 			logChannel: string;
 			registrationMode: number;
 			rounds: string;
+			statusFlags: number;
 			team: number;
 			bracketsTime?: number | null;
 			categoryId?: string | null;
@@ -400,8 +407,9 @@ declare global {
 			registrationMessage?: string | null;
 			registrationRole?: string | null;
 			registrationStart?: number | null;
-			roundType?: number | null;
+			roundType?: TournamentRoundMode | null;
 			workflowId?: string | null;
+			currentRound?: number | null;
 			id: number;
 		};
 		type Participant = {
@@ -411,6 +419,16 @@ declare global {
 			team?: number | null;
 		};
 		type Round = { mode: string; bof: number };
+		type Match = {
+			user1: string;
+			user2?: string | null;
+			id: number;
+			tournamentId: number;
+			status: DBMatchStatus;
+			channelId?: string | null;
+			result1?: number | null;
+			result2?: number | null;
+		};
 	}
 
 	type ResolvedUser = Pick<
@@ -581,6 +599,32 @@ declare global {
 	}[];
 
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
+
+	type Participant = {
+		member?: APIGuildMember;
+		userId: string;
+		result: string;
+		player?:
+			| Partial<Pick<Brawl.Player | Clash.Player, "name" | "tag">>
+			| Brawl.Player
+			| Clash.Player;
+	};
+
+	type ResolvedMatch = {
+		participant1: Participant;
+		participant2: Participant;
+		id: number;
+		status: DBMatchStatus;
+		round: number;
+		original: Matches[number] | undefined;
+	};
+
+	type MatchWithPlayers = Database.Match & {
+		user1Tag: Database.Participant["tag"];
+		user2Tag: Database.Participant["tag"];
+		user1Name: Database.SupercellPlayer["name"] | null;
+		user2Name: Database.SupercellPlayer["name"] | null;
+	};
 
 	namespace Twitter {
 		type UrlEntity = {
@@ -1177,6 +1221,23 @@ declare global {
 		};
 		type EventTypeList = EventType[];
 		type EventType = { name: JsonLocalizedName; id: number };
+		type BattleList = Battle[];
+		type Battle = { event: Event; battleTime: string; battle: BattleResult };
+		type Event = { mode: string; modeId: number; id: number; map: string };
+		type BattlePlayer = {
+			tag: string;
+			name: string;
+			brawler: { id: number; name: string; power: number; trophies: number };
+		};
+		type BattleResult = {
+			mode: string;
+			type: string;
+			result: string;
+			duration: number;
+			trophyChange: number;
+			starPlayer: BattlePlayer;
+			teams: BattlePlayer[][];
+		};
 		type Paginated<T> = {
 			items: T[];
 			paging: { cursors: { after?: string; before?: string } };

@@ -120,11 +120,8 @@ export class CommandHandler {
 		const Command = this.interactionTypes[interaction.type].findCommand(
 			interaction as never,
 		);
-
-		if (!Command) return new Response(null, { status: 400 });
 		const user = (interaction.member ?? interaction).user!;
-		if (Command.private && !env.OWNER_ID.includes(user.id))
-			return new Response(null, { status: 403 });
+
 		console.log(
 			`Interaction type: ${InteractionType[interaction.type]}, command: ${
 				"name" in interaction.data ?
@@ -134,6 +131,9 @@ export class CommandHandler {
 				interaction.channel?.name
 			} (${interaction.channel?.id})`,
 		);
+		if (!Command) return new Response(null, { status: 400 });
+		if (Command.private && !env.OWNER_ID.includes(user.id))
+			return new Response(null, { status: 403 });
 		const { promise, resolve } =
 			Promise.withResolvers<APIInteractionResponse>();
 		const args: {

@@ -5,6 +5,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	PermissionFlagsBits,
 	Routes,
 	TextInputStyle,
 	type APIModalInteractionResponseCallbackData,
@@ -12,11 +13,19 @@ import {
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import { RegistrationMode, TournamentFlags } from "../util/Constants";
+import {
+	DBMatchStatus,
+	RegistrationMode,
+	SupercellPlayerType,
+	TournamentFlags,
+} from "../util/Constants";
 import { rest } from "../util/globals";
 import { ok } from "../util/node";
+import normalizeError from "../util/normalizeError";
 import { TimeUnit } from "../util/time";
 import { editMessage } from "../util/tournaments/editMessage";
+import { finishRound } from "../util/tournaments/finishRound";
+import { patchMatch } from "../util/tournaments/patchMatch";
 import { Brawl } from "./brawl";
 
 export class Tournament extends Command {
@@ -574,6 +583,163 @@ export class Tournament extends Command {
 			tag: data.values[0],
 			team,
 		});
+	};
+	static ava = async (
+		{ edit, defer, reply }: ComponentReplies,
+		{
+			args: [tournamentId, round],
+			interaction: { member: { roles, permissions } = { roles: [] } as any },
+		}: ComponentArgs,
+	) => {
+		if (
+			new Set(roles).isDisjointFrom(new Set(env.ALLOWED_ROLES.split(","))) &&
+			!(BigInt(permissions) & PermissionFlagsBits.ManageGuild)
+		)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: "Non hai abbastanza permessi per eseguire questa azione!",
+			});
+		defer();
+		const tournament = await env.DB.prepare(
+			`
+				SELECT workflowId
+				FROM Tournaments
+				WHERE id = ?1
+			`,
+		)
+			.bind(tournamentId)
+			.first<Pick<Database.Tournament, "workflowId">>();
+
+		if (!tournament?.workflowId)
+			return edit({ content: "Torneo non trovato." });
+		try {
+			await finishRound(tournament.workflowId, Number(round));
+			return edit({ content: "Il round successivo è iniziato!" });
+		} catch (err) {
+			return edit({
+				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,
+			});
+		}
+	};
+	static che = async (
+		{ edit, defer }: ComponentReplies,
+		{
+			args: [matchId, tournamentId],
+			user: { id: userId },
+			interaction: { member: { roles, permissions } = { roles: [] } as any },
+		}: ComponentArgs,
+	) => {
+		defer();
+		const match = await env.DB.prepare(
+			`
+				SELECT 
+				    m.*,
+					t.game, t.rounds, t.flags, t.id as tournamentId,
+				    p1.tag AS user1Tag, p2.tag AS user2Tag
+				FROM Matches m
+				JOIN Tournaments t ON m.tournamentId = t.id
+				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND tournamentId = m.tournamentId
+				LEFT JOIN Participants p2 ON p1.userId = m.user2 AND tournamentId = m.tournamentId
+				WHERE m.id = ?1 AND m.tournamentId = ?2
+			`,
+		)
+			.bind(matchId, tournamentId)
+			.first<
+				Database.Match &
+					Pick<Database.Tournament, "game" | "rounds" | "flags"> & {
+						tournamentId: Database.Tournament["id"];
+					} & Partial<{
+						user1Tag: Database.Participant["tag"];
+						user2Tag: Database.Participant["tag"];
+					}>
+			>();
+
+		if (!match?.user1Tag) return edit({ content: "Torneo non trovato." });
+		if ((match.flags & TournamentFlags.AutoDetectResults) === 0)
+			return edit({
+				content:
+					"Il controllo dei risultati tramite registro battaglie non è attivato per questo torneo!",
+			});
+		if (match.game === SupercellPlayerType.ClashRoyale)
+			return edit({
+				content:
+					"Il controllo dei risultati tramite registro battaglie non è supportato per Clash Royale!",
+			});
+		if (
+			match.status !== DBMatchStatus.Playing &&
+			match.status !== DBMatchStatus.ToBePlayed &&
+			new Set(roles).isDisjointFrom(new Set(env.ALLOWED_ROLES.split(","))) &&
+			!(BigInt(permissions) & PermissionFlagsBits.ManageGuild)
+		)
+			return edit({
+				flags: MessageFlags.Ephemeral,
+				content:
+					"Solo gli amministratori possono aggiornare i risultati dopo che la partita è terminata!",
+			});
+		try {
+			const round = (JSON.parse(match.rounds) as Database.Round[]).at(
+				Math.floor(Math.log2(match.id + 1)),
+			)!;
+			round.mode = round.mode
+				.toLowerCase()
+				.split(/\s+/)
+				.reduce((a, b) => a + (b[0]?.toUpperCase() ?? "") + b.slice(1));
+			const battleLog = (await Brawl.getBattleLog(match.user1Tag)).filter(
+				(b) =>
+					b.event.mode === round.mode &&
+					(b.battle.result === "defeat" || b.battle.result === "victory") &&
+					b.battle.teams.every(
+						(t) =>
+							t.length === 1 &&
+							[match.user1Tag, match.user2Tag].includes(t[0]?.tag),
+					),
+			);
+
+			if (!battleLog.length)
+				return edit({
+					content: `Non risulta alcuna partita corrispondente!\n-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Tag} e ${match.user2Tag} vengono considerate\n`,
+				});
+			const result = battleLog.reduce<[number, number]>(
+				(result, { battle }) =>
+					battle.result === "defeat" ?
+						[result[0], result[1] + 1]
+					:	[result[0] + 1, result[1]],
+				[0, 0],
+			);
+			const newMatch = await patchMatch(
+				match.tournamentId,
+				match.id,
+				env.DB.prepare(
+					`
+						UPDATE Matches
+						SET result1 = ?3,
+							result2 = ?4,
+							status  = ?5
+						WHERE tournamentId = ?1 AND id = ?2
+						RETURNING status, result1, result2, user1, user2
+					`,
+				).bind(
+					match.tournamentId,
+					match.id,
+					result[0],
+					result[1],
+					Math.max(result[0], result[1]) > round.bof / 2 ?
+						DBMatchStatus.Finished
+					:	DBMatchStatus.Playing,
+				),
+				userId,
+			);
+
+			if (newMatch)
+				return edit({
+					content: `## <@${newMatch.user1}> VS <@${newMatch.user2}>: ${newMatch.result1} - ${newMatch.result2} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+					allowed_mentions: { parse: [] },
+				});
+		} catch (err) {
+			return edit({
+				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,
+			});
+		}
 	};
 	static tag = async (
 		{ defer, edit, reply }: ModalReplies,
