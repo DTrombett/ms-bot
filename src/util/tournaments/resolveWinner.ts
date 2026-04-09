@@ -18,7 +18,8 @@ export const resolveWinner = <
 	if (
 		match.status === DBMatchStatus.Postponed ||
 		match.status === DBMatchStatus.Playing ||
-		match.status === DBMatchStatus.ToBePlayed
+		match.status === DBMatchStatus.ToBePlayed ||
+		match.result1 == match.result2
 	)
 		return undefined;
 	return match[
