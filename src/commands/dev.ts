@@ -28,6 +28,7 @@ export class Dev extends Command {
 		name: "dev",
 		description: "Developer commands",
 		type: ApplicationCommandType.ChatInput,
+		default_member_permissions: "0",
 		options: [
 			{
 				name: "test",
