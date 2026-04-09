@@ -677,9 +677,9 @@ export class Tournament extends Command {
 					"Solo gli amministratori possono aggiornare i risultati dopo che la partita è terminata!",
 			});
 		try {
-			const round = (JSON.parse(match.rounds) as Database.Round[]).at(
-				Math.floor(Math.log2(match.id + 1)),
-			)!;
+			const rounds = JSON.parse(match.rounds) as Database.Round[];
+			const round =
+				rounds.at(Math.floor(Math.log2(match.id + 1))) ?? rounds.at(-1)!;
 			round.mode = round.mode
 				.toLowerCase()
 				.split(/\s+/)
