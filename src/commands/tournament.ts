@@ -701,7 +701,7 @@ export class Tournament extends Command {
 					match.id,
 					result[0],
 					result[1],
-					battleLog.length > round.bof / 2 ?
+					Math.max(result[0], result[1]) > round.bof / 2 ?
 						DBMatchStatus.Finished
 					:	DBMatchStatus.Playing,
 				),
