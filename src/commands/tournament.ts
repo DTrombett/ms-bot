@@ -681,7 +681,7 @@ export class Tournament extends Command {
 				(result, { battle }) =>
 					battle.result === "defeat" ?
 						[result[0], result[1] + 1]
-					:	[result[0], result[1] + 1],
+					:	[result[0] + 1, result[1]],
 				[0, 0],
 			);
 			const newMatch = await patchMatch(
