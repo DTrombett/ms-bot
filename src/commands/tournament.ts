@@ -638,8 +638,8 @@ export class Tournament extends Command {
 				    p1.tag AS user1Tag, p2.tag AS user2Tag
 				FROM Matches m
 				JOIN Tournaments t ON m.tournamentId = t.id
-				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND tournamentId = m.tournamentId
-				LEFT JOIN Participants p2 ON p1.userId = m.user2 AND tournamentId = m.tournamentId
+				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND p1.tournamentId = m.tournamentId
+				LEFT JOIN Participants p2 ON p1.userId = m.user2 AND p1.tournamentId = m.tournamentId
 				WHERE m.id = ?1 AND m.tournamentId = ?2
 			`,
 		)
