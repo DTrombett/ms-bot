@@ -8,10 +8,11 @@ import {
 	type RESTPatchAPIChannelJSONBody,
 	type RESTPostAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
-import { DBMatchStatus } from "../Constants";
+import { DBMatchStatus, TournamentRoundMode } from "../Constants";
 import { rest } from "../globals";
 import normalizeError from "../normalizeError";
 import { createSetCookie, isAdmin } from "../token";
+import { finishRound } from "./finishRound";
 import { resolveWinner } from "./resolveWinner";
 
 export const runPatchRequest = async (
@@ -91,7 +92,7 @@ export const patchMatch = async (
 		).bind(tournamentId, matchId + (matchId % 2 || -1)),
 		env.DB.prepare(
 			`
-				SELECT t.logChannel, t.currentRound, m.channelId, m.user1, m.user2,
+				SELECT t.logChannel, t.currentRound, t.roundType, t.workflowId, m.channelId, m.user1, m.user2,
 				(
 					SELECT COUNT(*)
 					FROM Matches m2
@@ -120,7 +121,10 @@ export const patchMatch = async (
 			Pick<Database.Match, "status" | "result1" | "result2" | "user1" | "user2">
 		>,
 		D1Result<
-			Pick<Database.Tournament, "logChannel" | "currentRound"> &
+			Pick<
+				Database.Tournament,
+				"logChannel" | "currentRound" | "roundType" | "workflowId"
+			> &
 				Partial<Pick<Database.Match, "channelId" | "user1" | "user2">> & {
 					pendingMatches: number;
 				}
@@ -163,7 +167,13 @@ export const patchMatch = async (
 						:	""
 					}\n${tournament.currentRound == null ? "" : `-# Ci sono ${tournament.pendingMatches.toLocaleString()} partite da concludere nel round attuale`}`,
 					components:
-						!tournament.pendingMatches && tournament.currentRound != null ?
+						(
+							!tournament.pendingMatches &&
+							(tournament.currentRound === Math.floor(Math.log2(matchId + 1)) ||
+								tournament.currentRound ===
+									Math.floor(Math.log2(parent + 1))) &&
+							tournament.roundType === TournamentRoundMode.Manual
+						) ?
 							[
 								{
 									type: ComponentType.ActionRow,
@@ -241,6 +251,12 @@ export const patchMatch = async (
 						} satisfies RESTPatchAPIChannelJSONBody,
 					})
 				:	rest.delete(Routes.channel(tournament.channelId))),
+			tournament.roundType === TournamentRoundMode.Once &&
+				tournament.workflowId &&
+				!tournament.pendingMatches &&
+				(tournament.currentRound === Math.floor(Math.log2(matchId + 1)) ||
+					tournament.currentRound === Math.floor(Math.log2(parent + 1))) &&
+				finishRound(tournament.workflowId, tournament.currentRound),
 		]);
 	}
 	return match;

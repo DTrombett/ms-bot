@@ -55,3 +55,8 @@ export enum DBMatchStatus {
 	Abandoned,
 	Postponed,
 }
+export enum TournamentRoundMode {
+	Manual = 1,
+	Once,
+	Fast,
+}

@@ -33,7 +33,11 @@ import type {
 import type { Matches } from "./app/tournaments/[id].page";
 import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
-import type { DBMatchStatus, SupercellPlayerType } from "./util/Constants";
+import type {
+	DBMatchStatus,
+	SupercellPlayerType,
+	TournamentRoundMode,
+} from "./util/Constants";
 
 declare global {
 	interface ObjectConstructor {
@@ -403,7 +407,7 @@ declare global {
 			registrationMessage?: string | null;
 			registrationRole?: string | null;
 			registrationStart?: number | null;
-			roundType?: number | null;
+			roundType?: TournamentRoundMode | null;
 			workflowId?: string | null;
 			currentRound?: number | null;
 			id: number;

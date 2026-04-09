@@ -23,6 +23,7 @@ import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
 import { TimeUnit } from "../util/time";
 import { editMessage } from "../util/tournaments/editMessage";
+import { finishRound } from "../util/tournaments/finishRound";
 import { patchMatch } from "../util/tournaments/patchMatch";
 import { Brawl } from "./brawl";
 
@@ -611,9 +612,7 @@ export class Tournament extends Command {
 		if (!tournament?.workflowId)
 			return edit({ content: "Torneo non trovato." });
 		try {
-			await (
-				await env.TOURNAMENT.get(tournament.workflowId)
-			).sendEvent({ type: `round-${round}`, payload: null });
+			await finishRound(tournament.workflowId, Number(round));
 			return edit({ content: "Il round successivo è iniziato!" });
 		} catch (err) {
 			return edit({
