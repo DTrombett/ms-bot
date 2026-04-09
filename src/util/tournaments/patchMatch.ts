@@ -142,7 +142,9 @@ export const patchMatch = async (
 		await Promise.all([
 			rest.post(Routes.channelMessages(tournament.logChannel), {
 				body: {
-					content: `Scontro aggiornato!\n## <@${match.user1}> VS <@${match.user2}>: ${
+					content: `Scontro aggiornato!\n## <@${match.user1}> VS ${
+						match.user2 ? `<@${match.user2}>` : "N/A"
+					}: ${
 						match.status === DBMatchStatus.Abandoned && match.result1 == null ?
 							"A"
 						:	String(match.result1 ?? 0)
@@ -206,11 +208,18 @@ export const patchMatch = async (
 								user1 = ?3,
 								user2 = ?4,
 								status = ?5,
-								result1 = NULL,
+								result1 = ?6,
 								result2 = NULL
 							WHERE tournamentId = ?1 AND id = ?2
 						`,
-					).bind(tournamentId, parent, a, b, DBMatchStatus.Playing)
+					).bind(
+						tournamentId,
+						parent,
+						a,
+						b,
+						b === null ? DBMatchStatus.Default : DBMatchStatus.Playing,
+						b && 0,
+					)
 				).run(),
 			changes &&
 				tournament.channelId &&

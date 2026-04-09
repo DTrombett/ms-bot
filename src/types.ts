@@ -386,7 +386,7 @@ declare global {
 		type Tournament = {
 			name: string;
 			flags: number;
-			game: number;
+			game: SupercellPlayerType;
 			logChannel: string;
 			registrationMode: number;
 			rounds: string;

@@ -16,6 +16,7 @@ import Command from "../Command";
 import {
 	DBMatchStatus,
 	RegistrationMode,
+	SupercellPlayerType,
 	TournamentFlags,
 } from "../util/Constants";
 import { rest } from "../util/globals";
@@ -634,12 +635,11 @@ export class Tournament extends Command {
 				SELECT 
 				    m.*,
 					t.game, t.rounds, t.flags, t.id as tournamentId,
-				    sp1.tag AS user1Tag, sp2.tag AS user2Tag,
-				    sp1.name AS user1Name, sp2.name AS user2Name
+				    p1.tag AS user1Tag, p2.tag AS user2Tag
 				FROM Matches m
 				JOIN Tournaments t ON m.tournamentId = t.id
-				LEFT JOIN SupercellPlayers sp1 ON sp1.userId = m.user1
-				LEFT JOIN SupercellPlayers sp2 ON sp2.userId = m.user2
+				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND tournamentId = m.tournamentId
+				LEFT JOIN Participants p2 ON p1.userId = m.user2 AND tournamentId = m.tournamentId
 				WHERE m.id = ?1 AND m.tournamentId = ?2
 			`,
 		)
@@ -649,10 +649,8 @@ export class Tournament extends Command {
 					Pick<Database.Tournament, "game" | "rounds" | "flags"> & {
 						tournamentId: Database.Tournament["id"];
 					} & Partial<{
-						user1Tag: Database.SupercellPlayer["tag"];
-						user2Tag: Database.SupercellPlayer["tag"];
-						user1Name: Database.SupercellPlayer["name"];
-						user2Name: Database.SupercellPlayer["name"];
+						user1Tag: Database.Participant["tag"];
+						user2Tag: Database.Participant["tag"];
 					}>
 			>();
 
@@ -661,6 +659,11 @@ export class Tournament extends Command {
 			return edit({
 				content:
 					"Il controllo dei risultati tramite registro battaglie non è attivato per questo torneo!",
+			});
+		if (match.game === SupercellPlayerType.ClashRoyale)
+			return edit({
+				content:
+					"Il controllo dei risultati tramite registro battaglie non è supportato per Clash Royale!",
 			});
 		if (
 			match.status !== DBMatchStatus.Playing &&
@@ -694,7 +697,7 @@ export class Tournament extends Command {
 
 			if (!battleLog.length)
 				return edit({
-					content: `Non risulta alcuna partita corrispondente!\n-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Name} e ${match.user2Name} vengono considerate\n`,
+					content: `Non risulta alcuna partita corrispondente!\n-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Tag} e ${match.user2Tag} vengono considerate\n`,
 				});
 			const result = battleLog.reduce<[number, number]>(
 				(result, { battle }) =>

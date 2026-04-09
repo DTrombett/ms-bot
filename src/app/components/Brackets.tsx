@@ -385,7 +385,7 @@ const MatchUI = ({
 						},
 				);
 			})().catch(console.error),
-		[],
+		[active],
 	);
 	return (
 		<form
