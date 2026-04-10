@@ -5,6 +5,7 @@ import {
 	type WorkflowStep,
 } from "cloudflare:workers";
 import {
+	AllowedMentionsTypes,
 	ButtonStyle,
 	ChannelType,
 	ComponentType,
@@ -161,6 +162,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 										body: {
 											flags: MessageFlags.IsComponentsV2,
 											components,
+											allowed_mentions: { parse: [AllowedMentionsTypes.User] },
 										} satisfies RESTPostAPIChannelMessageJSONBody,
 									})
 									.then(() => {}),

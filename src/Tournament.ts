@@ -279,7 +279,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			round--
 		) {
 			const [matches, message] = await Promise.all([
-				this.createRoundAndMoveChannels(
+				this.createRoundAndDeleteChannels(
 					step,
 					round,
 					tournament.logChannel,
@@ -330,7 +330,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		);
 	};
 
-	private createRoundAndMoveChannels = async (
+	private createRoundAndDeleteChannels = async (
 		step: WorkflowStep,
 		round: number,
 		logChannel: string,
