@@ -110,7 +110,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				step,
 				tournament.logChannel,
 				error,
-				"Impossibile inviare il messaggio di iscrizione nel canale specificato",
+				"Impossibile inviare il messaggio di iscrizione nel canale specificato!",
 			);
 		}
 	}
@@ -173,7 +173,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				step,
 				tournament.logChannel,
 				error,
-				"Impossibile creare le brackets",
+				"Impossibile creare le brackets!",
 			);
 		}
 	}

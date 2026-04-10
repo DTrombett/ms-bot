@@ -34,7 +34,7 @@ export class DeleteChannels extends WorkflowEntrypoint<Env, Params> {
 					step,
 					event.payload.logChannel,
 					err,
-					`Impossibile eliminare il canale ${channelId}`,
+					`Impossibile eliminare il canale <#${channelId}>`,
 				);
 			}
 		await step.do<void>("Update channelId in database", () =>
