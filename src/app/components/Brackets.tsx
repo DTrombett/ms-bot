@@ -800,6 +800,18 @@ const BracketsUI = ({
 								)}
 								<div
 									style={{
+										top: "50%",
+										position: "absolute",
+										transform: "translate(-100%, -50%)",
+										pointerEvents: "none",
+										fontSize: "0.75rem",
+										fontFamily: "ggsans",
+										left: "-1.6px",
+									}}>
+									{match.id}
+								</div>
+								<div
+									style={{
 										borderBottom: style.border,
 										display: "flex",
 										alignItems: "center",
