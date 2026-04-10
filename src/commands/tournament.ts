@@ -638,8 +638,8 @@ export class Tournament extends Command {
 				    p1.tag AS user1Tag, p2.tag AS user2Tag
 				FROM Matches m
 				JOIN Tournaments t ON m.tournamentId = t.id
-				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND tournamentId = m.tournamentId
-				LEFT JOIN Participants p2 ON p1.userId = m.user2 AND tournamentId = m.tournamentId
+				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND p1.tournamentId = m.tournamentId
+				LEFT JOIN Participants p2 ON p2.userId = m.user2 AND p2.tournamentId = m.tournamentId
 				WHERE m.id = ?1 AND m.tournamentId = ?2
 			`,
 		)
@@ -677,9 +677,9 @@ export class Tournament extends Command {
 					"Solo gli amministratori possono aggiornare i risultati dopo che la partita è terminata!",
 			});
 		try {
-			const round = (JSON.parse(match.rounds) as Database.Round[]).at(
-				Math.floor(Math.log2(match.id + 1)),
-			)!;
+			const rounds = JSON.parse(match.rounds) as Database.Round[];
+			const round =
+				rounds.at(Math.floor(Math.log2(match.id + 1))) ?? rounds.at(-1)!;
 			round.mode = round.mode
 				.toLowerCase()
 				.split(/\s+/)

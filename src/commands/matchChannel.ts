@@ -30,18 +30,17 @@ export class MatchChannel extends Command {
 				type: ApplicationCommandOptionType.Subcommand,
 				options: [
 					{
-						name: "category",
-						description: "La categoria in cui creare il canale",
-						type: ApplicationCommandOptionType.Channel,
-						required: true,
-						channel_types: [ChannelType.GuildCategory],
-					},
-					{
 						name: "name",
 						description: "Il nome del canale",
 						type: ApplicationCommandOptionType.String,
 						required: true,
 						max_length: 100,
+					},
+					{
+						name: "category",
+						description: "La categoria in cui creare il canale",
+						type: ApplicationCommandOptionType.Channel,
+						channel_types: [ChannelType.GuildCategory],
 					},
 					{
 						name: "user1",
