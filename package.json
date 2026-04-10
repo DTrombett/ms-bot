@@ -30,11 +30,11 @@
 		"@discordjs/ws": "^2.0.4",
 		"bufferutil": "^4.1.0",
 		"cloudflare": "^5.2.0",
-		"discord-api-types": "^0.38.44",
+		"discord-api-types": "^0.38.45",
 		"entities": "^8.0.0",
 		"esbuild": "^0.28.0",
-		"react": "^19.2.4",
-		"react-dom": "^19.2.4",
+		"react": "^19.2.5",
+		"react-dom": "^19.2.5",
 		"temporal-polyfill": "^0.3.2"
 	},
 	"devDependencies": {
@@ -47,6 +47,6 @@
 		"eslint": "^10.2.0",
 		"typescript": "^6.0.2",
 		"typescript-eslint": "^8.58.1",
-		"wrangler": "^4.81.0"
+		"wrangler": "^4.81.1"
 	}
 }
