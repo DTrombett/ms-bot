@@ -802,11 +802,13 @@ const BracketsUI = ({
 									style={{
 										top: "50%",
 										position: "absolute",
-										transform: "translate(-100%, -50%)",
+										transform: `translate(${match.id ? "+" : "-"}50%, -50%)`,
 										pointerEvents: "none",
 										fontSize: "0.75rem",
 										fontFamily: "ggsans",
-										left: "-1.6px",
+										...(match.id ?
+											{ right: "calc(-0.75rem - 0.8px)" }
+										:	{ left: "calc(-0.75rem - 0.8px)" }),
 									}}>
 									{match.id}
 								</div>

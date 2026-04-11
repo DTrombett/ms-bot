@@ -25,7 +25,7 @@ import normalizeError from "../util/normalizeError";
 import { TimeUnit } from "../util/time";
 import { editMessage } from "../util/tournaments/editMessage";
 import { finishRound } from "../util/tournaments/finishRound";
-import { patchMatch } from "../util/tournaments/patchMatch";
+import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
 import { Brawl } from "./brawl";
 
 export class Tournament extends Command {
@@ -733,7 +733,7 @@ export class Tournament extends Command {
 
 			if (newMatch)
 				return edit({
-					content: `## <@${newMatch.user1}> VS <@${newMatch.user2}>: ${newMatch.result1} - ${newMatch.result2} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+					content: `## ${displayMatchScore(newMatch)} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
 					allowed_mentions: { parse: [] },
 				});
 		} catch (err) {

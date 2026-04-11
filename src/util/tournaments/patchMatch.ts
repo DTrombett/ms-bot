@@ -15,6 +15,23 @@ import { createSetCookie, isAdmin } from "../token";
 import { finishRound } from "./finishRound";
 import { resolveWinner } from "./resolveWinner";
 
+export const displayMatchScore = (
+	match: Pick<
+		Database.Match,
+		"status" | "result1" | "result2" | "user1" | "user2"
+	>,
+) =>
+	`<@${match.user1}> VS ${match.user2 ? `<@${match.user2}>` : "N/A"}: ${
+		match.status === DBMatchStatus.Abandoned && match.result1 == null ?
+			"A"
+		:	String(match.result1 ?? 0)
+	} - ${
+		match.user2 ?
+			match.status === DBMatchStatus.Abandoned && match.result2 == null ?
+				"A"
+			:	String(match.result2 ?? 0)
+		:	"N"
+	}`;
 export const runPatchRequest = async (
 	request: Request,
 	tournamentId: number,
@@ -134,7 +151,7 @@ export const patchMatch = async (
 		>,
 	];
 
-	if (!match || !tournament) return;
+	if (!match || !tournament) return null;
 	if (changed_db) {
 		let [a, b] = [resolveWinner(match), resolveWinner(sibling)];
 		if (!a && b) [a, b] = [b, a];
@@ -145,22 +162,7 @@ export const patchMatch = async (
 		await Promise.all([
 			rest.post(Routes.channelMessages(tournament.logChannel), {
 				body: {
-					content: `Scontro aggiornato!\n## <@${match.user1}> VS ${
-						match.user2 ? `<@${match.user2}>` : "N/A"
-					}: ${
-						match.status === DBMatchStatus.Abandoned && match.result1 == null ?
-							"A"
-						:	String(match.result1 ?? 0)
-					} - ${
-						match.user2 ?
-							(
-								match.status === DBMatchStatus.Abandoned &&
-								match.result2 == null
-							) ?
-								"A"
-							:	String(match.result2 ?? 0)
-						:	"N"
-					}\n-# <@${userId}> ha aggiornato lo scontro ${matchId}\n${
+					content: `Scontro aggiornato!\n## ${displayMatchScore(match)}\n-# <@${userId}> ha aggiornato lo scontro ${matchId}\n${
 						changes ?
 							`## Lo scontro ${parent} (<@${tournament.user1}> VS ${
 								tournament.user2 ? `<@${tournament.user2}>` : "N/A"

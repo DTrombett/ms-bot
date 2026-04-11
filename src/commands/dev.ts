@@ -267,7 +267,7 @@ export class Dev extends Command {
 							.flatMap((file) => [
 								...(file.chatInputData ? [file.chatInputData] : []),
 								...(file.contextMenuData ?? []),
-							]) satisfies RecursiveReadonly<RESTPutAPIApplicationGuildCommandsJSONBody>,
+							]) satisfies AsConst<RESTPutAPIApplicationGuildCommandsJSONBody>,
 					},
 				) as Promise<APIApplicationCommand[]>
 			).catch(normalizeError),
@@ -280,7 +280,7 @@ export class Dev extends Command {
 							.flatMap((file) => [
 								...(file.chatInputData ? [file.chatInputData] : []),
 								...(file.contextMenuData ?? []),
-							]) satisfies RecursiveReadonly<RESTPutAPIApplicationCommandsJSONBody>,
+							]) satisfies AsConst<RESTPutAPIApplicationCommandsJSONBody>,
 					}) as Promise<APIApplicationCommand[]>
 				).catch(normalizeError),
 		]);
