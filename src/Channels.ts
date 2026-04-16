@@ -5,6 +5,7 @@ import {
 	type WorkflowStep,
 } from "cloudflare:workers";
 import {
+	AllowedMentionsTypes,
 	ButtonStyle,
 	ChannelType,
 	ComponentType,
@@ -39,6 +40,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 		const cases: [string, [number, string]][] = [];
 		for (const match of event.payload.matches)
 			try {
+				let channelName = event.payload.tournament.channelName;
 				const channelId = await step.do<string>(
 					`Create channel for match ${match.id}`,
 					{ retries: { limit: 1, delay: 5_000 } },
@@ -49,10 +51,10 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 								{
 									body: {
 										name: placeholder(
-											event.payload.tournament.channelName ??
-												"{matchID}-{player1}-vs-{player2}",
+											channelName ?? "{matchId}-{player1}-vs-{player2}",
 											{
-												matchID: match.id.toString(),
+												matchId: match.id.toString(),
+												tournamentId: event.payload.tournament.id.toString(),
 												id1: match.user1,
 												id2: match.user2!,
 												tag1: match.user1Tag?.slice(1) ?? "",
@@ -103,10 +105,12 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 							if (
 								err instanceof DiscordAPIError &&
 								"errors" in err.rawError &&
-								typeof err.rawError.errors === "object" &&
-								"parent_id" in err.rawError.errors
-							)
-								parent_id = null;
+								typeof err.rawError.errors === "object"
+							) {
+								if ("parent_id" in err.rawError.errors) parent_id = null;
+								if ("name" in err.rawError.errors)
+									channelName = "{matchId}-torneo-{tournamentId}";
+							}
 							throw err;
 						}
 					},
@@ -121,7 +125,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 					components.push({
 						type: ComponentType.TextDisplay,
 						content: placeholder(event.payload.content, {
-							matchID: match.id.toString(),
+							matchId: match.id.toString(),
 							id1: match.user1,
 							id2: match.user2!,
 							tag1: match.user1Tag?.slice(1) ?? "",
@@ -158,6 +162,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 										body: {
 											flags: MessageFlags.IsComponentsV2,
 											components,
+											allowed_mentions: { parse: [AllowedMentionsTypes.User] },
 										} satisfies RESTPostAPIChannelMessageJSONBody,
 									})
 									.then(() => {}),
@@ -168,7 +173,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 					step,
 					event.payload.tournament.logChannel,
 					err,
-					`Impossibile creare il canale per il match ${match.id}`,
+					`Impossibile creare il canale per il match ${match.id}: ${match.user1Name} (<@${match.user1}> ${match.user1Tag}) VS ${match.user2Name} (<@${match.user2}> ${match.user2Tag})`,
 				);
 			}
 		if (cases.length)

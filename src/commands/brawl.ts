@@ -74,7 +74,7 @@ export class Brawl extends Command {
 		"Avanzamento nel cammino dei trofei",
 		"All",
 	] as const;
-	static readonly BRAWLER_EMOJIS: RecursiveReadonly<
+	static readonly BRAWLER_EMOJIS: AsConst<
 		Record<string, [string, string, string, string]>
 	> = {
 		"0": [

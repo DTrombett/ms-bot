@@ -49,9 +49,7 @@ declare global {
 
 	type Awaitable<T> = Promise<T> | T;
 
-	type RecursiveReadonly<T> = {
-		readonly [P in keyof T]: RecursiveReadonly<T[P]>;
-	};
+	type AsConst<T> = { readonly [P in keyof T]: AsConst<T[P]> };
 
 	type RecursivePartial<T> = { [P in keyof T]?: RecursivePartial<T[P]> };
 
@@ -437,7 +435,7 @@ declare global {
 	> & { predictions: Pick<Database.Prediction, "matchId" | "prediction">[] };
 
 	type ExtractOptionType<
-		T extends RecursiveReadonly<APIApplicationCommandOption> =
+		T extends AsConst<APIApplicationCommandOption> =
 			APIApplicationCommandOption,
 	> =
 		T extends { choices: { value: infer V }[] } ? V
@@ -445,7 +443,7 @@ declare global {
 				type: T["type"];
 			})["value"];
 	type ResolvedOptions<
-		T extends RecursiveReadonly<
+		T extends AsConst<
 			| APIApplicationCommandSubcommandGroupOption
 			| APIApplicationCommandSubcommandOption
 		>,
@@ -458,12 +456,12 @@ declare global {
 			>
 		:	never;
 	type CreateObject<
-		T extends RecursiveReadonly<APIApplicationCommandOption[]>,
+		T extends AsConst<APIApplicationCommandOption[]>,
 		S extends string | undefined = undefined,
 		R extends boolean = true,
 	> =
 		T extends (
-			RecursiveReadonly<
+			AsConst<
 				(
 					| APIApplicationCommandSubcommandGroupOption
 					| APIApplicationCommandSubcommandOption
@@ -483,7 +481,7 @@ declare global {
 			};
 	type ParseOptions<
 		T extends
-			| RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody>
+			| AsConst<RESTPostAPIChatInputApplicationCommandsJSONBody>
 			| undefined,
 		R extends boolean = true,
 	> =
@@ -525,8 +523,7 @@ declare global {
 		BaseReplies;
 
 	type ChatInputArgs<
-		A extends
-			RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> =
+		A extends AsConst<RESTPostAPIChatInputApplicationCommandsJSONBody> =
 			RESTPostAPIChatInputApplicationCommandsJSONBody,
 		B extends string | undefined = string | undefined,
 	> = BaseArgs<APIChatInputApplicationCommandInteraction> &
@@ -535,8 +532,7 @@ declare global {
 	type AutoCompleteReplies = Pick<Replies, "autocomplete">;
 
 	type AutoCompleteArgs<
-		A extends
-			RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody> =
+		A extends AsConst<RESTPostAPIChatInputApplicationCommandsJSONBody> =
 			RESTPostAPIChatInputApplicationCommandsJSONBody,
 	> = BaseArgs<APIApplicationCommandAutocompleteInteraction> & ParseOptions<A>;
 

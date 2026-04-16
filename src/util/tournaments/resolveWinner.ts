@@ -15,6 +15,7 @@ export const resolveWinner = <
 			match.result2 == null)
 	)
 		return null;
+	if (match.status === DBMatchStatus.Default) return match.user1;
 	if (
 		match.status === DBMatchStatus.Postponed ||
 		match.status === DBMatchStatus.Playing ||

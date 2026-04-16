@@ -9,7 +9,6 @@ import {
 	Routes,
 	type APIMessageTopLevelComponent,
 	type RESTGetAPIChannelMessageResult,
-	type RESTPatchAPIChannelMessageResult,
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
@@ -80,17 +79,17 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					.bind(this.tournamentId)
 					.first<number>("participantCount"),
 			);
-			const id = await step.do<string>(
-				"Send registration message",
-				this.actuallySendMessage(
-					tournament,
-					tournament.registrationChannel,
-					tournament.registrationTemplateLink,
-					participantCount ?? 0,
-				),
-			);
+			if (!tournament.registrationMessage) {
+				const id = await step.do<string>(
+					"Send registration message",
+					this.actuallySendMessage(
+						tournament,
+						tournament.registrationChannel,
+						tournament.registrationTemplateLink,
+						participantCount ?? 0,
+					),
+				);
 
-			if (!tournament.registrationMessage)
 				this.ctx.waitUntil(
 					step.do<void>("Add message to database", () =>
 						this.env.DB.prepare(
@@ -105,12 +104,13 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 							.then(() => {}),
 					),
 				);
+			}
 		} catch (error) {
 			this.sendError(
 				step,
 				tournament.logChannel,
 				error,
-				"Impossibile inviare il messaggio di iscrizione nel canale specificato",
+				"Impossibile inviare il messaggio di iscrizione nel canale specificato!",
 			);
 		}
 	}
@@ -123,25 +123,15 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			registrationCount: number,
 		) =>
 		async () => {
-			const { id } = (await rest[
-				tournament.registrationMessage ? "patch" : "post"
-			](
-				tournament.registrationMessage ?
-					Routes.channelMessage(channelId, tournament.registrationMessage)
-				:	Routes.channelMessages(channelId),
-				{
-					body: await createRegistrationMessage(
-						this.tournamentId,
-						registrationTemplateLink,
-						registrationCount,
-						tournament.name,
-						tournament.minPlayers,
-					),
-				},
-			)) as
-				| RESTPostAPIChannelMessageResult
-				// eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
-				| RESTPatchAPIChannelMessageResult;
+			const { id } = (await rest.post(Routes.channelMessages(channelId), {
+				body: await createRegistrationMessage(
+					this.tournamentId,
+					registrationTemplateLink,
+					registrationCount,
+					tournament.name,
+					tournament.minPlayers,
+				),
+			})) as RESTPostAPIChannelMessageResult;
 
 			return id;
 		};
@@ -183,7 +173,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				step,
 				tournament.logChannel,
 				error,
-				"Impossibile creare le brackets",
+				"Impossibile creare le brackets!",
 			);
 		}
 	}
@@ -284,23 +274,17 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		if (!participantCount || participantCount < 2) return;
 		for (
 			let round =
-					tournament.currentRound ?? Math.ceil(Math.log2(participantCount)) - 1,
-				first = true;
+				tournament.currentRound ?? Math.ceil(Math.log2(participantCount)) - 1;
 			round >= 0;
-			round--, first = false
+			round--
 		) {
 			const [matches, message] = await Promise.all([
-				first ?
-					step.do(
-						`Get matches for round ${round}`,
-						this.getMatches(round, true),
-					)
-				:	this.createRoundAndMoveChannels(
-						step,
-						round,
-						tournament.logChannel,
-						tournament.flags,
-					),
+				this.createRoundAndDeleteChannels(
+					step,
+					round,
+					tournament.logChannel,
+					tournament.flags,
+				),
 				tournament.matchMessageLink &&
 					step.do(
 						`Fetch message for round ${round}`,
@@ -346,32 +330,39 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		);
 	};
 
-	private createRoundAndMoveChannels = async (
+	private createRoundAndDeleteChannels = async (
 		step: WorkflowStep,
 		round: number,
 		logChannel: string,
 		flags: number,
 	) => {
 		const oldMatches = await step.do(
-			`Get old matches from round ${round + 1}`,
+			`Get existing matches for round ${round}`,
 			this.getMatches(round + 1),
 		);
 		const [matches] = await Promise.all([
 			step.do(`Create round ${round}`, this.createRound(round, oldMatches)),
 			flags & TournamentFlags.AutoDeleteChannels &&
-				step.do<void>(
-					`Create delete channels workflows from round ${round + 1}`,
-					() =>
-						this.env.DELETE_CHANNELS.createBatch(
-							oldMatches
-								.reduce<string[][]>((arr, v) => {
-									if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-									if (v.channelId) arr.at(-1)!.push(v.channelId);
-									return arr;
-								}, [])
-								.map((channels) => ({ params: { channels, logChannel } })),
-						).then(() => {}),
-				),
+				this.env.DELETE_CHANNELS.createBatch(
+					oldMatches
+						.filter(
+							(
+								v,
+							): v is typeof v & {
+								channelId: NonNullable<(typeof v)["channelId"]>;
+							} =>
+								v.channelId != null &&
+								Math.floor(Math.log2(v.id + 1)) === round + 1,
+						)
+						.reduce<string[][]>((arr, v) => {
+							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+							arr.at(-1)!.push(v.channelId);
+							return arr;
+						}, [])
+						.map((channels) => ({ params: { channels, logChannel } })),
+				)
+					.then(() => {})
+					.catch(console.error),
 		]);
 
 		return matches;
@@ -410,7 +401,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						.map((v) => ({ ...v, winner: resolveWinner(v) }));
 
 					if (!a) {
-						if (!b) return;
+						if (!b) return resolvedOldMatches[2 ** round + k - 1];
 						[a, b] = [b, a];
 					}
 					if (a.winner === undefined || (b && b?.winner === undefined)) return;
@@ -424,7 +415,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						status: b?.winner ? DBMatchStatus.Playing : DBMatchStatus.Default,
 						tournamentId: this.tournamentId,
 						user1: a.winner!,
-						user2: b?.winner,
+						user2: b?.winner ?? null,
 						user1Name: a.winner === a.user1 ? a.user1Name : a.user2Name,
 						user2Name:
 							b ?
@@ -441,48 +432,68 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 							:	null,
 					};
 				},
-			).filter((v) => v != null);
-			const query = this.env.DB.prepare(
-				`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
+			).filter(
+				(v): v is NonNullable<typeof v> =>
+					v != null &&
+					(!resolvedOldMatches[v.id] ||
+						v === resolvedOldMatches[v.id] ||
+						v.user1 != resolvedOldMatches[v.id]!.user1 ||
+						v.user2 != resolvedOldMatches[v.id]!.user2),
 			);
-
-			await this.env.DB.batch(
+			const query = this.env.DB.prepare(
+				`
+					INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)
+					ON CONFLICT(id, tournamentId) DO
+					UPDATE SET
+						status		=	excluded.status,
+						user1		=	excluded.user1,
+						user2		=	excluded.user2,
+						result1		=	NULL,
+						result2		=	NULL,
+						channelId	=	NULL
+					WHERE user1 IS NOT excluded.user1 OR user2 IS NOT excluded.user2
+					RETURNING channelId
+				`,
+			);
+			const existing = await this.env.DB.batch<
+				Partial<Pick<Database.Match, "channelId">>
+			>(
 				matches.map((m) =>
 					query.bind(m.id, m.status, m.tournamentId, m.user1, m.user2),
 				),
 			);
-			return matches.filter((m) => m.user2);
+
+			return matches.filter(
+				(m, i) => m.user2 && !existing[i]?.results[0]?.channelId,
+			);
 		};
 
-	private getMatches =
-		(round: number, noChannel = false) =>
-		async () => {
-			const { results } = await this.env.DB.prepare(
-				`
-					SELECT m.*,
-						p1.tag AS user1Tag,
-						sp1.name AS user1Name,
-						p2.tag AS user2Tag,
-						sp2.name AS user2Name
-					FROM Matches m
-						LEFT JOIN Participants p1 ON p1.tournamentId = m.tournamentId
-						AND p1.userId = m.user1
-						LEFT JOIN SupercellPlayers sp1 ON sp1.userId = p1.userId
-						AND sp1.tag = p1.tag
-						LEFT JOIN Participants p2 ON p2.tournamentId = m.tournamentId
-						AND p2.userId = m.user2
-						LEFT JOIN SupercellPlayers sp2 ON sp2.userId = p2.userId
-						AND sp2.tag = p2.tag
-					WHERE m.tournamentId = ?1 AND m.id >= ?2 AND m.id <= ?3
-						${noChannel ? `AND m.channelId IS NULL AND m.user2 IS NOT NULL` : ""}
-					ORDER BY m.id
-				`,
-			)
-				.bind(this.tournamentId, 2 ** round - 1, 2 ** (round + 1) - 2)
-				.run<MatchWithPlayers>();
+	private getMatches = (round: number) => async () => {
+		const { results } = await this.env.DB.prepare(
+			`
+				SELECT m.*,
+					p1.tag		AS	user1Tag,
+					sp1.name	AS	user1Name,
+					p2.tag		AS	user2Tag,
+					sp2.name	AS	user2Name
+				FROM Matches m
+					LEFT JOIN Participants p1 ON p1.tournamentId = m.tournamentId
+					AND p1.userId = m.user1
+					LEFT JOIN SupercellPlayers sp1 ON sp1.userId = p1.userId
+					AND sp1.tag = p1.tag
+					LEFT JOIN Participants p2 ON p2.tournamentId = m.tournamentId
+					AND p2.userId = m.user2
+					LEFT JOIN SupercellPlayers sp2 ON sp2.userId = p2.userId
+					AND sp2.tag = p2.tag
+				WHERE m.tournamentId = ?1 AND m.id >= ?2 AND m.id <= ?3
+				ORDER BY m.id
+			`,
+		)
+			.bind(this.tournamentId, 2 ** (round - 1) - 1, 2 ** (round + 1) - 2)
+			.run<MatchWithPlayers>();
 
-			return results;
-		};
+		return results;
+	};
 
 	private sendError = (
 		step: WorkflowStep,

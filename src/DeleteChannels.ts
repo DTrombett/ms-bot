@@ -19,6 +19,8 @@ export class DeleteChannels extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
+		const toDelete: string[] = [];
+
 		for (const channelId of event.payload.channels)
 			try {
 				await step.do<void>(
@@ -26,14 +28,28 @@ export class DeleteChannels extends WorkflowEntrypoint<Env, Params> {
 					{ retries: { limit: 1, delay: 5_000 } },
 					() => rest.delete(Routes.channel(channelId)).then(() => {}),
 				);
+				toDelete.push(channelId);
 			} catch (err) {
 				this.sendError(
 					step,
 					event.payload.logChannel,
 					err,
-					`Impossibile eliminare il canale ${channelId}`,
+					`Impossibile eliminare il canale <#${channelId}>`,
 				);
 			}
+		if (toDelete.length)
+			await step.do<void>("Update channelId in database", () =>
+				this.env.DB.prepare(
+					`
+					UPDATE Matches
+					SET channelId = NULL
+					WHERE channelId IN (${new Array(toDelete.length).fill("?").join(",")})
+				`,
+				)
+					.bind(...toDelete)
+					.run()
+					.then(() => {}),
+			);
 	}
 
 	private sendError = (

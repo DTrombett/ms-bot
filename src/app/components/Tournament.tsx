@@ -296,11 +296,11 @@ export default ({
 					name="channelName"
 					placeholder="Il nome da assegnare ai canali delle partite"
 					maxWidth="18.25rem"
-					note="Puoi usare i placeholder {matchID} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
+					note="Puoi usare i placeholder {matchId} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
 					defaultValue={
 						tournament ?
 							(tournament.channelName ?? undefined)
-						:	"{matchID}-{player1}-vs-{player2}"
+						:	"{matchId}-{player1}-vs-{player2}"
 					}
 				/>
 				<TextInput
@@ -308,7 +308,7 @@ export default ({
 					name="endedChannelName"
 					placeholder="Il nome da assegnare ai canali delle partite concluse"
 					maxWidth="22.25rem"
-					note="Puoi usare i placeholder {matchID} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
+					note="Puoi usare i placeholder {matchId} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
 					defaultValue={tournament?.endedChannelName ?? undefined}
 				/>
 				<TextInput

@@ -25,7 +25,7 @@ import normalizeError from "../util/normalizeError";
 import { TimeUnit } from "../util/time";
 import { editMessage } from "../util/tournaments/editMessage";
 import { finishRound } from "../util/tournaments/finishRound";
-import { patchMatch } from "../util/tournaments/patchMatch";
+import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
 import { Brawl } from "./brawl";
 
 export class Tournament extends Command {
@@ -679,21 +679,24 @@ export class Tournament extends Command {
 		try {
 			const rounds = JSON.parse(match.rounds) as Database.Round[];
 			const round =
-				rounds.at(Math.floor(Math.log2(match.id + 1))) ?? rounds.at(-1)!;
-			round.mode = round.mode
+				rounds[Math.floor(Math.log2(match.id + 1))] ?? rounds.at(-1)!;
+			const resolvedMode = round.mode
 				.toLowerCase()
 				.split(/\s+/)
 				.reduce((a, b) => a + (b[0]?.toUpperCase() ?? "") + b.slice(1));
-			const battleLog = (await Brawl.getBattleLog(match.user1Tag)).filter(
-				(b) =>
-					b.event.mode === round.mode &&
-					(b.battle.result === "defeat" || b.battle.result === "victory") &&
-					b.battle.teams.every(
-						(t) =>
-							t.length === 1 &&
-							[match.user1Tag, match.user2Tag].includes(t[0]?.tag),
-					),
-			);
+			const battleLog = (await Brawl.getBattleLog(match.user1Tag))
+				.filter(
+					(b) =>
+						b.event.mode === resolvedMode &&
+						(b.battle.result === "defeat" || b.battle.result === "victory") &&
+						b.battle.teams.every(
+							(t) =>
+								t.length === 1 &&
+								[match.user1Tag, match.user2Tag].includes(t[0]?.tag),
+						),
+				)
+				.reverse()
+				.slice(0, round.bof);
 
 			if (!battleLog.length)
 				return edit({
@@ -712,9 +715,7 @@ export class Tournament extends Command {
 				env.DB.prepare(
 					`
 						UPDATE Matches
-						SET result1 = ?3,
-							result2 = ?4,
-							status  = ?5
+						SET result1 = ?3, result2 = ?4, status = ?5
 						WHERE tournamentId = ?1 AND id = ?2
 						RETURNING status, result1, result2, user1, user2
 					`,
@@ -732,7 +733,7 @@ export class Tournament extends Command {
 
 			if (newMatch)
 				return edit({
-					content: `## <@${newMatch.user1}> VS <@${newMatch.user2}>: ${newMatch.result1} - ${newMatch.result2} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+					content: `## ${displayMatchScore(newMatch)} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
 					allowed_mentions: { parse: [] },
 				});
 		} catch (err) {
