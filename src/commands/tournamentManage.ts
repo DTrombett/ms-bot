@@ -219,7 +219,7 @@ export class TournamentManage extends Command {
 						result2 = CASE
 							WHEN user1 = ?3 THEN NULL
 							WHEN user2 = ?3 THEN COALESCE(result2, 0)
-							ELSE result1
+							ELSE result2
 						END,
 						result1 = CASE
 							WHEN user2 = ?3 THEN NULL
