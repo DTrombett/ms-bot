@@ -77,11 +77,13 @@ export const refreshToken: {
 		mayThrow,
 	);
 
-export const parseToken = async (token?: string) => {
+export const parseToken = async (
+	token: string | undefined,
+	scopes?: Iterable<string>,
+) => {
 	if (!token) return;
 	const decoded = Uint8Array.fromBase64(token, { alphabet: "base64url" });
-
-	return Object.fromEntries(
+	const jwt = Object.fromEntries(
 		new URLSearchParams(
 			textDecoder.decode(
 				await crypto.subtle.decrypt(
@@ -98,6 +100,9 @@ export const parseToken = async (token?: string) => {
 			),
 		),
 	) as object as JWT;
+
+	if (scopes && !new Set(scopes).isSubsetOf(new Set(jwt.s?.split(" ")))) return;
+	return jwt;
 };
 
 export const revokeToken = async (token?: string) => {
@@ -163,9 +168,11 @@ export const tokenFromResponse: {
 
 export const createSetCookie = async (
 	request: Request,
+	scopes?: string[],
 ): Promise<{ setCookie: string; token: JWT | undefined }> => {
 	let token = await parseToken(
 		request.headers.get("cookie")?.match(/(?:^|;\s*)token=([^;]*)/)?.[1],
+		scopes,
 	);
 
 	if (token)

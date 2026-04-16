@@ -270,39 +270,40 @@ const server: ExportedHandler<Env> = {
 		if ((matchResult = url.pathname.match(/^\/tournaments\/([^/]+)\/?$/))) {
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
-			const [
-				{ setCookie, token },
-				[
-					{
-						results: [tournament],
-					},
-					{ results: participants },
-				],
-			] = await Promise.all([
-				createSetCookie(request),
-				env.DB.batch([
-					env.DB.prepare(`SELECT * FROM Tournaments WHERE id = ?`).bind(
-						Number(matchResult[1]),
-					),
-					env.DB.prepare(
-						`
-							SELECT p.*, sp.name
-							FROM Participants p
-							LEFT JOIN SupercellPlayers sp ON sp.userId = p.userId AND sp.tag = p.tag
-							WHERE p.tournamentId = ?
-						`,
-					).bind(Number(matchResult[1])),
-				]) as Promise<
-					[
-						D1Result<Database.Tournament>,
-						D1Result<
-							Pick<Database.Participant, "tag" | "userId"> &
-								Pick<Database.SupercellPlayer, "name">
-						>,
-					]
-				>,
-			]);
+			const { setCookie, token } = await createSetCookie(request, ["guilds"]);
 
+			if (!token)
+				return new Response(null, {
+					status: 303,
+					headers: {
+						location: `/auth/discord/login?to=${encodeURIComponent(url.pathname)}&scope=guilds`,
+						"set-cookie": setCookie,
+					},
+				});
+			const [
+				{
+					results: [tournament],
+				},
+				{ results: participants },
+			] = (await env.DB.batch([
+				env.DB.prepare(`SELECT * FROM Tournaments WHERE id = ?`).bind(
+					Number(matchResult[1]),
+				),
+				env.DB.prepare(
+					`
+						SELECT p.*, sp.name
+						FROM Participants p
+						LEFT JOIN SupercellPlayers sp ON sp.userId = p.userId AND sp.tag = p.tag
+						WHERE p.tournamentId = ?
+					`,
+				).bind(Number(matchResult[1])),
+			])) as [
+				D1Result<Database.Tournament>,
+				D1Result<
+					Pick<Database.Participant, "tag" | "userId"> &
+						Pick<Database.SupercellPlayer, "name">
+				>,
+			];
 			if (!tournament)
 				return new Response(null, {
 					status: 303,
@@ -1501,10 +1502,13 @@ const server: ExportedHandler<Env> = {
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
 			let r = url.searchParams.get("to") ?? request.headers.get("Referer");
+			const scopes = new Set(url.searchParams.get("scope")?.split(" "));
 			if (r && URL.canParse(r)) r = new URL(r).pathname;
+			scopes.add("identify");
 			try {
 				const token = await parseToken(
 					request.headers.get("cookie")?.match(/(?:^|;\s*)token=([^;]*)/)?.[1],
+					scopes,
 				);
 
 				if (token && +token.e * 1000 - 5 * TimeUnit.Minute > Date.now())
@@ -1537,7 +1541,7 @@ const server: ExportedHandler<Env> = {
 							redirect_uri: new URL(authRedirectPath, url).href,
 							client_id: env.DISCORD_APPLICATION_ID,
 							response_type: "code",
-							scope: "identify",
+							scope: Array.from(scopes).join(" "),
 							prompt: "none",
 							state,
 						},
