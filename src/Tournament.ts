@@ -401,7 +401,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						.map((v) => ({ ...v, winner: resolveWinner(v) }));
 
 					if (!a) {
-						if (!b) return;
+						if (!b) return resolvedOldMatches[2 ** round + k - 1];
 						[a, b] = [b, a];
 					}
 					if (a.winner === undefined || (b && b?.winner === undefined)) return;
@@ -436,6 +436,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				(v): v is NonNullable<typeof v> =>
 					v != null &&
 					(!resolvedOldMatches[v.id] ||
+						v === resolvedOldMatches[v.id] ||
 						v.user1 != resolvedOldMatches[v.id]!.user1 ||
 						v.user2 != resolvedOldMatches[v.id]!.user2),
 			);

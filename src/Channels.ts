@@ -51,7 +51,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 								{
 									body: {
 										name: placeholder(
-											channelName ?? "{matchID}-{player1}-vs-{player2}",
+											channelName ?? "{matchId}-{player1}-vs-{player2}",
 											{
 												matchId: match.id.toString(),
 												tournamentId: event.payload.tournament.id.toString(),
@@ -125,7 +125,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 					components.push({
 						type: ComponentType.TextDisplay,
 						content: placeholder(event.payload.content, {
-							matchID: match.id.toString(),
+							matchId: match.id.toString(),
 							id1: match.user1,
 							id2: match.user2!,
 							tag1: match.user1Tag?.slice(1) ?? "",
