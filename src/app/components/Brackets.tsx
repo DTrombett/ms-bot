@@ -3,8 +3,10 @@ import type {
 	RESTGetAPIGuildMemberResult,
 } from "discord-api-types/v10";
 import {
+	memo,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 	type CSSProperties,
 	type Dispatch,
@@ -340,20 +342,20 @@ const MatchUI = ({
 }): ReactNode => {
 	const [disabled, setDisabled] = useState(false);
 	const [error, setError] = useState<string>();
+	const scrollPosition = useRef(window.scrollY);
 
-	useEffect(
-		() =>
-			void (async () => {
-				const params = toSearchParams({
-					user1: active.participant1.userId || null,
-					tag1: active.participant1.player?.tag,
-					user2: active.participant2.userId || null,
-					tag2: active.participant2.player?.tag,
-				}).toString();
-				if (!params) return;
-				const result = await fetch(
-					`/tournaments/${id}/matchData?${params}`,
-				).then((res) =>
+	useEffect(() => {
+		document.body.style.overflowY = "clip";
+		(async () => {
+			const params = toSearchParams({
+				user1: active.participant1.userId || null,
+				tag1: active.participant1.player?.tag,
+				user2: active.participant2.userId || null,
+				tag2: active.participant2.player?.tag,
+			}).toString();
+			if (!params) return;
+			const result = await fetch(`/tournaments/${id}/matchData?${params}`).then(
+				(res) =>
 					res.json<
 						| Partial<{
 								channel: RESTGetAPIChannelResult;
@@ -364,29 +366,32 @@ const MatchUI = ({
 						  }>
 						| { message: string }
 					>(),
-				);
+			);
 
-				if ("message" in result) return console.error(result.message);
-				setActive(
-					(active) =>
-						active && {
-							...active,
-							channel: result.channel,
-							participant1: {
-								...active.participant1,
-								member: result.user1,
-								player: result.player1 ?? active.participant1.player,
-							},
-							participant2: {
-								...active.participant2,
-								member: result.user2,
-								player: result.player2 ?? active.participant2.player,
-							},
+			if ("message" in result) return console.error(result.message);
+			setActive(
+				(active) =>
+					active && {
+						...active,
+						channel: result.channel,
+						participant1: {
+							...active.participant1,
+							member: result.user1,
+							player: result.player1 ?? active.participant1.player,
 						},
-				);
-			})().catch(console.error),
-		[active],
-	);
+						participant2: {
+							...active.participant2,
+							member: result.user2,
+							player: result.player2 ?? active.participant2.player,
+						},
+					},
+			);
+		})().catch(console.error);
+		return () => {
+			document.body.style.overflowY = "";
+			window.scrollTo({ top: scrollPosition.current, behavior: "instant" });
+		};
+	}, []);
 	return (
 		<form
 			id="match"
@@ -397,9 +402,10 @@ const MatchUI = ({
 				fontSize: "1rem",
 				gap: "0.5rem",
 				lineHeight: "1.25rem",
-				margin: "0 auto",
+				margin: "50vh auto 0",
 				padding: "0 1rem",
 				textAlign: "center",
+				transform: "translateY(-50%)",
 				whiteSpace: "nowrap",
 				width: "fit-content",
 			}}
@@ -657,18 +663,16 @@ const MatchUI = ({
 		</form>
 	);
 };
-const BracketsUI = ({
-	embed,
-	brackets,
-	participantsMap,
-	setActive,
-}: {
-	embed: boolean | undefined;
-	brackets: (Matches | undefined)[];
-	participantsMap: Record<string, Participants[number]>;
-	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
-}): ReactNode => {
-	return (
+const BracketsUI = memo(
+	({
+		brackets,
+		participantsMap,
+		setActive,
+	}: {
+		brackets: (Matches | undefined)[];
+		participantsMap: Record<string, Participants[number]>;
+		setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
+	}): ReactNode => (
 		<div
 			id="brackets"
 			style={{
@@ -682,84 +686,14 @@ const BracketsUI = ({
 				textAlign: "center",
 				whiteSpace: "nowrap",
 				width: "fit-content",
+				height: `calc((5rem + 2.4px) * ${brackets[0]?.length ?? 0})`,
 			}}>
-			<div
-				style={{
-					position: "fixed",
-					top: "1rem",
-					right: "1rem",
-					padding: "0 1rem",
-					display: "flex",
-					gap: "1rem",
-					zIndex: 10,
-				}}>
-				{!embed && (
-					<button
-						className="deleteButton"
-						type="button"
-						onClick={() =>
-							document.fullscreenElement ?
-								document.exitFullscreen()
-							:	document.documentElement.requestFullscreen()
-						}
-						style={{
-							backgroundColor: "transparent",
-							border: "none",
-							borderRadius: "0.5rem",
-							color: "white",
-							cursor: "pointer",
-							fontFamily: "ggsans",
-							fontSize: "2.5rem",
-							fontWeight: 600,
-							height: "2.5rem",
-							lineHeight: 0,
-							marginRight: 0,
-							padding: "0.25rem",
-							userSelect: "none",
-							width: "2.5rem",
-						}}>
-						↕
-					</button>
-				)}
-				<button
-					className="deleteButton"
-					type="button"
-					onClick={
-						typeof window === "undefined" ? undefined : (
-							window.location.reload.bind(window.location)
-						)
-					}
-					style={{
-						backgroundColor: "transparent",
-						border: "none",
-						borderRadius: "0.5rem",
-						color: "white",
-						cursor: "pointer",
-						fontFamily: "ggsans",
-						fontSize: "2.5rem",
-						fontWeight: 600,
-						height: "2.5rem",
-						lineHeight: 0,
-						marginRight: 0,
-						padding: "0.25rem",
-						userSelect: "none",
-						width: "2.5rem",
-					}}>
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
-						<path
-							fill="currentColor"
-							d="M22.242 22.242l2.829 2.829c-3.905 3.905-10.237 3.904-14.143-.001-2.247-2.246-3.194-5.296-2.854-8.225l-4.037.367c-.215 3.84 1.128 7.752 4.062 10.687 5.467 5.467 14.333 5.468 19.799 0l2.828 2.828.849-9.334-9.333.849zM27.899 8.1C22.431 2.633 13.568 2.633 8.1 8.1L5.272 5.272l-.849 9.334 9.334-.849-2.829-2.829c3.906-3.905 10.236-3.905 14.142 0 2.248 2.247 3.194 5.297 2.856 8.226l4.036-.366c.216-3.841-1.128-7.753-4.063-10.688z"
-						/>
-					</svg>
-				</button>
-			</div>
 			{Array.from(brackets, (_, i) => (
 				<div
 					style={{
 						display: "flex",
 						flexDirection: "column",
 						justifyContent: "space-around",
-						height: `calc((5rem + 2.4px) * ${brackets[0]?.length})`,
 					}}>
 					{Array.from({ length: 2 ** (brackets.length - 1 - i) }, (_, k) => {
 						const match = resolveMatch(brackets, participantsMap, i, k);
@@ -877,8 +811,8 @@ const BracketsUI = ({
 				</div>
 			))}
 		</div>
-	);
-};
+	),
+);
 
 export default useClient(
 	"Brackets",
@@ -925,21 +859,96 @@ export default useClient(
 			[brackets],
 		);
 
-		return active ?
-				<MatchUI
-					active={active}
-					setActive={setActive}
-					mobile={mobile}
-					id={id}
-					admin={admin}
-					currentlyPlaying={currentlyPlaying}
-					setMatches={setMatches}
-				/>
-			:	<BracketsUI
-					brackets={brackets}
-					embed={embed}
-					participantsMap={participantsMap}
-					setActive={setActive}
-				/>;
+		return (
+			<>
+				<div
+					style={{
+						position: "fixed",
+						top: "1rem",
+						right: active ? "calc(1rem + 4px)" : "1rem",
+						padding: "0 1rem",
+						display: "flex",
+						gap: "1rem",
+						zIndex: 10,
+						transition: "none",
+					}}>
+					{!embed && (
+						<button
+							className="deleteButton"
+							type="button"
+							onClick={() =>
+								document.fullscreenElement ?
+									document.exitFullscreen()
+								:	document.documentElement.requestFullscreen()
+							}
+							style={{
+								backgroundColor: "transparent",
+								border: "none",
+								borderRadius: "0.5rem",
+								color: "white",
+								cursor: "pointer",
+								fontFamily: "ggsans",
+								fontSize: "2.5rem",
+								fontWeight: 600,
+								height: "2.5rem",
+								lineHeight: 0,
+								marginRight: 0,
+								padding: "0.25rem",
+								userSelect: "none",
+								width: "2.5rem",
+							}}>
+							↕
+						</button>
+					)}
+					<button
+						className="deleteButton"
+						type="button"
+						onClick={
+							typeof window === "undefined" ? undefined : (
+								window.location.reload.bind(window.location)
+							)
+						}
+						style={{
+							backgroundColor: "transparent",
+							border: "none",
+							borderRadius: "0.5rem",
+							color: "white",
+							cursor: "pointer",
+							fontFamily: "ggsans",
+							fontSize: "2.5rem",
+							fontWeight: 600,
+							height: "2.5rem",
+							lineHeight: 0,
+							marginRight: 0,
+							padding: "0.25rem",
+							userSelect: "none",
+							width: "2.5rem",
+						}}>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
+							<path
+								fill="currentColor"
+								d="M22.242 22.242l2.829 2.829c-3.905 3.905-10.237 3.904-14.143-.001-2.247-2.246-3.194-5.296-2.854-8.225l-4.037.367c-.215 3.84 1.128 7.752 4.062 10.687 5.467 5.467 14.333 5.468 19.799 0l2.828 2.828.849-9.334-9.333.849zM27.899 8.1C22.431 2.633 13.568 2.633 8.1 8.1L5.272 5.272l-.849 9.334 9.334-.849-2.829-2.829c3.906-3.905 10.236-3.905 14.142 0 2.248 2.247 3.194 5.297 2.856 8.226l4.036-.366c.216-3.841-1.128-7.753-4.063-10.688z"
+							/>
+						</svg>
+					</button>
+				</div>
+				{active ?
+					<MatchUI
+						active={active}
+						setActive={setActive}
+						mobile={mobile}
+						id={id}
+						admin={admin}
+						currentlyPlaying={currentlyPlaying}
+						setMatches={setMatches}
+					/>
+				:	<BracketsUI
+						brackets={brackets}
+						participantsMap={participantsMap}
+						setActive={setActive}
+					/>
+				}
+			</>
+		);
 	},
 );
