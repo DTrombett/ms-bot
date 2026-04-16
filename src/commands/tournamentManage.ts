@@ -131,7 +131,6 @@ export class TournamentManage extends Command {
 			user: { id: userId },
 		}: ChatInputArgs<typeof TournamentManage.chatInputData, "abandoned">,
 	) => {
-		defer();
 		if (remove && winner)
 			return reply({
 				content: "Non puoi specificare remove e winner contemporaneamente!",
@@ -142,6 +141,7 @@ export class TournamentManage extends Command {
 				content: "Non puoi specificare user e winner contemporaneamente!",
 				flags: MessageFlags.Ephemeral,
 			});
+		defer();
 		const match = await env.DB.prepare(
 			`SELECT * FROM Matches WHERE channelId = ? LIMIT 1`,
 		)
@@ -194,7 +194,7 @@ export class TournamentManage extends Command {
 				});
 		}
 		const newMatch = await patchMatch(
-			match?.tournamentId,
+			match.tournamentId,
 			match.id,
 			env.DB.prepare(
 				`

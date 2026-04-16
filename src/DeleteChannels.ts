@@ -37,18 +37,19 @@ export class DeleteChannels extends WorkflowEntrypoint<Env, Params> {
 					`Impossibile eliminare il canale <#${channelId}>`,
 				);
 			}
-		await step.do<void>("Update channelId in database", () =>
-			this.env.DB.prepare(
-				`
+		if (toDelete.length)
+			await step.do<void>("Update channelId in database", () =>
+				this.env.DB.prepare(
+					`
 					UPDATE Matches
 					SET channelId = NULL
 					WHERE channelId IN (${new Array(toDelete.length).fill("?").join(",")})
 				`,
-			)
-				.bind(...toDelete)
-				.run()
-				.then(() => {}),
-		);
+				)
+					.bind(...toDelete)
+					.run()
+					.then(() => {}),
+			);
 	}
 
 	private sendError = (
