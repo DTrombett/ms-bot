@@ -35,7 +35,7 @@ export class TournamentManage extends Command {
 				type: ApplicationCommandOptionType.Subcommand,
 				name: "abandoned",
 				description:
-					"Segna un abbandono. In caso di doppio abbandono non passare opzioni. Le opzioni sono mutualmente esclusive!",
+					"Segna un abbandono. In caso di doppio abbandono non passare opzioni.",
 				options: [
 					{
 						type: ApplicationCommandOptionType.User,
