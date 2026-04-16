@@ -690,6 +690,7 @@ const BracketsUI = memo(
 			}}>
 			{Array.from(brackets, (_, i) => (
 				<div
+					key={i}
 					style={{
 						display: "flex",
 						flexDirection: "column",
@@ -707,6 +708,7 @@ const BracketsUI = memo(
 									backgroundColor: style.backgroundColor,
 									cursor: "pointer",
 								}}
+								key={k}
 								onClick={setActive.bind(null, match)}>
 								{i > 0 && (
 									<span style={{ pointerEvents: "none" }}>
