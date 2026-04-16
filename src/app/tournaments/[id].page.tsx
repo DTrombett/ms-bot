@@ -52,13 +52,12 @@ export default ({
 			}}>
 			{tournament.name}
 		</span>
-		{admin && (
-			<Participants
-				mobile={mobile}
-				participants={participants}
-				id={tournament.id}
-			/>
-		)}
+		<Participants
+			mobile={mobile}
+			admin={admin}
+			participants={participants}
+			id={tournament.id}
+		/>
 		{(tournament.statusFlags & TournamentStatusFlags.BracketsCreated) !== 0 && (
 			<div
 				style={{

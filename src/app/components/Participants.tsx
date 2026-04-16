@@ -113,12 +113,14 @@ const DeleteButton = ({
 const ListUI = ({
 	participants,
 	mobile,
+	admin,
 	id,
 	setUI,
 	setParticipants,
 }: {
 	participants: Participants;
 	mobile: boolean;
+	admin: boolean;
 	id: number;
 	setUI: Dispatch<SetStateAction<UI>>;
 	setParticipants: Dispatch<SetStateAction<Participants>>;
@@ -227,7 +229,7 @@ const ListUI = ({
 			</div>
 			<ol
 				style={{
-					height: "16rem",
+					height: admin ? "16rem" : "21rem",
 					overflowY: "auto",
 					fontSize: "1.25rem",
 					lineHeight: "1.5rem",
@@ -245,19 +247,23 @@ const ListUI = ({
 							alignItems: "center",
 							borderRadius: "0.25rem",
 						}}>
-						<input
-							type="checkbox"
-							style={{
-								...styles.checkbox,
-								opacity: "75%",
-								display: !mobile || selection > 0 ? undefined : "none",
-							}}
-							name={p.userId}
-							aria-label={p.name ?? p.tag ?? p.userId}
-							onChange={(event) =>
-								setSelection((s) => s + Math.sign(+event.target.checked - 0.5))
-							}
-						/>
+						{admin && (
+							<input
+								type="checkbox"
+								style={{
+									...styles.checkbox,
+									opacity: "75%",
+									display: !mobile || selection > 0 ? undefined : "none",
+								}}
+								name={p.userId}
+								aria-label={p.name ?? p.tag ?? p.userId}
+								onChange={(event) =>
+									setSelection(
+										(s) => s + Math.sign(+event.target.checked - 0.5),
+									)
+								}
+							/>
+						)}
 						<div
 							style={{
 								flex: 1,
@@ -269,7 +275,7 @@ const ListUI = ({
 								const input = event.currentTarget.parentElement
 									?.firstElementChild as HTMLInputElement | undefined;
 
-								if (input && !input.checked)
+								if (input && !input.checked && admin)
 									timeout.current = window.setTimeout(() => {
 										if (!input.checked) {
 											input.checked = true;
@@ -294,15 +300,17 @@ const ListUI = ({
 								{p.tag}
 							</div>
 						</div>
-						<DeleteButton
-							i={i}
-							id={id}
-							mobile={mobile}
-							p={p}
-							disabled={disabled}
-							setError={setError}
-							setP={setParticipants}
-						/>
+						{admin && (
+							<DeleteButton
+								i={i}
+								id={id}
+								mobile={mobile}
+								p={p}
+								disabled={disabled}
+								setError={setError}
+								setP={setParticipants}
+							/>
+						)}
 					</li>
 				))}
 			</ol>
@@ -319,28 +327,30 @@ const ListUI = ({
 					{error}
 				</span>
 			)}
-			<button
-				className="button"
-				form=""
-				type="button"
-				onClick={setUI.bind(null, UI.AddParticipant)}
-				style={{
-					backgroundColor: Colors.Primary,
-					borderRadius: "0.5rem",
-					fontFamily: "ggsans",
-					fontSize: "1.125rem",
-					fontWeight: 600,
-					lineHeight: "1.75rem",
-					padding: "0.5rem 1rem",
-					userSelect: "none",
-					cursor: "pointer",
-					color: "white",
-					border: "none",
-					width: "fit-content",
-					margin: "auto auto 0",
-				}}>
-				Aggiungi partecipante
-			</button>
+			{admin && (
+				<button
+					className="button"
+					form=""
+					type="button"
+					onClick={setUI.bind(null, UI.AddParticipant)}
+					style={{
+						backgroundColor: Colors.Primary,
+						borderRadius: "0.5rem",
+						fontFamily: "ggsans",
+						fontSize: "1.125rem",
+						fontWeight: 600,
+						lineHeight: "1.75rem",
+						padding: "0.5rem 1rem",
+						userSelect: "none",
+						cursor: "pointer",
+						color: "white",
+						border: "none",
+						width: "fit-content",
+						margin: "auto auto 0",
+					}}>
+					Aggiungi partecipante
+				</button>
+			)}
 		</form>
 	);
 };
@@ -477,10 +487,12 @@ export default useClient(
 	"Participants",
 	({
 		participants,
+		admin,
 		mobile,
 		id,
 	}: {
 		participants: Participants;
+		admin: boolean;
 		mobile: boolean;
 		id: number;
 	}) => {
@@ -491,6 +503,7 @@ export default useClient(
 				<ListUI
 					id={id}
 					mobile={mobile}
+					admin={admin}
 					participants={p}
 					setUI={setUI}
 					setParticipants={setP}
