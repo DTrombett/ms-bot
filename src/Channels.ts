@@ -173,7 +173,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 					step,
 					event.payload.tournament.logChannel,
 					err,
-					`Impossibile creare il canale per il match ${match.id}: ${match.user1Name} (<@${match.user1}> ${match.user1Tag}) VS ${match.user2Name} (<@${match.user1}> ${match.user2Tag})`,
+					`Impossibile creare il canale per il match ${match.id}: ${match.user1Name} (<@${match.user1}> ${match.user1Tag}) VS ${match.user2Name} (<@${match.user2}> ${match.user2Tag})`,
 				);
 			}
 		if (cases.length)
