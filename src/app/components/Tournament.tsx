@@ -132,6 +132,13 @@ export default ({
 					min={0}
 					defaultValue={tournament?.minPlayers ?? undefined}
 				/>
+				<NumberInput
+					label="Massimo partecipanti"
+					name="maxPlayers"
+					placeholder=""
+					min={0}
+					defaultValue={tournament?.maxPlayers ?? undefined}
+				/>
 				<TextInput
 					name="messageLink"
 					label="Link al messaggio di iscrizione"

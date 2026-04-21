@@ -24,6 +24,7 @@ export const parseTournamentData = async (
 		message: ParseType.Boolean,
 		dashboard: ParseType.Boolean,
 		minPlayers: ParseType.Number,
+		maxPlayers: ParseType.Number,
 		messageLink: ParseType.Text,
 		channelId: ParseType.Text,
 		roleId: ParseType.Text,
@@ -69,6 +70,16 @@ export const parseTournamentData = async (
 		ok(
 			!form.minPlayers || form.minPlayers > 0,
 			"Il numero minimo di iscritti deve essere maggiore di 0",
+		);
+		ok(
+			!form.maxPlayers || form.maxPlayers > 0,
+			"Il numero massimo di iscritti deve essere maggiore di 0",
+		);
+		ok(
+			!form.maxPlayers ||
+				!form.minPlayers ||
+				form.maxPlayers >= form.minPlayers,
+			"Il numero massimo di iscritti deve essere maggiore del minimo",
 		);
 		if (form.messageLink) {
 			const result = form.messageLink.match(linkRegex);
@@ -210,6 +221,7 @@ export const parseTournamentData = async (
 		endedChannelName: form.endedChannelName,
 		matchMessageLink: form.matchMessageLink,
 		minPlayers: form.minPlayers,
+		maxPlayers: form.maxPlayers,
 		registrationChannel: form.channelId,
 		registrationChannelName:
 			form.channelId &&

@@ -143,6 +143,10 @@ export default async ({
 						children={t.minPlayers?.toLocaleString("it-IT")}
 					/>
 					<ListElement
+						label="Massimo giocatori"
+						children={t.maxPlayers?.toLocaleString("it-IT")}
+					/>
+					<ListElement
 						label="Iscrizioni"
 						children={
 							t.registrationStart &&

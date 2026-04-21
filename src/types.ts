@@ -398,6 +398,7 @@ declare global {
 			endedChannelName?: string | null;
 			matchMessageLink?: string | null;
 			minPlayers?: number | null;
+			maxPlayers?: number | null;
 			registrationChannel?: string | null;
 			registrationChannelName?: string | null;
 			registrationEnd?: number | null;

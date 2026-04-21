@@ -250,6 +250,7 @@ export class Tournament extends Command {
 			Pick<
 				Database.Tournament,
 				| "minPlayers"
+				| "maxPlayers"
 				| "registrationMessage"
 				| "registrationTemplateLink"
 				| "registrationRole"
@@ -266,7 +267,7 @@ export class Tournament extends Command {
 			).bind(tournament.id, userId, tag || null),
 			env.DB.prepare(
 				`
-					SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
+					SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
 					(
 						SELECT COUNT(*)
 						FROM Participants
@@ -345,7 +346,7 @@ export class Tournament extends Command {
 		const data = await env.DB.prepare(
 			`
 				SELECT 
-					t.minPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name, t.id,
+					t.minPlayers, t.maxPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name, t.id,
 					p.userId IS NOT NULL AS participationExists,
 					(
 						(t.registrationMode & ?1) != 0
@@ -372,6 +373,7 @@ export class Tournament extends Command {
 				} & Pick<
 					Database.Tournament,
 					| "minPlayers"
+					| "maxPlayers"
 					| "registrationMessage"
 					| "registrationChannel"
 					| "registrationTemplateLink"

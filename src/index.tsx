@@ -118,6 +118,7 @@ const server: ExportedHandler<Env> = {
 							endedChannelName,
 							matchMessageLink,
 							minPlayers,
+							maxPlayers,
 							registrationChannel,
 							registrationChannelName,
 							registrationEnd,
@@ -127,7 +128,7 @@ const server: ExportedHandler<Env> = {
 							roundType,
 							workflowId
 						)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					)
 						.bind(
 							tournament.name,
@@ -145,6 +146,7 @@ const server: ExportedHandler<Env> = {
 							tournament.endedChannelName,
 							tournament.matchMessageLink,
 							tournament.minPlayers,
+							tournament.maxPlayers,
 							tournament.registrationChannel,
 							tournament.registrationChannelName,
 							tournament.registrationEnd,
@@ -458,6 +460,7 @@ const server: ExportedHandler<Env> = {
 								endedChannelName = ?,
 								matchMessageLink = ?,
 								minPlayers = ?,
+								maxPlayers = ?,
 								registrationChannel = ?,
 								registrationChannelName = ?,
 								registrationEnd = ?,
@@ -485,6 +488,7 @@ const server: ExportedHandler<Env> = {
 							tournament.endedChannelName,
 							tournament.matchMessageLink,
 							tournament.minPlayers,
+							tournament.maxPlayers,
 							tournament.registrationChannel,
 							tournament.registrationChannelName,
 							tournament.registrationEnd,
@@ -644,6 +648,7 @@ const server: ExportedHandler<Env> = {
 					Pick<
 						Database.Tournament,
 						| "minPlayers"
+						| "maxPlayers"
 						| "registrationMessage"
 						| "registrationTemplateLink"
 						| "registrationRole"
@@ -660,7 +665,7 @@ const server: ExportedHandler<Env> = {
 					).bind(matchResult[1], token.i, tournament.tag),
 					env.DB.prepare(
 						`
-							SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, id, name,
+							SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, id, name,
 							(
 								SELECT COUNT(*)
 								FROM Participants
@@ -728,7 +733,7 @@ const server: ExportedHandler<Env> = {
 			try {
 				const tournament = await env.DB.prepare(
 					`
-						SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id, p.userId IS NOT NULL AS participationExists,
+						SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id, p.userId IS NOT NULL AS participationExists,
 							(
 								SELECT COUNT(*)
 								FROM Participants
@@ -753,6 +758,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationChannel"
 							| "registrationMessage"
 							| "minPlayers"
+							| "maxPlayers"
 							| "registrationTemplateLink"
 							| "id"
 						> & { participantCount: number; participationExists: boolean }
@@ -907,7 +913,7 @@ const server: ExportedHandler<Env> = {
 					`
 						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole,
 							t.registrationChannel, t.registrationMessage, t.flags,
-							t.minPlayers, t.registrationTemplateLink, sp.tag as foundTag,
+							t.minPlayers, t.maxPlayers, t.registrationTemplateLink, sp.tag as foundTag,
 							sp.name as foundName, (
 								SELECT COUNT(*) FROM Participants
 								WHERE tournamentId = t.id
@@ -927,6 +933,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationChannel"
 							| "registrationMessage"
 							| "minPlayers"
+							| "maxPlayers"
 							| "registrationTemplateLink"
 							| "id"
 							| "game"
@@ -1157,7 +1164,7 @@ const server: ExportedHandler<Env> = {
 					).bind(matchResult[1], ...body),
 					env.DB.prepare(
 						`
-							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id,
+							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id,
 								(
 									SELECT COUNT(*)
 									FROM Participants
@@ -1177,6 +1184,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationChannel"
 							| "registrationMessage"
 							| "minPlayers"
+							| "maxPlayers"
 							| "registrationTemplateLink"
 							| "id"
 						> & { participantCount: number }
@@ -1290,7 +1298,7 @@ const server: ExportedHandler<Env> = {
 					),
 					env.DB.prepare(
 						`
-							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id,
+							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id,
 								(
 									SELECT COUNT(*)
 									FROM Participants
@@ -1310,6 +1318,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationChannel"
 							| "registrationMessage"
 							| "minPlayers"
+							| "maxPlayers"
 							| "registrationTemplateLink"
 							| "id"
 						> & { participantCount: number }

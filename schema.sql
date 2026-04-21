@@ -48,6 +48,7 @@ CREATE TABLE Tournaments (
 	endedChannelName TEXT,
 	matchMessageLink TEXT,
 	minPlayers INTEGER,
+	maxPlayers INTEGER,
 	registrationChannel TEXT,
 	registrationChannelName TEXT,
 	registrationEnd INTEGER,

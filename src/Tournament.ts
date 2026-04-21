@@ -130,6 +130,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					registrationCount,
 					tournament.name,
 					tournament.minPlayers,
+					tournament.maxPlayers,
 				),
 			})) as RESTPostAPIChannelMessageResult;
 
