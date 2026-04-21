@@ -1390,7 +1390,7 @@ const server: ExportedHandler<Env> = {
 							result2 = COALESCE(result2, 0)`
 						}
 						WHERE tournamentId = ?1 AND id = ?2 ${userId ? "AND (?3 = user1 OR ?3 = user2)" : ""}
-						RETURNING status, result1, result2, user1, user2
+						RETURNING *
 					`,
 				).bind(
 					Number(matchResult[1]),
@@ -1423,7 +1423,7 @@ const server: ExportedHandler<Env> = {
 							result2 = COALESCE(?4, result2),
 							status  = COALESCE(?5, status)
 						WHERE tournamentId = ?1 AND id = ?2
-						RETURNING status, result1, result2, user1, user2
+						RETURNING *
 					`,
 				).bind(
 					Number(matchResult[1]),

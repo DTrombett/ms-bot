@@ -88,9 +88,9 @@ export class Tournament extends Command {
 				FROM Tournaments t
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
-				    (t.registrationMode & ?2) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					(t.registrationMode & ?2) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, RegistrationMode.Discord)
@@ -319,9 +319,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, data.values[0], RegistrationMode.Discord)
@@ -416,9 +416,9 @@ export class Tournament extends Command {
 					LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 					WHERE
 						t.id = ?2
-					    AND (t.registrationMode & ?3) != 0
-					    AND t.registrationStart < unixepoch('now')
-					    AND t.registrationEnd > unixepoch('now')
+						AND (t.registrationMode & ?3) != 0
+						AND t.registrationStart < unixepoch('now')
+						AND t.registrationEnd > unixepoch('now')
 				`,
 			)
 				.bind(id, tournamentId, RegistrationMode.Discord)
@@ -440,21 +440,21 @@ export class Tournament extends Command {
 		const { results } = await env.DB.prepare(
 			`
 				SELECT
-				    sp.tag,
-				    sp.active,
-				    sp.name,
-				    t.registrationMode,
-				    t.registrationStart,
-				    t.registrationEnd,
-				    t.name AS tournamentName,
-				    p.userId IS NOT NULL AS registered,
+					sp.tag,
+					sp.active,
+					sp.name,
+					t.registrationMode,
+					t.registrationStart,
+					t.registrationEnd,
+					t.name AS tournamentName,
+					p.userId IS NOT NULL AS registered,
 					p.tag as pTag,
 					p.team as pTeam
 				FROM SupercellPlayers sp
 				JOIN Tournaments t
-				    ON sp.type = t.game
+					ON sp.type = t.game
 				LEFT JOIN Participants p
-				    ON p.tournamentId = t.id AND p.userId = sp.userId
+					ON p.tournamentId = t.id AND p.userId = sp.userId
 				WHERE t.id = ?1 AND sp.userId = ?2
 			`,
 		)
@@ -564,9 +564,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, tournamentId, RegistrationMode.Discord)
@@ -633,9 +633,9 @@ export class Tournament extends Command {
 		const match = await env.DB.prepare(
 			`
 				SELECT 
-				    m.*,
+					m.*,
 					t.game, t.rounds, t.flags, t.id as tournamentId,
-				    p1.tag AS user1Tag, p2.tag AS user2Tag
+					p1.tag AS user1Tag, p2.tag AS user2Tag
 				FROM Matches m
 				JOIN Tournaments t ON m.tournamentId = t.id
 				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND p1.tournamentId = m.tournamentId
@@ -717,7 +717,7 @@ export class Tournament extends Command {
 						UPDATE Matches
 						SET result1 = ?3, result2 = ?4, status = ?5
 						WHERE tournamentId = ?1 AND id = ?2
-						RETURNING status, result1, result2, user1, user2
+						RETURNING *
 					`,
 				).bind(
 					match.tournamentId,
@@ -774,9 +774,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, tournamentId, RegistrationMode.Discord)
