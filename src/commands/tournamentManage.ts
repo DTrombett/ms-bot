@@ -256,7 +256,7 @@ export class TournamentManage extends Command {
 			).bind(
 				match.tournamentId,
 				match.id,
-				user ?? winner,
+				user ?? winner ?? null,
 				!remove ? DBMatchStatus.Abandoned : DBMatchStatus.Playing,
 			),
 			userId,

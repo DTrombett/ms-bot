@@ -905,14 +905,16 @@ const server: ExportedHandler<Env> = {
 			try {
 				const { results } = await env.DB.prepare(
 					`
-						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink,
-							(
-								SELECT COUNT(*)
-								FROM Participants
+						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole,
+							t.registrationChannel, t.registrationMessage, t.flags,
+							t.minPlayers, t.registrationTemplateLink, sp.tag as foundTag,
+							sp.name as foundName, (
+								SELECT COUNT(*) FROM Participants
 								WHERE tournamentId = t.id
 							) AS participantCount
 						FROM Tournaments t
 						LEFT JOIN Participants p ON p.tournamentId = t.id AND (p.userId = ?1 OR p.tag = ?2)
+						LEFT JOIN SupercellPlayers sp ON sp.userId = ?1 AND sp.type = t.game AND sp.active = 1
 						WHERE t.id = ?3
 					`,
 				)
@@ -928,9 +930,12 @@ const server: ExportedHandler<Env> = {
 							| "registrationTemplateLink"
 							| "id"
 							| "game"
+							| "flags"
 						> &
-							Pick<Database.Participant, "tag" | "userId"> & {
+							Partial<Pick<Database.Participant, "tag" | "userId">> & {
 								participantCount: number;
+								foundTag?: Database.SupercellPlayer["tag"];
+								foundName?: Database.SupercellPlayer["name"];
 							}
 					>();
 				const tournament = results[0];
@@ -1022,7 +1027,21 @@ const server: ExportedHandler<Env> = {
 								},
 							},
 						);
+				} else {
+					data.tag = tournament.foundTag ?? null;
+					data.name = tournament.foundName;
 				}
+				if (!data.tag && tournament.flags & TournamentFlags.TagRequired)
+					return Response.json(
+						{ message: "Il tag è richiesto in questo torneo" },
+						{
+							status: 400,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
 				tournament.participantCount++;
 				await Promise.all([
 					env.DB.prepare(

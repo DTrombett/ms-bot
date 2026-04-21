@@ -340,29 +340,26 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			`Get existing matches for round ${round}`,
 			this.getMatches(round + 1),
 		);
+		const batch = oldMatches
+			.filter(
+				(
+					v,
+				): v is typeof v & {
+					channelId: NonNullable<(typeof v)["channelId"]>;
+				} =>
+					v.channelId != null && Math.floor(Math.log2(v.id + 1)) === round + 1,
+			)
+			.reduce<string[][]>((arr, v) => {
+				if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+				arr.at(-1)!.push(v.channelId);
+				return arr;
+			}, [])
+			.map((channels) => ({ params: { channels, logChannel } }));
 		const [matches] = await Promise.all([
 			step.do(`Create round ${round}`, this.createRound(round, oldMatches)),
 			flags & TournamentFlags.AutoDeleteChannels &&
-				this.env.DELETE_CHANNELS.createBatch(
-					oldMatches
-						.filter(
-							(
-								v,
-							): v is typeof v & {
-								channelId: NonNullable<(typeof v)["channelId"]>;
-							} =>
-								v.channelId != null &&
-								Math.floor(Math.log2(v.id + 1)) === round + 1,
-						)
-						.reduce<string[][]>((arr, v) => {
-							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-							arr.at(-1)!.push(v.channelId);
-							return arr;
-						}, [])
-						.map((channels) => ({ params: { channels, logChannel } })),
-				)
-					.then(() => {})
-					.catch(console.error),
+				batch.length &&
+				this.env.DELETE_CHANNELS.createBatch(batch).then(() => {}),
 		]);
 
 		return matches;

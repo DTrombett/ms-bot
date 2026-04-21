@@ -1,6 +1,6 @@
 import React, { type CSSProperties } from "react";
 import { bitSetMap } from "../../util/bitSets";
-import { RegistrationMode } from "../../util/Constants";
+import { RegistrationMode, TournamentStatusFlags } from "../../util/Constants";
 import { TimeUnit } from "../../util/time";
 import { Colors } from "../utils/Colors";
 import formatDate from "../utils/formatDate";
@@ -13,6 +13,7 @@ enum TournamentStatus {
 	Soon,
 	RegistrationClosed,
 	Running,
+	Finished,
 	Unknown,
 }
 const statusText = [
@@ -20,6 +21,7 @@ const statusText = [
 	"Soon™",
 	"Iscrizioni chiuse",
 	"In corso",
+	"Terminato",
 	"",
 ];
 const statusColor: CSSProperties["color"][] = [
@@ -27,6 +29,7 @@ const statusColor: CSSProperties["color"][] = [
 	Colors.Primary,
 	Colors.Danger,
 	Colors.Primary,
+	Colors.Danger,
 	"",
 ];
 const gameName = ["Brawl Stars", "Clash Royale"];
@@ -62,7 +65,8 @@ export default async ({
 
 	return (await tournaments).map((t) => {
 		const status =
-			t.registrationStart && t.registrationStart > now ? TournamentStatus.Soon
+			t.statusFlags & TournamentStatusFlags.Finished ? TournamentStatus.Finished
+			: t.registrationStart && t.registrationStart > now ? TournamentStatus.Soon
 			: t.registrationEnd && t.registrationEnd > now ?
 				TournamentStatus.RegistrationOpen
 			: t.bracketsTime && t.bracketsTime > now ?
