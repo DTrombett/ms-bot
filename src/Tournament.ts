@@ -160,6 +160,28 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				this.loadParticipants,
 			);
 
+			if (participants.length < (tournament.minPlayers ?? 0))
+				await step.do<never>(
+					"Participants count not satisfied",
+					{ retries: { limit: 0, delay: 0 } },
+					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
+						Promise,
+						new Error(
+							`Minimo partecipanti non soddisfatto: ${participants.length} < ${tournament.minPlayers}`,
+						),
+					),
+				);
+			if (participants.length > (tournament.maxPlayers ?? Infinity))
+				await step.do<never>(
+					"Participants count not satisfied",
+					{ retries: { limit: 0, delay: 0 } },
+					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
+						Promise,
+						new Error(
+							`Massimo partecipanti non soddisfatto: ${participants.length} > ${tournament.maxPlayers}`,
+						),
+					),
+				);
 			if (participants.length > 1)
 				await step.do<void>(
 					"Save participants",
