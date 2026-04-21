@@ -253,7 +253,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			.run<Pick<Database.Participant, "userId">>();
 		let currentIndex = results.length;
 
-		if (currentIndex <= 1) return [];
+		if (currentIndex <= 1) return results;
 		while (currentIndex != 0) {
 			const randomIndex = Math.floor(Math.random() * currentIndex--);
 
