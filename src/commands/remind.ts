@@ -172,15 +172,13 @@ export class Remind extends Command {
 		page = 0,
 	) => {
 		const { results } = await env.DB.prepare(
-			`SELECT id, date, remind, COUNT(*) OVER () AS count
-				FROM Reminders
-				WHERE userId = ?1
-				ORDER BY date
-				LIMIT 8
-				OFFSET ?2`,
+			`
+				SELECT id, date, remind, COUNT(*) OVER () AS count
+				FROM Reminders WHERE userId = ?1 ORDER BY date LIMIT 8 OFFSET ?2
+			`,
 		)
 			.bind(userId, page * 8)
-			.all<
+			.run<
 				Pick<Database.Reminder, "date" | "id" | "remind"> & { count: number }
 			>();
 		const count = results[0]?.count ?? 0;

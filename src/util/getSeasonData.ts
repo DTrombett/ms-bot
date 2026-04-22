@@ -50,16 +50,14 @@ export const getSeasonData = async (userId: string, day?: number) => {
 	matches ??= await loadMatches(matchDayData.matchSetId);
 	if (!matches.length) return [];
 	const { results: existingPredictions } = await env.DB.prepare(
-		`SELECT Predictions.matchId,
-			Predictions.prediction,
-			Users.match
-		FROM Predictions
-			JOIN Users ON Predictions.userId = Users.id
-		WHERE Users.id = ?
-			AND Predictions.matchId IN (${Array(matches.length).fill("?").join(", ")})`,
+		`
+			SELECT p.matchId, p.prediction, u.match FROM Predictions p
+			JOIN Users u ON p.userId = u.id WHERE u.id = ? AND p.matchId IN
+				(${Array(matches.length).fill("?").join(", ")})
+		`,
 	)
 		.bind(userId, ...matches.map((m) => m.matchId))
-		.all<
+		.run<
 			Pick<Database.Prediction, "matchId" | "prediction"> &
 				Pick<Database.User, "match">
 		>();

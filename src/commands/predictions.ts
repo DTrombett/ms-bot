@@ -170,10 +170,11 @@ export class Predictions extends Command {
 		});
 	static leaderboard = async ({ reply }: ChatInputReplies) => {
 		const { results } = await env.DB.prepare(
-			`SELECT id, dayPoints, matchPointsHistory, match
-				FROM Users
-				WHERE dayPoints IS NOT NULL`,
-		).all<
+			`
+				SELECT id, dayPoints, matchPointsHistory, match
+				FROM Users WHERE dayPoints IS NOT NULL
+			`,
+		).run<
 			Pick<Database.User, "dayPoints" | "id" | "matchPointsHistory" | "match">
 		>();
 		const wins = calculateWins(results);

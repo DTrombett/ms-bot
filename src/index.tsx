@@ -913,19 +913,21 @@ const server: ExportedHandler<Env> = {
 					`
 						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole,
 							t.registrationChannel, t.registrationMessage, t.flags,
-							t.minPlayers, t.maxPlayers, t.registrationTemplateLink, sp.tag as foundTag,
-							sp.name as foundName, (
+							t.minPlayers, t.maxPlayers, t.registrationTemplateLink,
+							sp.tag as foundTag, sp.name as foundName, (
 								SELECT COUNT(*) FROM Participants
 								WHERE tournamentId = t.id
 							) AS participantCount
 						FROM Tournaments t
-						LEFT JOIN Participants p ON p.tournamentId = t.id AND (p.userId = ?1 OR p.tag = ?2)
-						LEFT JOIN SupercellPlayers sp ON sp.userId = ?1 AND sp.type = t.game AND sp.active = 1
+						LEFT JOIN Participants p ON
+							p.tournamentId = t.id AND (p.userId = ?1 OR p.tag = ?2)
+						LEFT JOIN SupercellPlayers sp ON
+							sp.userId = ?1 AND sp.type = t.game AND sp.active = 1
 						WHERE t.id = ?3
 					`,
 				)
 					.bind(data.userId, data.tag, matchResult[1])
-					.all<
+					.run<
 						Pick<
 							Database.Tournament,
 							| "registrationRole"
@@ -1702,10 +1704,8 @@ const server: ExportedHandler<Env> = {
 			]);
 		else if (cron === "*/5 * * * *") {
 			const { results } = await env.DB.prepare(
-				`SELECT *
-				FROM SupercellPlayers
-				WHERE notifications != 0`,
-			).all<Database.SupercellPlayer>();
+				`SELECT * FROM SupercellPlayers WHERE notifications != 0`,
+			).run<Database.SupercellPlayer>();
 			const instances = await env.NOTIFICATIONS.createBatch(
 				results
 					.reduce<Database.SupercellPlayer[][]>((arr, v) => {
