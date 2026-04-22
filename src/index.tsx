@@ -118,6 +118,7 @@ const server: ExportedHandler<Env> = {
 							endedChannelName,
 							matchMessageLink,
 							minPlayers,
+							maxPlayers,
 							registrationChannel,
 							registrationChannelName,
 							registrationEnd,
@@ -127,7 +128,7 @@ const server: ExportedHandler<Env> = {
 							roundType,
 							workflowId
 						)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					)
 						.bind(
 							tournament.name,
@@ -145,6 +146,7 @@ const server: ExportedHandler<Env> = {
 							tournament.endedChannelName,
 							tournament.matchMessageLink,
 							tournament.minPlayers,
+							tournament.maxPlayers,
 							tournament.registrationChannel,
 							tournament.registrationChannelName,
 							tournament.registrationEnd,
@@ -291,17 +293,14 @@ const server: ExportedHandler<Env> = {
 				),
 				env.DB.prepare(
 					`
-						SELECT p.*, sp.name
-						FROM Participants p
-						LEFT JOIN SupercellPlayers sp ON sp.userId = p.userId AND sp.tag = p.tag
-						WHERE p.tournamentId = ?
+						SELECT userId, tag, team, name
+						FROM Participants WHERE tournamentId = ?
 					`,
 				).bind(Number(matchResult[1])),
 			])) as [
 				D1Result<Database.Tournament>,
 				D1Result<
-					Pick<Database.Participant, "tag" | "userId"> &
-						Pick<Database.SupercellPlayer, "name">
+					Pick<Database.Participant, "tag" | "userId" | "team" | "name">
 				>,
 			];
 			if (!tournament)
@@ -339,6 +338,7 @@ const server: ExportedHandler<Env> = {
 				/^\/tournaments\/([^/]+)\/brackets\/?$/,
 			))
 		) {
+			// TODO: After improving the build system add cache here in order to speed up brackets
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
 			const [
@@ -358,24 +358,15 @@ const server: ExportedHandler<Env> = {
 					),
 					env.DB.prepare(
 						`
-							SELECT
-								channelId,
-								id,
-								result1,
-								result2,
-								status,
-								user1,
-								user2
+							SELECT channelId, id, result1,
+								result2, status, user1, user2
 							FROM Matches WHERE tournamentId = ?
-							ORDER BY id
 						`,
 					).bind(Number(matchResult[1])),
 					env.DB.prepare(
 						`
-							SELECT p.*, sp.name
-							FROM Participants p
-							LEFT JOIN SupercellPlayers sp ON sp.userId = p.userId AND sp.tag = p.tag
-							WHERE p.tournamentId = ?
+							SELECT userId, tag, team, name
+							FROM Participants WHERE tournamentId = ?
 						`,
 					).bind(Number(matchResult[1])),
 				]) as Promise<
@@ -394,8 +385,7 @@ const server: ExportedHandler<Env> = {
 							>
 						>,
 						D1Result<
-							Pick<Database.Participant, "tag" | "userId"> &
-								Pick<Database.SupercellPlayer, "name">
+							Pick<Database.Participant, "tag" | "userId" | "team" | "name">
 						>,
 					]
 				>,
@@ -458,6 +448,7 @@ const server: ExportedHandler<Env> = {
 								endedChannelName = ?,
 								matchMessageLink = ?,
 								minPlayers = ?,
+								maxPlayers = ?,
 								registrationChannel = ?,
 								registrationChannelName = ?,
 								registrationEnd = ?,
@@ -485,6 +476,7 @@ const server: ExportedHandler<Env> = {
 							tournament.endedChannelName,
 							tournament.matchMessageLink,
 							tournament.minPlayers,
+							tournament.maxPlayers,
 							tournament.registrationChannel,
 							tournament.registrationChannelName,
 							tournament.registrationEnd,
@@ -594,26 +586,24 @@ const server: ExportedHandler<Env> = {
 			try {
 				const tournament = await env.DB.prepare(
 					`
-						SELECT t.name, t.flags, t.team,
-						(
-							SELECT sp.tag
-							FROM SupercellPlayers sp
-							WHERE sp.userId = ?1 AND sp.type = t.game
-							ORDER BY sp.active DESC
-							LIMIT 1
-						) AS tag
+						SELECT t.name, t.flags, t.team, sp.tag, sp.name as spName
 						FROM Tournaments t
+						LEFT JOIN SupercellPlayers sp
+							ON sp.userId = ?1 AND sp.type = t.game
 						WHERE
 							t.id = ?2
 							AND (t.registrationMode & ?3) != 0
 							AND t.registrationStart < unixepoch('now')
 							AND t.registrationEnd > unixepoch('now')
+						ORDER BY sp.active DESC LIMIT 1
 					`,
 				)
 					.bind(token.i, matchResult[1], RegistrationMode.Dashboard)
 					.first<
 						Pick<Database.Tournament, "name" | "flags" | "team"> &
-							Pick<Database.SupercellPlayer, "tag">
+							Pick<Database.SupercellPlayer, "tag"> & {
+								spName: Database.SupercellPlayer["name"] | null;
+							}
 					>();
 
 				if (!tournament)
@@ -644,6 +634,7 @@ const server: ExportedHandler<Env> = {
 					Pick<
 						Database.Tournament,
 						| "minPlayers"
+						| "maxPlayers"
 						| "registrationMessage"
 						| "registrationTemplateLink"
 						| "registrationRole"
@@ -654,13 +645,13 @@ const server: ExportedHandler<Env> = {
 				>([
 					env.DB.prepare(
 						`
-							INSERT INTO Participants (tournamentId, userId, tag)
-							VALUES (?1, ?2, ?3)
+							INSERT INTO Participants (tournamentId, userId, tag, name)
+							VALUES (?1, ?2, ?3, ?4)
 						`,
-					).bind(matchResult[1], token.i, tournament.tag),
+					).bind(matchResult[1], token.i, tournament.tag, tournament.spName),
 					env.DB.prepare(
 						`
-							SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, id, name,
+							SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, id, name,
 							(
 								SELECT COUNT(*)
 								FROM Participants
@@ -728,7 +719,7 @@ const server: ExportedHandler<Env> = {
 			try {
 				const tournament = await env.DB.prepare(
 					`
-						SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id, p.userId IS NOT NULL AS participationExists,
+						SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id, p.userId IS NOT NULL AS participationExists,
 							(
 								SELECT COUNT(*)
 								FROM Participants
@@ -753,6 +744,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationChannel"
 							| "registrationMessage"
 							| "minPlayers"
+							| "maxPlayers"
 							| "registrationTemplateLink"
 							| "id"
 						> & { participantCount: number; participationExists: boolean }
@@ -905,19 +897,23 @@ const server: ExportedHandler<Env> = {
 			try {
 				const { results } = await env.DB.prepare(
 					`
-						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink,
-							(
-								SELECT COUNT(*)
-								FROM Participants
+						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole,
+							t.registrationChannel, t.registrationMessage, t.flags,
+							t.minPlayers, t.maxPlayers, t.registrationTemplateLink,
+							sp.tag as foundTag, sp.name as foundName, (
+								SELECT COUNT(*) FROM Participants
 								WHERE tournamentId = t.id
 							) AS participantCount
 						FROM Tournaments t
-						LEFT JOIN Participants p ON p.tournamentId = t.id AND (p.userId = ?1 OR p.tag = ?2)
+						LEFT JOIN Participants p ON
+							p.tournamentId = t.id AND (p.userId = ?1 OR p.tag = ?2)
+						LEFT JOIN SupercellPlayers sp ON
+							sp.userId = ?1 AND sp.type = t.game AND sp.active = 1
 						WHERE t.id = ?3
 					`,
 				)
 					.bind(data.userId, data.tag, matchResult[1])
-					.all<
+					.run<
 						Pick<
 							Database.Tournament,
 							| "registrationRole"
@@ -925,12 +921,16 @@ const server: ExportedHandler<Env> = {
 							| "registrationChannel"
 							| "registrationMessage"
 							| "minPlayers"
+							| "maxPlayers"
 							| "registrationTemplateLink"
 							| "id"
 							| "game"
+							| "flags"
 						> &
-							Pick<Database.Participant, "tag" | "userId"> & {
+							Partial<Pick<Database.Participant, "tag" | "userId">> & {
 								participantCount: number;
+								foundTag?: Database.SupercellPlayer["tag"];
+								foundName?: Database.SupercellPlayer["name"];
 							}
 					>();
 				const tournament = results[0];
@@ -1022,16 +1022,35 @@ const server: ExportedHandler<Env> = {
 								},
 							},
 						);
+				} else {
+					data.tag = tournament.foundTag ?? null;
+					data.name = tournament.foundName;
 				}
+				if (!data.tag && tournament.flags & TournamentFlags.TagRequired)
+					return Response.json(
+						{ message: "Il tag è richiesto in questo torneo" },
+						{
+							status: 400,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
 				tournament.participantCount++;
 				await Promise.all([
 					env.DB.prepare(
 						`
-							INSERT INTO Participants (tournamentId, userId, tag)
-							VALUES (?1, ?2, ?3)
+							INSERT INTO Participants (tournamentId, userId, tag, name)
+							VALUES (?1, ?2, ?3, ?4)
 						`,
 					)
-						.bind(tournament.id, data.userId, data.tag)
+						.bind(
+							tournament.id,
+							data.userId,
+							data.tag ?? null,
+							data.name ?? null,
+						)
 						.run(),
 					tournament.registrationRole &&
 						rest.put(
@@ -1138,7 +1157,7 @@ const server: ExportedHandler<Env> = {
 					).bind(matchResult[1], ...body),
 					env.DB.prepare(
 						`
-							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id,
+							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id,
 								(
 									SELECT COUNT(*)
 									FROM Participants
@@ -1158,6 +1177,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationChannel"
 							| "registrationMessage"
 							| "minPlayers"
+							| "maxPlayers"
 							| "registrationTemplateLink"
 							| "id"
 						> & { participantCount: number }
@@ -1271,7 +1291,7 @@ const server: ExportedHandler<Env> = {
 					),
 					env.DB.prepare(
 						`
-							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.registrationTemplateLink, t.id,
+							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id,
 								(
 									SELECT COUNT(*)
 									FROM Participants
@@ -1291,6 +1311,7 @@ const server: ExportedHandler<Env> = {
 							| "registrationChannel"
 							| "registrationMessage"
 							| "minPlayers"
+							| "maxPlayers"
 							| "registrationTemplateLink"
 							| "id"
 						> & { participantCount: number }
@@ -1390,7 +1411,7 @@ const server: ExportedHandler<Env> = {
 							result2 = COALESCE(result2, 0)`
 						}
 						WHERE tournamentId = ?1 AND id = ?2 ${userId ? "AND (?3 = user1 OR ?3 = user2)" : ""}
-						RETURNING status, result1, result2, user1, user2
+						RETURNING *
 					`,
 				).bind(
 					Number(matchResult[1]),
@@ -1423,7 +1444,7 @@ const server: ExportedHandler<Env> = {
 							result2 = COALESCE(?4, result2),
 							status  = COALESCE(?5, status)
 						WHERE tournamentId = ?1 AND id = ?2
-						RETURNING status, result1, result2, user1, user2
+						RETURNING *
 					`,
 				).bind(
 					Number(matchResult[1]),
@@ -1674,10 +1695,8 @@ const server: ExportedHandler<Env> = {
 			]);
 		else if (cron === "*/5 * * * *") {
 			const { results } = await env.DB.prepare(
-				`SELECT *
-				FROM SupercellPlayers
-				WHERE notifications != 0`,
-			).all<Database.SupercellPlayer>();
+				`SELECT * FROM SupercellPlayers WHERE notifications > 0`,
+			).run<Database.SupercellPlayer>();
 			const instances = await env.NOTIFICATIONS.createBatch(
 				results
 					.reduce<Database.SupercellPlayer[][]>((arr, v) => {

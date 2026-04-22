@@ -7,6 +7,7 @@ export const editMessage = async (
 		Database.Tournament,
 		| "name"
 		| "minPlayers"
+		| "maxPlayers"
 		| "registrationChannel"
 		| "registrationTemplateLink"
 		| "registrationMessage"
@@ -27,6 +28,7 @@ export const editMessage = async (
 				tournament.participantCount,
 				tournament.name,
 				tournament.minPlayers,
+				tournament.maxPlayers,
 			),
 		},
 	);

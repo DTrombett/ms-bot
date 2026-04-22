@@ -251,12 +251,12 @@ export class TournamentManage extends Command {
 						result2 = COALESCE(result2, 0)`
 					}
 					WHERE tournamentId = ?1 AND id = ?2 ${user || winner ? "AND (?3 = user1 OR ?3 = user2)" : ""}
-					RETURNING status, result1, result2, user1, user2
+					RETURNING *
 				`,
 			).bind(
 				match.tournamentId,
 				match.id,
-				user ?? winner,
+				user ?? winner ?? null,
 				!remove ? DBMatchStatus.Abandoned : DBMatchStatus.Playing,
 			),
 			userId,

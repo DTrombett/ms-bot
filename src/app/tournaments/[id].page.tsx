@@ -5,9 +5,10 @@ import lilitaOne from "../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
 import nougat from "../fonts/Nougat-Regular.ttf" with { type: "asset" };
 import ggsans from "../fonts/ggsansvf.woff2" with { type: "asset" };
 
-export type Participants = (Pick<Database.Participant, "tag" | "userId"> & {
-	name: Database.SupercellPlayer["name"] | null | undefined;
-})[];
+export type Participants = Pick<
+	Database.Participant,
+	"tag" | "userId" | "name" | "team"
+>[];
 export type Matches = Pick<
 	Database.Match,
 	"channelId" | "id" | "result1" | "result2" | "status" | "user1" | "user2"

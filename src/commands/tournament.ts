@@ -88,9 +88,9 @@ export class Tournament extends Command {
 				FROM Tournaments t
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
-				    (t.registrationMode & ?2) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					(t.registrationMode & ?2) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, RegistrationMode.Discord)
@@ -132,7 +132,7 @@ export class Tournament extends Command {
 			Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 },
 		edit: Replies["edit"],
 		userId: string,
-		options: { tag?: string; team?: string; confirm?: boolean },
+		options: { tag?: string; team?: string; confirm?: boolean; name?: string },
 	) => {
 		if (tournament.registered)
 			return edit({
@@ -152,7 +152,7 @@ export class Tournament extends Command {
 				],
 			});
 		if (options.tag && options.confirm) {
-			const { name } = await Brawl.getPlayer(options.tag, { edit });
+			({ name: options.name } = await Brawl.getPlayer(options.tag, { edit }));
 			const existing = await env.DB.prepare(
 				`
 					INSERT INTO SupercellPlayers (tag, userId, active, type, name)
@@ -172,7 +172,7 @@ export class Tournament extends Command {
 					RETURNING userId
 				`,
 			)
-				.bind(options.tag, userId, tournament.game, name)
+				.bind(options.tag, userId, tournament.game, options.name)
 				.first<Database.SupercellPlayer["userId"]>("userId");
 
 			if (existing && existing !== userId)
@@ -184,7 +184,7 @@ export class Tournament extends Command {
 			(!(tournament.flags & TournamentFlags.TagRequired) && !options.tag) ||
 			(options.tag && options.confirm)
 		)
-			return this.completeRegistration(tournament, edit, userId, options.tag);
+			return this.completeRegistration(tournament, edit, userId, options);
 		const { results: saved } = await env.DB.prepare(
 			`SELECT tag, active, name FROM SupercellPlayers WHERE userId = ? AND type = ?`,
 		)
@@ -244,12 +244,13 @@ export class Tournament extends Command {
 		tournament: Pick<Database.Tournament, "id" | "name">,
 		edit: Replies["edit"],
 		userId: string,
-		tag?: string,
+		{ tag, name }: { tag?: string; name?: string } = {},
 	) => {
 		const [, result] = await env.DB.batch<
 			Pick<
 				Database.Tournament,
 				| "minPlayers"
+				| "maxPlayers"
 				| "registrationMessage"
 				| "registrationTemplateLink"
 				| "registrationRole"
@@ -260,13 +261,13 @@ export class Tournament extends Command {
 		>([
 			env.DB.prepare(
 				`
-					INSERT INTO Participants (tournamentId, userId, tag)
-					VALUES (?1, ?2, ?3)
+					INSERT INTO Participants (tournamentId, userId, tag, name)
+					VALUES (?1, ?2, ?3, ?4)
 				`,
-			).bind(tournament.id, userId, tag || null),
+			).bind(tournament.id, userId, tag || null, name || null),
 			env.DB.prepare(
 				`
-					SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
+					SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
 					(
 						SELECT COUNT(*)
 						FROM Participants
@@ -319,9 +320,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, data.values[0], RegistrationMode.Discord)
@@ -345,7 +346,7 @@ export class Tournament extends Command {
 		const data = await env.DB.prepare(
 			`
 				SELECT 
-					t.minPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name, t.id,
+					t.minPlayers, t.maxPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name, t.id,
 					p.userId IS NOT NULL AS participationExists,
 					(
 						(t.registrationMode & ?1) != 0
@@ -372,6 +373,7 @@ export class Tournament extends Command {
 				} & Pick<
 					Database.Tournament,
 					| "minPlayers"
+					| "maxPlayers"
 					| "registrationMessage"
 					| "registrationChannel"
 					| "registrationTemplateLink"
@@ -393,10 +395,7 @@ export class Tournament extends Command {
 			),
 			editMessage(data),
 			env.DB.prepare(
-				`
-					DELETE FROM Participants
-					WHERE tournamentId = ?1 AND userId = ?2
-				`,
+				`DELETE FROM Participants WHERE tournamentId = ?1 AND userId = ?2`,
 			)
 				.bind(tournament, id)
 				.run(),
@@ -416,9 +415,9 @@ export class Tournament extends Command {
 					LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 					WHERE
 						t.id = ?2
-					    AND (t.registrationMode & ?3) != 0
-					    AND t.registrationStart < unixepoch('now')
-					    AND t.registrationEnd > unixepoch('now')
+						AND (t.registrationMode & ?3) != 0
+						AND t.registrationStart < unixepoch('now')
+						AND t.registrationEnd > unixepoch('now')
 				`,
 			)
 				.bind(id, tournamentId, RegistrationMode.Discord)
@@ -440,21 +439,20 @@ export class Tournament extends Command {
 		const { results } = await env.DB.prepare(
 			`
 				SELECT
-				    sp.tag,
-				    sp.active,
-				    sp.name,
-				    t.registrationMode,
-				    t.registrationStart,
-				    t.registrationEnd,
-				    t.name AS tournamentName,
-				    p.userId IS NOT NULL AS registered,
+					sp.tag,
+					sp.active,
+					sp.name,
+					t.registrationMode,
+					t.registrationStart,
+					t.registrationEnd,
+					t.name AS tournamentName,
+					p.userId IS NOT NULL AS registered,
 					p.tag as pTag,
 					p.team as pTeam
 				FROM SupercellPlayers sp
-				JOIN Tournaments t
-				    ON sp.type = t.game
+				JOIN Tournaments t ON sp.type = t.game
 				LEFT JOIN Participants p
-				    ON p.tournamentId = t.id AND p.userId = sp.userId
+					ON p.tournamentId = t.id AND p.userId = sp.userId
 				WHERE t.id = ?1 AND sp.userId = ?2
 			`,
 		)
@@ -564,9 +562,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, tournamentId, RegistrationMode.Discord)
@@ -633,9 +631,9 @@ export class Tournament extends Command {
 		const match = await env.DB.prepare(
 			`
 				SELECT 
-				    m.*,
+					m.*,
 					t.game, t.rounds, t.flags, t.id as tournamentId,
-				    p1.tag AS user1Tag, p2.tag AS user2Tag
+					p1.tag AS user1Tag, p2.tag AS user2Tag
 				FROM Matches m
 				JOIN Tournaments t ON m.tournamentId = t.id
 				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND p1.tournamentId = m.tournamentId
@@ -717,7 +715,7 @@ export class Tournament extends Command {
 						UPDATE Matches
 						SET result1 = ?3, result2 = ?4, status = ?5
 						WHERE tournamentId = ?1 AND id = ?2
-						RETURNING status, result1, result2, user1, user2
+						RETURNING *
 					`,
 				).bind(
 					match.tournamentId,
@@ -774,9 +772,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, tournamentId, RegistrationMode.Discord)

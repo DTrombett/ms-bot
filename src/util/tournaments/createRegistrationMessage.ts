@@ -17,6 +17,7 @@ export const createRegistrationMessage = async (
 	registrationCount: number,
 	tournamentName: string,
 	minPlayers: number | undefined | null,
+	maxPlayers: number | undefined | null,
 ): Promise<
 	RESTPostAPIChannelMessageJSONBody & RESTPatchAPIChannelMessageJSONBody
 > => {
@@ -37,6 +38,7 @@ export const createRegistrationMessage = async (
 				iscritti: registrationCount.toLocaleString("it-IT"),
 				nome: tournamentName,
 				minimo: (minPlayers ?? 0).toLocaleString("it-IT"),
+				massimo: (maxPlayers ?? 0).toLocaleString("it-IT"),
 			}),
 		});
 	if (message.attachments.length)

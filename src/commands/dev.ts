@@ -48,6 +48,44 @@ export class Dev extends Command {
 				],
 			},
 			{
+				name: "supercell-api",
+				description: "Call the supercell API",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						type: ApplicationCommandOptionType.Number,
+						name: "game",
+						description: "The game.",
+						required: true,
+						choices: [
+							{ name: "Brawl Stars", value: SupercellPlayerType.BrawlStars },
+							{ name: "Clash Royale", value: SupercellPlayerType.ClashRoyale },
+						],
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "path",
+						description: "The path.",
+						required: true,
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "query",
+						description: "The query.",
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "hash",
+						description: "The hash.",
+					},
+					{
+						type: ApplicationCommandOptionType.Boolean,
+						name: "ephemeral",
+						description: "If the message should be ephemeral",
+					},
+				],
+			},
+			{
 				name: "register-commands",
 				description: "Register commands",
 				type: ApplicationCommandOptionType.Subcommand,
@@ -246,6 +284,38 @@ export class Dev extends Command {
 		return edit({
 			content: `Success ${statements.length}/${results.length}!\n${errors.join("\n")}`,
 		});
+	};
+	static "supercell-api" = async (
+		{ defer, edit }: ChatInputReplies,
+		{
+			options: { game, path, ephemeral, query = "", hash = "" },
+			fullRoute,
+		}: ChatInputArgs<typeof Dev.chatInputData, "supercell-api">,
+	) => {
+		defer({ flags: ephemeral ? MessageFlags.Ephemeral : undefined });
+		try {
+			const data = JSON.stringify(
+				await (
+					game === SupercellPlayerType.BrawlStars ?
+						commandsObj.Brawl
+					:	commandsObj.Clash).callApi(
+					path.split("/").map(encodeURIComponent).join("/") + query + hash,
+					{ cache: false },
+				),
+				null,
+				"\t",
+			);
+
+			return rest.patch(fullRoute, {
+				body: {
+					attachments: [{ id: 0, filename: "result.json" }],
+					content: `\`\`\`json\n${data.slice(0, 1988)}\n\`\`\``,
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				files: [{ name: "result.json", data, contentType: "application/json" }],
+			});
+		} catch (err) {
+			return edit({ content: normalizeError(err).stack });
+		}
 	};
 	static "register-commands" = async (
 		{ defer, edit }: ChatInputReplies,

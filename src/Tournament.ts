@@ -130,6 +130,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					registrationCount,
 					tournament.name,
 					tournament.minPlayers,
+					tournament.maxPlayers,
 				),
 			})) as RESTPostAPIChannelMessageResult;
 
@@ -159,6 +160,28 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				this.loadParticipants,
 			);
 
+			if (participants.length < (tournament.minPlayers ?? 0))
+				await step.do<never>(
+					"Participants count not satisfied",
+					{ retries: { limit: 0, delay: 0 } },
+					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
+						Promise,
+						new Error(
+							`Minimo partecipanti non soddisfatto: ${participants.length} < ${tournament.minPlayers}`,
+						),
+					),
+				);
+			if (participants.length > (tournament.maxPlayers ?? Infinity))
+				await step.do<never>(
+					"Participants count not satisfied",
+					{ retries: { limit: 0, delay: 0 } },
+					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
+						Promise,
+						new Error(
+							`Massimo partecipanti non soddisfatto: ${participants.length} > ${tournament.maxPlayers}`,
+						),
+					),
+				);
 			if (participants.length > 1)
 				await step.do<void>(
 					"Save participants",
@@ -230,7 +253,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			.run<Pick<Database.Participant, "userId">>();
 		let currentIndex = results.length;
 
-		if (currentIndex <= 1) return [];
+		if (currentIndex <= 1) return results;
 		while (currentIndex != 0) {
 			const randomIndex = Math.floor(Math.random() * currentIndex--);
 
@@ -340,27 +363,26 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			`Get existing matches for round ${round}`,
 			this.getMatches(round + 1),
 		);
+		const batch = oldMatches
+			.filter(
+				(
+					v,
+				): v is typeof v & {
+					channelId: NonNullable<(typeof v)["channelId"]>;
+				} =>
+					v.channelId != null && Math.floor(Math.log2(v.id + 1)) === round + 1,
+			)
+			.reduce<string[][]>((arr, v) => {
+				if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+				arr.at(-1)!.push(v.channelId);
+				return arr;
+			}, [])
+			.map((channels) => ({ params: { channels, logChannel } }));
 		const [matches] = await Promise.all([
 			step.do(`Create round ${round}`, this.createRound(round, oldMatches)),
 			flags & TournamentFlags.AutoDeleteChannels &&
-				this.env.DELETE_CHANNELS.createBatch(
-					oldMatches
-						.filter(
-							(
-								v,
-							): v is typeof v & {
-								channelId: NonNullable<(typeof v)["channelId"]>;
-							} =>
-								v.channelId != null &&
-								Math.floor(Math.log2(v.id + 1)) === round + 1,
-						)
-						.reduce<string[][]>((arr, v) => {
-							if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-							arr.at(-1)!.push(v.channelId);
-							return arr;
-						}, [])
-						.map((channels) => ({ params: { channels, logChannel } })),
-				)
+				batch.length &&
+				this.env.DELETE_CHANNELS.createBatch(batch)
 					.then(() => {})
 					.catch(console.error),
 		]);

@@ -398,6 +398,7 @@ declare global {
 			endedChannelName?: string | null;
 			matchMessageLink?: string | null;
 			minPlayers?: number | null;
+			maxPlayers?: number | null;
 			registrationChannel?: string | null;
 			registrationChannelName?: string | null;
 			registrationEnd?: number | null;
@@ -415,6 +416,7 @@ declare global {
 			userId: string;
 			tag?: string | null;
 			team?: number | null;
+			name?: string | null;
 		};
 		type Round = { mode: string; bof: number };
 		type Match = {
