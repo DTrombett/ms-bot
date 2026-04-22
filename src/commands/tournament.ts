@@ -132,7 +132,7 @@ export class Tournament extends Command {
 			Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 },
 		edit: Replies["edit"],
 		userId: string,
-		options: { tag?: string; team?: string; confirm?: boolean },
+		options: { tag?: string; team?: string; confirm?: boolean; name?: string },
 	) => {
 		if (tournament.registered)
 			return edit({
@@ -152,7 +152,7 @@ export class Tournament extends Command {
 				],
 			});
 		if (options.tag && options.confirm) {
-			const { name } = await Brawl.getPlayer(options.tag, { edit });
+			({ name: options.name } = await Brawl.getPlayer(options.tag, { edit }));
 			const existing = await env.DB.prepare(
 				`
 					INSERT INTO SupercellPlayers (tag, userId, active, type, name)
@@ -172,7 +172,7 @@ export class Tournament extends Command {
 					RETURNING userId
 				`,
 			)
-				.bind(options.tag, userId, tournament.game, name)
+				.bind(options.tag, userId, tournament.game, options.name)
 				.first<Database.SupercellPlayer["userId"]>("userId");
 
 			if (existing && existing !== userId)
@@ -184,7 +184,7 @@ export class Tournament extends Command {
 			(!(tournament.flags & TournamentFlags.TagRequired) && !options.tag) ||
 			(options.tag && options.confirm)
 		)
-			return this.completeRegistration(tournament, edit, userId, options.tag);
+			return this.completeRegistration(tournament, edit, userId, options);
 		const { results: saved } = await env.DB.prepare(
 			`SELECT tag, active, name FROM SupercellPlayers WHERE userId = ? AND type = ?`,
 		)
@@ -244,7 +244,7 @@ export class Tournament extends Command {
 		tournament: Pick<Database.Tournament, "id" | "name">,
 		edit: Replies["edit"],
 		userId: string,
-		tag?: string,
+		{ tag, name }: { tag?: string; name?: string } = {},
 	) => {
 		const [, result] = await env.DB.batch<
 			Pick<
@@ -261,10 +261,10 @@ export class Tournament extends Command {
 		>([
 			env.DB.prepare(
 				`
-					INSERT INTO Participants (tournamentId, userId, tag)
-					VALUES (?1, ?2, ?3)
+					INSERT INTO Participants (tournamentId, userId, tag, name)
+					VALUES (?1, ?2, ?3, ?4)
 				`,
-			).bind(tournament.id, userId, tag || null),
+			).bind(tournament.id, userId, tag || null, name || null),
 			env.DB.prepare(
 				`
 					SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
@@ -395,10 +395,7 @@ export class Tournament extends Command {
 			),
 			editMessage(data),
 			env.DB.prepare(
-				`
-					DELETE FROM Participants
-					WHERE tournamentId = ?1 AND userId = ?2
-				`,
+				`DELETE FROM Participants WHERE tournamentId = ?1 AND userId = ?2`,
 			)
 				.bind(tournament, id)
 				.run(),
@@ -453,8 +450,7 @@ export class Tournament extends Command {
 					p.tag as pTag,
 					p.team as pTeam
 				FROM SupercellPlayers sp
-				JOIN Tournaments t
-					ON sp.type = t.game
+				JOIN Tournaments t ON sp.type = t.game
 				LEFT JOIN Participants p
 					ON p.tournamentId = t.id AND p.userId = sp.userId
 				WHERE t.id = ?1 AND sp.userId = ?2

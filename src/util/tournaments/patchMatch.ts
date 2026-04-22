@@ -30,17 +30,12 @@ const editChannel = async (
 		return;
 	let { results } = await env.DB.prepare(
 		`
-			SELECT p.tag, p.userId, sp.name FROM Participants p
-				LEFT JOIN SupercellPlayers sp
-				ON sp.userId = p.userId AND sp.tag = p.tag
-			WHERE p.tournamentId = ?1 AND p.userId IN (?2, ?3)
+			SELECT userId, tag, team, name
+			FROM Participants WHERE tournamentId = ?1 AND p.userId IN (?2, ?3)
 		`,
 	)
 		.bind(tournamentId, match.user1, match.user2)
-		.run<
-			Pick<Database.Participant, "tag" | "userId"> &
-				Partial<Pick<Database.SupercellPlayer, "name">>
-		>();
+		.run<Pick<Database.Participant, "tag" | "userId" | "team" | "name">>();
 
 	if (results[1]?.userId === match.user1) results = [results[1], results[0]!];
 	return rest.patch(Routes.channel(match.channelId), {

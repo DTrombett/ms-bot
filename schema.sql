@@ -65,6 +65,7 @@ CREATE TABLE Participants (
 	tournamentId INTEGER NOT NULL REFERENCES Tournaments(id) ON DELETE CASCADE,
 	userId TEXT NOT NULL,
 	tag TEXT,
+	name TEXT,
 	team INTEGER REFERENCES TournamentTeams(id) ON DELETE CASCADE,
 	UNIQUE (tournamentId, tag),
 	FOREIGN KEY (tag, userId) REFERENCES SupercellPlayers(tag, userId) ON DELETE RESTRICT,
@@ -83,3 +84,5 @@ CREATE TABLE Matches (
 	FOREIGN KEY (tournamentId, user1) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT,
 	FOREIGN KEY (tournamentId, user2) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT
 );
+CREATE INDEX SupercellPlayersNotificationsIndex ON SupercellPlayers(notifications)
+WHERE notifications > 0;
