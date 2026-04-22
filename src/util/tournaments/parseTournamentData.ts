@@ -72,8 +72,16 @@ export const parseTournamentData = async (
 			"Il numero minimo di iscritti deve essere maggiore di 0",
 		);
 		ok(
+			!Number.isNaN(form.minPlayers),
+			"Il numero minimo di iscritti non è valido",
+		);
+		ok(
 			!form.maxPlayers || form.maxPlayers > 0,
 			"Il numero massimo di iscritti deve essere maggiore di 0",
+		);
+		ok(
+			!Number.isNaN(form.minPlayers),
+			"Il numero massimo di iscritti non è valido",
 		);
 		ok(
 			!form.maxPlayers ||

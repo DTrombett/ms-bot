@@ -1045,7 +1045,12 @@ const server: ExportedHandler<Env> = {
 							VALUES (?1, ?2, ?3, ?4)
 						`,
 					)
-						.bind(tournament.id, data.userId, data.tag, data.name)
+						.bind(
+							tournament.id,
+							data.userId,
+							data.tag ?? null,
+							data.name ?? null,
+						)
 						.run(),
 					tournament.registrationRole &&
 						rest.put(

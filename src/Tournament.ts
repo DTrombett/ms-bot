@@ -382,7 +382,9 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			step.do(`Create round ${round}`, this.createRound(round, oldMatches)),
 			flags & TournamentFlags.AutoDeleteChannels &&
 				batch.length &&
-				this.env.DELETE_CHANNELS.createBatch(batch).then(() => {}),
+				this.env.DELETE_CHANNELS.createBatch(batch)
+					.then(() => {})
+					.catch(console.error),
 		]);
 
 		return matches;
