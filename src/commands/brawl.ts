@@ -17,7 +17,8 @@ import {
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import capitalize from "../util/capitalize";
+import { Notifications } from "../Notifications";
+import capitalize, { forceCapitalize } from "../util/capitalize";
 import { BrawlNotifications, SupercellPlayerType } from "../util/Constants";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
@@ -648,6 +649,33 @@ export class Brawl extends Command {
 			"1431299150921732158",
 		],
 	};
+	static readonly RANKED_EMOJIS = [
+		"1496908079281995977",
+		"1496908077482377307",
+		"1496908075158994974",
+		"1496908073460039882",
+		"1496908071727927336",
+		"1496908069672718427",
+		"1496908056741544037",
+		"1496908054480814121",
+	];
+	static readonly brawlTrophyRoadTiers = [
+		"Piazza del Parco",
+		"Retropoli",
+		"Frontiere Selvagge",
+		"Terre Infestate",
+		"Selva dell'Avventura",
+		"Montagna Mistica",
+		"Brawlywood",
+		"Castello Incantato",
+		"Futuropoli",
+		"Acquaworld",
+		"Cronotrappola",
+		"Ritmotown",
+		"Strambolandia",
+		"Paese dei Giocattoli",
+		"Maniero Medioemale",
+	];
 	static readonly ROBO_RUMBLE_LEVELS = [
 		"*None*",
 		"Normale",
@@ -1233,7 +1261,7 @@ export class Brawl extends Command {
 	};
 	static createPlayerEmbed = (
 		player: Brawl.Player,
-		playerId?: string,
+		{ playerId, locale }: { playerId?: string; locale?: string } = {},
 	): APIEmbed => ({
 		title: `${player.name} (${player.tag})`,
 		thumbnail: {
@@ -1247,20 +1275,37 @@ export class Brawl extends Command {
 					`**${player.club.name}** (${player.club.tag})`
 				:	"*In nessun club*"
 			}
-			<:totalPrestige:1479095470541242480> Prestigio: **${player.totalPrestigeLevel}**
 			${playerId}👤 Discord: <@${playerId}>
 		`,
 		fields: [
 			{
 				name: "🏆 Trofei",
-				value: `**Attuali**: ${player.trophies}\n**Record**: ${
-					player.highestTrophies
-				}\n**Media**: ${Math.round(player.trophies / player.brawlers.length)}`,
+				value: `**Attuali**: ${player.trophies.toLocaleString(locale)}\n**Record**: ${player.highestTrophies.toLocaleString(
+					locale,
+				)}\n**Cammino**: ${
+					this.brawlTrophyRoadTiers[
+						(Notifications.brawlTrophyRoadTiers.findLast(
+							(tier) => tier <= player.highestTrophies,
+						) ?? -1) + 1
+					] ?? this.brawlTrophyRoadTiers.at(-1)
+				}`,
+				inline: true,
+			},
+			{
+				name: "🔫 Brawler",
+				value: `**Ottenuti**: ${player.brawlers.length.toLocaleString(locale)}\n**Prestigio**: ${player.totalPrestigeLevel.toLocaleString(
+					locale,
+				)}\n**Trofei medi**: ${Math.round(player.trophies / player.brawlers.length).toLocaleString(locale)}`,
 				inline: true,
 			},
 			{
 				name: "🏅 Vittorie",
-				value: `**3v3**: ${player["3vs3Victories"]}\n**Solo**: ${player.soloVictories}\n**Duo**: ${player.duoVictories}`,
+				value: `**3v3**: ${player["3vs3Victories"].toLocaleString(locale)}\n**Solo**: ${player.soloVictories.toLocaleString(locale)}\n**Duo**: ${player.duoVictories.toLocaleString(locale)}`,
+				inline: true,
+			},
+			{
+				name: "👑 Classificata",
+				value: `**Attuale**: ${this.resolveRanked(player, "ranked", locale)}\n**Migliore**: ${this.resolveRanked(player, "highestAllTimeRanked", locale)}\n**Stagione**: ${this.resolveRanked(player, "highestSeasonRanked", locale)}`,
 				inline: true,
 			},
 			{
@@ -1269,7 +1314,7 @@ export class Brawl extends Command {
 					this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]
 				}\n**Big Game**: ${
 					this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]
-				}\n**Brawlers**: ${player.brawlers.length}`,
+				}\n**Serie vittorie**: ${player.brawlers.reduce((m, b) => (b.maxWinStreak > m ? b.maxWinStreak : m), 0).toLocaleString(locale)}`,
 				inline: true,
 			},
 		],
@@ -1389,6 +1434,7 @@ export class Brawl extends Command {
 		playerId?: string,
 		commandId?: string,
 		link?: boolean,
+		locale?: string,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		const components: APIActionRowComponent<APIButtonComponent>[] = [
 			{
@@ -1429,8 +1475,22 @@ export class Brawl extends Command {
 				emoji: { name: "🫂" },
 				style: ButtonStyle.Primary,
 			});
-		return { embeds: [this.createPlayerEmbed(player, playerId)], components };
+		return {
+			embeds: [this.createPlayerEmbed(player, { playerId, locale })],
+			components,
+		};
 	};
+	private static resolveRanked = (
+		player: Brawl.Player,
+		prefix: RankedPrefix,
+		locale?: string,
+	) =>
+		`<:ranked:${this.RANKED_EMOJIS[Math.floor((player[`${prefix}Rank`] - 1) / 3)]}> ${player[
+			`${prefix}RankName`
+		]
+			.split(/\s+/)
+			.map((v, i) => (i ? v : forceCapitalize(v)))
+			.join(" ")} (${player[`${prefix}Elo`].toLocaleString(locale)})`;
 	static async callApi<T>(
 		path: string,
 		{
@@ -1585,6 +1645,7 @@ export class Brawl extends Command {
 			interaction: {
 				data: { id: commandId },
 				member,
+				locale,
 			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, `${"player"} ${string}`>,
 	) => {
@@ -1645,6 +1706,7 @@ export class Brawl extends Command {
 					playerId === id ? false
 					: playerId ? undefined
 					: true,
+					locale,
 				),
 			);
 		}
@@ -1675,7 +1737,7 @@ export class Brawl extends Command {
 					allowed_mentions: { parse: [] },
 				});
 			return edit({
-				embeds: [this.createPlayerEmbed(player)],
+				embeds: [this.createPlayerEmbed(player, { locale })],
 				components: [
 					{
 						type: ComponentType.ActionRow,
@@ -2020,7 +2082,7 @@ export class Brawl extends Command {
 	};
 	static playerComponent = async (
 		{ defer, edit }: ComponentReplies,
-		{ user: { id }, interaction: { data }, args: [tag] }: ComponentArgs,
+		{ user: { id }, interaction: { data, locale }, args: [tag] }: ComponentArgs,
 	) => {
 		if (data.component_type === ComponentType.StringSelect) [tag] = data.values;
 		ok(tag);
@@ -2041,6 +2103,7 @@ export class Brawl extends Command {
 				playerId ?? undefined,
 				undefined,
 				playerId !== id && (!playerId || undefined),
+				locale,
 			),
 		);
 	};

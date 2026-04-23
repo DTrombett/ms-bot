@@ -64,6 +64,7 @@ export class Tournament extends Command {
 		{
 			user: { id },
 			options,
+			interaction: { locale },
 		}: ChatInputArgs<typeof Tournament.chatInputData, "register">,
 	) => {
 		if (options.tag)
@@ -103,7 +104,10 @@ export class Tournament extends Command {
 				content: "Non è possibile iscriversi a nessun torneo al momento!",
 			});
 		if (results.length === 1)
-			return this.handleTournament(results[0]!, edit, id, options);
+			return this.handleTournament(results[0]!, edit, id, {
+				...options,
+				locale,
+			});
 		return edit({
 			content: "Sono aperte le iscrizioni per più tornei al momento!",
 			components: [
@@ -132,7 +136,13 @@ export class Tournament extends Command {
 			Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 },
 		edit: Replies["edit"],
 		userId: string,
-		options: { tag?: string; team?: string; confirm?: boolean; name?: string },
+		options: {
+			tag?: string;
+			team?: string;
+			confirm?: boolean;
+			name?: string;
+			locale?: string;
+		},
 	) => {
 		if (tournament.registered)
 			return edit({
@@ -200,7 +210,7 @@ export class Tournament extends Command {
 		const player = await Brawl.getPlayer(options.tag, { edit });
 		return edit({
 			content: `Confermi la tua iscrizione al torneo **${tournament.name}** come **${player.name}**?`,
-			embeds: [Brawl.createPlayerEmbed(player)],
+			embeds: [Brawl.createPlayerEmbed(player, { locale: options.locale })],
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -404,7 +414,11 @@ export class Tournament extends Command {
 	};
 	static reg = async (
 		{ edit, deferUpdate, modal, defer, reply }: ComponentReplies,
-		{ args: [tournamentId, tag, team], user: { id } }: ComponentArgs,
+		{
+			args: [tournamentId, tag, team],
+			user: { id },
+			interaction: { locale },
+		}: ComponentArgs,
 	) => {
 		if (tag) {
 			deferUpdate();
@@ -503,7 +517,7 @@ export class Tournament extends Command {
 		const player = await Brawl.getPlayer(tag, { edit });
 		return edit({
 			content: `Confermi la tua iscrizione al torneo **${result.tournamentName}** come **${player.name}**?`,
-			embeds: [Brawl.createPlayerEmbed(player)],
+			embeds: [Brawl.createPlayerEmbed(player, { locale })],
 			components: [
 				{
 					type: ComponentType.ActionRow,
