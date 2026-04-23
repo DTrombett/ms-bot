@@ -27,15 +27,6 @@ import { rest } from "./util/globals";
 export type Params = { players: Database.SupercellPlayer[] };
 
 export class Notifications extends WorkflowEntrypoint<Env, Params> {
-	static readonly brawlTrophyRoadTiers = [
-		500, 1_500, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 40_000, 50_000,
-		60_000, 70_000, 80_000, 90_000, 100_000,
-	];
-	static readonly RANKED_COLORS = [
-		0xf59833, 0xa7b3f0, 0xffa411, 0x0da9ef, 0xe018ff, 0xf80000, 0x6a1700,
-		0xe08500,
-	];
-
 	override async run(
 		{ payload: { players } }: WorkflowEvent<Params>,
 		step: WorkflowStep,
@@ -97,13 +88,13 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 				BrawlNotifications["All"])
 		) {
 			const newTier =
-					Notifications.brawlTrophyRoadTiers.findLast(
-						(tier) => tier <= newPlayer.highestTrophies,
-					) ?? 0,
+					Brawl.TROPHY_ROAD_TIERS.findLast(
+						({ max }) => max <= newPlayer.highestTrophies,
+					)?.max ?? 0,
 				oldTier =
-					Notifications.brawlTrophyRoadTiers.findLast(
-						(tier) => tier <= oldPlayer.highestTrophies,
-					) ?? 0;
+					Brawl.TROPHY_ROAD_TIERS.findLast(
+						({ max }) => max <= oldPlayer.highestTrophies,
+					)?.max ?? 0;
 
 			if (newTier > oldTier)
 				components.push({
@@ -142,7 +133,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 				components.push({
 					type: ComponentType.Container,
 					accent_color:
-						Notifications.RANKED_COLORS[newRank] ??
+						Brawl.RANKED_TIERS[newRank]?.color ??
 						(newPlayer.nameColor ?
 							parseInt(newPlayer.nameColor.slice(4), 16)
 						:	0xffffff),
@@ -152,7 +143,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 							components: [
 								{
 									type: ComponentType.TextDisplay,
-									content: `## Nuova divisione raggiunta!\nHai raggiunto <:ranked:${Brawl.RANKED_EMOJIS[newRank]}> **${forceCapitalize(newPlayer.rankedRankName.split(/\s+/)[0]!)}** in modalità Classificata!`,
+									content: `## Nuova divisione raggiunta!\nHai raggiunto <:ranked:${(Brawl.RANKED_TIERS[newRank] ?? Brawl.RANKED_TIERS.at(-1))!.emoji}> **${forceCapitalize(newPlayer.rankedRankName.split(/\s+/)[0]!)}** in modalità Classificata!`,
 								},
 							],
 							accessory: {

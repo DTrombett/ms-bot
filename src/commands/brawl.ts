@@ -17,7 +17,6 @@ import {
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import { Notifications } from "../Notifications";
 import capitalize, { forceCapitalize } from "../util/capitalize";
 import { BrawlNotifications, SupercellPlayerType } from "../util/Constants";
 import { percentile } from "../util/maths";
@@ -650,32 +649,32 @@ export class Brawl extends Command {
 			"1431299150921732158",
 		],
 	};
-	static readonly RANKED_EMOJIS = [
-		"1496908079281995977",
-		"1496908077482377307",
-		"1496908075158994974",
-		"1496908073460039882",
-		"1496908071727927336",
-		"1496908069672718427",
-		"1496908056741544037",
-		"1496908054480814121",
+	static readonly RANKED_TIERS = [
+		{ emoji: "1496908079281995977", color: 0xf59833 },
+		{ emoji: "1496908077482377307", color: 0xa7b3f0 },
+		{ emoji: "1496908075158994974", color: 0xffa411 },
+		{ emoji: "1496908073460039882", color: 0x0da9ef },
+		{ emoji: "1496908071727927336", color: 0xe018ff },
+		{ emoji: "1496908069672718427", color: 0xf80000 },
+		{ emoji: "1496908056741544037", color: 0x6a1700 },
+		{ emoji: "1496908054480814121", color: 0xe08500 },
 	];
-	static readonly brawlTrophyRoadTiers = [
-		"Piazza del Parco",
-		"Retropoli",
-		"Frontiere Selvagge",
-		"Terre Infestate",
-		"Selva dell'Avventura",
-		"Montagna Mistica",
-		"Brawlywood",
-		"Castello Incantato",
-		"Futuropoli",
-		"Acquaworld",
-		"Cronotrappola",
-		"Ritmotown",
-		"Strambolandia",
-		"Paese dei Giocattoli",
-		"Maniero Medioemale",
+	static readonly TROPHY_ROAD_TIERS = [
+		{ name: "Piazza del Parco", max: 500 },
+		{ name: "Retropoli", max: 1_500 },
+		{ name: "Frontiere Selvagge", max: 5_000 },
+		{ name: "Terre Infestate", max: 10_000 },
+		{ name: "Selva dell'Avventura", max: 15_000 },
+		{ name: "Montagna Mistica", max: 20_000 },
+		{ name: "Brawlywood", max: 25_000 },
+		{ name: "Castello Incantato", max: 30_000 },
+		{ name: "Futuropoli", max: 40_000 },
+		{ name: "Acquaworld", max: 50_000 },
+		{ name: "Cronotrappola", max: 60_000 },
+		{ name: "Ritmotown", max: 70_000 },
+		{ name: "Strambolandia", max: 80_000 },
+		{ name: "Paese dei Giocattoli", max: 90_000 },
+		{ name: "Maniero Medioemale", max: 100_000 },
 	];
 	static readonly ROBO_RUMBLE_LEVELS = [
 		"*None*",
@@ -1284,11 +1283,11 @@ export class Brawl extends Command {
 				value: `**Attuali**: ${player.trophies.toLocaleString(locale)}\n**Record**: ${player.highestTrophies.toLocaleString(
 					locale,
 				)}\n**Cammino**: ${
-					this.brawlTrophyRoadTiers[
-						Notifications.brawlTrophyRoadTiers.findLastIndex(
-							(tier) => tier <= player.highestTrophies,
-						) + 1
-					] ?? this.brawlTrophyRoadTiers.at(-1)
+					(
+						this.TROPHY_ROAD_TIERS.findLast(
+							({ max }) => max <= player.highestTrophies,
+						) ?? this.TROPHY_ROAD_TIERS[0]
+					)?.name
 				}`,
 				inline: true,
 			},
@@ -1486,7 +1485,7 @@ export class Brawl extends Command {
 		prefix: RankedPrefix,
 		locale?: string,
 	) =>
-		`<:ranked:${this.RANKED_EMOJIS[Math.floor((player[`${prefix}Rank`] - 1) / 3)]}> ${player[
+		`<:ranked:${(this.RANKED_TIERS[Math.floor((player[`${prefix}Rank`] - 1) / 3)] ?? this.RANKED_TIERS.at(-1))!.emoji}> ${player[
 			`${prefix}RankName`
 		]
 			.split(/\s+/)
