@@ -650,14 +650,14 @@ export class Brawl extends Command {
 		],
 	};
 	static readonly RANKED_TIERS = [
-		{ emoji: "1496908079281995977", color: 0xf59833 },
-		{ emoji: "1496908077482377307", color: 0xa7b3f0 },
-		{ emoji: "1496908075158994974", color: 0xffa411 },
-		{ emoji: "1496908073460039882", color: 0x0da9ef },
-		{ emoji: "1496908071727927336", color: 0xe018ff },
-		{ emoji: "1496908069672718427", color: 0xf80000 },
-		{ emoji: "1496908056741544037", color: 0x6a1700 },
-		{ emoji: "1496908054480814121", color: 0xe08500 },
+		{ emoji: "1496930462281498757", color: 0xf59833 },
+		{ emoji: "1496930460880605275", color: 0xa7b3f0 },
+		{ emoji: "1496930459282706553", color: 0xffa411 },
+		{ emoji: "1496930457747460278", color: 0x0da9ef },
+		{ emoji: "1496930456111808532", color: 0xe018ff },
+		{ emoji: "1496930454094217448", color: 0xf80000 },
+		{ emoji: "1496930452424888430", color: 0x6a1700 },
+		{ emoji: "1496930450667601970", color: 0xe08500 },
 	];
 	static readonly TROPHY_ROAD_TIERS = [
 		{ name: "Piazza del Parco", max: 500 },
