@@ -624,6 +624,9 @@ declare global {
 		user2Name: Database.SupercellPlayer["name"] | null;
 	};
 
+	type RankedPrefix<T = keyof Brawl.Player> =
+		T extends `${infer A}RankName` ? A : never;
+
 	namespace Twitter {
 		type UrlEntity = {
 			display_url: string;
@@ -1145,6 +1148,16 @@ declare global {
 			bestRoboRumbleTime: number;
 			bestTimeAsBigBrawler: number;
 			brawlers: BrawlerStatList;
+			rankedSeasonId: number;
+			rankedRank: number;
+			rankedRankName: string;
+			rankedElo: number;
+			highestSeasonRankedRank: number;
+			highestSeasonRankedRankName: string;
+			highestSeasonRankedElo: number;
+			highestAllTimeRankedRank: number;
+			highestAllTimeRankedRankName: string;
+			highestAllTimeRankedElo: number;
 			nameColor: string;
 		};
 		type PlayerClub = { tag: string; name: string };

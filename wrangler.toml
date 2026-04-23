@@ -1,6 +1,6 @@
 name = "ms-bot"
 main = "./dist/index.js"
-compatibility_date = "2026-04-15"
+compatibility_date = "2026-04-21"
 compatibility_flags = ["nodejs_compat", "no_handle_cross_request_promise_resolution"]
 workers_dev = false
 preview_urls = true
@@ -26,7 +26,7 @@ crons = ["0 0 * * *", "*/5 * * * *"]
 directory = "./build"
 binding = "ASSETS"
 not_found_handling = "404-page"
-run_worker_first = ["/", "/color", "/interactions", "/auth/*", "/tournaments", "/tournaments/*"]
+run_worker_first = ["/", "/color", "/interactions", "/auth/*", "/tournaments", "/tournaments/*", "/__scheduled"]
 
 [[routes]]
 pattern = "ms-bot.trombett.org"
