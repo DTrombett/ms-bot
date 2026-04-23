@@ -24,6 +24,7 @@ export enum BrawlNotifications {
 	"Prestigio" = 1 << 1,
 	"Nuovo Brawler" = 1 << 2,
 	"Avanzamento nel cammino dei trofei" = 1 << 3,
+	"Nuovo rank" = 1 << 4,
 }
 export enum ClashNotifications {
 	"All" = 1 << 0,
@@ -42,6 +43,21 @@ export enum TournamentFlags {
 	PublicBrackets = 1 << 1,
 	AutoDetectResults = 1 << 2,
 	AutoDeleteChannels = 1 << 3,
-	BracketsCreated = 1 << 4,
-	Finished = 1 << 5,
+}
+export enum TournamentStatusFlags {
+	BracketsCreated = 1 << 0,
+	Finished = 1 << 1,
+}
+export enum DBMatchStatus {
+	ToBePlayed,
+	Playing,
+	Finished,
+	Default,
+	Abandoned,
+	Postponed,
+}
+export enum TournamentRoundMode {
+	Manual = 1,
+	Once,
+	Fast,
 }

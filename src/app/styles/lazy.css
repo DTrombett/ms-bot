@@ -71,13 +71,10 @@
 * {
 	transition-duration: 0.2s;
 	transition-property: all;
-	transition-timing-function: ease-in-out;
+	transition-timing-function: ease-out;
 }
-.button:hover {
+.button:hover:not(:active):not(:disabled) {
 	scale: 105%;
-}
-.button:active {
-	scale: 100%;
 }
 :focus-visible {
 	outline: #ffffff40 solid 0.8px;
@@ -124,4 +121,24 @@ input:user-invalid {
 .mention:hover {
 	background-color: #5865f2 !important;
 	color: white !important;
+}
+::-webkit-scrollbar {
+	width: 4px;
+	height: 4px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: #c0c0c048;
+}
+.deleteButton:hover,
+.activeBg:active {
+	background-color: #ffffff20 !important;
+}
+input:checked {
+	opacity: 1 !important;
+}
+#brackets > div > div:hover {
+	background-color: rgba(63, 63, 70, 0.75) !important;
 }

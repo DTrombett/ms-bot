@@ -5,6 +5,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	PermissionFlagsBits,
 	Routes,
 	TextInputStyle,
 	type APIModalInteractionResponseCallbackData,
@@ -12,11 +13,19 @@ import {
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import { RegistrationMode, TournamentFlags } from "../util/Constants";
+import {
+	DBMatchStatus,
+	RegistrationMode,
+	SupercellPlayerType,
+	TournamentFlags,
+} from "../util/Constants";
 import { rest } from "../util/globals";
 import { ok } from "../util/node";
+import normalizeError from "../util/normalizeError";
 import { TimeUnit } from "../util/time";
-import { createRegistrationMessage } from "../util/tournaments/createRegistrationMessage";
+import { editMessage } from "../util/tournaments/editMessage";
+import { finishRound } from "../util/tournaments/finishRound";
+import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
 import { Brawl } from "./brawl";
 
 export class Tournament extends Command {
@@ -55,6 +64,7 @@ export class Tournament extends Command {
 		{
 			user: { id },
 			options,
+			interaction: { locale },
 		}: ChatInputArgs<typeof Tournament.chatInputData, "register">,
 	) => {
 		if (options.tag)
@@ -79,9 +89,9 @@ export class Tournament extends Command {
 				FROM Tournaments t
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
-				    (t.registrationMode & ?2) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					(t.registrationMode & ?2) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, RegistrationMode.Discord)
@@ -94,7 +104,10 @@ export class Tournament extends Command {
 				content: "Non è possibile iscriversi a nessun torneo al momento!",
 			});
 		if (results.length === 1)
-			return this.handleTournament(results[0]!, edit, id, options);
+			return this.handleTournament(results[0]!, edit, id, {
+				...options,
+				locale,
+			});
 		return edit({
 			content: "Sono aperte le iscrizioni per più tornei al momento!",
 			components: [
@@ -123,7 +136,13 @@ export class Tournament extends Command {
 			Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 },
 		edit: Replies["edit"],
 		userId: string,
-		options: { tag?: string; team?: string; confirm?: boolean },
+		options: {
+			tag?: string;
+			team?: string;
+			confirm?: boolean;
+			name?: string;
+			locale?: string;
+		},
 	) => {
 		if (tournament.registered)
 			return edit({
@@ -143,7 +162,7 @@ export class Tournament extends Command {
 				],
 			});
 		if (options.tag && options.confirm) {
-			const { name } = await Brawl.getPlayer(options.tag, { edit });
+			({ name: options.name } = await Brawl.getPlayer(options.tag, { edit }));
 			const existing = await env.DB.prepare(
 				`
 					INSERT INTO SupercellPlayers (tag, userId, active, type, name)
@@ -163,7 +182,7 @@ export class Tournament extends Command {
 					RETURNING userId
 				`,
 			)
-				.bind(options.tag, userId, tournament.game, name)
+				.bind(options.tag, userId, tournament.game, options.name)
 				.first<Database.SupercellPlayer["userId"]>("userId");
 
 			if (existing && existing !== userId)
@@ -175,7 +194,7 @@ export class Tournament extends Command {
 			(!(tournament.flags & TournamentFlags.TagRequired) && !options.tag) ||
 			(options.tag && options.confirm)
 		)
-			return this.completeRegistration(tournament, edit, userId, options.tag);
+			return this.completeRegistration(tournament, edit, userId, options);
 		const { results: saved } = await env.DB.prepare(
 			`SELECT tag, active, name FROM SupercellPlayers WHERE userId = ? AND type = ?`,
 		)
@@ -191,7 +210,7 @@ export class Tournament extends Command {
 		const player = await Brawl.getPlayer(options.tag, { edit });
 		return edit({
 			content: `Confermi la tua iscrizione al torneo **${tournament.name}** come **${player.name}**?`,
-			embeds: [Brawl.createPlayerEmbed(player)],
+			embeds: [Brawl.createPlayerEmbed(player, { locale: options.locale })],
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -235,27 +254,30 @@ export class Tournament extends Command {
 		tournament: Pick<Database.Tournament, "id" | "name">,
 		edit: Replies["edit"],
 		userId: string,
-		tag?: string,
+		{ tag, name }: { tag?: string; name?: string } = {},
 	) => {
 		const [, result] = await env.DB.batch<
 			Pick<
 				Database.Tournament,
 				| "minPlayers"
+				| "maxPlayers"
 				| "registrationMessage"
 				| "registrationTemplateLink"
 				| "registrationRole"
 				| "registrationChannel"
+				| "name"
+				| "id"
 			> & { participantCount: number }
 		>([
 			env.DB.prepare(
 				`
-					INSERT INTO Participants (tournamentId, userId, tag)
-					VALUES (?1, ?2, ?3)
+					INSERT INTO Participants (tournamentId, userId, tag, name)
+					VALUES (?1, ?2, ?3, ?4)
 				`,
-			).bind(tournament.id, userId, tag || null),
+			).bind(tournament.id, userId, tag || null, name || null),
 			env.DB.prepare(
 				`
-					SELECT minPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole,
+					SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
 					(
 						SELECT COUNT(*)
 						FROM Participants
@@ -271,25 +293,12 @@ export class Tournament extends Command {
 				content: `Non è stato possibile completare l'iscrizione! Riprova o contatta un moderatore.`,
 			});
 		await Promise.all([
-			rest.put(
-				Routes.guildMemberRole(env.MAIN_GUILD, userId, data.registrationRole!),
-				{ reason: `Iscrizione al torneo ${tournament.name}` },
-			),
-			rest.patch(
-				Routes.channelMessage(
-					data.registrationChannel!,
-					data.registrationMessage!,
+			data.registrationRole &&
+				rest.put(
+					Routes.guildMemberRole(env.MAIN_GUILD, userId, data.registrationRole),
+					{ reason: `Iscrizione al torneo ${tournament.name}` },
 				),
-				{
-					body: await createRegistrationMessage(
-						tournament.id,
-						data.registrationTemplateLink!,
-						data.participantCount,
-						tournament.name,
-						data.minPlayers,
-					),
-				},
-			),
+			editMessage(data),
 		]);
 		return edit({
 			content: `Ti sei iscritto con successo al torneo **${tournament.name}**!`,
@@ -321,9 +330,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, data.values[0], RegistrationMode.Discord)
@@ -347,7 +356,7 @@ export class Tournament extends Command {
 		const data = await env.DB.prepare(
 			`
 				SELECT 
-					t.minPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name,
+					t.minPlayers, t.maxPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name, t.id,
 					p.userId IS NOT NULL AS participationExists,
 					(
 						(t.registrationMode & ?1) != 0
@@ -374,11 +383,13 @@ export class Tournament extends Command {
 				} & Pick<
 					Database.Tournament,
 					| "minPlayers"
+					| "maxPlayers"
 					| "registrationMessage"
 					| "registrationChannel"
 					| "registrationTemplateLink"
 					| "registrationRole"
 					| "name"
+					| "id"
 				>
 			>();
 
@@ -386,31 +397,15 @@ export class Tournament extends Command {
 			return edit({ content: "Le iscrizioni per questo torneo sono chiuse!" });
 		if (!data.participationExists)
 			return edit({ content: "Non risulti iscritto a questo torneo!" });
+		data.participantCount--;
 		await Promise.all([
 			rest.delete(
 				Routes.guildMemberRole(env.MAIN_GUILD, id, data.registrationRole!),
 				{ reason: `Rimozione iscrizione al torneo ${data.name}` },
 			),
-			rest.patch(
-				Routes.channelMessage(
-					data.registrationChannel!,
-					data.registrationMessage!,
-				),
-				{
-					body: await createRegistrationMessage(
-						Number(tournament),
-						data.registrationTemplateLink!,
-						data.participantCount - 1,
-						data.name,
-						data.minPlayers,
-					),
-				},
-			),
+			editMessage(data),
 			env.DB.prepare(
-				`
-					DELETE FROM Participants
-					WHERE tournamentId = ?1 AND userId = ?2
-				`,
+				`DELETE FROM Participants WHERE tournamentId = ?1 AND userId = ?2`,
 			)
 				.bind(tournament, id)
 				.run(),
@@ -419,7 +414,11 @@ export class Tournament extends Command {
 	};
 	static reg = async (
 		{ edit, deferUpdate, modal, defer, reply }: ComponentReplies,
-		{ args: [tournamentId, tag, team], user: { id } }: ComponentArgs,
+		{
+			args: [tournamentId, tag, team],
+			user: { id },
+			interaction: { locale },
+		}: ComponentArgs,
 	) => {
 		if (tag) {
 			deferUpdate();
@@ -430,9 +429,9 @@ export class Tournament extends Command {
 					LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 					WHERE
 						t.id = ?2
-					    AND (t.registrationMode & ?3) != 0
-					    AND t.registrationStart < unixepoch('now')
-					    AND t.registrationEnd > unixepoch('now')
+						AND (t.registrationMode & ?3) != 0
+						AND t.registrationStart < unixepoch('now')
+						AND t.registrationEnd > unixepoch('now')
 				`,
 			)
 				.bind(id, tournamentId, RegistrationMode.Discord)
@@ -454,21 +453,20 @@ export class Tournament extends Command {
 		const { results } = await env.DB.prepare(
 			`
 				SELECT
-				    sp.tag,
-				    sp.active,
-				    sp.name,
-				    t.registrationMode,
-				    t.registrationStart,
-				    t.registrationEnd,
-				    t.name AS tournamentName,
-				    p.userId IS NOT NULL AS registered,
+					sp.tag,
+					sp.active,
+					sp.name,
+					t.registrationMode,
+					t.registrationStart,
+					t.registrationEnd,
+					t.name AS tournamentName,
+					p.userId IS NOT NULL AS registered,
 					p.tag as pTag,
 					p.team as pTeam
 				FROM SupercellPlayers sp
-				JOIN Tournaments t
-				    ON sp.type = t.game
+				JOIN Tournaments t ON sp.type = t.game
 				LEFT JOIN Participants p
-				    ON p.tournamentId = t.id AND p.userId = sp.userId
+					ON p.tournamentId = t.id AND p.userId = sp.userId
 				WHERE t.id = ?1 AND sp.userId = ?2
 			`,
 		)
@@ -519,7 +517,7 @@ export class Tournament extends Command {
 		const player = await Brawl.getPlayer(tag, { edit });
 		return edit({
 			content: `Confermi la tua iscrizione al torneo **${result.tournamentName}** come **${player.name}**?`,
-			embeds: [Brawl.createPlayerEmbed(player)],
+			embeds: [Brawl.createPlayerEmbed(player, { locale })],
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -578,9 +576,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, tournamentId, RegistrationMode.Discord)
@@ -597,6 +595,164 @@ export class Tournament extends Command {
 			tag: data.values[0],
 			team,
 		});
+	};
+	static ava = async (
+		{ edit, defer, reply }: ComponentReplies,
+		{
+			args: [tournamentId, round],
+			interaction: { member: { roles, permissions } = { roles: [] } as any },
+		}: ComponentArgs,
+	) => {
+		if (
+			new Set(roles).isDisjointFrom(new Set(env.ALLOWED_ROLES.split(","))) &&
+			!(BigInt(permissions) & PermissionFlagsBits.ManageGuild)
+		)
+			return reply({
+				flags: MessageFlags.Ephemeral,
+				content: "Non hai abbastanza permessi per eseguire questa azione!",
+			});
+		defer();
+		const tournament = await env.DB.prepare(
+			`
+				SELECT workflowId
+				FROM Tournaments
+				WHERE id = ?1
+			`,
+		)
+			.bind(tournamentId)
+			.first<Pick<Database.Tournament, "workflowId">>();
+
+		if (!tournament?.workflowId)
+			return edit({ content: "Torneo non trovato." });
+		try {
+			await finishRound(tournament.workflowId, Number(round));
+			return edit({ content: "Il round successivo è iniziato!" });
+		} catch (err) {
+			return edit({
+				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,
+			});
+		}
+	};
+	static che = async (
+		{ edit, defer }: ComponentReplies,
+		{
+			args: [matchId, tournamentId],
+			user: { id: userId },
+			interaction: { member: { roles, permissions } = { roles: [] } as any },
+		}: ComponentArgs,
+	) => {
+		defer();
+		const match = await env.DB.prepare(
+			`
+				SELECT 
+					m.*,
+					t.game, t.rounds, t.flags, t.id as tournamentId,
+					p1.tag AS user1Tag, p2.tag AS user2Tag
+				FROM Matches m
+				JOIN Tournaments t ON m.tournamentId = t.id
+				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND p1.tournamentId = m.tournamentId
+				LEFT JOIN Participants p2 ON p2.userId = m.user2 AND p2.tournamentId = m.tournamentId
+				WHERE m.id = ?1 AND m.tournamentId = ?2
+			`,
+		)
+			.bind(matchId, tournamentId)
+			.first<
+				Database.Match &
+					Pick<Database.Tournament, "game" | "rounds" | "flags"> & {
+						tournamentId: Database.Tournament["id"];
+					} & Partial<{
+						user1Tag: Database.Participant["tag"];
+						user2Tag: Database.Participant["tag"];
+					}>
+			>();
+
+		if (!match?.user1Tag) return edit({ content: "Torneo non trovato." });
+		if ((match.flags & TournamentFlags.AutoDetectResults) === 0)
+			return edit({
+				content:
+					"Il controllo dei risultati tramite registro battaglie non è attivato per questo torneo!",
+			});
+		if (match.game === SupercellPlayerType.ClashRoyale)
+			return edit({
+				content:
+					"Il controllo dei risultati tramite registro battaglie non è supportato per Clash Royale!",
+			});
+		if (
+			match.status !== DBMatchStatus.Playing &&
+			match.status !== DBMatchStatus.ToBePlayed &&
+			new Set(roles).isDisjointFrom(new Set(env.ALLOWED_ROLES.split(","))) &&
+			!(BigInt(permissions) & PermissionFlagsBits.ManageGuild)
+		)
+			return edit({
+				flags: MessageFlags.Ephemeral,
+				content:
+					"Solo gli amministratori possono aggiornare i risultati dopo che la partita è terminata!",
+			});
+		try {
+			const rounds = JSON.parse(match.rounds) as Database.Round[];
+			const round =
+				rounds[Math.floor(Math.log2(match.id + 1))] ?? rounds.at(-1)!;
+			const resolvedMode = round.mode
+				.toLowerCase()
+				.split(/\s+/)
+				.reduce((a, b) => a + (b[0]?.toUpperCase() ?? "") + b.slice(1));
+			const battleLog = (await Brawl.getBattleLog(match.user1Tag))
+				.filter(
+					(b) =>
+						b.event.mode === resolvedMode &&
+						(b.battle.result === "defeat" || b.battle.result === "victory") &&
+						b.battle.teams.every(
+							(t) =>
+								t.length === 1 &&
+								[match.user1Tag, match.user2Tag].includes(t[0]?.tag),
+						),
+				)
+				.reverse()
+				.slice(0, round.bof);
+
+			if (!battleLog.length)
+				return edit({
+					content: `Non risulta alcuna partita corrispondente!\n-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Tag} e ${match.user2Tag} vengono considerate\n`,
+				});
+			const result = battleLog.reduce<[number, number]>(
+				(result, { battle }) =>
+					battle.result === "defeat" ?
+						[result[0], result[1] + 1]
+					:	[result[0] + 1, result[1]],
+				[0, 0],
+			);
+			const newMatch = await patchMatch(
+				match.tournamentId,
+				match.id,
+				env.DB.prepare(
+					`
+						UPDATE Matches
+						SET result1 = ?3, result2 = ?4, status = ?5
+						WHERE tournamentId = ?1 AND id = ?2
+						RETURNING *
+					`,
+				).bind(
+					match.tournamentId,
+					match.id,
+					result[0],
+					result[1],
+					Math.max(result[0], result[1]) > round.bof / 2 ?
+						DBMatchStatus.Finished
+					:	DBMatchStatus.Playing,
+				),
+				userId,
+			);
+
+			if (newMatch)
+				return edit({
+					content: `## ${displayMatchScore(newMatch)} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+					allowed_mentions: { parse: [] },
+				});
+		} catch (err) {
+			return edit({
+				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,
+			});
+		}
 	};
 	static tag = async (
 		{ defer, edit, reply }: ModalReplies,
@@ -630,9 +786,9 @@ export class Tournament extends Command {
 				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
 				WHERE
 					t.id = ?2
-				    AND (t.registrationMode & ?3) != 0
-				    AND t.registrationStart < unixepoch('now')
-				    AND t.registrationEnd > unixepoch('now') + 1
+					AND (t.registrationMode & ?3) != 0
+					AND t.registrationStart < unixepoch('now')
+					AND t.registrationEnd > unixepoch('now') + 1
 			`,
 		)
 			.bind(id, tournamentId, RegistrationMode.Discord)

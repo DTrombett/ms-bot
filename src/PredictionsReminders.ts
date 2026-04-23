@@ -171,11 +171,11 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 
 	private async getReminders(startTime: number) {
 		const { results } = await this.env.DB.prepare(
-			`SELECT u.id, u.remindMinutes
-				FROM Users u
-				WHERE u.reminded = 0
-				AND u.remindMinutes IS NOT NULL`,
-		).all<Pick<Database.User, "id" | "remindMinutes">>();
+			`
+				SELECT u.id, u.remindMinutes FROM Users u
+				WHERE u.reminded = 0 AND u.remindMinutes IS NOT NULL
+			`,
+		).run<Pick<Database.User, "id" | "remindMinutes">>();
 
 		return results
 			.sort((a, b) => b.remindMinutes! - a.remindMinutes!)

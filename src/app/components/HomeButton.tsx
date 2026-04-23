@@ -1,4 +1,5 @@
 import type { AnchorHTMLAttributes, DetailedHTMLProps, ReactNode } from "react";
+import { Colors } from "../utils/Colors";
 
 export default ({
 	icon,
@@ -14,7 +15,7 @@ export default ({
 		{...props}
 		style={{
 			alignItems: "center",
-			backgroundColor: "#008545",
+			backgroundColor: Colors.Success,
 			borderRadius: "0.5rem",
 			color: "white",
 			display: "flex",

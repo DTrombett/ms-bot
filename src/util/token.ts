@@ -1,5 +1,7 @@
+import { REST } from "@discordjs/rest";
 import { env } from "cloudflare:workers";
 import {
+	APIVersion,
 	RouteBases,
 	Routes,
 	type RESTGetAPIGuildMemberResult,
@@ -33,26 +35,28 @@ export const createToken = async (jwt: JWT) => {
 export const updateToken = async (
 	body: RESTPostOAuth2AccessTokenResult | JWT,
 ): Promise<JWT> => {
-	try {
-		rest.setToken("access_token" in body ? body.access_token : body.a);
-		const authorization = (await rest.get(Routes.oauth2CurrentAuthorization(), {
-			authPrefix: "Bearer",
-		})) as RESTGetAPIOAuth2CurrentAuthorizationResult;
+	const authorization = (await new REST({
+		version: APIVersion,
+		hashSweepInterval: 0,
+		handlerSweepInterval: 0,
+		authPrefix: "Bearer",
+	})
+		.setToken("access_token" in body ? body.access_token : body.a)
+		.get(
+			Routes.oauth2CurrentAuthorization(),
+		)) as RESTGetAPIOAuth2CurrentAuthorizationResult;
 
-		return {
-			a: "access_token" in body ? body.access_token : body.a,
-			d: authorization.user!.global_name ?? undefined,
-			e: Math.floor(Date.parse(authorization.expires) / 1000),
-			h: authorization.user!.avatar ?? undefined,
-			i: authorization.user!.id,
-			l: Math.floor(Date.now() / 1000),
-			r: "refresh_token" in body ? body.refresh_token : body.r,
-			s: authorization.scopes.join(" "),
-			u: authorization.user!.username,
-		};
-	} finally {
-		rest.setToken(env.DISCORD_TOKEN);
-	}
+	return {
+		a: "access_token" in body ? body.access_token : body.a,
+		d: authorization.user!.global_name ?? undefined,
+		e: Math.floor(Date.parse(authorization.expires) / 1000),
+		h: authorization.user!.avatar ?? undefined,
+		i: authorization.user!.id,
+		l: Math.floor(Date.now() / 1000),
+		r: "refresh_token" in body ? body.refresh_token : body.r,
+		s: authorization.scopes.join(" "),
+		u: authorization.user!.username,
+	};
 };
 
 export const refreshToken: {
@@ -77,11 +81,13 @@ export const refreshToken: {
 		mayThrow,
 	);
 
-export const parseToken = async (token?: string) => {
+export const parseToken = async (
+	token: string | undefined,
+	scopes?: Iterable<string>,
+) => {
 	if (!token) return;
 	const decoded = Uint8Array.fromBase64(token, { alphabet: "base64url" });
-
-	return Object.fromEntries(
+	const jwt = Object.fromEntries(
 		new URLSearchParams(
 			textDecoder.decode(
 				await crypto.subtle.decrypt(
@@ -98,6 +104,9 @@ export const parseToken = async (token?: string) => {
 			),
 		),
 	) as object as JWT;
+
+	if (scopes && !new Set(scopes).isSubsetOf(new Set(jwt.s?.split(" ")))) return;
+	return jwt;
 };
 
 export const revokeToken = async (token?: string) => {
@@ -163,9 +172,11 @@ export const tokenFromResponse: {
 
 export const createSetCookie = async (
 	request: Request,
+	scopes?: string[],
 ): Promise<{ setCookie: string; token: JWT | undefined }> => {
 	let token = await parseToken(
 		request.headers.get("cookie")?.match(/(?:^|;\s*)token=([^;]*)/)?.[1],
+		scopes,
 	);
 
 	if (token)

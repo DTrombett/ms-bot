@@ -4,8 +4,8 @@ import {
 } from "discord-api-types/v10";
 
 export abstract class Command {
-	static readonly chatInputData?: RecursiveReadonly<RESTPostAPIChatInputApplicationCommandsJSONBody>;
-	static readonly contextMenuData?: RecursiveReadonly<
+	static readonly chatInputData?: AsConst<RESTPostAPIChatInputApplicationCommandsJSONBody>;
+	static readonly contextMenuData?: AsConst<
 		RESTPostAPIContextMenuApplicationCommandsJSONBody[]
 	>;
 	static readonly customId?: string;

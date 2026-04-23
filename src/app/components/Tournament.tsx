@@ -4,8 +4,9 @@ import {
 	RegistrationMode,
 	SupercellPlayerType,
 	TournamentFlags,
+	TournamentRoundMode,
 } from "../../util/Constants";
-import { Round } from "../tournaments/new.page";
+import { Colors } from "../utils/Colors";
 import { Mode, ModeWithSuggestions } from "./Mode";
 import Rounds from "./Rounds";
 import {
@@ -131,6 +132,13 @@ export default ({
 					min={0}
 					defaultValue={tournament?.minPlayers ?? undefined}
 				/>
+				<NumberInput
+					label="Massimo partecipanti"
+					name="maxPlayers"
+					placeholder=""
+					min={0}
+					defaultValue={tournament?.maxPlayers ?? undefined}
+				/>
 				<TextInput
 					name="messageLink"
 					label="Link al messaggio di iscrizione"
@@ -253,13 +261,21 @@ export default ({
 				<RadioInput
 					label="Avanzamento round"
 					name="channelsMode"
-					default={tournament?.roundType ?? Round.Manual}
+					default={tournament?.roundType ?? TournamentRoundMode.Manual}
 					options={[
-						{ label: "Manuale", value: Round.Manual, id: "manual" },
-						{ label: "Automatico", value: Round.Once, id: "once" },
+						{
+							label: "Manuale",
+							value: TournamentRoundMode.Manual,
+							id: "manual",
+						},
+						{
+							label: "Automatico",
+							value: TournamentRoundMode.Once,
+							id: "once",
+						},
 						{
 							label: "Crea canali il prima possibile",
-							value: Round.Fast,
+							value: TournamentRoundMode.Fast,
 							id: "fast",
 						},
 					]}
@@ -287,11 +303,11 @@ export default ({
 					name="channelName"
 					placeholder="Il nome da assegnare ai canali delle partite"
 					maxWidth="18.25rem"
-					note="Puoi usare i placeholder {matchID} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
+					note="Puoi usare i placeholder {matchId} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
 					defaultValue={
 						tournament ?
 							(tournament.channelName ?? undefined)
-						:	"{matchID}-{player1}-vs-{player2}"
+						:	"{matchId}-{player1}-vs-{player2}"
 					}
 				/>
 				<TextInput
@@ -299,7 +315,7 @@ export default ({
 					name="endedChannelName"
 					placeholder="Il nome da assegnare ai canali delle partite concluse"
 					maxWidth="22.25rem"
-					note="Puoi usare i placeholder {matchID} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
+					note="Puoi usare i placeholder {matchId} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
 					defaultValue={tournament?.endedChannelName ?? undefined}
 				/>
 				<TextInput
@@ -378,7 +394,7 @@ export default ({
 				className="button"
 				type="submit"
 				style={{
-					backgroundColor: "#008545",
+					backgroundColor: Colors.Success,
 					borderRadius: "0.5rem",
 					fontFamily: "ggsans",
 					fontSize: "1.125rem",

@@ -2,9 +2,11 @@ import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
+	ComponentType,
 	MessageFlags,
 	Routes,
 	type APIApplicationCommand,
+	type RESTGetAPIGuildChannelsResult,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationCommandsJSONBody,
@@ -26,7 +28,13 @@ export class Dev extends Command {
 		name: "dev",
 		description: "Developer commands",
 		type: ApplicationCommandType.ChatInput,
+		default_member_permissions: "0",
 		options: [
+			{
+				name: "test",
+				description: "test",
+				type: ApplicationCommandOptionType.Subcommand,
+			},
 			{
 				name: "update-players",
 				description: "Update players name",
@@ -36,6 +44,44 @@ export class Dev extends Command {
 						type: ApplicationCommandOptionType.Number,
 						name: "page",
 						description: "La pagina (default 0)",
+					},
+				],
+			},
+			{
+				name: "supercell-api",
+				description: "Call the supercell API",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						type: ApplicationCommandOptionType.Number,
+						name: "game",
+						description: "The game.",
+						required: true,
+						choices: [
+							{ name: "Brawl Stars", value: SupercellPlayerType.BrawlStars },
+							{ name: "Clash Royale", value: SupercellPlayerType.ClashRoyale },
+						],
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "path",
+						description: "The path.",
+						required: true,
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "query",
+						description: "The query.",
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "hash",
+						description: "The hash.",
+					},
+					{
+						type: ApplicationCommandOptionType.Boolean,
+						name: "ephemeral",
+						description: "If the message should be ephemeral",
 					},
 				],
 			},
@@ -188,6 +234,18 @@ export class Dev extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
+	static test = async ({ defer, edit }: ChatInputReplies) => {
+		defer();
+		for (const channel of (await rest.get(
+			Routes.guildChannels(env.MAIN_GUILD),
+		)) as RESTGetAPIGuildChannelsResult)
+			if (channel.name.match(/^\d+-/))
+				await rest.delete(Routes.channel(channel.id));
+		return edit({
+			flags: MessageFlags.IsComponentsV2,
+			components: [{ type: ComponentType.TextDisplay, content: "Fatt" }],
+		});
+	};
 	static "update-players" = async (
 		{ defer, edit }: ChatInputReplies,
 		{ options }: ChatInputArgs<typeof Dev.chatInputData, "update-players">,
@@ -227,6 +285,38 @@ export class Dev extends Command {
 			content: `Success ${statements.length}/${results.length}!\n${errors.join("\n")}`,
 		});
 	};
+	static "supercell-api" = async (
+		{ defer, edit }: ChatInputReplies,
+		{
+			options: { game, path, ephemeral, query = "", hash = "" },
+			fullRoute,
+		}: ChatInputArgs<typeof Dev.chatInputData, "supercell-api">,
+	) => {
+		defer({ flags: ephemeral ? MessageFlags.Ephemeral : undefined });
+		try {
+			const data = JSON.stringify(
+				await (
+					game === SupercellPlayerType.BrawlStars ?
+						commandsObj.Brawl
+					:	commandsObj.Clash).callApi(
+					path.split("/").map(encodeURIComponent).join("/") + query + hash,
+					{ cache: false },
+				),
+				null,
+				"\t",
+			);
+
+			return rest.patch(fullRoute, {
+				body: {
+					attachments: [{ id: 0, filename: "result.json" }],
+					content: `\`\`\`json\n${data.slice(0, 1988)}\n\`\`\``,
+				} satisfies RESTPatchAPIWebhookWithTokenMessageJSONBody,
+				files: [{ name: "result.json", data, contentType: "application/json" }],
+			});
+		} catch (err) {
+			return edit({ content: normalizeError(err).stack });
+		}
+	};
 	static "register-commands" = async (
 		{ defer, edit }: ChatInputReplies,
 		{ options }: ChatInputArgs<typeof Dev.chatInputData, "register-commands">,
@@ -247,7 +337,7 @@ export class Dev extends Command {
 							.flatMap((file) => [
 								...(file.chatInputData ? [file.chatInputData] : []),
 								...(file.contextMenuData ?? []),
-							]) satisfies RecursiveReadonly<RESTPutAPIApplicationGuildCommandsJSONBody>,
+							]) satisfies AsConst<RESTPutAPIApplicationGuildCommandsJSONBody>,
 					},
 				) as Promise<APIApplicationCommand[]>
 			).catch(normalizeError),
@@ -260,7 +350,7 @@ export class Dev extends Command {
 							.flatMap((file) => [
 								...(file.chatInputData ? [file.chatInputData] : []),
 								...(file.contextMenuData ?? []),
-							]) satisfies RecursiveReadonly<RESTPutAPIApplicationCommandsJSONBody>,
+							]) satisfies AsConst<RESTPutAPIApplicationCommandsJSONBody>,
 					}) as Promise<APIApplicationCommand[]>
 				).catch(normalizeError),
 		]);
