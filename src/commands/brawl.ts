@@ -73,6 +73,7 @@ export class Brawl extends Command {
 		"Prestigio",
 		"Nuovo Brawler",
 		"Avanzamento nel cammino dei trofei",
+		"Nuovo rank",
 		"All",
 	] as const;
 	static readonly BRAWLER_EMOJIS: AsConst<

@@ -15,6 +15,7 @@ import {
 import { Clash } from "./commands";
 import { Brawl } from "./commands/brawl";
 import { bitSetMap } from "./util/bitSets";
+import { forceCapitalize } from "./util/capitalize";
 import {
 	BrawlNotifications,
 	ClashNotifications,
@@ -29,6 +30,10 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 	static readonly brawlTrophyRoadTiers = [
 		500, 1_500, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 40_000, 50_000,
 		60_000, 70_000, 80_000, 90_000, 100_000,
+	];
+	static readonly RANKED_COLORS = [
+		0xf59833, 0xa7b3f0, 0xffa411, 0x0da9ef, 0xe018ff, 0xf80000, 0x6a1700,
+		0xe08500,
 	];
 
 	override async run(
@@ -114,6 +119,40 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 								{
 									type: ComponentType.TextDisplay,
 									content: `## Avanzamento Cammino dei Trofei!\nHai raggiunto il traguardo di **${newTier.toLocaleString("it-IT")}** trofei!`,
+								},
+							],
+							accessory: {
+								type: ComponentType.Thumbnail,
+								media: {
+									url: `https://cdn.brawlify.com/profile-icons/regular/${newPlayer.icon.id}.png`,
+								},
+							},
+						},
+					],
+				});
+		}
+		if (
+			user.notifications &
+			(BrawlNotifications["Nuovo rank"] | BrawlNotifications["All"])
+		) {
+			const newRank = Math.floor((newPlayer.rankedRank - 1) / 3),
+				oldRank = Math.floor((oldPlayer.rankedRank - 1) / 3);
+
+			if (newRank > oldRank)
+				components.push({
+					type: ComponentType.Container,
+					accent_color:
+						Notifications.RANKED_COLORS[newRank] ??
+						(newPlayer.nameColor ?
+							parseInt(newPlayer.nameColor.slice(4), 16)
+						:	0xffffff),
+					components: [
+						{
+							type: ComponentType.Section,
+							components: [
+								{
+									type: ComponentType.TextDisplay,
+									content: `## Nuova divisione raggiunta!\nHai raggiunto <:ranked:${Brawl.RANKED_EMOJIS[newRank]}> **${forceCapitalize(newPlayer.rankedRankName.split(/\s+/)[0]!)}** in modalità Classificata!`,
 								},
 							],
 							accessory: {

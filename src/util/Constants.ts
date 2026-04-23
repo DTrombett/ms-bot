@@ -24,6 +24,7 @@ export enum BrawlNotifications {
 	"Prestigio" = 1 << 1,
 	"Nuovo Brawler" = 1 << 2,
 	"Avanzamento nel cammino dei trofei" = 1 << 3,
+	"Nuovo rank" = 1 << 4,
 }
 export enum ClashNotifications {
 	"All" = 1 << 0,
