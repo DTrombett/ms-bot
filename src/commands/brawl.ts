@@ -1285,9 +1285,9 @@ export class Brawl extends Command {
 					locale,
 				)}\n**Cammino**: ${
 					this.brawlTrophyRoadTiers[
-						(Notifications.brawlTrophyRoadTiers.findLast(
+						Notifications.brawlTrophyRoadTiers.findLastIndex(
 							(tier) => tier <= player.highestTrophies,
-						) ?? -1) + 1
+						) + 1
 					] ?? this.brawlTrophyRoadTiers.at(-1)
 				}`,
 				inline: true,
