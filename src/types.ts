@@ -377,7 +377,7 @@ declare global {
 		};
 		type Reminder = {
 			id: string;
-			date: string;
+			timestamp: number;
 			userId: string;
 			remind: string;
 		};

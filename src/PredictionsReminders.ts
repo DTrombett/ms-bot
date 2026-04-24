@@ -201,7 +201,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		await this.env.REMINDER.create({
 			id: `${userId}-predictions-${matchDay.day}`,
 			params: {
-				duration: Math.max(date - Date.now(), 0),
+				timestamp: date,
 				message: {
 					content:
 						"⚽ È l'ora di inviare i pronostici per la prossima giornata!",

@@ -102,59 +102,55 @@ export const parseTimeValue = (value: string): number => {
 
 const parseNumber = (string?: string) => Number(string) || 0;
 
-export const parseTime = (str: string): number => {
-	str = str.trim().toLowerCase();
-	let match = str.match(
-		/^(?:(?<months>\d+)\s*(?:mos?|mesi|mese|months?))?\s*,?\s*e?\s*(?:(?<weeks>\d+)\s*(?:ws?|settimana|settimane|weeks?))?\s*,?\s*e?\s*(?:(?<days>\d+)\s*(?:ds?|giorni|giorno|days?|gg?))?\s*,?\s*e?\s*(?:(?<hours>\d+)\s*(?:hs?|ore|hours?|ore|ora|hrs?))?\s*,?\s*e?\s*(?:(?<minutes>\d+)\s*(?:mins?|minuti|minuto|minutes?|m))?\s*,?\s*e?\s*(?:(?<seconds>\d+)\s*(?:secs?|secondi|secondo|ss?|seconds?))?$/,
-	);
+export const parseDuration = (
+	str: string,
+	relativeTo = Temporal.Now.zonedDateTimeISO("Europe/Rome"),
+): Temporal.ZonedDateTime | null => {
+	try {
+		str = str.trim().toLowerCase();
+		let match = str.match(
+			/^(?:(?<years>\d+)\s*(?:ys?|anni|anno|years?))?\s*,?\s*e?\s*(?:(?<months>\d+)\s*(?:mos?|mesi|mese|months?))?\s*,?\s*e?\s*(?:(?<weeks>\d+)\s*(?:ws?|settimana|settimane|weeks?))?\s*,?\s*e?\s*(?:(?<days>\d+)\s*(?:ds?|giorni|giorno|days?|gg?))?\s*,?\s*e?\s*(?:(?<hours>\d+)\s*(?:hs?|ore|hours?|ore|ora|hrs?))?\s*,?\s*e?\s*(?:(?<minutes>\d+)\s*(?:mins?|minuti|minuto|minutes?|m))?\s*,?\s*e?\s*(?:(?<seconds>\d+)\s*(?:secs?|secondi|secondo|ss?|seconds?))?$/,
+		);
 
-	if (match?.groups)
-		return Temporal.Duration.from({
-			months: parseNumber(match.groups.months),
-			weeks: parseNumber(match.groups.weeks),
-			days: parseNumber(match.groups.days),
-			hours: parseNumber(match.groups.hours),
-			minutes: parseNumber(match.groups.minutes),
-			seconds: parseNumber(match.groups.seconds),
-		}).total({
-			unit: "milliseconds",
-			relativeTo: Temporal.Now.zonedDateTimeISO("Europe/Rome"),
-		});
-	match = str.match(
-		/^(?:(?<day>\d{1,2})\/(?<month>\d{1,2})(?:\/(?<year>\d{2}|\d{4}))?)?\s*,?\s*(?:(?<hours>\d{1,2}):(?<minutes>\d{1,2})(?::(?<seconds>\d{1,2}))?)?$/,
-	);
-	if (match?.groups) {
-		const date = new Date();
-		const now = date.getTime();
-		let year = parseNumber(match.groups.year);
+		if (match?.groups)
+			return relativeTo.add({
+				years: parseNumber(match.groups.years),
+				months: parseNumber(match.groups.months),
+				weeks: parseNumber(match.groups.weeks),
+				days: parseNumber(match.groups.days),
+				hours: parseNumber(match.groups.hours),
+				minutes: parseNumber(match.groups.minutes),
+				seconds: parseNumber(match.groups.seconds),
+			});
+		match = str.match(
+			/^(?:(?<day>\d{1,2})[/-](?<month>\d{1,2})(?:[/-](?<year>\d{2}|\d{4}))?)?\s*,?\s*(?:(?<hour>\d{1,2}):(?<minute>\d{1,2})(?::(?<second>\d{1,2}))?)?$/,
+		);
+		if (match?.groups) {
+			const target = Temporal.ZonedDateTime.from({
+				timeZone: relativeTo,
+				year:
+					match.groups.year ?
+						match.groups.year.length === 4 ?
+							Number(match.groups.year)
+						:	Number(match.groups.year) + 2000
+					:	relativeTo.year,
+				month:
+					match.groups.month ? Number(match.groups.month) : relativeTo.month,
+				day: match.groups.day ? Number(match.groups.day) : relativeTo.day,
+				hour: match.groups.hour ? Number(match.groups.hour) : undefined,
+				minute: match.groups.minute ? Number(match.groups.minute) : undefined,
+				second: match.groups.second ? Number(match.groups.second) : undefined,
+			});
 
-		if (year > 0 && year < 1_000)
-			year += Math.floor(date.getUTCFullYear() / 1_000);
-		date.setUTCFullYear(
-			year || date.getUTCFullYear(),
-			Number(match.groups.month) - 1 || date.getUTCMonth(),
-			parseNumber(match.groups.day) || date.getUTCDate(),
-		);
-		date.setUTCHours(
-			parseNumber(match.groups.hours),
-			parseNumber(match.groups.minutes),
-			parseNumber(match.groups.seconds),
-			0,
-		);
-		match = new Intl.DateTimeFormat("it", {
-			timeZoneName: "longOffset",
-			timeZone: "Europe/Rome",
-			month: "numeric",
-		})
-			.format(date)
-			.match(/(\+|-)(\d{2}):(\d{2})$/)!;
-		date.setUTCMinutes(
-			date.getUTCMinutes() -
-				(match[1] === "+" ? 1 : -1) *
-					(Number(match[2]) * 60 + Number(match[3])),
-		);
-		if (date.getTime() < now) date.setUTCDate(date.getUTCDate() + 1);
-		return date.getTime() - now;
+			return (
+					match.groups.day ||
+						Temporal.ZonedDateTime.compare(target, relativeTo) > 0
+				) ?
+					target
+				:	target.add({ days: 1 });
+		}
+	} catch (err) {
+		console.error(err);
 	}
-	return NaN;
+	return null;
 };
