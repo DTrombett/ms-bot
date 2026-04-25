@@ -36,7 +36,7 @@ export const formatDuration = (
 ) => {
 	const duration = Temporal.Duration.from(item).round({
 		largestUnit: long ? "year" : "day",
-		smallestUnit: "millisecond",
+		smallestUnit: "nanoseconds",
 		relativeTo,
 		...roundTo,
 	});
@@ -46,8 +46,13 @@ export const formatDuration = (
 			locales = "en";
 			options.style ??= "digital";
 			if (duration.hours === 0) options.hoursDisplay ??= "auto";
-		} else options.style ??= "narrow";
-	else options.style = "long";
+		} else {
+			options.style ??= "narrow";
+			options.hoursDisplay ??= "always";
+			options.minutesDisplay ??= "always";
+			options.secondsDisplay ??= "always";
+		}
+	else options.style ??= "long";
 	return duration.toLocaleString(locales, options);
 };
 

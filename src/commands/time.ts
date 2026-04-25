@@ -130,21 +130,23 @@ export class Time extends Command {
 			);
 
 			reply({
-				content: `Differenza di tempo tra i due timestamp: **${formatDuration(
-					start.until(
-						time2 ?
-							Temporal.Instant.fromEpochMilliseconds(parseTimeValue(time2))
-						:	Temporal.Now.instant(),
-					),
-					{
-						locales: locale,
-						long,
-						relativeTo:
-							long || tz ?
-								start.toZonedDateTimeISO(tz ?? "Europe/Rome")
-							:	undefined,
-					},
-				)}**`,
+				content: `Differenza di tempo tra i due timestamp: **${
+					formatDuration(
+						start.until(
+							time2 ?
+								Temporal.Instant.fromEpochMilliseconds(parseTimeValue(time2))
+							:	Temporal.Now.instant(),
+						),
+						{
+							locales: locale,
+							long,
+							relativeTo:
+								long || tz ?
+									start.toZonedDateTimeISO(tz ?? "Europe/Rome")
+								:	undefined,
+						},
+					) || "⚡ nessuna differenza, più veloce di flash!"
+				}**`,
 			});
 		} catch (err) {
 			return reply({
