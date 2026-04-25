@@ -10,67 +10,92 @@ export enum TimeUnit {
 	Year = Day * 365.25,
 	Month = Year / 12,
 }
-export const formatTime = (ms: number): string => {
-	const sign = ms >= 0 ? "" : "-";
-	const hours = Math.floor((ms = Math.abs(ms)) / TimeUnit.Hour);
-	const last = `${Math.floor((ms % TimeUnit.Hour) / TimeUnit.Minute)
-		.toString()
-		.padStart(2, "0")}:${Math.floor((ms % TimeUnit.Minute) / TimeUnit.Second)
-		.toString()
-		.padStart(2, "0")}.${(ms % TimeUnit.Second).toString().padStart(3, "0")}`;
 
-	return `${sign}${
-		hours > 0 ? `${hours.toString().padStart(2, "0")}:` : ""
-	}${last}`;
+export const formatDuration = (
+	item: Temporal.Duration | Temporal.DurationLike | string,
+	{
+		long,
+		relativeTo = long ?
+			Temporal.Now.plainDateTimeISO("Europe/Rome").subtract(item)
+		:	undefined,
+		locales,
+		roundTo,
+		options = {},
+	}: {
+		relativeTo?:
+			| Temporal.PlainDateTime
+			| Temporal.ZonedDateTime
+			| Temporal.PlainDateTimeLike
+			| Temporal.ZonedDateTimeLike
+			| string;
+		locales?: Intl.LocalesArgument;
+		long?: boolean;
+		roundTo?: Partial<Extract<Temporal.DurationRoundTo, object>>;
+		options?: Partial<Temporal.DurationFormatOptions>;
+	} = {},
+) => {
+	const duration = Temporal.Duration.from(item).round({
+		largestUnit: long ? "year" : "day",
+		smallestUnit: "millisecond",
+		relativeTo,
+		...roundTo,
+	});
+
+	if (!long)
+		if (duration.days === 0) {
+			locales = "en";
+			options.style ??= "digital";
+			if (duration.hours === 0) options.hoursDisplay ??= "auto";
+		} else options.style ??= "narrow";
+	else options.style = "long";
+	return duration.toLocaleString(locales, options);
 };
 
-const formatTimeString = (
-	n: number,
-	singular: string,
-	plural = singular,
-): string => (n > 0 ? `${n} ${n === 1 ? singular : plural}` : "");
-export const formatLongTime = (ms: number): string =>
-	[
-		formatTimeString(Math.floor(ms / TimeUnit.Year), "anno", "anni"),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Year) / TimeUnit.Month),
-			"mese",
-			"mesi",
-		),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Month) / TimeUnit.Day),
-			"giorno",
-			"giorni",
-		),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Day) / TimeUnit.Hour),
-			"ora",
-			"ore",
-		),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Hour) / TimeUnit.Minute),
-			"minuto",
-			"minuti",
-		),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Minute) / TimeUnit.Second),
-			"secondo",
-			"secondi",
-		),
-	]
-		.filter(Boolean)
-		.join(", ") || "0 secondi";
-export const formatShortTime = (ms: number): string =>
-	formatTimeString(Math.floor(ms / TimeUnit.Year), "anno", "anni") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Month), "mese", "mesi") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Day), "giorno", "giorni") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Hour), "ora", "ore") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Minute), "minuto", "minuti") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Second), "secondo", "secondi") ||
-	"0 secondi";
+export const formatShortTime = (
+	item: Temporal.Duration | Temporal.DurationLike | string,
+	{
+		relativeTo = Temporal.Now.plainDateTimeISO("Europe/Rome").subtract(item),
+		locales,
+		options = {},
+	}: {
+		relativeTo?:
+			| Temporal.PlainDateTime
+			| Temporal.ZonedDateTime
+			| Temporal.PlainDateTimeLike
+			| Temporal.ZonedDateTimeLike
+			| string;
+		locales?: Intl.LocalesArgument;
+		options?: Partial<Temporal.DurationFormatOptions>;
+	} = {},
+): string => {
+	const duration = Temporal.Duration.from(item);
 
-export const idDiff = (id1: string, id2: string): number =>
-	Number((BigInt(id1) >> 22n) - (BigInt(id2) >> 22n));
+	return duration
+		.round({
+			smallestUnit: (
+				[
+					"years",
+					"months",
+					"weeks",
+					"days",
+					"hours",
+					"minutes",
+					"seconds",
+					"milliseconds",
+					"nanoseconds",
+					"microseconds",
+				] as const
+			).find((v) => duration[v]),
+			largestUnit: "auto",
+			relativeTo,
+		})
+		.toLocaleString(locales, { style: "long", ...options });
+};
+
+export const idDiff = (id1: string, id2: string) =>
+	Temporal.Instant.fromEpochMilliseconds(Number(BigInt(id1) >> 22n)).until(
+		Temporal.Instant.fromEpochMilliseconds(Number(BigInt(id2) >> 22n)),
+	);
 
 export const idToTimestamp = (id: string): number =>
 	Number((BigInt(id) >> 22n) + 1420070400000n);
@@ -100,7 +125,7 @@ export const parseTimeValue = (value: string): number => {
 	}
 };
 
-const parseNumber = (string?: string) => Number(string) || 0;
+const parseNumber = (string?: string) => Number(string) || undefined;
 
 export const parseDuration = (
 	str: string,
@@ -137,9 +162,9 @@ export const parseDuration = (
 				month:
 					match.groups.month ? Number(match.groups.month) : relativeTo.month,
 				day: match.groups.day ? Number(match.groups.day) : relativeTo.day,
-				hour: match.groups.hour ? Number(match.groups.hour) : undefined,
-				minute: match.groups.minute ? Number(match.groups.minute) : undefined,
-				second: match.groups.second ? Number(match.groups.second) : undefined,
+				hour: parseNumber(match.groups.hour),
+				minute: parseNumber(match.groups.minute),
+				second: parseNumber(match.groups.second),
 			});
 
 			return (

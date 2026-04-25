@@ -7,12 +7,12 @@ import {
 	type APIMessage,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { Temporal } from "temporal-polyfill";
 import Command from "../Command";
 import { rest } from "../util/globals";
 import { timeout } from "../util/node";
 import {
-	formatLongTime,
-	formatTime,
+	formatDuration,
 	idDiff,
 	idToTimestamp,
 	parseTimeValue,
@@ -62,6 +62,12 @@ export class Time extends Command {
 						name: "long",
 						description: "Usa un formato più lungo",
 						type: ApplicationCommandOptionType.Boolean,
+					},
+					{
+						name: "tz",
+						description:
+							"Fuso orario per il formato lungo (default: Europe/Rome)",
+						type: ApplicationCommandOptionType.String,
 					},
 				],
 			},
@@ -114,21 +120,38 @@ export class Time extends Command {
 	static compare = (
 		{ reply }: ChatInputReplies,
 		{
-			options: { time1, time2, long },
+			options: { time1, time2, long, tz },
+			interaction: { locale },
 		}: ChatInputArgs<typeof Time.chatInputData, "compare">,
 	) => {
-		const diff = Math.abs(
-			parseTimeValue(time1) - (time2 ? parseTimeValue(time2) : Date.now()),
-		);
+		try {
+			const start = Temporal.Instant.fromEpochMilliseconds(
+				parseTimeValue(time1),
+			);
 
-		if (Number.isNaN(diff))
+			reply({
+				content: `Differenza di tempo tra i due timestamp: **${formatDuration(
+					start.until(
+						time2 ?
+							Temporal.Instant.fromEpochMilliseconds(parseTimeValue(time2))
+						:	Temporal.Now.instant(),
+					),
+					{
+						locales: locale,
+						long,
+						relativeTo:
+							long || tz ?
+								start.toZonedDateTimeISO(tz ?? "Europe/Rome")
+							:	undefined,
+					},
+				)}**`,
+			});
+		} catch (err) {
 			return reply({
-				content: "Timestamp non validi!",
+				content: "Timestamp o fuso orario non validi!",
 				flags: MessageFlags.Ephemeral,
 			});
-		reply({
-			content: `Differenza di tempo tra i due timestamp: **${long ? formatLongTime(diff) : formatTime(diff)}**`,
-		});
+		}
 	};
 	static stop = (
 		{ reply, update }: ComponentReplies,
@@ -136,7 +159,7 @@ export class Time extends Command {
 	) =>
 		interaction.message.interaction_metadata?.user.id === id ?
 			update({
-				content: `Cronometro fermato dopo **${formatTime(idDiff(interaction.id, interaction.message.id))}**`,
+				content: `Cronometro fermato dopo **${formatDuration(idDiff(interaction.id, interaction.message.id), { locales: interaction.locale })}**`,
 				components: [],
 			})
 		:	reply({

@@ -29,7 +29,7 @@ export class Ping extends Command {
 		const { id, content } = (await rest.get(fullRoute)) as APIMessage;
 
 		return edit({
-			content: `${content}\n- Tempo totale: **${idDiff(id, interactionId)}ms**`,
+			content: `${content}\n- Tempo totale: **${idDiff(interactionId, id).total("millisecond")}ms**`,
 		});
 	}
 }
