@@ -1,3 +1,5 @@
+import { Temporal } from "temporal-polyfill";
+
 export enum TimeUnit {
 	Millisecond = 1,
 	Second = Millisecond * 1000,
@@ -8,67 +10,97 @@ export enum TimeUnit {
 	Year = Day * 365.25,
 	Month = Year / 12,
 }
-export const formatTime = (ms: number): string => {
-	const sign = ms >= 0 ? "" : "-";
-	const hours = Math.floor((ms = Math.abs(ms)) / TimeUnit.Hour);
-	const last = `${Math.floor((ms % TimeUnit.Hour) / TimeUnit.Minute)
-		.toString()
-		.padStart(2, "0")}:${Math.floor((ms % TimeUnit.Minute) / TimeUnit.Second)
-		.toString()
-		.padStart(2, "0")}.${(ms % TimeUnit.Second).toString().padStart(3, "0")}`;
 
-	return `${sign}${
-		hours > 0 ? `${hours.toString().padStart(2, "0")}:` : ""
-	}${last}`;
+export const formatDuration = (
+	item: Temporal.Duration | Temporal.DurationLike | string,
+	{
+		long,
+		relativeTo = long ?
+			Temporal.Now.plainDateTimeISO("Europe/Rome").subtract(item)
+		:	undefined,
+		locales,
+		roundTo,
+		options = {},
+	}: {
+		relativeTo?:
+			| Temporal.PlainDateTime
+			| Temporal.ZonedDateTime
+			| Temporal.PlainDateTimeLike
+			| Temporal.ZonedDateTimeLike
+			| string;
+		locales?: Intl.LocalesArgument;
+		long?: boolean;
+		roundTo?: Partial<Extract<Temporal.DurationRoundTo, object>>;
+		options?: Partial<Temporal.DurationFormatOptions>;
+	} = {},
+) => {
+	const duration = Temporal.Duration.from(item).round({
+		largestUnit: long ? "year" : "day",
+		smallestUnit: "nanoseconds",
+		relativeTo,
+		...roundTo,
+	});
+
+	if (!long)
+		if (duration.days === 0) {
+			locales = "en";
+			options.style ??= "digital";
+			if (duration.hours === 0) options.hoursDisplay ??= "auto";
+		} else {
+			options.style ??= "narrow";
+			options.hoursDisplay ??= "always";
+			options.minutesDisplay ??= "always";
+			options.secondsDisplay ??= "always";
+		}
+	else options.style ??= "long";
+	return duration.toLocaleString(locales, options);
 };
 
-const formatTimeString = (
-	n: number,
-	singular: string,
-	plural = singular,
-): string => (n > 0 ? `${n} ${n === 1 ? singular : plural}` : "");
-export const formatLongTime = (ms: number): string =>
-	[
-		formatTimeString(Math.floor(ms / TimeUnit.Year), "anno", "anni"),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Year) / TimeUnit.Month),
-			"mese",
-			"mesi",
-		),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Month) / TimeUnit.Day),
-			"giorno",
-			"giorni",
-		),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Day) / TimeUnit.Hour),
-			"ora",
-			"ore",
-		),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Hour) / TimeUnit.Minute),
-			"minuto",
-			"minuti",
-		),
-		formatTimeString(
-			Math.floor((ms % TimeUnit.Minute) / TimeUnit.Second),
-			"secondo",
-			"secondi",
-		),
-	]
-		.filter(Boolean)
-		.join(", ") || "0 secondi";
-export const formatShortTime = (ms: number): string =>
-	formatTimeString(Math.floor(ms / TimeUnit.Year), "anno", "anni") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Month), "mese", "mesi") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Day), "giorno", "giorni") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Hour), "ora", "ore") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Minute), "minuto", "minuti") ||
-	formatTimeString(Math.floor(ms / TimeUnit.Second), "secondo", "secondi") ||
-	"0 secondi";
+export const formatShortTime = (
+	item: Temporal.Duration | Temporal.DurationLike | string,
+	{
+		relativeTo = Temporal.Now.plainDateTimeISO("Europe/Rome").subtract(item),
+		locales,
+		options = {},
+	}: {
+		relativeTo?:
+			| Temporal.PlainDateTime
+			| Temporal.ZonedDateTime
+			| Temporal.PlainDateTimeLike
+			| Temporal.ZonedDateTimeLike
+			| string;
+		locales?: Intl.LocalesArgument;
+		options?: Partial<Temporal.DurationFormatOptions>;
+	} = {},
+): string => {
+	const duration = Temporal.Duration.from(item);
 
-export const idDiff = (id1: string, id2: string): number =>
-	Number((BigInt(id1) >> 22n) - (BigInt(id2) >> 22n));
+	return duration
+		.round({
+			smallestUnit: (
+				[
+					"years",
+					"months",
+					"weeks",
+					"days",
+					"hours",
+					"minutes",
+					"seconds",
+					"milliseconds",
+					"nanoseconds",
+					"microseconds",
+				] as const
+			).find((v) => duration[v]),
+			largestUnit: "auto",
+			relativeTo,
+		})
+		.toLocaleString(locales, { style: "long", ...options });
+};
+
+export const idDiff = (id1: string, id2: string) =>
+	Temporal.Instant.fromEpochMilliseconds(Number(BigInt(id1) >> 22n)).until(
+		Temporal.Instant.fromEpochMilliseconds(Number(BigInt(id2) >> 22n)),
+	);
 
 export const idToTimestamp = (id: string): number =>
 	Number((BigInt(id) >> 22n) + 1420070400000n);
@@ -98,58 +130,57 @@ export const parseTimeValue = (value: string): number => {
 	}
 };
 
-const parseNumber = (string?: string) => Number(string) || 0;
+const parseNumber = (string?: string) => Number(string) || undefined;
 
-export const parseTime = (str: string): number => {
-	str = str.trim().toLowerCase();
-	let match = str.match(
-		/^(?:(?<months>\d+)\s*(?:mos?|mesi|mese|months?))?\s*,?\s*e?\s*(?:(?<weeks>\d+)\s*(?:ws?|settimana|settimane|weeks?))?\s*,?\s*e?\s*(?:(?<days>\d+)\s*(?:ds?|giorni|giorno|days?|gg?))?\s*,?\s*e?\s*(?:(?<hours>\d+)\s*(?:hs?|ore|hours?|ore|ora|hrs?))?\s*,?\s*e?\s*(?:(?<minutes>\d+)\s*(?:mins?|minuti|minuto|minutes?|m))?\s*,?\s*e?\s*(?:(?<seconds>\d+)\s*(?:secs?|secondi|secondo|ss?|seconds?))?$/,
-	);
+export const parseDuration = (
+	str: string,
+	relativeTo = Temporal.Now.zonedDateTimeISO("Europe/Rome"),
+): Temporal.ZonedDateTime | null => {
+	try {
+		str = str.trim().toLowerCase();
+		let match = str.match(
+			/^(?:(?<years>\d+)\s*(?:ys?|anni|anno|years?))?\s*,?\s*e?\s*(?:(?<months>\d+)\s*(?:mos?|mesi|mese|months?))?\s*,?\s*e?\s*(?:(?<weeks>\d+)\s*(?:ws?|settimana|settimane|weeks?))?\s*,?\s*e?\s*(?:(?<days>\d+)\s*(?:ds?|giorni|giorno|days?|gg?))?\s*,?\s*e?\s*(?:(?<hours>\d+)\s*(?:hs?|ore|hours?|ore|ora|hrs?))?\s*,?\s*e?\s*(?:(?<minutes>\d+)\s*(?:mins?|minuti|minuto|minutes?|m))?\s*,?\s*e?\s*(?:(?<seconds>\d+)\s*(?:secs?|secondi|secondo|ss?|seconds?))?$/,
+		);
 
-	if (match?.groups)
-		return (
-			parseNumber(match.groups.months) * TimeUnit.Month +
-			parseNumber(match.groups.weeks) * TimeUnit.Week +
-			parseNumber(match.groups.days) * TimeUnit.Day +
-			parseNumber(match.groups.hours) * TimeUnit.Hour +
-			parseNumber(match.groups.minutes) * TimeUnit.Minute +
-			parseNumber(match.groups.seconds) * TimeUnit.Second
+		if (match?.groups)
+			return relativeTo.add({
+				years: parseNumber(match.groups.years),
+				months: parseNumber(match.groups.months),
+				weeks: parseNumber(match.groups.weeks),
+				days: parseNumber(match.groups.days),
+				hours: parseNumber(match.groups.hours),
+				minutes: parseNumber(match.groups.minutes),
+				seconds: parseNumber(match.groups.seconds),
+			});
+		match = str.match(
+			/^(?:(?<day>\d{1,2})[/-](?<month>\d{1,2})(?:[/-](?<year>\d{2}|\d{4}))?)?\s*,?\s*(?:(?<hour>\d{1,2}):(?<minute>\d{1,2})(?::(?<second>\d{1,2}))?)?$/,
 		);
-	match = str.match(
-		/^(?:(?<day>\d{1,2})\/(?<month>\d{1,2})(?:\/(?<year>\d{2}|\d{4}))?)?\s*,?\s*(?:(?<hours>\d{1,2}):(?<minutes>\d{1,2})(?::(?<seconds>\d{1,2}))?)?$/,
-	);
-	if (match?.groups) {
-		const date = new Date();
-		const now = date.getTime();
-		let year = parseNumber(match.groups.year);
+		if (match?.groups) {
+			const target = Temporal.ZonedDateTime.from({
+				timeZone: relativeTo,
+				year:
+					match.groups.year ?
+						match.groups.year.length === 4 ?
+							Number(match.groups.year)
+						:	Number(match.groups.year) + 2000
+					:	relativeTo.year,
+				month:
+					match.groups.month ? Number(match.groups.month) : relativeTo.month,
+				day: match.groups.day ? Number(match.groups.day) : relativeTo.day,
+				hour: parseNumber(match.groups.hour),
+				minute: parseNumber(match.groups.minute),
+				second: parseNumber(match.groups.second),
+			});
 
-		if (year > 0 && year < 1_000)
-			year += Math.floor(date.getUTCFullYear() / 1_000);
-		date.setUTCFullYear(
-			year || date.getUTCFullYear(),
-			Number(match.groups.month) - 1 || date.getUTCMonth(),
-			parseNumber(match.groups.day) || date.getUTCDate(),
-		);
-		date.setUTCHours(
-			parseNumber(match.groups.hours),
-			parseNumber(match.groups.minutes),
-			parseNumber(match.groups.seconds),
-			0,
-		);
-		match = new Intl.DateTimeFormat("it", {
-			timeZoneName: "longOffset",
-			timeZone: "Europe/Rome",
-			month: "numeric",
-		})
-			.format(date)
-			.match(/(\+|-)(\d{2}):(\d{2})$/)!;
-		date.setUTCMinutes(
-			date.getUTCMinutes() -
-				(match[1] === "+" ? 1 : -1) *
-					(Number(match[2]) * 60 + Number(match[3])),
-		);
-		if (date.getTime() < now) date.setUTCDate(date.getUTCDate() + 1);
-		return date.getTime() - now;
+			return (
+					match.groups.day ||
+						Temporal.ZonedDateTime.compare(target, relativeTo) > 0
+				) ?
+					target
+				:	target.add({ days: 1 });
+		}
+	} catch {
+		// Invalid user-provided duration strings are expected parse failures.
 	}
-	return 0;
+	return null;
 };

@@ -4,7 +4,7 @@ import {
 	type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import { formatTime } from "../util/time";
+import { formatDuration } from "../util/time";
 
 export class EditedAfter extends Command {
 	static override contextMenuData = [
@@ -19,7 +19,7 @@ export class EditedAfter extends Command {
 
 		if (message?.edited_timestamp)
 			reply({
-				content: `Messaggio modificato dopo **${formatTime(Date.parse(message.edited_timestamp) - Date.parse(message.timestamp))}**`,
+				content: `Messaggio modificato dopo **${formatDuration({ milliseconds: Date.parse(message.edited_timestamp) - Date.parse(message.timestamp) }, { locales: interaction.locale, options: { fractionalDigits: 3 } })}**`,
 			});
 		else
 			reply({

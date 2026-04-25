@@ -13,13 +13,14 @@ import {
 	type RESTPutAPIApplicationGuildCommandsJSONBody,
 } from "discord-api-types/v10";
 import type { SessionState, Settings } from "node:http2";
+import { Temporal } from "temporal-polyfill";
 import Command from "../Command";
 import { SupercellPlayerType } from "../util/Constants";
 import { rest } from "../util/globals";
 import normalizeError from "../util/normalizeError";
 import { toSearchParams } from "../util/objects";
 import { template } from "../util/strings";
-import { parseTime } from "../util/time";
+import { parseDuration, TimeUnit } from "../util/time";
 import * as commandsObj from "./index";
 
 export class Dev extends Command {
@@ -380,8 +381,10 @@ export class Dev extends Command {
 					(options.duration ?
 						options.duration === "Infinity" ?
 							Infinity
-						:	parseTime(options.duration)
-					:	0) || 24 * 60 * 60 * 1000,
+						:	parseDuration(options.duration)
+								?.since(Temporal.Now.zonedDateTimeISO("Europe/Rome"))
+								.total("millisecond")
+					:	0) || TimeUnit.Day,
 				interaction: {
 					application_id: interaction.application_id,
 					token: interaction.token,
