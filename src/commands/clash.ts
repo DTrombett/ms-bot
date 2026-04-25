@@ -1013,7 +1013,7 @@ export class Clash extends Command {
 		locale: Locale,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		const now = Temporal.Now.zonedDateTimeISO("UTC");
-		const inactiveTime = now.subtract({ days: 7 });
+		const inactiveTime = now.subtract({ days: 7 }).epochMilliseconds;
 		const memberTrophies: number[] = [];
 		const memberLevels: number[] = [];
 		const staff: {
@@ -1051,13 +1051,7 @@ export class Clash extends Command {
 							Membri: **${memberTrophies.length.toLocaleString(locale)}**
 							Inattivi: **${
 								clan.memberList.filter(
-									(m) =>
-										Temporal.ZonedDateTime.compare(
-											inactiveTime,
-											Temporal.Instant.fromEpochMilliseconds(
-												Clash.parseAPIDate(m.lastSeen),
-											).toZonedDateTimeISO("UTC"),
-										) > 0,
+									(m) => inactiveTime >= Clash.parseAPIDate(m.lastSeen),
 								).length
 							}**
 							`,
@@ -1133,23 +1127,22 @@ export class Clash extends Command {
 							type: ComponentType.StringSelect,
 							custom_id: "clash-player",
 							placeholder: "Visualizza un membro...",
-							options: clan.memberList
-								.slice(0, 25)
-								.map((m) => ({
+							options: clan.memberList.slice(0, 25).map((m) => {
+								const inactive = Temporal.Instant.fromEpochMilliseconds(
+									Clash.parseAPIDate(m.lastSeen),
+								).toZonedDateTimeISO("UTC");
+
+								return {
 									label: `${m.clanRank}. ${m.name}`,
 									value: m.tag,
 									description: `➡️${m.donations} 🏆${m.trophies.toLocaleString(
 										locale,
 									)} 🕓${
 										formatShortTime(
-											now
-												.since(
-													Temporal.Instant.fromEpochMilliseconds(
-														Clash.parseAPIDate(m.lastSeen),
-													).toZonedDateTimeISO("UTC"),
-												)
+											inactive
+												.until(now)
 												.round({
-													relativeTo: now,
+													relativeTo: inactive,
 													largestUnit: "years",
 													smallestUnit: "minutes",
 												}),
@@ -1157,7 +1150,8 @@ export class Clash extends Command {
 										) || "poco"
 									} fa`,
 									emoji: { name: MemberEmoji[toUpperCase(m.role)] ?? "👤" },
-								})),
+								};
+							}),
 						},
 					],
 				},
