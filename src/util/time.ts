@@ -179,8 +179,8 @@ export const parseDuration = (
 					target
 				:	target.add({ days: 1 });
 		}
-	} catch (err) {
-		console.error(err);
+	} catch {
+		// Invalid user-provided duration strings are expected parse failures.
 	}
 	return null;
 };
