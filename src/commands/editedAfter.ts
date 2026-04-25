@@ -19,7 +19,7 @@ export class EditedAfter extends Command {
 
 		if (message?.edited_timestamp)
 			reply({
-				content: `Messaggio modificato dopo **${formatDuration({ milliseconds: Date.parse(message.edited_timestamp) - Date.parse(message.timestamp) }, { locales: interaction.locale })}**`,
+				content: `Messaggio modificato dopo **${formatDuration({ milliseconds: Date.parse(message.edited_timestamp) - Date.parse(message.timestamp) }, { locales: interaction.locale, options: { fractionalDigits: 3 } })}**`,
 			});
 		else
 			reply({

@@ -144,6 +144,7 @@ export class Time extends Command {
 								long || tz ?
 									start.toZonedDateTimeISO(tz ?? "Europe/Rome")
 								:	undefined,
+							options: { fractionalDigits: 3 },
 						},
 					) || "⚡ nessuna differenza, più veloce di flash!"
 				}**`,
@@ -161,7 +162,7 @@ export class Time extends Command {
 	) =>
 		interaction.message.interaction_metadata?.user.id === id ?
 			update({
-				content: `Cronometro fermato dopo **${formatDuration(idDiff(interaction.message.id, interaction.id), { locales: interaction.locale })}**`,
+				content: `Cronometro fermato dopo **${formatDuration(idDiff(interaction.message.id, interaction.id), { locales: interaction.locale, options: { fractionalDigits: 3 } })}**`,
 				components: [],
 			})
 		:	reply({
