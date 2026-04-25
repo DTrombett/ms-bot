@@ -161,7 +161,7 @@ export class Time extends Command {
 	) =>
 		interaction.message.interaction_metadata?.user.id === id ?
 			update({
-				content: `Cronometro fermato dopo **${formatDuration(idDiff(interaction.id, interaction.message.id), { locales: interaction.locale })}**`,
+				content: `Cronometro fermato dopo **${formatDuration(idDiff(interaction.message.id, interaction.id), { locales: interaction.locale })}**`,
 				components: [],
 			})
 		:	reply({
