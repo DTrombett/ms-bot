@@ -38,6 +38,7 @@ export class Remind extends Command {
 						description: "Tra quanto tempo te lo dovrò ricordare (es. 1d3h)",
 						type: ApplicationCommandOptionType.String,
 						required: true,
+						max_length: 1000,
 					},
 					{
 						name: "tz",

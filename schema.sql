@@ -25,7 +25,7 @@ CREATE TABLE Predictions (
 );
 CREATE TABLE Reminders (
 	id TEXT NOT NULL,
-	date TEXT NOT NULL,
+	timestamp INTEGER NOT NULL,
 	userId TEXT NOT NULL,
 	remind TEXT NOT NULL,
 	PRIMARY KEY (id, userId)
