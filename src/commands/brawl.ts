@@ -705,6 +705,7 @@ export class Brawl extends Command {
 		404: "Dati non trovati.",
 		429: "Limite di richieste API raggiunto.",
 		500: "Errore interno dell'API.",
+		502: "Si è verificato un errore temporaneo, riprova!",
 		503: "Manutenzione in corso!",
 	};
 	static override chatInputData = {
