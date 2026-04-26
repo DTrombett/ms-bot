@@ -699,13 +699,16 @@ export class Tournament extends Command {
 			const battleLog = (await Brawl.getBattleLog(match.user1Tag))
 				.filter(
 					(b) =>
-						b.event.mode === resolvedMode &&
+						b.battle.mode === resolvedMode &&
 						(b.battle.result === "defeat" || b.battle.result === "victory") &&
-						b.battle.teams.every(
+						(b.battle.teams?.every(
 							(t) =>
 								t.length === 1 &&
 								[match.user1Tag, match.user2Tag].includes(t[0]?.tag),
-						),
+						) ??
+							b.battle.players?.every((t) =>
+								[match.user1Tag, match.user2Tag].includes(t.tag),
+							)),
 				)
 				.reverse()
 				.slice(0, round.bof);

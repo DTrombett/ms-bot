@@ -1247,7 +1247,8 @@ declare global {
 			duration: number;
 			trophyChange: number;
 			starPlayer: BattlePlayer;
-			teams: BattlePlayer[][];
+			teams?: BattlePlayer[][];
+			players?: BattlePlayer[];
 		};
 		type Paginated<T> = {
 			items: T[];
