@@ -34,17 +34,28 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
-		this.tournamentId = event.payload.id;
-		const tournament = await step.do("Get tournament data", () =>
-			this.env.DB.prepare(`SELECT * FROM Tournaments WHERE id = ?`)
+		try {
+			this.tournamentId = event.payload.id;
+			// Don't use a step so the data is updated every time the workflow wakes up
+			const tournament = await this.env.DB.prepare(
+				`SELECT * FROM Tournaments WHERE id = ?`,
+			)
 				.bind(this.tournamentId)
-				.first<Database.Tournament>(),
-		);
+				.first<Database.Tournament>();
 
-		ok(tournament, "Tournament not found");
-		await this.sendRegistrationMessage(tournament, step);
-		await this.createBrackets(tournament, step);
-		await this.createChannels(tournament, step);
+			ok(tournament, "Tournament not found");
+			await this.sendRegistrationMessage(tournament, step);
+			await this.createBrackets(tournament, step);
+			await this.createChannels(tournament, step);
+		} catch (err) {
+			this.sendError(
+				step,
+				this.env.STATUS_CHANNEL,
+				err,
+				`Errore fatale durante la gestione del torneo ${event.payload.id}`,
+			);
+			throw err;
+		}
 	}
 
 	private async sendRegistrationMessage(
@@ -187,7 +198,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					"Save participants",
 					this.saveParticipants(participants),
 				);
-			this.log(step, tournament.logChannel, {
+			this.log(step, tournament.logChannel, "Brackets create", {
 				type: ComponentType.TextDisplay,
 				content: `## Brackets create!\nhttps://ms-bot.trombett.org/tournaments/${this.tournamentId}`,
 			});
@@ -382,8 +393,10 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			step.do(`Create round ${round}`, this.createRound(round, oldMatches)),
 			flags & TournamentFlags.AutoDeleteChannels &&
 				batch.length &&
-				this.env.DELETE_CHANNELS.createBatch(batch)
-					.then(() => {})
+				step
+					.do(`Delete channels from round ${round + 1}`, () =>
+						this.env.DELETE_CHANNELS.createBatch(batch).then(() => {}),
+					)
 					.catch(console.error),
 		]);
 
@@ -557,10 +570,11 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 	private log = (
 		step: WorkflowStep,
 		channelId: string,
+		name: string,
 		...components: APIMessageTopLevelComponent[]
 	) =>
 		this.ctx.waitUntil(
-			step.do<void>(`Send message in logs channel ${crypto.randomUUID()}`, () =>
+			step.do<void>(name, () =>
 				rest
 					.post(Routes.channelMessages(channelId), {
 						body: {
