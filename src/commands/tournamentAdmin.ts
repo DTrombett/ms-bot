@@ -1,3 +1,4 @@
+import { DiscordAPIError } from "@discordjs/rest";
 import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
@@ -6,15 +7,19 @@ import {
 	ComponentType,
 	MessageFlags,
 	PermissionFlagsBits,
+	Routes,
+	type RESTGetAPIGuildMemberResult,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
 import { DBMatchStatus, TournamentStatusFlags } from "../util/Constants";
+import { rest } from "../util/globals";
+import normalizeError from "../util/normalizeError";
 import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
 
-export class TournamentManage extends Command {
+export class TournamentAdmin extends Command {
 	static override chatInputData = {
-		name: "tournament-manage",
+		name: "tournament-admin",
 		description: "Gestisci i tornei",
 		default_member_permissions: String(PermissionFlagsBits.ManageGuild),
 		type: ApplicationCommandType.ChatInput,
@@ -54,13 +59,27 @@ export class TournamentManage extends Command {
 					},
 				],
 			},
+			{
+				type: ApplicationCommandOptionType.Subcommand,
+				name: "members",
+				description:
+					"Controlla che tutti gli iscritti siano nel server con il ruolo. Esegui solo se necessario!",
+				options: [
+					{
+						type: ApplicationCommandOptionType.Number,
+						name: "tournament",
+						description: "L'id del torneo",
+						required: true,
+					},
+				],
+			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static advance = async (
 		{ defer, edit }: ChatInputReplies,
 		{
 			options: { tournament },
-		}: ChatInputArgs<typeof TournamentManage.chatInputData, "advance">,
+		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "advance">,
 	) => {
 		defer();
 		const { results } = await env.DB.prepare(
@@ -121,6 +140,90 @@ export class TournamentManage extends Command {
 			],
 		});
 	};
+	static members = async (
+		{ edit, reply }: ChatInputReplies,
+		{
+			options: { tournament },
+		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "members">,
+	) => {
+		const [
+			{
+				results: [{ registrationRole } = {}],
+			},
+			{ results },
+		] = (await env.DB.batch([
+			env.DB.prepare(
+				`SELECT registrationRole FROM Tournaments WHERE id = ?`,
+			).bind(tournament),
+			env.DB.prepare(
+				`SELECT userId FROM Participants WHERE tournamentId = ?`,
+			).bind(tournament),
+		])) as [
+			D1Result<Pick<Database.Tournament, "registrationRole">>,
+			D1Result<Pick<Database.Participant, "userId">>,
+		];
+		if (!registrationRole)
+			return reply({
+				content: "Torneo non trovato!",
+				flags: MessageFlags.Ephemeral,
+			});
+		if (!results.length)
+			return reply({
+				content: "Questo torneo non ha iscritti!",
+				flags: MessageFlags.Ephemeral,
+			});
+		const signal = AbortSignal.timeout(25_000);
+		const values: Promise<unknown>[] = [];
+		const toRemove: string[] = [];
+		const errors: Error[] = [];
+		let count = 0;
+
+		reply({ content: `Sto analizzando ${results.length} iscritti...` });
+		for (const { userId } of results)
+			try {
+				count++;
+				if (signal.aborted) break;
+				const { roles } = (await rest.get(
+					Routes.guildMember(env.MAIN_GUILD, userId),
+					{ signal },
+				)) as RESTGetAPIGuildMemberResult;
+
+				if (!roles.includes(registrationRole))
+					values.push(
+						rest.put(
+							Routes.guildMemberRole(env.MAIN_GUILD, userId, registrationRole),
+							{ signal, reason: "Controllo membri senza ruolo torneo" },
+						),
+					);
+			} catch (err) {
+				if (err instanceof DiscordAPIError && err.code == 10007)
+					toRemove.push(userId);
+				else errors.push(normalizeError(err));
+			}
+		if (toRemove.length)
+			values.push(
+				env.DB.prepare(
+					`DELETE FROM Participants WHERE userId IN (${new Array(toRemove.length).fill("?").join(",")})`,
+				)
+					.bind(...toRemove)
+					.first(),
+			);
+		errors.push(
+			...(await Promise.allSettled(values))
+				.filter((v) => v.status === "rejected")
+				.map((v) => normalizeError(v.reason)),
+		);
+		return edit({
+			content: `Analizzati ${count}/${results.length} iscritti!\nSono stati rimossi ${toRemove.length} iscritti.\n${
+				errors.length ?
+					`Si sono verificati ${errors.length} errori:\n${errors
+						.map((e) => `${e.name}: ${e.message}`)
+						.join("\n")
+						.slice(0, 1900)}`
+				:	""
+			}`,
+		});
+	};
 	static abandoned = async (
 		{ defer, edit, reply }: ChatInputReplies,
 		{
@@ -129,7 +232,7 @@ export class TournamentManage extends Command {
 				channel: { id: channelId },
 			},
 			user: { id: userId },
-		}: ChatInputArgs<typeof TournamentManage.chatInputData, "abandoned">,
+		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "abandoned">,
 	) => {
 		if (remove && winner)
 			return reply({
