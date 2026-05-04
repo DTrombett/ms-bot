@@ -162,8 +162,8 @@ export class TournamentAdmin extends Command {
 			).bind(tournament),
 			env.DB.prepare(
 				`
-					SELECT userId FROM Participants
-					WHERE tournamentId = ?1 LIMIT 25 OFFSET ?2
+					SELECT userId FROM Participants WHERE tournamentId = ?1
+					ORDER BY userId LIMIT 25 OFFSET ?2
 				`,
 			).bind(tournament, offset ?? 0),
 		])) as [
@@ -211,9 +211,9 @@ export class TournamentAdmin extends Command {
 		if (toRemove.length)
 			values.push(
 				env.DB.prepare(
-					`DELETE FROM Participants WHERE userId IN (${new Array(toRemove.length).fill("?").join(",")})`,
+					`DELETE FROM Participants WHERE tournamentId = ? AND userId IN (${new Array(toRemove.length).fill("?").join(",")})`,
 				)
-					.bind(...toRemove)
+					.bind(tournament, ...toRemove)
 					.first(),
 			);
 		errors.push(
@@ -222,12 +222,17 @@ export class TournamentAdmin extends Command {
 				.map((v) => normalizeError(v.reason)),
 		);
 		return edit({
-			content: `Analizzati ${count} iscritti!\nSono stati rimossi ${toRemove.length} iscritti.\n${
+			content: `Analizzati ${count} iscritti!${
+				toRemove.length ?
+					`\nSono stati rimossi i seguenti iscritti: ${toRemove
+						.map((id) => `<@${id}>`)
+						.join(", ")}`
+				:	""
+			}${
 				errors.length ?
-					`Si sono verificati ${errors.length} errori:\n${errors
+					`\nSi sono verificati ${errors.length} errori:\n${errors
 						.map((e) => `${e.name}: ${e.message}`)
-						.join("\n")
-						.slice(0, 1900)}`
+						.join("\n")}`
 				:	""
 			}`,
 		});
