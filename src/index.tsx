@@ -678,7 +678,9 @@ const server: ExportedHandler<Env> = {
 								token.i,
 								data.registrationRole,
 							),
-							{ reason: `Iscrizione al torneo ${tournament.name}` },
+							{
+								reason: `Iscrizione al torneo ${tournament.name}${tournament.tag ? ` come ${tournament.tag}` : ""} (${data.participantCount} iscritti totali)`,
+							},
 						),
 					editMessage(data),
 				]);
@@ -1060,7 +1062,7 @@ const server: ExportedHandler<Env> = {
 								tournament.registrationRole,
 							),
 							{
-								reason: `Iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
+								reason: `Iscrizione al torneo ${tournament.name}${data.tag ? ` come ${data.tag}` : ""} da parte di ${token.u} (${tournament.participantCount} iscritti totali)`,
 							},
 						),
 					editMessage(tournament),

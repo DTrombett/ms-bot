@@ -54,7 +54,7 @@ const editChannel = async (
 					}).slice(0, 100)
 				:	undefined,
 			parent_id: tournament.endedCategoryId ?? undefined,
-			position: 49 + 2 ** (Math.floor(Math.log2(match.id + 1)) + 1),
+			position: 99 + 2 ** (Math.floor(Math.log2(match.id + 1)) + 1),
 		} satisfies RESTPatchAPIChannelJSONBody,
 	});
 };

@@ -24,4 +24,4 @@ export * from "./search";
 export * from "./share";
 export * from "./time";
 export * from "./tournament";
-export * from "./tournamentManage";
+export * from "./tournamentAdmin";
