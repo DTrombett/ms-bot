@@ -269,7 +269,6 @@ const ListUI = ({
 								flex: 1,
 								marginLeft: mobile && !selection ? "1rem" : "0.5rem",
 								transitionProperty: "none",
-								userSelect: "none",
 							}}
 							onTouchStart={(event) => {
 								const input = event.currentTarget.parentElement
@@ -297,7 +296,10 @@ const ListUI = ({
 							onTouchCancel={() => clearTimeout(timeout.current)}>
 							<span>{p.name ?? p.tag ?? p.userId}</span>
 							<div style={{ fontSize: "0.75rem", lineHeight: "1rem" }}>
-								{p.tag}
+								<span>{p.tag}</span>
+								<span style={{ fontFamily: "ggsans", marginLeft: "0.25rem" }}>
+									({p.userId})
+								</span>
 							</div>
 						</div>
 						{admin && (
