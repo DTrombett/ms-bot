@@ -57,17 +57,17 @@ export class Dev extends Command {
 				type: ApplicationCommandOptionType.Subcommand,
 				options: [
 					{
-						type: ApplicationCommandOptionType.Channel,
-						name: "channel",
-						description:
-							"Il canale in cui mandare il messaggio (default: canale corrente)",
-					},
-					{
 						type: ApplicationCommandOptionType.String,
 						name: "content",
 						description: "Il contenuto del messaggio",
 						required: true,
 						max_length: 2000,
+					},
+					{
+						type: ApplicationCommandOptionType.Channel,
+						name: "channel",
+						description:
+							"Il canale in cui mandare il messaggio (default: canale corrente)",
 					},
 					{
 						type: ApplicationCommandOptionType.String,
