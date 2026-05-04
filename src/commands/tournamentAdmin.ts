@@ -71,6 +71,11 @@ export class TournamentAdmin extends Command {
 						description: "L'id del torneo",
 						required: true,
 					},
+					{
+						type: ApplicationCommandOptionType.Number,
+						name: "offset",
+						description: "Quanti partecipanti saltare",
+					},
 				],
 			},
 		],
@@ -143,7 +148,7 @@ export class TournamentAdmin extends Command {
 	static members = async (
 		{ edit, reply }: ChatInputReplies,
 		{
-			options: { tournament },
+			options: { tournament, offset },
 		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "members">,
 	) => {
 		const [
@@ -153,11 +158,14 @@ export class TournamentAdmin extends Command {
 			{ results },
 		] = (await env.DB.batch([
 			env.DB.prepare(
-				`SELECT registrationRole FROM Tournaments WHERE id = ?`,
+				`SELECT registrationRole FROM Tournaments WHERE id = ?1`,
 			).bind(tournament),
 			env.DB.prepare(
-				`SELECT userId FROM Participants WHERE tournamentId = ?`,
-			).bind(tournament),
+				`
+					SELECT userId FROM Participants
+					WHERE tournamentId = ?1 LIMIT 25 OFFSET ?2
+				`,
+			).bind(tournament, offset ?? 0),
 		])) as [
 			D1Result<Pick<Database.Tournament, "registrationRole">>,
 			D1Result<Pick<Database.Participant, "userId">>,
@@ -214,7 +222,7 @@ export class TournamentAdmin extends Command {
 				.map((v) => normalizeError(v.reason)),
 		);
 		return edit({
-			content: `Analizzati ${count}/${results.length} iscritti!\nSono stati rimossi ${toRemove.length} iscritti.\n${
+			content: `Analizzati ${count} iscritti!\nSono stati rimossi ${toRemove.length} iscritti.\n${
 				errors.length ?
 					`Si sono verificati ${errors.length} errori:\n${errors
 						.map((e) => `${e.name}: ${e.message}`)
