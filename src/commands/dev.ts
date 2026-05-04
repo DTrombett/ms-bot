@@ -66,6 +66,8 @@ export class Dev extends Command {
 						type: ApplicationCommandOptionType.String,
 						name: "content",
 						description: "Il contenuto del messaggio",
+						required: true,
+						max_length: 2000,
 					},
 					{
 						type: ApplicationCommandOptionType.String,
