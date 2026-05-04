@@ -297,7 +297,7 @@ export class Tournament extends Command {
 				rest.put(
 					Routes.guildMemberRole(env.MAIN_GUILD, userId, data.registrationRole),
 					{
-						reason: `Iscrizione al torneo ${tournament.name} (${data.participantCount} iscritti totali)`,
+						reason: `Iscrizione al torneo${tag ? ` come ${tag}` : ""} ${tournament.name} (${data.participantCount} iscritti totali)`,
 					},
 				),
 			editMessage(data),
