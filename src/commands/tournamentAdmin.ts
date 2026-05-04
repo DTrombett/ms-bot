@@ -172,7 +172,7 @@ export class TournamentAdmin extends Command {
 		];
 		if (!registrationRole)
 			return reply({
-				content: "Torneo non trovato!",
+				content: "Torneo non trovato o senza ruolo!",
 				flags: MessageFlags.Ephemeral,
 			});
 		if (!results.length)
