@@ -4,10 +4,13 @@ import {
 	ApplicationCommandType,
 	ComponentType,
 	MessageFlags,
+	MessageReferenceType,
 	Routes,
 	type APIApplicationCommand,
 	type RESTGetAPIGuildChannelsResult,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
+	type RESTPostAPIChannelMessageJSONBody,
+	type RESTPostAPIChannelMessageResult,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationGuildCommandsJSONBody,
@@ -45,6 +48,36 @@ export class Dev extends Command {
 						type: ApplicationCommandOptionType.Number,
 						name: "page",
 						description: "La pagina (default 0)",
+					},
+				],
+			},
+			{
+				name: "send",
+				description: "Send a message as the bot",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "content",
+						description: "Il contenuto del messaggio",
+						required: true,
+						max_length: 2000,
+					},
+					{
+						type: ApplicationCommandOptionType.Channel,
+						name: "channel",
+						description:
+							"Il canale in cui mandare il messaggio (default: canale corrente)",
+					},
+					{
+						type: ApplicationCommandOptionType.String,
+						name: "reply",
+						description: "L'id del messaggio a cui rispondere",
+					},
+					{
+						type: ApplicationCommandOptionType.Boolean,
+						name: "tts",
+						description: "Se mandare il messaggio come tts",
 					},
 				],
 			},
@@ -358,6 +391,40 @@ export class Dev extends Command {
 
 		await edit({
 			content: `Private commands: \`${privateAPICommands instanceof Error ? privateAPICommands.message : privateAPICommands.map((c) => c.name).join(", ")}\`\nPublic commands: \`${publicAPICommands instanceof Error ? publicAPICommands.message : publicAPICommands.map((c) => c.name).join(", ")}\``,
+		});
+	};
+	static "send" = async (
+		{ defer, edit }: ChatInputReplies,
+		{
+			options,
+			interaction: {
+				channel: { id: channelId },
+			},
+		}: ChatInputArgs<typeof Dev.chatInputData, "send">,
+	) => {
+		defer({ flags: MessageFlags.Ephemeral });
+		const message = (await rest
+			.post(Routes.channelMessages(options.channel ?? channelId), {
+				body: {
+					content: options.content,
+					message_reference:
+						options.reply ?
+							{
+								type: MessageReferenceType.Default,
+								message_id: options.reply,
+								fail_if_not_exists: false,
+							}
+						:	undefined,
+					tts: options.tts,
+				} satisfies RESTPostAPIChannelMessageJSONBody,
+			})
+			.catch(normalizeError)) as RESTPostAPIChannelMessageResult | Error;
+
+		return edit({
+			content:
+				message instanceof Error ?
+					`\`\`\`\n${message.stack ?? `${message.name}: ${message.message}`}\n\`\`\``
+				:	`https://discord.com/channels/@me/${message.channel_id}/${message.id}`,
 		});
 	};
 	static shorten = async (
