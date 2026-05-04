@@ -394,7 +394,6 @@ declare global {
 			categoryId?: string | null;
 			channelName?: string | null;
 			channelsTime?: number | null;
-			endedCategoryId?: string | null;
 			endedChannelName?: string | null;
 			matchMessageLink?: string | null;
 			minPlayers?: number | null;
@@ -426,6 +425,7 @@ declare global {
 			tournamentId: number;
 			status: DBMatchStatus;
 			channelId?: string | null;
+			messageSent: boolean;
 			result1?: number | null;
 			result2?: number | null;
 		};

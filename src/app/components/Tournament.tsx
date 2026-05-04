@@ -243,7 +243,7 @@ export default ({
 				/>
 				<DateTimeInput
 					name="autoChannels"
-					label="Crea canali automaticamente"
+					label="Crea thread automaticamente"
 					defaultValue={
 						tournament?.channelsTime ?
 							Temporal.Instant.fromEpochMilliseconds(
@@ -274,7 +274,7 @@ export default ({
 							id: "once",
 						},
 						{
-							label: "Crea canali il prima possibile",
+							label: "Crea scontri il prima possibile",
 							value: TournamentRoundMode.Fast,
 							id: "fast",
 						},
@@ -290,56 +290,67 @@ export default ({
 					}
 				/>
 				<CheckboxInput
-					label="Elimina automaticamente i canali al termine del round (finale esclusa)"
-					name="autoDeleteChannels"
+					label="Chiudi automaticamente i thread al termine della partita"
+					name="autoArchive"
 					defaultChecked={
 						tournament ?
-							(tournament.flags & TournamentFlags.AutoDeleteChannels) !== 0
+							(tournament.flags & TournamentFlags.AutoArchive) !== 0
 						:	true
 					}
 				/>
+				<CheckboxInput
+					label="Chiudi e blocca automaticamente i thread al termine del round"
+					name="autoLock"
+					defaultChecked={
+						tournament ?
+							(tournament.flags & TournamentFlags.AutoLock) !== 0
+						:	true
+					}
+				/>
+				<CheckboxInput
+					label="Elimina i thread al termine del torneo (finale esclusa)"
+					name="autoDeleteChannels"
+					defaultChecked={
+						tournament ?
+							(tournament.flags & TournamentFlags.AutoLock) !== 0
+						:	false
+					}
+				/>
 				<TextInput
-					label="Nome canali partite"
+					label="Nome thread scontri"
 					name="channelName"
-					placeholder="Il nome da assegnare ai canali delle partite"
+					placeholder="Il nome da assegnare ai thread delle partite"
 					maxWidth="18.25rem"
 					note="Puoi usare i placeholder {matchId} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
 					defaultValue={
 						tournament ?
 							(tournament.channelName ?? undefined)
-						:	"{matchId}-{player1}-vs-{player2}"
+						:	"{matchId}: {player1} VS {player2}"
 					}
 				/>
 				<TextInput
-					label="Nome canali partite concluse"
+					label="Nome thread scontri terminati"
 					name="endedChannelName"
-					placeholder="Il nome da assegnare ai canali delle partite concluse"
+					placeholder="Il nome da assegnare ai thread delle partite terminate"
 					maxWidth="22.25rem"
 					note="Puoi usare i placeholder {matchId} {tag1} {id1} {player1} {username1} (stessa cosa per 2 etc.)"
-					defaultValue={tournament?.endedChannelName ?? undefined}
+					defaultValue={
+						tournament ?
+							(tournament.endedChannelName ?? undefined)
+						:	"!{matchId}: {player1} VS {player2}"
+					}
 				/>
 				<TextInput
-					label="ID categoria canali"
+					label="ID canale torneo"
 					name="categoryId"
-					placeholder="L'ID della categoria dove creare i canali"
+					placeholder="L'ID del canale dove creare i thread"
 					pattern="\d{16,32}"
 					errorMessage="ID non valido"
-					maxWidth="16.625rem"
-					note="Impostando una categoria potresti incappare nel limite canali"
 					defaultValue={tournament?.categoryId ?? undefined}
 				/>
 				<TextInput
-					label="ID categoria canali partite concluse"
-					name="endedCategoryId"
-					placeholder="L'ID della categoria dove spostare i canali delle partite concluse"
-					pattern="\d{16,32}"
-					errorMessage="ID non valido"
-					maxWidth="27.25rem"
-					defaultValue={tournament?.endedCategoryId ?? undefined}
-				/>
-				<TextInput
 					name="matchMessageLink"
-					label="Link al messaggio da mandare nei canali"
+					label="Link al messaggio da mandare nei thread"
 					placeholder="Scrivi il messaggio in un canale privato e incolla qui il link per preservare immagini e formattazione"
 					pattern="https?://(?:[^.]+\.)?discord\.com/channels/(?:\d{16,32}|@me)/\d{16,32}/\d{16,32}"
 					errorMessage="Link non valido"

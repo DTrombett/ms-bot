@@ -18,14 +18,14 @@ import { resolveWinner } from "./resolveWinner";
 
 const editChannel = async (
 	match: Database.Match,
-	tournament: Pick<Database.Tournament, "endedCategoryId" | "endedChannelName">,
+	tournament: Pick<Database.Tournament, "endedChannelName">,
 	tournamentId: number,
 ) => {
 	if (
 		(match.status !== DBMatchStatus.Abandoned &&
 			match.status !== DBMatchStatus.Finished) ||
 		!match.channelId ||
-		(!tournament.endedCategoryId && !tournament.endedChannelName)
+		!tournament.endedChannelName
 	)
 		return;
 	let { results } = await env.DB.prepare(
@@ -53,7 +53,6 @@ const editChannel = async (
 						player2: results[1]?.name ?? "",
 					}).slice(0, 100)
 				:	undefined,
-			parent_id: tournament.endedCategoryId ?? undefined,
 			position: 49 + 2 ** (Math.floor(Math.log2(match.id + 1)) + 1),
 		} satisfies RESTPatchAPIChannelJSONBody,
 	});
@@ -155,7 +154,7 @@ export const patchMatch = async (
 		).bind(tournamentId, matchId + (matchId % 2 || -1)),
 		env.DB.prepare(
 			`
-				SELECT t.logChannel, t.currentRound, t.roundType, t.workflowId, t.endedCategoryId, t.endedChannelName, m.channelId, m.user1, m.user2,
+				SELECT t.logChannel, t.currentRound, t.roundType, t.workflowId, t.endedChannelName, m.channelId, m.user1, m.user2,
 				(
 					SELECT COUNT(*)
 					FROM Matches m2
@@ -188,7 +187,6 @@ export const patchMatch = async (
 				| "currentRound"
 				| "roundType"
 				| "workflowId"
-				| "endedCategoryId"
 				| "endedChannelName"
 			> &
 				Partial<Pick<Database.Match, "channelId" | "user1" | "user2">> & {

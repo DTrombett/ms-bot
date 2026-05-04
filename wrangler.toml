@@ -74,11 +74,11 @@ binding = "TOURNAMENT"
 class_name = "Tournament"
 
 [[workflows]]
-name = "channels"
-binding = "CHANNELS"
-class_name = "Channels"
+name = "create-threads"
+binding = "CREATE_THREADS"
+class_name = "CreateThreads"
 
 [[workflows]]
-name = "delete-channels"
-binding = "DELETE_CHANNELS"
-class_name = "DeleteChannels"
+name = "lock-threads"
+binding = "LOCK_THREADS"
+class_name = "LockThreads"

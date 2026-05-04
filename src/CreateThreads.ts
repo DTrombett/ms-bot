@@ -1,57 +1,89 @@
-import { DiscordAPIError } from "@discordjs/rest";
 import {
 	WorkflowEntrypoint,
 	type WorkflowEvent,
 	type WorkflowStep,
 } from "cloudflare:workers";
 import {
-	AllowedMentionsTypes,
 	ButtonStyle,
 	ChannelType,
 	ComponentType,
 	MessageFlags,
-	OverwriteType,
-	PermissionFlagsBits,
 	Routes,
 	type APIMediaGalleryItem,
 	type APIMessageTopLevelComponent,
 	type RESTPostAPIChannelMessageJSONBody,
-	type RESTPostAPIGuildChannelJSONBody,
-	type RESTPostAPIGuildChannelResult,
+	type RESTPostAPIChannelThreadsJSONBody,
+	type RESTPostAPIChannelThreadsResult,
 } from "discord-api-types/v10";
 import { rest } from "./util/globals";
 import normalizeError from "./util/normalizeError";
 import { placeholder } from "./util/strings";
 
 export type Params = {
-	matches: MatchWithPlayers[];
 	tournament: Database.Tournament;
 	content?: string;
 	attachments?: APIMediaGalleryItem[];
+	min: number;
+	max: number;
 };
 
-export class Channels extends WorkflowEntrypoint<Env, Params> {
+export class CreateThreads extends WorkflowEntrypoint<Env, Params> {
 	override async run(
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
-		let parent_id = event.payload.tournament.categoryId;
+		const results = await step.do(
+			"Fetch matches",
+			{ timeout: "20 seconds" },
+			async () => {
+				const { results } = await this.env.DB.prepare(
+					`
+						SELECT m.*,
+							p1.tag		AS	user1Tag,
+							sp1.name	AS	user1Name,
+							p2.tag		AS	user2Tag,
+							sp2.name	AS	user2Name
+						FROM Matches m
+							LEFT JOIN Participants p1 ON p1.tournamentId = m.tournamentId
+							AND p1.userId	=	m.user1
+							LEFT JOIN SupercellPlayers sp1 ON sp1.userId = p1.userId
+							AND sp1.tag		=	p1.tag
+							LEFT JOIN Participants p2 ON p2.tournamentId = m.tournamentId
+							AND p2.userId	=	m.user2
+							LEFT JOIN SupercellPlayers sp2 ON sp2.userId = p2.userId
+							AND sp2.tag		=	p2.tag
+						WHERE m.tournamentId = ?1 AND m.id BETWEEN ?2 AND ?3
+							AND m.messageSent = FALSE AND m.user2 IS NOT NULL
+						ORDER BY m.id
+					`,
+				)
+					.bind(
+						event.payload.tournament.id,
+						event.payload.min,
+						event.payload.max,
+					)
+					.run<MatchWithPlayers>();
+
+				return results;
+			},
+		);
 		const values: Promise<void>[] = [];
 		const cases: [string, [number, string]][] = [];
-		for (const match of event.payload.matches)
+		for (const match of results)
 			try {
-				let channelName = event.payload.tournament.channelName;
 				const channelId = await step.do<string>(
-					`Create channel for match ${match.id}`,
-					{ retries: { limit: 1, delay: 5_000 } },
-					async () => {
-						try {
-							const { id } = (await rest.post(
-								Routes.guildChannels(this.env.MAIN_GUILD),
+					`Create thread for match ${match.id}`,
+					{ retries: { limit: 0, delay: 0 }, timeout: "5 minutes" },
+					async () =>
+						(
+							(await rest.post(
+								Routes.threads(event.payload.tournament.categoryId!),
 								{
+									reason: `Creazione thread per lo scontro ${match.id} (<@${match.user1}> VS <@${match.user2}>)`,
 									body: {
 										name: placeholder(
-											channelName ?? "{matchId}-{player1}-vs-{player2}",
+											event.payload.tournament.channelName ??
+												"{matchId}: {player1} VS {player2}",
 											{
 												matchId: match.id.toString(),
 												tournamentId: event.payload.tournament.id.toString(),
@@ -63,113 +95,77 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 												player2: match.user2Name ?? "",
 											},
 										).slice(0, 100),
-										type: ChannelType.GuildText,
-										permission_overwrites: [
-											{
-												id: this.env.MAIN_GUILD,
-												type: OverwriteType.Role,
-												deny: String(PermissionFlagsBits.ViewChannel),
-											},
-											{
-												id: match.user1,
-												type: OverwriteType.Member,
-												allow: String(PermissionFlagsBits.ViewChannel),
-											},
-											{
-												id: match.user2!,
-												type: OverwriteType.Member,
-												allow: String(PermissionFlagsBits.ViewChannel),
-											},
-											{
-												// TODO: Add this as option to tournament
-												id: "1484914959673463004",
-												type: OverwriteType.Role,
-												allow: String(PermissionFlagsBits.ViewChannel),
-											},
-											...this.env.ALLOWED_ROLES.split(",").map((id) => ({
-												id,
-												type: OverwriteType.Role,
-												allow: String(
-													PermissionFlagsBits.ViewChannel |
-														PermissionFlagsBits.ManageChannels,
-												),
-											})),
-										],
-										parent_id,
-										position: match.id + 50,
-									} satisfies RESTPostAPIGuildChannelJSONBody,
+										type: ChannelType.PrivateThread,
+										invitable: false,
+										rate_limit_per_user: 0,
+									} satisfies RESTPostAPIChannelThreadsJSONBody,
 								},
-							)) as RESTPostAPIGuildChannelResult;
-
-							return id;
-						} catch (err) {
-							if (
-								err instanceof DiscordAPIError &&
-								"errors" in err.rawError &&
-								typeof err.rawError.errors === "object"
-							) {
-								if ("parent_id" in err.rawError.errors) parent_id = null;
-								if ("name" in err.rawError.errors)
-									channelName = "{matchId}-torneo-{tournamentId}";
-							}
-							throw err;
-						}
-					},
+							)) as RESTPostAPIChannelThreadsResult
+						).id,
 				);
-				const components: APIMessageTopLevelComponent[] = [];
 
-				cases.push([
-					`WHEN ?${(cases.length + 1) * 2} THEN ?${(cases.length + 1) * 2 + 1}`,
-					[match.id, channelId],
-				]);
-				if (event.payload.content)
+				if (event.payload.content || event.payload.attachments?.length) {
+					const components: APIMessageTopLevelComponent[] = [];
+
+					cases.push([
+						`WHEN ?${(cases.length + 1) * 2} THEN ?${(cases.length + 1) * 2 + 1}`,
+						[match.id, channelId],
+					]);
+					if (event.payload.content)
+						components.push({
+							type: ComponentType.TextDisplay,
+							content: placeholder(event.payload.content, {
+								matchId: match.id.toString(),
+								id1: match.user1,
+								id2: match.user2!,
+								tag1: match.user1Tag?.slice(1) ?? "",
+								tag2: match.user2Tag?.slice(1) ?? "",
+								player1: match.user1Name ?? "",
+								player2: match.user2Name ?? "",
+							}),
+						});
+					if (event.payload.attachments?.length)
+						components.push({
+							type: ComponentType.MediaGallery,
+							items: event.payload.attachments,
+						});
 					components.push({
-						type: ComponentType.TextDisplay,
-						content: placeholder(event.payload.content, {
-							matchId: match.id.toString(),
-							id1: match.user1,
-							id2: match.user2!,
-							tag1: match.user1Tag?.slice(1) ?? "",
-							tag2: match.user2Tag?.slice(1) ?? "",
-							player1: match.user1Name ?? "",
-							player2: match.user2Name ?? "",
-						}),
+						type: ComponentType.ActionRow,
+						components: [
+							{
+								type: ComponentType.Button,
+								custom_id: `tournament-che-${match.id}-${event.payload.tournament.id}`,
+								style: ButtonStyle.Success,
+								emoji: { name: "✅" },
+								label: "Controlla risultati",
+							},
+						],
 					});
-				if (event.payload.attachments?.length)
-					components.push({
-						type: ComponentType.MediaGallery,
-						items: event.payload.attachments,
-					});
-				components.push({
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: `tournament-che-${match.id}-${event.payload.tournament.id}`,
-							style: ButtonStyle.Success,
-							emoji: { name: "✅" },
-							label: "Controlla risultati",
-						},
-					],
-				});
-				if (components.length > 1)
 					values.push(
 						step.do<void>(
-							`Send message to channel ${channelId}`,
-							{ retries: { limit: 1, delay: 5_000 } },
+							`Send message to thread ${channelId}`,
+							{ retries: { limit: 0, delay: 0 } },
 							() =>
 								rest
 									.post(Routes.channelMessages(channelId), {
 										body: {
 											flags: MessageFlags.IsComponentsV2,
 											components,
-											allowed_mentions: { parse: [AllowedMentionsTypes.User] },
 										} satisfies RESTPostAPIChannelMessageJSONBody,
 									})
 									.then(() => {}),
 						),
 					);
+				}
 			} catch (err) {
+				if (
+					err instanceof Error &&
+					err.message.startsWith(
+						"Too many subrequests by single Worker invocation.",
+					)
+				) {
+					break;
+				}
 				this.sendError(
 					step,
 					event.payload.tournament.logChannel,

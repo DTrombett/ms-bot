@@ -40,7 +40,6 @@ export const parseTournamentData = async (
 		channelName: ParseType.Text,
 		endedChannelName: ParseType.Text,
 		categoryId: ParseType.Text,
-		endedCategoryId: ParseType.Text,
 		matchMessageLink: ParseType.Text,
 	});
 	let registrationMode = 0,
@@ -158,13 +157,7 @@ export const parseTournamentData = async (
 			match(
 				form.categoryId,
 				idRegex,
-				"L'id della categoria in cui creare i canali non è valido",
-			);
-		if (form.endedCategoryId)
-			match(
-				form.endedCategoryId,
-				idRegex,
-				"L'id della categoria in cui spostare i canali non è valido",
+				"L'id del canale in cui creare i thread non è valido",
 			);
 		if (form.matchMessageLink) {
 			const result = form.matchMessageLink.match(linkRegex);
@@ -201,7 +194,7 @@ export const parseTournamentData = async (
 		if (form.tagRequired) flags |= TournamentFlags.TagRequired;
 		if (form.publicBrackets) flags |= TournamentFlags.PublicBrackets;
 		if (form.autoDetectResults) flags |= TournamentFlags.AutoDetectResults;
-		if (form.autoDeleteChannels) flags |= TournamentFlags.AutoDeleteChannels;
+		if (form.autoDeleteChannels) flags |= TournamentFlags.AutoArchive;
 	} catch (err) {
 		return new Response(null, {
 			status: 303,
@@ -225,7 +218,6 @@ export const parseTournamentData = async (
 		categoryId: form.categoryId,
 		channelName: form.channelName,
 		channelsTime: form.autoChannels,
-		endedCategoryId: form.endedCategoryId,
 		endedChannelName: form.endedChannelName,
 		matchMessageLink: form.matchMessageLink,
 		minPlayers: form.minPlayers,

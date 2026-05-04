@@ -42,6 +42,8 @@ export enum TournamentFlags {
 	PublicBrackets = 1 << 1,
 	AutoDetectResults = 1 << 2,
 	AutoDeleteChannels = 1 << 3,
+	AutoArchive = 1 << 4,
+	AutoLock = 1 << 5,
 }
 export enum TournamentStatusFlags {
 	BracketsCreated = 1 << 0,

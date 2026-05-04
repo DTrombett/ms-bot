@@ -46,7 +46,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			ok(tournament, "Tournament not found");
 			await this.sendRegistrationMessage(tournament, step);
 			await this.createBrackets(tournament, step);
-			await this.createChannels(tournament, step);
+			await this.createThreads(tournament, step);
 		} catch (err) {
 			this.sendError(
 				step,
@@ -240,10 +240,11 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		(_: unknown, i: number) => {
 			const match: Database.Match = {
 				id: i + length - 1,
-				status: 0,
+				status: DBMatchStatus.ToBePlayed,
 				tournamentId: this.tournamentId,
 				user1: participants[i]!.userId,
 				user2: participants[i + length]?.userId ?? null,
+				messageSent: false,
 			};
 
 			if (!match.user2) match.status = DBMatchStatus.Default;
@@ -276,7 +277,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		return results;
 	};
 
-	private createChannels = async (
+	private createThreads = async (
 		tournament: Database.Tournament,
 		step: WorkflowStep,
 	) => {
@@ -312,18 +313,18 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			round >= 0;
 			round--
 		) {
-			const [matches, message] = await Promise.all([
-				this.createRoundAndDeleteChannels(
-					step,
-					round,
-					tournament.logChannel,
-					tournament.flags,
-				),
+			const [message] = await Promise.all([
 				tournament.matchMessageLink &&
 					step.do(
 						`Fetch message for round ${round}`,
 						this.fetchMatchMessage(tournament.matchMessageLink),
 					),
+				this.createRoundAndArchiveThreads(
+					step,
+					round,
+					tournament.logChannel,
+					tournament.flags,
+				),
 				step.do<void>(`Set current round to ${round}`, () =>
 					this.env.DB.prepare(
 						`UPDATE Tournaments SET currentRound = ?1 WHERE id = ?2`,
@@ -334,22 +335,11 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				),
 			]);
 
-			if (matches.length)
-				await step.do<void>(
-					`Create channels workflows for round ${round}`,
-					() =>
-						this.env.CHANNELS.createBatch(
-							matches
-								.reduce<MatchWithPlayers[][]>((arr, v) => {
-									if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
-									arr.at(-1)!.push(v);
-									return arr;
-								}, [])
-								.map((matches) => ({
-									params: { ...message, matches, tournament },
-								})),
-						).then(() => {}),
-				);
+			await step.do<void>(`Create threads workflows for round ${round}`, () =>
+				this.env.CREATE_THREADS.create({
+					params: { ...message, tournament, round },
+				}).then(() => {}),
+			);
 			await step.waitForEvent(`Wait for round ${round} to finish`, {
 				type: `round-${round}`,
 			});
@@ -364,7 +354,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		);
 	};
 
-	private createRoundAndDeleteChannels = async (
+	private createRoundAndArchiveThreads = async (
 		step: WorkflowStep,
 		round: number,
 		logChannel: string,
@@ -384,23 +374,24 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					v.channelId != null && Math.floor(Math.log2(v.id + 1)) === round + 1,
 			)
 			.reduce<string[][]>((arr, v) => {
-				if (!arr.length || arr.at(-1)!.length >= 16) arr.push([]);
+				if (!arr.length || arr.at(-1)!.length >= 15) arr.push([]);
 				arr.at(-1)!.push(v.channelId);
 				return arr;
 			}, [])
 			.map((channels) => ({ params: { channels, logChannel } }));
-		const [matches] = await Promise.all([
-			step.do(`Create round ${round}`, this.createRound(round, oldMatches)),
-			flags & TournamentFlags.AutoDeleteChannels &&
+		await Promise.all([
+			step.do<void>(
+				`Create round ${round}`,
+				this.createRound(round, oldMatches),
+			),
+			flags & TournamentFlags.AutoLock &&
 				batch.length &&
 				step
-					.do(`Delete channels from round ${round + 1}`, () =>
-						this.env.DELETE_CHANNELS.createBatch(batch).then(() => {}),
+					.do(`Lock threads from round ${round + 1}`, () =>
+						this.env.LOCK_THREADS.createBatch(batch).then(() => {}),
 					)
 					.catch(console.error),
 		]);
-
-		return matches;
 	};
 
 	private fetchMatchMessage = (matchMessageLink: string) => async () => {
@@ -424,12 +415,12 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 	};
 
 	private createRound =
-		(round: number, oldMatches: MatchWithPlayers[]) => async () => {
-			const resolvedOldMatches: MatchWithPlayers[] = [];
+		(round: number, oldMatches: Database.Match[]) => async () => {
+			const resolvedOldMatches: Database.Match[] = [];
 			for (const match of oldMatches) resolvedOldMatches[match.id] = match;
 			const matches = Array.from(
 				{ length: 2 ** round },
-				(_, k): MatchWithPlayers | undefined => {
+				(_, k): Database.Match | undefined => {
 					const start = 2 ** (round + 1) + k * 2 - 1;
 					let [a, b] = resolvedOldMatches
 						.slice(start, start + 2)
@@ -451,20 +442,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						tournamentId: this.tournamentId,
 						user1: a.winner!,
 						user2: b?.winner ?? null,
-						user1Name: a.winner === a.user1 ? a.user1Name : a.user2Name,
-						user2Name:
-							b ?
-								b.winner === b.user1 ?
-									b.user1Name
-								:	b.user2Name
-							:	null,
-						user1Tag: a.winner === a.user1 ? a.user1Tag : a.user2Tag,
-						user2Tag:
-							b ?
-								b.winner === b.user1 ?
-									b.user1Tag
-								:	b.user2Tag
-							:	null,
+						messageSent: false,
 					};
 				},
 			).filter(
@@ -486,46 +464,26 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						result1		=	NULL,
 						result2		=	NULL,
 						channelId	=	NULL
-					WHERE user1 IS NOT excluded.user1 OR user2 IS NOT excluded.user2
-					RETURNING channelId
+					WHERE user1 != excluded.user1 OR user2 != excluded.user2
 				`,
 			);
-			const existing = await this.env.DB.batch<
-				Partial<Pick<Database.Match, "channelId">>
-			>(
+
+			await this.env.DB.batch(
 				matches.map((m) =>
 					query.bind(m.id, m.status, m.tournamentId, m.user1, m.user2),
 				),
-			);
-
-			return matches.filter(
-				(m, i) => m.user2 && !existing[i]?.results[0]?.channelId,
 			);
 		};
 
 	private getMatches = (round: number) => async () => {
 		const { results } = await this.env.DB.prepare(
 			`
-				SELECT m.*,
-					p1.tag		AS	user1Tag,
-					sp1.name	AS	user1Name,
-					p2.tag		AS	user2Tag,
-					sp2.name	AS	user2Name
-				FROM Matches m
-					LEFT JOIN Participants p1 ON p1.tournamentId = m.tournamentId
-					AND p1.userId = m.user1
-					LEFT JOIN SupercellPlayers sp1 ON sp1.userId = p1.userId
-					AND sp1.tag = p1.tag
-					LEFT JOIN Participants p2 ON p2.tournamentId = m.tournamentId
-					AND p2.userId = m.user2
-					LEFT JOIN SupercellPlayers sp2 ON sp2.userId = p2.userId
-					AND sp2.tag = p2.tag
-				WHERE m.tournamentId = ?1 AND m.id >= ?2 AND m.id <= ?3
-				ORDER BY m.id
+				SELECT * FROM Matches
+				WHERE tournamentId = ?1 AND id >= ?2 AND id <= ?3
 			`,
 		)
 			.bind(this.tournamentId, 2 ** (round - 1) - 1, 2 ** (round + 1) - 2)
-			.run<MatchWithPlayers>();
+			.run<Database.Match>();
 
 		return results;
 	};

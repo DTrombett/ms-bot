@@ -114,7 +114,6 @@ const server: ExportedHandler<Env> = {
 							categoryId,
 							channelName,
 							channelsTime,
-							endedCategoryId,
 							endedChannelName,
 							matchMessageLink,
 							minPlayers,
@@ -128,7 +127,7 @@ const server: ExportedHandler<Env> = {
 							roundType,
 							workflowId
 						)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					)
 						.bind(
 							tournament.name,
@@ -142,7 +141,6 @@ const server: ExportedHandler<Env> = {
 							tournament.categoryId,
 							tournament.channelName,
 							tournament.channelsTime,
-							tournament.endedCategoryId,
 							tournament.endedChannelName,
 							tournament.matchMessageLink,
 							tournament.minPlayers,
@@ -444,7 +442,6 @@ const server: ExportedHandler<Env> = {
 								categoryId = ?,
 								channelName = ?,
 								channelsTime = ?,
-								endedCategoryId = ?,
 								endedChannelName = ?,
 								matchMessageLink = ?,
 								minPlayers = ?,
@@ -472,7 +469,6 @@ const server: ExportedHandler<Env> = {
 							tournament.categoryId,
 							tournament.channelName,
 							tournament.channelsTime,
-							tournament.endedCategoryId,
 							tournament.endedChannelName,
 							tournament.matchMessageLink,
 							tournament.minPlayers,
@@ -1440,9 +1436,9 @@ const server: ExportedHandler<Env> = {
 				env.DB.prepare(
 					`
 						UPDATE Matches
-						SET result1 = COALESCE(?3, result1),
-							result2 = COALESCE(?4, result2),
-							status  = COALESCE(?5, status)
+						SET	result1	=	COALESCE(?3, result1),
+							result2	=	COALESCE(?4, result2),
+							status	=	COALESCE(?5, status)
 						WHERE tournamentId = ?1 AND id = ?2
 						RETURNING *
 					`,
@@ -1715,8 +1711,8 @@ const server: ExportedHandler<Env> = {
 	},
 };
 
-export { Channels } from "./Channels";
-export { DeleteChannels } from "./DeleteChannels";
+export { CreateThreads } from "./CreateThreads";
+export { LockThreads } from "./LockThreads";
 export { Notifications } from "./Notifications";
 export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";

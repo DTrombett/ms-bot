@@ -1613,16 +1613,11 @@ export class Clash extends Command {
 			VALUES (
 				?1,
 				?2,
-				CASE
-					WHEN EXISTS (
-						SELECT 1
-						FROM SupercellPlayers
-						WHERE userId = ?2
-						  AND type = ?3
-						  AND active = 1
-					) THEN 0
-					ELSE 1
-				END,
+				NOT EXISTS (
+					SELECT TRUE
+					FROM SupercellPlayers
+					WHERE userId = ?2 AND type = ?3 AND active = TRUE
+				),
 				?3
 			)
 			ON CONFLICT(tag, type) DO UPDATE
