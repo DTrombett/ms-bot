@@ -96,7 +96,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 											})),
 										],
 										parent_id,
-										position: match.id + 50,
+										position: match.id + 100,
 									} satisfies RESTPostAPIGuildChannelJSONBody,
 								},
 							)) as RESTPostAPIGuildChannelResult;
