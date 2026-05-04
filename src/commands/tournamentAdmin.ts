@@ -30,7 +30,7 @@ export class TournamentAdmin extends Command {
 				description: "Avanza al prossimo round",
 				options: [
 					{
-						type: ApplicationCommandOptionType.Number,
+						type: ApplicationCommandOptionType.Integer,
 						name: "tournament",
 						description: "L'id del torneo",
 					},
@@ -66,13 +66,13 @@ export class TournamentAdmin extends Command {
 					"Controlla che tutti gli iscritti siano nel server con il ruolo. Esegui solo se necessario!",
 				options: [
 					{
-						type: ApplicationCommandOptionType.Number,
+						type: ApplicationCommandOptionType.Integer,
 						name: "tournament",
 						description: "L'id del torneo",
 						required: true,
 					},
 					{
-						type: ApplicationCommandOptionType.Number,
+						type: ApplicationCommandOptionType.Integer,
 						name: "offset",
 						description: "Quanti partecipanti saltare",
 					},
