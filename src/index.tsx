@@ -1693,7 +1693,7 @@ const server: ExportedHandler<Env> = {
 		if (cron === "0 0 * * *")
 			await Promise.allSettled([
 				env.PREDICTIONS_REMINDERS.create(),
-				env.WEBSOCKET.create(),
+				// env.WEBSOCKET.create(),
 			]);
 		else if (cron === "*/5 * * * *") {
 			const { results } = await env.DB.prepare(

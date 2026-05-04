@@ -15,6 +15,7 @@ import {
 import { Clash } from "./commands";
 import { Brawl } from "./commands/brawl";
 import { bitSetMap } from "./util/bitSets";
+import { forceCapitalize } from "./util/capitalize";
 import {
 	BrawlNotifications,
 	ClashNotifications,
@@ -26,11 +27,6 @@ import { rest } from "./util/globals";
 export type Params = { players: Database.SupercellPlayer[] };
 
 export class Notifications extends WorkflowEntrypoint<Env, Params> {
-	static readonly brawlTrophyRoadTiers = [
-		500, 1_500, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 40_000, 50_000,
-		60_000, 70_000, 80_000, 90_000, 100_000,
-	];
-
 	override async run(
 		{ payload: { players } }: WorkflowEvent<Params>,
 		step: WorkflowStep,
@@ -92,13 +88,13 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 				BrawlNotifications["All"])
 		) {
 			const newTier =
-					Notifications.brawlTrophyRoadTiers.findLast(
-						(tier) => tier <= newPlayer.highestTrophies,
-					) ?? 0,
+					Brawl.TROPHY_ROAD_TIERS.findLast(
+						({ max }) => max <= newPlayer.highestTrophies,
+					)?.max ?? 0,
 				oldTier =
-					Notifications.brawlTrophyRoadTiers.findLast(
-						(tier) => tier <= oldPlayer.highestTrophies,
-					) ?? 0;
+					Brawl.TROPHY_ROAD_TIERS.findLast(
+						({ max }) => max <= oldPlayer.highestTrophies,
+					)?.max ?? 0;
 
 			if (newTier > oldTier)
 				components.push({
@@ -114,6 +110,40 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 								{
 									type: ComponentType.TextDisplay,
 									content: `## Avanzamento Cammino dei Trofei!\nHai raggiunto il traguardo di **${newTier.toLocaleString("it-IT")}** trofei!`,
+								},
+							],
+							accessory: {
+								type: ComponentType.Thumbnail,
+								media: {
+									url: `https://cdn.brawlify.com/profile-icons/regular/${newPlayer.icon.id}.png`,
+								},
+							},
+						},
+					],
+				});
+		}
+		if (
+			user.notifications &
+			(BrawlNotifications["Nuovo rank"] | BrawlNotifications["All"])
+		) {
+			const newRank = Math.floor((newPlayer.rankedRank - 1) / 3),
+				oldRank = Math.floor((oldPlayer.rankedRank - 1) / 3);
+
+			if (newRank > oldRank)
+				components.push({
+					type: ComponentType.Container,
+					accent_color:
+						Brawl.RANKED_TIERS[newRank]?.color ??
+						(newPlayer.nameColor ?
+							parseInt(newPlayer.nameColor.slice(4), 16)
+						:	0xffffff),
+					components: [
+						{
+							type: ComponentType.Section,
+							components: [
+								{
+									type: ComponentType.TextDisplay,
+									content: `## Nuova divisione raggiunta!\nHai raggiunto <:ranked:${(Brawl.RANKED_TIERS[newRank] ?? Brawl.RANKED_TIERS.at(-1))!.emoji}> **${forceCapitalize(newPlayer.rankedRankName.split(/\s+/)[0]!)}** in modalità Classificata!`,
 								},
 							],
 							accessory: {

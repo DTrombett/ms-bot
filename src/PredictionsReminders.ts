@@ -23,7 +23,7 @@ import { hashMatches } from "./util/hashMatches";
 import { loadMatches } from "./util/loadMatches";
 import { createMatchName } from "./util/normalizeTeamName";
 import { resolveLeaderboard } from "./util/resolveLeaderboard";
-import { formatLongTime, TimeUnit } from "./util/time";
+import { formatDuration, TimeUnit } from "./util/time";
 
 const KV_KEY = "started-matchdays";
 const timeout = 20 * TimeUnit.Second;
@@ -59,7 +59,9 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		const diff = startTime - event.timestamp.getTime();
 
 		if (diff > TimeUnit.Day) {
-			console.log(`Next match day is in ${formatLongTime(diff)}`);
+			console.log(
+				`Next match day is in ${formatDuration({ milliseconds: diff }, { long: true })}`,
+			);
 			return;
 		}
 		if (diff > TimeUnit.Second) {
@@ -201,7 +203,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		await this.env.REMINDER.create({
 			id: `${userId}-predictions-${matchDay.day}`,
 			params: {
-				duration: Math.max(date - Date.now(), 0),
+				timestamp: date,
 				message: {
 					content:
 						"⚽ È l'ora di inviare i pronostici per la prossima giornata!",

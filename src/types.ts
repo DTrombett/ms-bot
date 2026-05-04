@@ -377,7 +377,7 @@ declare global {
 		};
 		type Reminder = {
 			id: string;
-			date: string;
+			timestamp: number;
 			userId: string;
 			remind: string;
 		};
@@ -623,6 +623,9 @@ declare global {
 		user1Name: Database.SupercellPlayer["name"] | null;
 		user2Name: Database.SupercellPlayer["name"] | null;
 	};
+
+	type RankedPrefix<T = keyof Brawl.Player> =
+		T extends `${infer A}RankName` ? A : never;
 
 	namespace Twitter {
 		type UrlEntity = {
@@ -1145,6 +1148,16 @@ declare global {
 			bestRoboRumbleTime: number;
 			bestTimeAsBigBrawler: number;
 			brawlers: BrawlerStatList;
+			rankedSeasonId: number;
+			rankedRank: number;
+			rankedRankName: string;
+			rankedElo: number;
+			highestSeasonRankedRank: number;
+			highestSeasonRankedRankName: string;
+			highestSeasonRankedElo: number;
+			highestAllTimeRankedRank: number;
+			highestAllTimeRankedRankName: string;
+			highestAllTimeRankedElo: number;
 			nameColor: string;
 		};
 		type PlayerClub = { tag: string; name: string };
@@ -1234,7 +1247,8 @@ declare global {
 			duration: number;
 			trophyChange: number;
 			starPlayer: BattlePlayer;
-			teams: BattlePlayer[][];
+			teams?: BattlePlayer[][];
+			players?: BattlePlayer[];
 		};
 		type Paginated<T> = {
 			items: T[];

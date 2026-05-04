@@ -17,7 +17,7 @@ import {
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import capitalize from "../util/capitalize";
+import capitalize, { forceCapitalize } from "../util/capitalize";
 import { BrawlNotifications, SupercellPlayerType } from "../util/Constants";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
@@ -72,6 +72,7 @@ export class Brawl extends Command {
 		"Prestigio",
 		"Nuovo Brawler",
 		"Avanzamento nel cammino dei trofei",
+		"Nuovo rank",
 		"All",
 	] as const;
 	static readonly BRAWLER_EMOJIS: AsConst<
@@ -648,6 +649,33 @@ export class Brawl extends Command {
 			"1431299150921732158",
 		],
 	};
+	static readonly RANKED_TIERS = [
+		{ emoji: "1496930462281498757", color: 0xf59833 },
+		{ emoji: "1496930460880605275", color: 0xa7b3f0 },
+		{ emoji: "1496930459282706553", color: 0xffa411 },
+		{ emoji: "1496930457747460278", color: 0x0da9ef },
+		{ emoji: "1496930456111808532", color: 0xe018ff },
+		{ emoji: "1496930454094217448", color: 0xf80000 },
+		{ emoji: "1496930452424888430", color: 0x6a1700 },
+		{ emoji: "1496930450667601970", color: 0xe08500 },
+	];
+	static readonly TROPHY_ROAD_TIERS = [
+		{ name: "Piazza del Parco", max: 500 },
+		{ name: "Retropoli", max: 1_500 },
+		{ name: "Frontiere Selvagge", max: 5_000 },
+		{ name: "Terre Infestate", max: 10_000 },
+		{ name: "Selva dell'Avventura", max: 15_000 },
+		{ name: "Montagna Mistica", max: 20_000 },
+		{ name: "Brawlywood", max: 25_000 },
+		{ name: "Castello Incantato", max: 30_000 },
+		{ name: "Futuropoli", max: 40_000 },
+		{ name: "Acquaworld", max: 50_000 },
+		{ name: "Cronotrappola", max: 60_000 },
+		{ name: "Ritmotown", max: 70_000 },
+		{ name: "Strambolandia", max: 80_000 },
+		{ name: "Paese dei Giocattoli", max: 90_000 },
+		{ name: "Maniero Medioemale", max: 100_000 },
+	];
 	static readonly ROBO_RUMBLE_LEVELS = [
 		"*None*",
 		"Normale",
@@ -677,6 +705,7 @@ export class Brawl extends Command {
 		404: "Dati non trovati.",
 		429: "Limite di richieste API raggiunto.",
 		500: "Errore interno dell'API.",
+		502: "Si è verificato un errore temporaneo, riprova!",
 		503: "Manutenzione in corso!",
 	};
 	static override chatInputData = {
@@ -1233,7 +1262,7 @@ export class Brawl extends Command {
 	};
 	static createPlayerEmbed = (
 		player: Brawl.Player,
-		playerId?: string,
+		{ playerId, locale }: { playerId?: string; locale?: string } = {},
 	): APIEmbed => ({
 		title: `${player.name} (${player.tag})`,
 		thumbnail: {
@@ -1247,20 +1276,37 @@ export class Brawl extends Command {
 					`**${player.club.name}** (${player.club.tag})`
 				:	"*In nessun club*"
 			}
-			<:totalPrestige:1479095470541242480> Prestigio: **${player.totalPrestigeLevel}**
 			${playerId}👤 Discord: <@${playerId}>
 		`,
 		fields: [
 			{
 				name: "🏆 Trofei",
-				value: `**Attuali**: ${player.trophies}\n**Record**: ${
-					player.highestTrophies
-				}\n**Media**: ${Math.round(player.trophies / player.brawlers.length)}`,
+				value: `**Attuali**: ${player.trophies.toLocaleString(locale)}\n**Record**: ${player.highestTrophies.toLocaleString(
+					locale,
+				)}\n**Cammino**: ${
+					(
+						this.TROPHY_ROAD_TIERS.findLast(
+							({ max }) => max <= player.highestTrophies,
+						) ?? this.TROPHY_ROAD_TIERS[0]
+					)?.name
+				}`,
+				inline: true,
+			},
+			{
+				name: "🔫 Brawler",
+				value: `**Ottenuti**: ${player.brawlers.length.toLocaleString(locale)}\n**Prestigio**: ${player.totalPrestigeLevel.toLocaleString(
+					locale,
+				)}\n**Trofei medi**: ${Math.round(player.trophies / player.brawlers.length).toLocaleString(locale)}`,
 				inline: true,
 			},
 			{
 				name: "🏅 Vittorie",
-				value: `**3v3**: ${player["3vs3Victories"]}\n**Solo**: ${player.soloVictories}\n**Duo**: ${player.duoVictories}`,
+				value: `**3v3**: ${player["3vs3Victories"].toLocaleString(locale)}\n**Solo**: ${player.soloVictories.toLocaleString(locale)}\n**Duo**: ${player.duoVictories.toLocaleString(locale)}`,
+				inline: true,
+			},
+			{
+				name: "👑 Classificata",
+				value: `**Attuale**: ${this.resolveRanked(player, "ranked", locale)}\n**Migliore**: ${this.resolveRanked(player, "highestAllTimeRanked", locale)}\n**Stagione**: ${this.resolveRanked(player, "highestSeasonRanked", locale)}`,
 				inline: true,
 			},
 			{
@@ -1269,7 +1315,7 @@ export class Brawl extends Command {
 					this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]
 				}\n**Big Game**: ${
 					this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]
-				}\n**Brawlers**: ${player.brawlers.length}`,
+				}\n**Serie vittorie**: ${player.brawlers.reduce((m, b) => (b.maxWinStreak > m ? b.maxWinStreak : m), 0).toLocaleString(locale)}`,
 				inline: true,
 			},
 		],
@@ -1389,6 +1435,7 @@ export class Brawl extends Command {
 		playerId?: string,
 		commandId?: string,
 		link?: boolean,
+		locale?: string,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		const components: APIActionRowComponent<APIButtonComponent>[] = [
 			{
@@ -1429,8 +1476,22 @@ export class Brawl extends Command {
 				emoji: { name: "🫂" },
 				style: ButtonStyle.Primary,
 			});
-		return { embeds: [this.createPlayerEmbed(player, playerId)], components };
+		return {
+			embeds: [this.createPlayerEmbed(player, { playerId, locale })],
+			components,
+		};
 	};
+	private static resolveRanked = (
+		player: Brawl.Player,
+		prefix: RankedPrefix,
+		locale?: string,
+	) =>
+		`<:ranked:${(this.RANKED_TIERS[Math.floor((player[`${prefix}Rank`] - 1) / 3)] ?? this.RANKED_TIERS.at(-1))!.emoji}> ${player[
+			`${prefix}RankName`
+		]
+			.split(/\s+/)
+			.map((v, i) => (i ? v : forceCapitalize(v)))
+			.join(" ")} (${player[`${prefix}Elo`].toLocaleString(locale)})`;
 	static async callApi<T>(
 		path: string,
 		{
@@ -1585,6 +1646,7 @@ export class Brawl extends Command {
 			interaction: {
 				data: { id: commandId },
 				member,
+				locale,
 			},
 		}: ChatInputArgs<typeof Brawl.chatInputData, `${"player"} ${string}`>,
 	) => {
@@ -1645,6 +1707,7 @@ export class Brawl extends Command {
 					playerId === id ? false
 					: playerId ? undefined
 					: true,
+					locale,
 				),
 			);
 		}
@@ -1675,7 +1738,7 @@ export class Brawl extends Command {
 					allowed_mentions: { parse: [] },
 				});
 			return edit({
-				embeds: [this.createPlayerEmbed(player)],
+				embeds: [this.createPlayerEmbed(player, { locale })],
 				components: [
 					{
 						type: ComponentType.ActionRow,
@@ -2020,7 +2083,7 @@ export class Brawl extends Command {
 	};
 	static playerComponent = async (
 		{ defer, edit }: ComponentReplies,
-		{ user: { id }, interaction: { data }, args: [tag] }: ComponentArgs,
+		{ user: { id }, interaction: { data, locale }, args: [tag] }: ComponentArgs,
 	) => {
 		if (data.component_type === ComponentType.StringSelect) [tag] = data.values;
 		ok(tag);
@@ -2041,6 +2104,7 @@ export class Brawl extends Command {
 				playerId ?? undefined,
 				undefined,
 				playerId !== id && (!playerId || undefined),
+				locale,
 			),
 		);
 	};

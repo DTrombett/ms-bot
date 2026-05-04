@@ -15,6 +15,7 @@ import {
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { Temporal } from "temporal-polyfill";
 import Command from "../Command";
 import { bitSetMap } from "../util/bitSets";
 import capitalize from "../util/capitalize";
@@ -56,9 +57,9 @@ enum MemberRole {
 	NOTMEMBER,
 }
 enum ResolvedMemberRole {
-	LEADER = "Presidente",
+	LEADER = "Capo",
 	ADMIN = "Admin",
-	COLEADER = "Vicepresidente",
+	COLEADER = "Co-capo",
 	ELDER = "Anziano",
 	MEMBER = "Membro",
 	NOTMEMBER = "Non membro",
@@ -118,6 +119,7 @@ export class Clash extends Command {
 		404: "Dati non trovati.",
 		429: "Limite di richieste API raggiunto.",
 		500: "Errore interno dell'API.",
+		502: "Si è verificato un errore temporaneo, riprova!",
 		503: "Manutenzione in corso!",
 	};
 	private static readonly "EMOJIS" = {
@@ -1011,7 +1013,8 @@ export class Clash extends Command {
 		clan: Clash.Clan,
 		locale: Locale,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
-		const now = Date.now();
+		const now = Temporal.Now.zonedDateTimeISO("UTC");
+		const inactiveTime = now.subtract({ days: 7 }).epochMilliseconds;
 		const memberTrophies: number[] = [];
 		const memberLevels: number[] = [];
 		const staff: {
@@ -1049,7 +1052,7 @@ export class Clash extends Command {
 							Membri: **${memberTrophies.length.toLocaleString(locale)}**
 							Inattivi: **${
 								clan.memberList.filter(
-									(m) => now - Clash.parseAPIDate(m.lastSeen) > TimeUnit.Week,
+									(m) => inactiveTime >= Clash.parseAPIDate(m.lastSeen),
 								).length
 							}**
 							`,
@@ -1091,10 +1094,10 @@ export class Clash extends Command {
 						{
 							name: "👥 Staff",
 							value: template`
-							${staff.leader.tag}Presidente: [${staff.leader.name}](${this.buildURL(
+							${staff.leader.tag}Capo: [${staff.leader.name}](${this.buildURL(
 								`playerInfo?id=${staff.leader.tag.slice(1)}`,
 							)})
-							${staff.coLeader.length}Vicepresidenti: ${staff.coLeader
+							${staff.coLeader.length}Co-capi: ${staff.coLeader
 								.slice(0, 4)
 								.map(
 									(m) =>
@@ -1125,18 +1128,31 @@ export class Clash extends Command {
 							type: ComponentType.StringSelect,
 							custom_id: "clash-player",
 							placeholder: "Visualizza un membro...",
-							options: clan.memberList
-								.slice(0, 25)
-								.map((m) => ({
+							options: clan.memberList.slice(0, 25).map((m) => {
+								const inactive = Temporal.Instant.fromEpochMilliseconds(
+									Clash.parseAPIDate(m.lastSeen),
+								).toZonedDateTimeISO("UTC");
+
+								return {
 									label: `${m.clanRank}. ${m.name}`,
 									value: m.tag,
 									description: `➡️${m.donations} 🏆${m.trophies.toLocaleString(
 										locale,
-									)} 🕓${formatShortTime(
-										now - Clash.parseAPIDate(m.lastSeen),
-									)} fa`,
+									)} 🕓${
+										formatShortTime(
+											inactive
+												.until(now)
+												.round({
+													relativeTo: inactive,
+													largestUnit: "years",
+													smallestUnit: "minutes",
+												}),
+											{ locales: "it", relativeTo: now },
+										) || "poco"
+									} fa`,
 									emoji: { name: MemberEmoji[toUpperCase(m.role)] ?? "👤" },
-								})),
+								};
+							}),
 						},
 					],
 				},
