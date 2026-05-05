@@ -15,6 +15,7 @@ import {
 } from "react";
 import { DBMatchStatus } from "../../util/Constants";
 import { toSearchParams } from "../../util/objects";
+import { matchStatus, statusColors } from "../../util/tournaments/Constants";
 import type { Matches, Participants } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
@@ -34,22 +35,6 @@ const style = {
 	width: "32rem",
 	height: "24rem",
 } as const satisfies CSSProperties;
-const status: Record<DBMatchStatus, string> = {
-	[DBMatchStatus.Abandoned]: "Vittoria per abbandono",
-	[DBMatchStatus.Default]: "Vittoria a tavolino",
-	[DBMatchStatus.Finished]: "Terminata",
-	[DBMatchStatus.Playing]: "In corso",
-	[DBMatchStatus.Postponed]: "Rimandata",
-	[DBMatchStatus.ToBePlayed]: "Da giocare",
-};
-const statusColors: Record<DBMatchStatus, CSSProperties["color"]> = {
-	[DBMatchStatus.Abandoned]: Colors.Danger,
-	[DBMatchStatus.Default]: Colors.Success,
-	[DBMatchStatus.Finished]: Colors.Success,
-	[DBMatchStatus.Playing]: Colors.Primary,
-	[DBMatchStatus.Postponed]: Colors.SecondarySolid,
-	[DBMatchStatus.ToBePlayed]: Colors.SecondarySolid,
-};
 
 const resolveParticipant = (
 	participantsMap: Record<string, Participants[number]>,
@@ -462,7 +447,7 @@ const MatchUI = ({
 					alignItems: "center",
 				}}>
 				<span style={{ color: statusColors[active.status] }}>
-					{status[active.status]}
+					{matchStatus[active.status]}
 				</span>
 				<button
 					type="button"

@@ -8,24 +8,30 @@ import {
 	PermissionFlagsBits,
 	Routes,
 	TextInputStyle,
+	type APIMessageTopLevelComponent,
 	type APIModalInteractionResponseCallbackData,
 	type APISelectMenuOption,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { ColorNumbers } from "../app/utils/Colors";
 import Command from "../Command";
 import {
 	DBMatchStatus,
 	RegistrationMode,
 	SupercellPlayerType,
 	TournamentFlags,
+	TournamentStatusFlags,
 } from "../util/Constants";
 import { rest } from "../util/globals";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
+import { template } from "../util/strings";
 import { TimeUnit } from "../util/time";
+import { matchStatus, roundName } from "../util/tournaments/Constants";
 import { editMessage } from "../util/tournaments/editMessage";
 import { finishRound } from "../util/tournaments/finishRound";
 import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
+import { resolveWinner } from "../util/tournaments/resolveWinner";
 import { Brawl } from "./brawl";
 
 export class Tournament extends Command {
@@ -55,9 +61,26 @@ export class Tournament extends Command {
 					},
 				],
 			},
+			{
+				type: ApplicationCommandOptionType.Subcommand,
+				name: "status",
+				description: "Controlla l'avanzamento nel torneo",
+				options: [
+					{
+						type: ApplicationCommandOptionType.User,
+						name: "user",
+						description:
+							"L'utente di cui controllare l'avanzamento (default: tu)",
+					},
+					{
+						type: ApplicationCommandOptionType.Boolean,
+						name: "full",
+						description: "Se vedere tutto lo storico del torneo",
+					},
+				],
+			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
-	static override customId = "tournament";
 	static override supportComponentMethods = true;
 	static register = async (
 		{ defer, edit, reply }: ChatInputReplies,
@@ -125,6 +148,95 @@ export class Tournament extends Command {
 						},
 					],
 				},
+			],
+		});
+	};
+	static status = async (
+		{ reply }: ChatInputReplies,
+		{
+			user: { id },
+			options: { user = id, full },
+		}: ChatInputArgs<typeof Tournament.chatInputData, "status">,
+	) => {
+		const { results } = await env.DB.prepare(
+			`
+				WITH t AS (
+					SELECT id FROM Tournaments
+					WHERE currentRound IS NOT NULL AND (statusFlags & ?2) = 0
+					LIMIT 1
+				)
+				SELECT * FROM Matches
+				WHERE tournamentId = (SELECT id FROM t) AND user1 = ?1
+				UNION ALL
+				SELECT * FROM Matches
+				WHERE tournamentId = (SELECT id FROM t) AND user2 = ?1
+				ORDER BY id
+				LIMIT ?3
+			`,
+		)
+			.bind(user, TournamentStatusFlags.Finished, full ? 19 : 1)
+			.run<Database.Match>();
+		const [match] = results;
+		const winner = resolveWinner(match);
+
+		reply({
+			flags: MessageFlags.IsComponentsV2 | (full ? MessageFlags.Ephemeral : 0),
+			components: [
+				{
+					type: ComponentType.TextDisplay,
+					content:
+						match ?
+							winner === user && match.id === 0 ?
+								"Complimenti, hai vinto il torneo!"
+							: (
+								match.status === DBMatchStatus.Playing ||
+								(match.status === DBMatchStatus.ToBePlayed && match.channelId)
+							) ?
+								`Lo scontro è iniziato! ${
+									match.channelId ?
+										`Vai in <#${match.channelId}> e segui le istruzioni per giocare`
+									:	"Attendi che venga creato il canale per concordarti con il tuo avversario..."
+								}.`
+							: match.status === DBMatchStatus.ToBePlayed ?
+								"Attendi l'inizio del torneo per giocare!"
+							: match.status === DBMatchStatus.Postponed ?
+								"Il tuo scontro è stato posticipato! Attendi ulteriori indicazioni..."
+							: match.status === DBMatchStatus.Default ?
+								"Hai superato lo scontro di default in quanto non è stato estratto alcun avversario! Attendi pazientemente l'inizio del prossimo round..."
+							: match.status === DBMatchStatus.Abandoned ?
+								winner === user ?
+									"Hai superato lo scontro per abbandono del tuo avversario! Attendi pazientemente l'inizio del prossimo round..."
+								:	"Hai perso lo scontro per abbandono :(\nSperiamo di vederti al prossimo torneo!"
+							: winner === user ?
+								"Hai vinto lo scontro! Attendi pazientemente l'inizio del prossimo round..."
+								// Here status is Finished and resolveWinner always returns a value for finished matches
+							:	`Hai perso lo scontro contro <@${winner!}> :(\nSperiamo di vederti al prossimo torneo!`
+						:	"Non risulta alcuno scontro associato a te nel torneo in corso!\nAssicurati di essere correttamente iscritto e attendi che vengano create le brackets.",
+				},
+				...results.map((match): APIMessageTopLevelComponent => {
+					const winner = resolveWinner(match);
+					const round = Math.floor(Math.log2(match.id + 1));
+
+					return {
+						type: ComponentType.Container,
+						accent_color:
+							winner === user ? ColorNumbers.Success
+							: winner === undefined ? ColorNumbers.Primary
+							: ColorNumbers.Danger,
+						components: [
+							{
+								type: ComponentType.TextDisplay,
+								content: template`
+									## ${displayMatchScore(match)}
+									ID: **${match.id}**
+									Stato: **${matchStatus[match.status]}**
+									Round: **${roundName(round)}**
+									Canale: ${match.channelId ? `<#${match.channelId}>` : "**nessuno**"}
+								`,
+							},
+						],
+					};
+				}),
 			],
 		});
 	};

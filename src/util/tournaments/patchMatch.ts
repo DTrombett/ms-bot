@@ -64,17 +64,17 @@ export const displayMatchScore = (
 		"status" | "result1" | "result2" | "user1" | "user2"
 	>,
 ) =>
-	`<@${match.user1}> VS ${match.user2 ? `<@${match.user2}>` : "N/A"}: ${
+	`<@${match.user1}>\t${
 		match.status === DBMatchStatus.Abandoned && match.result1 == null ?
 			"A"
 		:	String(match.result1 ?? 0)
-	} - ${
+	} – ${
 		match.user2 ?
 			match.status === DBMatchStatus.Abandoned && match.result2 == null ?
 				"A"
 			:	String(match.result2 ?? 0)
 		:	"N"
-	}`;
+	}\t${match.user2 ? `<@${match.user2}>` : "BYE"}`;
 export const runPatchRequest = async (
 	request: Request,
 	tournamentId: number,

@@ -86,3 +86,5 @@ CREATE TABLE Matches (
 );
 CREATE INDEX SupercellPlayersNotificationsIndex ON SupercellPlayers(notifications)
 WHERE notifications > 0;
+CREATE INDEX User1Matches ON Matches(tournamentId, user1);
+CREATE INDEX User2Matches ON Matches(tournamentId, user2);
