@@ -15,7 +15,11 @@ import {
 } from "react";
 import { DBMatchStatus } from "../../util/Constants";
 import { toSearchParams } from "../../util/objects";
-import { matchStatus, statusColors } from "../../util/tournaments/Constants";
+import {
+	matchStatus,
+	roundName,
+	statusColors,
+} from "../../util/tournaments/Constants";
 import type { Matches, Participants } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
@@ -653,150 +657,186 @@ const BracketsUI = memo(
 		brackets,
 		participantsMap,
 		setActive,
+		setRound,
 	}: {
 		brackets: (Matches | undefined)[];
 		participantsMap: Record<string, Participants[number]>;
 		setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
+		setRound: Dispatch<SetStateAction<number | undefined>>;
 	}): ReactNode => (
 		<div
-			id="brackets"
 			style={{
 				display: "flex",
-				fontFamily: "LilitaOne",
-				fontSize: "0.875rem",
-				gap: "3rem",
-				lineHeight: "1.25rem",
+				flexDirection: "column",
 				margin: "0 auto",
-				padding: "0 1rem",
+				padding: "0.5rem 1rem",
 				textAlign: "center",
-				whiteSpace: "nowrap",
 				width: "fit-content",
-				height: `calc((5rem + 2.4px) * ${brackets[0]?.length ?? 0})`,
 			}}>
-			{Array.from(brackets, (_, i) => (
-				<div
-					key={i}
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						justifyContent: "space-around",
-					}}>
-					{Array.from({ length: 2 ** (brackets.length - 1 - i) }, (_, k) => {
-						const match = resolveMatch(brackets, participantsMap, i, k);
+			<div style={{ display: "flex", justifyContent: "space-between" }}>
+				{Array.from(brackets, (_, i) => (
+					<button
+						key={brackets.length - i}
+						onClick={setRound.bind(null, (round) =>
+							round === brackets.length - i - 1 ?
+								undefined
+							:	brackets.length - i - 1,
+						)}
+						className="deleteButton"
+						style={{
+							width: "calc(2.4px + 10rem)",
+							padding: "0.5rem",
+							fontFamily: "ggsans",
+							fontSize: "1rem",
+							lineHeight: "2rem",
+							color: "white",
+							cursor: "pointer",
+							backgroundColor: "transparent",
+							paddingBlock: 0,
+							paddingInline: 0,
+							border: "none",
+							borderRadius: "4px",
+						}}>
+						{roundName(brackets.length - i - 1)}
+					</button>
+				))}
+			</div>
+			<div
+				id="brackets"
+				style={{
+					display: "flex",
+					fontFamily: "LilitaOne",
+					fontSize: "0.875rem",
+					gap: "3rem",
+					lineHeight: "1.25rem",
+					whiteSpace: "nowrap",
+					height: `calc((5rem + 2.4px) * ${brackets[0]?.length ?? 0})`,
+				}}>
+				{Array.from(brackets, (_, i) => (
+					<div
+						key={brackets.length - i}
+						style={{
+							display: "flex",
+							flexDirection: "column",
+							justifyContent: "space-around",
+						}}>
+						{Array.from({ length: 2 ** (brackets.length - 1 - i) }, (_, k) => {
+							const match = resolveMatch(brackets, participantsMap, i, k);
 
-						return (
-							<div
-								style={{
-									position: "relative",
-									border: style.border,
-									borderRadius: "4px",
-									backgroundColor: style.backgroundColor,
-									cursor: "pointer",
-								}}
-								key={k}
-								onClick={setActive.bind(null, match)}>
-								{i > 0 && (
-									<span style={{ pointerEvents: "none" }}>
-										<div
+							return (
+								<div
+									style={{
+										position: "relative",
+										border: style.border,
+										borderRadius: "4px",
+										backgroundColor: style.backgroundColor,
+										cursor: "pointer",
+									}}
+									key={match.id}
+									onClick={setActive.bind(null, match)}>
+									{i > 0 && (
+										<span style={{ pointerEvents: "none" }}>
+											<div
+												style={{
+													border: "0.8px solid rgba(255, 255, 255, 0.2)",
+													borderLeft: "none",
+													height: `calc((5rem + 2.4px) * ${2 ** (i - 1)} - 0.8px)`,
+													left: "calc(-3rem - 0.8px)",
+													position: "absolute",
+													top: `calc((-2.5rem - 1.2px) * ${2 ** (i - 1)} + 2rem)`,
+													width: "1.5rem",
+												}}
+											/>
+											<div
+												style={{
+													borderBottom: "0.8px solid rgba(255, 255, 255, 0.2)",
+													height: "2rem",
+													left: "calc(-1.5rem)",
+													position: "absolute",
+													width: "calc(1.5rem - 0.8px)",
+												}}
+											/>
+										</span>
+									)}
+									<div
+										style={{
+											top: "50%",
+											position: "absolute",
+											transform: `translate(${match.id ? "+" : "-"}50%, -50%)`,
+											pointerEvents: "none",
+											fontSize: "0.75rem",
+											fontFamily: "ggsans",
+											...(match.id ?
+												{ right: "calc(-0.75rem - 0.8px)" }
+											:	{ left: "calc(-0.75rem - 0.8px)" }),
+										}}>
+										{match.id}
+									</div>
+									<div
+										style={{
+											borderBottom: style.border,
+											display: "flex",
+											alignItems: "center",
+											height: "2rem",
+										}}>
+										<span
 											style={{
-												border: "0.8px solid rgba(255, 255, 255, 0.2)",
-												borderLeft: "none",
-												height: `calc((5rem + 2.4px) * ${2 ** (i - 1)} - 0.8px)`,
-												left: "calc(-3rem - 0.8px)",
-												position: "absolute",
-												top: `calc((-2.5rem - 1.2px) * ${2 ** (i - 1)} + 2rem)`,
-												width: "1.5rem",
-											}}
-										/>
-										<div
+												paddingBottom: "0.25rem",
+												textOverflow: "ellipsis",
+												overflowX: "clip",
+												width: "8rem",
+											}}>
+											{match.participant1.player?.name ?? "???"}
+										</span>
+										<span
 											style={{
-												borderBottom: "0.8px solid rgba(255, 255, 255, 0.2)",
-												height: "2rem",
-												left: "calc(-1.5rem)",
-												position: "absolute",
-												width: "calc(1.5rem - 0.8px)",
-											}}
-										/>
+												width: "2rem",
+												borderLeft: style.border,
+												height: "1.25rem",
+											}}>
+											{match.participant1.result}
+										</span>
+									</div>
+									<span
+										style={{
+											position: "absolute",
+											top: "50%",
+											left: "calc(50% - 1rem)",
+											transform: "translate(-50%, -50%)",
+											fontSize: "1rem",
+										}}>
+										VS
 									</span>
-								)}
-								<div
-									style={{
-										top: "50%",
-										position: "absolute",
-										transform: `translate(${match.id ? "+" : "-"}50%, -50%)`,
-										pointerEvents: "none",
-										fontSize: "0.75rem",
-										fontFamily: "ggsans",
-										...(match.id ?
-											{ right: "calc(-0.75rem - 0.8px)" }
-										:	{ left: "calc(-0.75rem - 0.8px)" }),
-									}}>
-									{match.id}
+									<div
+										style={{
+											display: "flex",
+											alignItems: "center",
+											height: "2rem",
+										}}>
+										<span
+											style={{
+												paddingTop: "0.25rem",
+												textOverflow: "ellipsis",
+												overflowX: "clip",
+												width: "8rem",
+											}}>
+											{match.participant2.player?.name ?? "???"}
+										</span>
+										<span
+											style={{
+												width: "2rem",
+												borderLeft: style.border,
+												height: "1.25rem",
+											}}>
+											{match.participant2.result}
+										</span>
+									</div>
 								</div>
-								<div
-									style={{
-										borderBottom: style.border,
-										display: "flex",
-										alignItems: "center",
-										height: "2rem",
-									}}>
-									<span
-										style={{
-											paddingBottom: "0.25rem",
-											textOverflow: "ellipsis",
-											overflowX: "clip",
-											width: "8rem",
-										}}>
-										{match.participant1.player?.name ?? "???"}
-									</span>
-									<span
-										style={{
-											width: "2rem",
-											borderLeft: style.border,
-											height: "1.25rem",
-										}}>
-										{match.participant1.result}
-									</span>
-								</div>
-								<span
-									style={{
-										position: "absolute",
-										top: "50%",
-										left: "calc(50% - 1rem)",
-										transform: "translate(-50%, -50%)",
-										fontSize: "1rem",
-									}}>
-									VS
-								</span>
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										height: "2rem",
-									}}>
-									<span
-										style={{
-											paddingTop: "0.25rem",
-											textOverflow: "ellipsis",
-											overflowX: "clip",
-											width: "8rem",
-										}}>
-										{match.participant2.player?.name ?? "???"}
-									</span>
-									<span
-										style={{
-											width: "2rem",
-											borderLeft: style.border,
-											height: "1.25rem",
-										}}>
-										{match.participant2.result}
-									</span>
-								</div>
-							</div>
-						);
-					})}
-				</div>
-			))}
+							);
+						})}
+					</div>
+				))}
+			</div>
 		</div>
 	),
 );
@@ -820,6 +860,7 @@ export default useClient(
 	}) => {
 		const [active, setActive] = useState<ResolvedMatch>();
 		const [currentMatches, setMatches] = useState(matches);
+		const [round, setRound] = useState<number>();
 		const [currentParticipants] = useState(participants);
 		const brackets = useMemo(() => {
 			const brackets: (Matches | undefined)[] = [];
@@ -827,10 +868,11 @@ export default useClient(
 			for (const match of currentMatches) {
 				const level = Math.floor(Math.log2(match.id + 1));
 
-				(brackets[level] ??= [])[match.id - 2 ** level + 1] = match;
+				if (round == null || level <= round)
+					(brackets[level] ??= [])[match.id - 2 ** level + 1] = match;
 			}
 			return brackets.reverse();
-		}, [currentMatches]);
+		}, [currentMatches, round]);
 		const participantsMap = useMemo(
 			() => Object.fromEntries(currentParticipants.map((p) => [p.userId, p])),
 			[currentParticipants],
@@ -851,11 +893,11 @@ export default useClient(
 				<div
 					style={{
 						position: "fixed",
-						top: "1rem",
-						right: active ? "calc(1rem + 4px)" : "1rem",
-						padding: "0 1rem",
+						top: "2.5rem",
+						right: active ? "calc(1rem + 4px)" : "0.5rem",
+						padding: "0 0.5rem",
 						display: "flex",
-						gap: "1rem",
+						gap: "0.25rem",
 						zIndex: 10,
 						transition: "none",
 					}}>
@@ -933,6 +975,7 @@ export default useClient(
 						brackets={brackets}
 						participantsMap={participantsMap}
 						setActive={setActive}
+						setRound={setRound}
 					/>
 				}
 			</>
