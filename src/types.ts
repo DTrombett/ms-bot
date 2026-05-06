@@ -36,6 +36,7 @@ import type { CommandHandler } from "./util/CommandHandler";
 import type {
 	DBMatchStatus,
 	SupercellPlayerType,
+	TournamentFlags,
 	TournamentRoundMode,
 } from "./util/Constants";
 
@@ -52,6 +53,8 @@ declare global {
 	type AsConst<T> = { readonly [P in keyof T]: AsConst<T[P]> };
 
 	type RecursivePartial<T> = { [P in keyof T]?: RecursivePartial<T[P]> };
+
+	type PossiblyNull<T> = T | { [P in keyof T]: null };
 
 	type InteractionByType<
 		T extends InteractionType,
@@ -383,7 +386,7 @@ declare global {
 		};
 		type Tournament = {
 			name: string;
-			flags: number;
+			flags: TournamentFlags;
 			game: SupercellPlayerType;
 			logChannel: string;
 			registrationMode: number;
@@ -409,6 +412,7 @@ declare global {
 			roundType?: TournamentRoundMode | null;
 			workflowId?: string | null;
 			currentRound?: number | null;
+			participantCount: number;
 			id: number;
 		};
 		type Participant = {

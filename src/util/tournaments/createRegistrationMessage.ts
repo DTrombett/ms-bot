@@ -59,6 +59,7 @@ export const createRegistrationMessage = async (
 				style: ButtonStyle.Success,
 				emoji: { animated: true, id: "817094620700868678", name: "verified" },
 				label: "Iscriviti",
+				disabled: registrationCount >= (maxPlayers ?? -1),
 			},
 			{
 				type: ComponentType.Button,

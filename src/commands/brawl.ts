@@ -23,6 +23,7 @@ import { percentile } from "../util/maths";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
 import { template } from "../util/strings";
+import { UserError } from "../util/UserError";
 
 enum BrawlerOrder {
 	Name,
@@ -1521,7 +1522,7 @@ export class Brawl extends Command {
 		).catch(() => {});
 
 		console.error(json ?? body);
-		throw new Error(
+		throw new UserError(
 			json?.message ??
 				errors[res.status] ??
 				`\`${res.status} ${res.statusText}\``,
@@ -1625,7 +1626,7 @@ export class Brawl extends Command {
 		tag = tag.toUpperCase().replace(/O/g, "0");
 		if (!tag.startsWith("#")) tag = `#${tag}`;
 		if (!/^#[0289PYLQGRJCUV]{3,15}$/.test(tag))
-			throw new TypeError("Tag non valido.");
+			throw new UserError("Tag non valido.");
 		return tag;
 	};
 	static override async chatInput(

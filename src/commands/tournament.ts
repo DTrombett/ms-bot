@@ -31,7 +31,9 @@ import { matchStatus, roundName } from "../util/tournaments/Constants";
 import { editMessage } from "../util/tournaments/editMessage";
 import { finishRound } from "../util/tournaments/finishRound";
 import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
+import { register } from "../util/tournaments/register";
 import { resolveWinner } from "../util/tournaments/resolveWinner";
+import { UserError } from "../util/UserError";
 import { Brawl } from "./brawl";
 
 export class Tournament extends Command {
@@ -248,13 +250,7 @@ export class Tournament extends Command {
 			Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 },
 		edit: Replies["edit"],
 		userId: string,
-		options: {
-			tag?: string;
-			team?: string;
-			confirm?: boolean;
-			name?: string;
-			locale?: string;
-		},
+		options: { tag?: string; team?: string; name?: string; locale?: string },
 	) => {
 		if (tournament.registered)
 			return edit({
@@ -273,33 +269,6 @@ export class Tournament extends Command {
 					},
 				],
 			});
-		if (options.tag && options.confirm) {
-			({ name: options.name } = await Brawl.getPlayer(options.tag, { edit }));
-			const existing = await env.DB.prepare(
-				`
-					INSERT INTO SupercellPlayers (tag, userId, type, name, active)
-					VALUES (?1, ?2, ?3, ?4, NOT EXISTS (
-						SELECT TRUE
-						FROM SupercellPlayers
-						WHERE userId = ?2 AND type = ?3 AND active = TRUE
-					))
-					ON CONFLICT(tag, type) DO UPDATE
-					SET name = excluded.name RETURNING userId
-				`,
-			)
-				.bind(options.tag, userId, tournament.game, options.name)
-				.first<Database.SupercellPlayer["userId"]>("userId");
-
-			if (existing && existing !== userId)
-				return edit({
-					content: `Questo tag risulta già collegato a <@${existing}>!`,
-				});
-		}
-		if (
-			(!(tournament.flags & TournamentFlags.TagRequired) && !options.tag) ||
-			(options.tag && options.confirm)
-		)
-			return this.completeRegistration(tournament, edit, userId, options);
 		const { results: saved } = await env.DB.prepare(
 			`
 				SELECT tag, active, name FROM SupercellPlayers
@@ -352,75 +321,6 @@ export class Tournament extends Command {
 								name: "verified",
 							},
 							style: ButtonStyle.Success,
-						},
-					],
-				},
-			],
-		});
-	};
-	static completeRegistration = async (
-		tournament: Pick<Database.Tournament, "id" | "name">,
-		edit: Replies["edit"],
-		userId: string,
-		{ tag, name }: { tag?: string; name?: string } = {},
-	) => {
-		const [, result] = await env.DB.batch<
-			Pick<
-				Database.Tournament,
-				| "minPlayers"
-				| "maxPlayers"
-				| "registrationMessage"
-				| "registrationTemplateLink"
-				| "registrationRole"
-				| "registrationChannel"
-				| "name"
-				| "id"
-			> & { participantCount: number }
-		>([
-			env.DB.prepare(
-				`
-					INSERT INTO Participants (tournamentId, userId, tag, name)
-					VALUES (?1, ?2, ?3, ?4)
-				`,
-			).bind(tournament.id, userId, tag || null, name || null),
-			env.DB.prepare(
-				`
-					SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
-					(
-						SELECT COUNT(*)
-						FROM Participants
-						WHERE tournamentId = Tournaments.id
-					) AS participantCount
-					FROM Tournaments WHERE id = ?
-				`,
-			).bind(tournament.id),
-		]);
-		const data = result?.results[0];
-		if (!data)
-			return edit({
-				content: `Non è stato possibile completare l'iscrizione! Riprova o contatta un moderatore.`,
-			});
-		await Promise.all([
-			data.registrationRole &&
-				rest.put(
-					Routes.guildMemberRole(env.MAIN_GUILD, userId, data.registrationRole),
-					{
-						reason: `Iscrizione al torneo ${tournament.name}${tag ? ` come ${tag}` : ""} (${data.participantCount} iscritti totali)`,
-					},
-				),
-			editMessage(data),
-		]);
-		return edit({
-			content: `Ti sei iscritto con successo al torneo **${tournament.name}**!`,
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: `tournament-unr-${tournament.id}`,
-							style: ButtonStyle.Danger,
-							label: "Rimuovi iscrizione",
 						},
 					],
 				},
@@ -530,36 +430,40 @@ export class Tournament extends Command {
 			interaction: { locale },
 		}: ComponentArgs,
 	) => {
-		if (tag) {
-			deferUpdate();
-			const tournament = await env.DB.prepare(
-				`
-					SELECT t.id, t.name, t.flags, t.team, t.game, p.tag, p.team, p.userId IS NOT NULL AS registered
-					FROM Tournaments t
-					LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
-					WHERE
-						t.id = ?2
-						AND (t.registrationMode & ?3) != 0
-						AND t.registrationStart < unixepoch('now')
-						AND t.registrationEnd > unixepoch('now')
-				`,
-			)
-				.bind(id, tournamentId, RegistrationMode.Discord)
-				.first<
-					Pick<Database.Tournament, "id" | "name" | "flags" | "team" | "game"> &
-						Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 }
-				>();
+		if (tag)
+			try {
+				deferUpdate();
+				const tournament = await register(
+					Number(tournamentId),
+					id,
+					RegistrationMode.Discord,
+					{ tag },
+				);
 
-			if (!tournament)
 				return edit({
-					content: "Le iscrizioni per questo torneo non sono più disponibili.",
+					content: `Ti sei iscritto con successo al torneo **${tournament.name}**!`,
+					components: [
+						{
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `tournament-unr-${tournament.id}`,
+									style: ButtonStyle.Danger,
+									label: "Rimuovi iscrizione",
+								},
+							],
+						},
+					],
 				});
-			return this.handleTournament(tournament, edit, id, {
-				tag,
-				team,
-				confirm: true,
-			});
-		}
+			} catch (err) {
+				if (err instanceof UserError) return edit({ content: err.message });
+				console.error(err);
+				return edit({
+					content:
+						"Si è verificato un errore imprevisto durante l'iscrizione! Contatta un moderatore.",
+				});
+			}
 		const { results } = await env.DB.prepare(
 			`
 				SELECT
