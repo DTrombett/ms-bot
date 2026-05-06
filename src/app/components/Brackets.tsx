@@ -655,11 +655,13 @@ const MatchUI = ({
 const BracketsUI = memo(
 	({
 		brackets,
+		currentlyPlaying,
 		participantsMap,
 		setActive,
 		setRound,
 	}: {
 		brackets: (Matches | undefined)[];
+		currentlyPlaying: number;
 		participantsMap: Record<string, Participants[number]>;
 		setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
 		setRound: Dispatch<SetStateAction<number | undefined>>;
@@ -697,6 +699,7 @@ const BracketsUI = memo(
 							border: "none",
 							borderRadius: "4px",
 						}}>
+						{currentlyPlaying === i && "🔴 "}
 						{roundName(brackets.length - i - 1)}
 					</button>
 				))}
@@ -973,6 +976,7 @@ export default useClient(
 					/>
 				:	<BracketsUI
 						brackets={brackets}
+						currentlyPlaying={currentlyPlaying}
 						participantsMap={participantsMap}
 						setActive={setActive}
 						setRound={setRound}
