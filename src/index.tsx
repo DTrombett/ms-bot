@@ -993,21 +993,14 @@ const server: ExportedHandler<Env> = {
 						);
 					const existing = await env.DB.prepare(
 						`
-							INSERT INTO SupercellPlayers (tag, userId, active, type, name)
-							VALUES (
-								?1,
-								?2,
-								NOT EXISTS (
-									SELECT TRUE
-									FROM SupercellPlayers
-									WHERE userId = ?2 AND type = ?3 AND active = TRUE
-								),
-								?3,
-								?4
-							)
+							INSERT INTO SupercellPlayers (tag, userId, type, name, active)
+							VALUES (?1, ?2, ?3, ?4, NOT EXISTS (
+								SELECT TRUE
+								FROM SupercellPlayers
+								WHERE userId = ?2 AND type = ?3 AND active = TRUE
+							))
 							ON CONFLICT(tag, type) DO UPDATE
-							SET name = excluded.name
-							RETURNING userId
+							SET name = excluded.name RETURNING userId
 						`,
 					)
 						.bind(data.tag, data.userId, tournament.game, data.name)

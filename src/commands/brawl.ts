@@ -1939,21 +1939,16 @@ export class Brawl extends Command {
 		deferUpdate();
 		userId ||= id;
 		const result = await env.DB.prepare(
-			`INSERT INTO SupercellPlayers (tag, userId, active, type, name)
-			VALUES (
-				?1,
-				?2,
-				NOT EXISTS (
-					SELECT 1
+			`
+				INSERT INTO SupercellPlayers (tag, userId, type, name, active)
+				VALUES (?1, ?2, ?3, ?4, NOT EXISTS (
+					SELECT TRUE
 					FROM SupercellPlayers
-					WHERE userId = ?2 AND type = ?3 AND active = 1
-				),
-				?3,
-				?4
-			)
-			ON CONFLICT(tag, type) DO UPDATE
-			SET active = active
-			RETURNING userId;`,
+					WHERE userId = ?2 AND type = ?3 AND active = TRUE
+				))
+				ON CONFLICT(tag, type) DO UPDATE
+				SET name = excluded.name RETURNING userId
+			`,
 		)
 			.bind(
 				tag,
