@@ -10,7 +10,10 @@ import { createSetCookie, isAdmin } from "../token";
 export const parseTournamentData = async (
 	request: Request,
 	pathname: string,
-): Promise<Response | Omit<Database.Tournament, "id" | "participantCount">> => {
+): Promise<
+	| Response
+	| Omit<Database.Tournament, "id" | "participantCount" | "statusFlags">
+> => {
 	const formDataPromise = request.formData();
 	const { setCookie, token } = await createSetCookie(request);
 	if (!(await isAdmin(token)))
@@ -219,7 +222,6 @@ export const parseTournamentData = async (
 		logChannel: form.logChannel,
 		registrationMode,
 		rounds: JSON.stringify(rounds),
-		statusFlags: 0,
 		team: form.team,
 		bracketsTime: form.bracketsTime,
 		categoryId: form.categoryId,

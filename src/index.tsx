@@ -41,6 +41,7 @@ import { editMessage } from "./util/tournaments/editMessage";
 import { parseTournamentData } from "./util/tournaments/parseTournamentData";
 import { runPatchRequest } from "./util/tournaments/patchMatch";
 import { register } from "./util/tournaments/register";
+import { unregister } from "./util/tournaments/unregister";
 import { UserError } from "./util/UserError";
 
 const handler = new CommandHandler(Object.values(commands));
@@ -597,6 +598,7 @@ const server: ExportedHandler<Env> = {
 					headers: {
 						"accept-ch": "Sec-CH-UA-Mobile",
 						location: "/tournaments",
+						"set-cookie": setCookie,
 					},
 				});
 			} catch (err) {
@@ -606,6 +608,7 @@ const server: ExportedHandler<Env> = {
 					status: 303,
 					headers: {
 						"accept-ch": "Sec-CH-UA-Mobile",
+						"set-cookie": setCookie,
 						location: `/tournaments?${toSearchParams({
 							error: error.name,
 							error_description:
@@ -632,90 +635,31 @@ const server: ExportedHandler<Env> = {
 					},
 				});
 			try {
-				const tournament = await env.DB.prepare(
-					`
-						SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id, p.userId IS NOT NULL AS participationExists,
-							(
-								SELECT COUNT(*)
-								FROM Participants
-								WHERE tournamentId = t.id
-							) AS participantCount
-						FROM Tournaments t
-						LEFT JOIN Participants p
-							ON p.tournamentId = t.id AND p.userId = ?1
-						WHERE
-							t.id = ?2
-							AND (t.registrationMode & ?3) != 0
-							AND t.registrationStart < unixepoch('now')
-							AND t.registrationEnd > unixepoch('now')
-					`,
-				)
-					.bind(token.i, matchResult[1], RegistrationMode.Dashboard)
-					.first<
-						Pick<
-							Database.Tournament,
-							| "registrationRole"
-							| "name"
-							| "registrationChannel"
-							| "registrationMessage"
-							| "minPlayers"
-							| "maxPlayers"
-							| "registrationTemplateLink"
-							| "id"
-						> & { participantCount: number; participationExists: boolean }
-					>();
-
-				if (!tournament)
-					return new Response(null, {
-						status: 303,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							location: `/tournaments?error=closed&error_description=${encodeURIComponent("Le iscrizioni per questo torneo non sono più disponibili")}`,
-						},
-					});
-				if (!tournament.participationExists)
-					return new Response(null, {
-						status: 303,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							location: `/tournaments?error=notRegistered&error_description=${encodeURIComponent("Non risulti iscritto a questo torneo!")}`,
-						},
-					});
-				tournament.participantCount--;
-				await Promise.all([
-					tournament.registrationRole &&
-						rest.delete(
-							Routes.guildMemberRole(
-								env.MAIN_GUILD,
-								token.i,
-								tournament.registrationRole,
-							),
-							{ reason: `Rimozione iscrizione al torneo ${tournament.name}` },
-						),
-					editMessage(tournament),
-					env.DB.prepare(
-						`
-							DELETE FROM Participants
-							WHERE tournamentId = ?1 AND userId = ?2
-						`,
-					)
-						.bind(matchResult[1], token.i)
-						.run(),
-				]);
+				await unregister(Number(matchResult[1]), {
+					userId: token.i,
+					mode: RegistrationMode.Dashboard,
+				});
 				return new Response(null, {
 					status: 303,
 					headers: {
 						"accept-ch": "Sec-CH-UA-Mobile",
+						"set-cookie": setCookie,
 						location: "/tournaments",
 					},
 				});
 			} catch (err) {
-				console.error(err);
+				const error = err instanceof UserError ? err : normalizeError(err);
+
 				return new Response(null, {
 					status: 303,
 					headers: {
 						"accept-ch": "Sec-CH-UA-Mobile",
-						location: `${url.pathname}?error=${encodeURIComponent((err as Error).name)}`,
+						"set-cookie": setCookie,
+						location: `/tournaments?${toSearchParams({
+							error: error.name,
+							error_description:
+								error instanceof UserError ? error.message : null,
+						})}`,
 					},
 				});
 			}
@@ -815,10 +759,7 @@ const server: ExportedHandler<Env> = {
 						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole,
 							t.registrationChannel, t.registrationMessage, t.flags,
 							t.minPlayers, t.maxPlayers, t.registrationTemplateLink,
-							sp.tag as foundTag, sp.name as foundName, (
-								SELECT COUNT(*) FROM Participants
-								WHERE tournamentId = t.id
-							) AS participantCount
+							sp.tag as foundTag, sp.name as foundName, t.participantCount
 						FROM Tournaments t
 						LEFT JOIN Participants p ON
 							p.tournamentId = t.id AND (p.userId = ?1 OR p.tag = ?2)
@@ -838,12 +779,12 @@ const server: ExportedHandler<Env> = {
 							| "minPlayers"
 							| "maxPlayers"
 							| "registrationTemplateLink"
+							| "participantCount"
 							| "id"
 							| "game"
 							| "flags"
 						> &
 							Partial<Pick<Database.Participant, "tag" | "userId">> & {
-								participantCount: number;
 								foundTag?: Database.SupercellPlayer["tag"];
 								foundName?: Database.SupercellPlayer["name"];
 							}
@@ -1043,91 +984,27 @@ const server: ExportedHandler<Env> = {
 						},
 					},
 				);
-			if (!body.length)
+			try {
+				await unregister(Number(matchResult[1]), {
+					admin: true,
+					userIds: body,
+				});
 				return new Response(null, {
 					status: 204,
 					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
 				});
-			try {
-				const [
-					{
-						meta: { changed_db },
-					},
-					{
-						results: [tournament],
-					},
-				] = (await env.DB.batch([
-					env.DB.prepare(
-						`
-							DELETE FROM Participants
-							WHERE tournamentId = ? AND userId in (${Array(body.length).fill("?").join(",")})
-						`,
-					).bind(matchResult[1], ...body),
-					env.DB.prepare(
-						`
-							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id,
-								(
-									SELECT COUNT(*)
-									FROM Participants
-									WHERE tournamentId = t.id
-								) AS participantCount
-							FROM Tournaments t
-							WHERE t.id = ?1
-						`,
-					).bind(matchResult[1]),
-				])) as [
-					D1Result<never>,
-					D1Result<
-						Pick<
-							Database.Tournament,
-							| "registrationRole"
-							| "name"
-							| "registrationChannel"
-							| "registrationMessage"
-							| "minPlayers"
-							| "maxPlayers"
-							| "registrationTemplateLink"
-							| "id"
-						> & { participantCount: number }
-					>,
-				];
-
-				if (!tournament)
+			} catch (err) {
+				if (err instanceof UserError)
 					return Response.json(
-						{ message: "Torneo non trovato" },
+						{ message: err.message },
 						{
-							status: 404,
+							status: 400,
 							headers: {
 								"accept-ch": "Sec-CH-UA-Mobile",
 								"set-cookie": setCookie,
 							},
 						},
 					);
-				if (changed_db) {
-					if (tournament.registrationRole)
-						waitUntil(
-							Promise.all(
-								body.map((id) =>
-									rest.delete(
-										Routes.guildMemberRole(
-											env.MAIN_GUILD,
-											id,
-											tournament.registrationRole!,
-										),
-										{
-											reason: `Rimozione iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
-										},
-									),
-								),
-							),
-						);
-					await editMessage(tournament);
-				}
-				return new Response(null, {
-					status: 204,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
-			} catch (err) {
 				console.error(err);
 				return new Response(null, {
 					status: 500,
@@ -1169,94 +1046,27 @@ const server: ExportedHandler<Env> = {
 					},
 				);
 			try {
-				const [
-					{
-						meta: { changed_db },
-					},
-					{
-						results: [tournament],
-					},
-				] = (await env.DB.batch([
-					env.DB.prepare(
-						`
-							DELETE FROM Participants
-							WHERE tournamentId = ?1 AND userId = ?2
-								AND EXISTS (
-									SELECT TRUE
-									FROM Tournaments t
-									WHERE t.id = ?1 AND (?3 = TRUE OR (
-										(t.registrationMode & ?4) != 0
-										AND t.registrationStart < unixepoch('now')
-										AND t.registrationEnd > unixepoch('now')
-									))
-								);
-						`,
-					).bind(
-						matchResult[1],
-						matchResult[2],
-						admin,
-						RegistrationMode.Dashboard,
-					),
-					env.DB.prepare(
-						`
-							SELECT t.registrationRole, t.name, t.registrationChannel, t.registrationMessage, t.minPlayers, t.maxPlayers, t.registrationTemplateLink, t.id,
-								(
-									SELECT COUNT(*)
-									FROM Participants
-									WHERE tournamentId = t.id
-								) AS participantCount
-							FROM Tournaments t
-							WHERE t.id = ?1
-						`,
-					).bind(matchResult[1]),
-				])) as [
-					D1Result<never>,
-					D1Result<
-						Pick<
-							Database.Tournament,
-							| "registrationRole"
-							| "name"
-							| "registrationChannel"
-							| "registrationMessage"
-							| "minPlayers"
-							| "maxPlayers"
-							| "registrationTemplateLink"
-							| "id"
-						> & { participantCount: number }
-					>,
-				];
-
-				if (!tournament)
+				await unregister(Number(matchResult[1]), {
+					admin,
+					userId: matchResult[2]!,
+					mode: RegistrationMode.Dashboard,
+				});
+				return new Response(null, {
+					status: 204,
+					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
+				});
+			} catch (err) {
+				if (err instanceof UserError)
 					return Response.json(
-						{ message: "Torneo non trovato" },
+						{ message: err.message },
 						{
-							status: 404,
+							status: 400,
 							headers: {
 								"accept-ch": "Sec-CH-UA-Mobile",
 								"set-cookie": setCookie,
 							},
 						},
 					);
-				if (changed_db)
-					await Promise.all([
-						tournament.registrationRole &&
-							rest.delete(
-								Routes.guildMemberRole(
-									env.MAIN_GUILD,
-									matchResult[2]!,
-									tournament.registrationRole,
-								),
-								{
-									reason: `Rimozione iscrizione al torneo ${tournament.name} da parte di ${token.u}`,
-								},
-							),
-						editMessage(tournament),
-					]);
-				return new Response(null, {
-					status: 204,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
-			} catch (err) {
 				console.error(err);
 				return new Response(null, {
 					status: 500,

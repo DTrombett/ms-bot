@@ -6,7 +6,6 @@ import {
 	ComponentType,
 	MessageFlags,
 	PermissionFlagsBits,
-	Routes,
 	TextInputStyle,
 	type APIMessageTopLevelComponent,
 	type APIModalInteractionResponseCallbackData,
@@ -22,17 +21,16 @@ import {
 	TournamentFlags,
 	TournamentStatusFlags,
 } from "../util/Constants";
-import { rest } from "../util/globals";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
 import { template } from "../util/strings";
 import { TimeUnit } from "../util/time";
 import { matchStatus, roundName } from "../util/tournaments/Constants";
-import { editMessage } from "../util/tournaments/editMessage";
 import { finishRound } from "../util/tournaments/finishRound";
 import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
 import { register } from "../util/tournaments/register";
 import { resolveWinner } from "../util/tournaments/resolveWinner";
+import { unregister } from "../util/tournaments/unregister";
 import { UserError } from "../util/UserError";
 import { Brawl } from "./brawl";
 
@@ -363,64 +361,15 @@ export class Tournament extends Command {
 		{ args: [tournament], user: { id } }: ComponentArgs,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
-		const data = await env.DB.prepare(
-			`
-				SELECT 
-					t.minPlayers, t.maxPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name, t.id,
-					p.userId IS NOT NULL AS participationExists,
-					(
-						(t.registrationMode & ?1) != 0
-						AND t.registrationStart < unixepoch('now')
-						AND t.registrationEnd > unixepoch('now') + 1
-					) AS registrationOpen,
-					(
-						SELECT COUNT(*)
-						FROM Participants
-						WHERE tournamentId = t.id
-					) AS participantCount
-				FROM Tournaments t
-				LEFT JOIN Participants p
-					ON p.tournamentId = t.id AND p.userId = ?2
-				WHERE t.id = ?3
-			`,
-		)
-			.bind(RegistrationMode.Discord, id, tournament)
-			.first<
-				{
-					participationExists: boolean;
-					registrationOpen: boolean;
-					participantCount: number;
-				} & Pick<
-					Database.Tournament,
-					| "minPlayers"
-					| "maxPlayers"
-					| "registrationMessage"
-					| "registrationChannel"
-					| "registrationTemplateLink"
-					| "registrationRole"
-					| "name"
-					| "id"
-				>
-			>();
-
-		if (!data?.registrationOpen)
-			return edit({ content: "Le iscrizioni per questo torneo sono chiuse!" });
-		if (!data.participationExists)
-			return edit({ content: "Non risulti iscritto a questo torneo!" });
-		data.participantCount--;
-		await Promise.all([
-			rest.delete(
-				Routes.guildMemberRole(env.MAIN_GUILD, id, data.registrationRole!),
-				{ reason: `Rimozione iscrizione al torneo ${data.name}` },
-			),
-			editMessage(data),
-			env.DB.prepare(
-				`DELETE FROM Participants WHERE tournamentId = ?1 AND userId = ?2`,
-			)
-				.bind(tournament, id)
-				.run(),
-		]);
-		return edit({ content: "Hai rimosso la tua iscrizione!" });
+		try {
+			await unregister(Number(tournament), {
+				mode: RegistrationMode.Discord,
+				userId: id,
+			});
+			return edit({ content: "Hai rimosso la tua iscrizione!" });
+		} catch (err) {
+			return this.handleError(err, edit);
+		}
 	};
 	static reg = async (
 		{ edit, deferUpdate, modal, defer, reply }: ComponentReplies,
@@ -437,7 +386,7 @@ export class Tournament extends Command {
 					tag,
 				});
 				return edit({
-					content: `Ti sei iscritto con successo!`,
+					content: "Ti sei iscritto con successo!",
 					components: [
 						{
 							type: ComponentType.ActionRow,
@@ -453,13 +402,7 @@ export class Tournament extends Command {
 					],
 				});
 			} catch (err) {
-				if (err instanceof UserError) return edit({ content: err.message });
-				console.error(err);
-				return edit({
-					content:
-						"Si è verificato un errore imprevisto durante l'iscrizione! Contatta un moderatore.",
-					components: [],
-				});
+				return this.handleError(err, edit);
 			}
 		const { results } = await env.DB.prepare(
 			`
@@ -841,4 +784,12 @@ export class Tournament extends Command {
 			},
 		],
 	});
+	static handleError = (err: unknown, edit: BaseReplies["edit"]) => {
+		if (err instanceof UserError) return edit({ content: err.message });
+		console.error(err);
+		return edit({
+			content: "Si è verificato un errore imprevisto! Contatta un moderatore.",
+			components: [],
+		});
+	};
 }

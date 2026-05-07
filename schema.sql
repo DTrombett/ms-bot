@@ -99,13 +99,13 @@ AFTER
 INSERT ON Participants BEGIN
 UPDATE Tournaments
 SET participantCount = participantCount + 1
-WHERE id = NEW.tournamentId
+WHERE id = NEW.tournamentId;
 END;
 CREATE TRIGGER DecreaseParticipantCount
 AFTER DELETE ON Participants BEGIN
 UPDATE Tournaments
 SET participantCount = participantCount - 1
-WHERE id = OLD.tournamentId
+WHERE id = OLD.tournamentId;
 END;
 CREATE TRIGGER ParticipantsCreate BEFORE
 INSERT ON Participants BEGIN
