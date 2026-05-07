@@ -56,6 +56,8 @@ declare global {
 
 	type PossiblyNull<T> = T | { [P in keyof T]: null };
 
+	type PossiblyUndefined<T> = T | { [P in keyof T]?: never };
+
 	type InteractionByType<
 		T extends InteractionType,
 		I extends APIInteraction = APIInteraction,

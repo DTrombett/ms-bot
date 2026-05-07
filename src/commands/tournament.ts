@@ -433,22 +433,18 @@ export class Tournament extends Command {
 		if (tag)
 			try {
 				deferUpdate();
-				const tournament = await register(
-					Number(tournamentId),
-					id,
-					RegistrationMode.Discord,
-					{ tag },
-				);
-
+				await register(Number(tournamentId), id, RegistrationMode.Discord, {
+					tag,
+				});
 				return edit({
-					content: `Ti sei iscritto con successo al torneo **${tournament.name}**!`,
+					content: `Ti sei iscritto con successo!`,
 					components: [
 						{
 							type: ComponentType.ActionRow,
 							components: [
 								{
 									type: ComponentType.Button,
-									custom_id: `tournament-unr-${tournament.id}`,
+									custom_id: `tournament-unr-${tournamentId}`,
 									style: ButtonStyle.Danger,
 									label: "Rimuovi iscrizione",
 								},
@@ -462,6 +458,7 @@ export class Tournament extends Command {
 				return edit({
 					content:
 						"Si è verificato un errore imprevisto durante l'iscrizione! Contatta un moderatore.",
+					components: [],
 				});
 			}
 		const { results } = await env.DB.prepare(

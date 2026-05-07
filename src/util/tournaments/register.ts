@@ -38,7 +38,7 @@ export const register = async (
 	tournamentId: number,
 	userId: string,
 	mode: RegistrationMode,
-	{ tag, name }: { tag?: string; name?: string },
+	{ tag, name }: { tag?: string; name?: string } = {},
 ) => {
 	const tournament = await env.DB.prepare(
 		`
@@ -46,9 +46,15 @@ export const register = async (
 				t.name, t.participantCount, t.registrationChannel,
 				t.registrationMessage, t.registrationMode, t.registrationRole,
 				t.registrationStart, t.registrationEnd, t.registrationTemplateLink,
-				p.tag, p.userId, p.name AS participantName
+				p.tag, p.userId, p.name AS participantName${tag ? "" : ", sp.tag as savedTag"}
 			FROM Tournaments t
 			LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?2
+			${
+				tag ? "" : (
+					`LEFT JOIN SupercellPlayers sp ON
+						sp.game = t.game AND sp.userId = ?2 AND active = TRUE`
+				)
+			}
 			WHERE t.id = ?1
 		`,
 	)
@@ -75,10 +81,14 @@ export const register = async (
 					Pick<Database.Participant, "tag" | "userId"> & {
 						participantName: Database.Participant["name"];
 					}
+				> &
+				PossiblyUndefined<
+					PossiblyNull<{ savedTag: Database.SupercellPlayer["tag"] }>
 				>
 		>();
 	const now = Date.now() / TimeUnit.Second + 1;
 
+	tag ??= tournament?.savedTag ?? undefined;
 	if (!tournament)
 		throw new UserError("Torneo non trovato!", {
 			cause: { type: RegisterErrorType.UnknownTournament },
@@ -126,7 +136,8 @@ export const register = async (
 				SET name = excluded.name RETURNING userId
 			`,
 		)
-			.bind(tag, userId, tournament.game, name)
+			// SP name is not used much anyway and is discontinued in favor of Participants.name
+			.bind(tag, userId, tournament.game, tagRequired ? name : "")
 			.first<Database.SupercellPlayer["userId"]>("userId");
 
 		if (existing && existing !== userId)

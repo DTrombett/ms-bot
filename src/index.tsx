@@ -40,6 +40,8 @@ import {
 import { editMessage } from "./util/tournaments/editMessage";
 import { parseTournamentData } from "./util/tournaments/parseTournamentData";
 import { runPatchRequest } from "./util/tournaments/patchMatch";
+import { register } from "./util/tournaments/register";
+import { UserError } from "./util/UserError";
 
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
@@ -575,6 +577,7 @@ const server: ExportedHandler<Env> = {
 		) {
 			if (request.method !== "POST") return create405("POST");
 			const { setCookie, token } = await createSetCookie(request);
+
 			if (!token)
 				return new Response(null, {
 					status: 303,
@@ -584,106 +587,11 @@ const server: ExportedHandler<Env> = {
 					},
 				});
 			try {
-				const tournament = await env.DB.prepare(
-					`
-						SELECT t.name, t.flags, t.team, sp.tag, sp.name as spName
-						FROM Tournaments t
-						LEFT JOIN SupercellPlayers sp
-							ON sp.userId = ?1 AND sp.type = t.game
-						WHERE
-							t.id = ?2
-							AND (t.registrationMode & ?3) != 0
-							AND t.registrationStart < unixepoch('now')
-							AND t.registrationEnd > unixepoch('now')
-						ORDER BY sp.active DESC LIMIT 1
-					`,
-				)
-					.bind(token.i, matchResult[1], RegistrationMode.Dashboard)
-					.first<
-						Pick<Database.Tournament, "name" | "flags" | "team"> &
-							Pick<Database.SupercellPlayer, "tag"> & {
-								spName: Database.SupercellPlayer["name"] | null;
-							}
-					>();
-
-				if (!tournament)
-					return new Response(null, {
-						status: 303,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							location: `/tournaments?error=closed&error_description=${encodeURIComponent("Le iscrizioni per questo torneo non sono più disponibili")}`,
-						},
-					});
-				if (tournament.team > 1)
-					return new Response(null, {
-						status: 303,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							location: `/tournaments?error=team&error_description=${encodeURIComponent("Per iscriversi a questo torneo è necessario un team")}`,
-						},
-					});
-				if (!tournament.tag && tournament.flags & TournamentFlags.TagRequired)
-					return new Response(null, {
-						status: 303,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							location: `/tournaments?error=tag&error_description=${encodeURIComponent("Per iscriversi a questo torneo è necessario avere un tag salvato")}`,
-						},
-					});
-				const [, result] = await env.DB.batch<
-					Pick<
-						Database.Tournament,
-						| "minPlayers"
-						| "maxPlayers"
-						| "registrationMessage"
-						| "registrationTemplateLink"
-						| "registrationRole"
-						| "registrationChannel"
-						| "id"
-						| "name"
-					> & { participantCount: number }
-				>([
-					env.DB.prepare(
-						`
-							INSERT INTO Participants (tournamentId, userId, tag, name)
-							VALUES (?1, ?2, ?3, ?4)
-						`,
-					).bind(matchResult[1], token.i, tournament.tag, tournament.spName),
-					env.DB.prepare(
-						`
-							SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, id, name,
-							(
-								SELECT COUNT(*)
-								FROM Participants
-								WHERE tournamentId = Tournaments.id
-							) AS participantCount
-							FROM Tournaments WHERE id = ?
-						`,
-					).bind(matchResult[1]),
-				]);
-				const data = result?.results[0];
-				if (!data)
-					return new Response(null, {
-						status: 303,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							location: `/tournaments?error=tData&error_description=${encodeURIComponent("Non è stato possibile completare l'iscrizione! Riprova o contatta un moderatore")}`,
-						},
-					});
-				await Promise.all([
-					data.registrationRole &&
-						rest.put(
-							Routes.guildMemberRole(
-								env.MAIN_GUILD,
-								token.i,
-								data.registrationRole,
-							),
-							{
-								reason: `Iscrizione al torneo ${tournament.name}${tournament.tag ? ` come ${tournament.tag}` : ""} (${data.participantCount} iscritti totali)`,
-							},
-						),
-					editMessage(data),
-				]);
+				await register(
+					Number(matchResult[1]),
+					token.i,
+					RegistrationMode.Dashboard,
+				);
 				return new Response(null, {
 					status: 303,
 					headers: {
@@ -692,12 +600,17 @@ const server: ExportedHandler<Env> = {
 					},
 				});
 			} catch (err) {
-				console.error(err);
+				const error = err instanceof UserError ? err : normalizeError(err);
+
 				return new Response(null, {
 					status: 303,
 					headers: {
 						"accept-ch": "Sec-CH-UA-Mobile",
-						location: `${url.pathname}?error=${encodeURIComponent((err as Error).name)}`,
+						location: `/tournaments?${toSearchParams({
+							error: error.name,
+							error_description:
+								error instanceof UserError ? error.message : null,
+						})}`,
 					},
 				});
 			}
