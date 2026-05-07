@@ -10,7 +10,7 @@ import { createSetCookie, isAdmin } from "../token";
 export const parseTournamentData = async (
 	request: Request,
 	pathname: string,
-): Promise<Response | Omit<Database.Tournament, "id">> => {
+): Promise<Response | Omit<Database.Tournament, "id" | "participantCount">> => {
 	const formDataPromise = request.formData();
 	const { setCookie, token } = await createSetCookie(request);
 	if (!(await isAdmin(token)))
