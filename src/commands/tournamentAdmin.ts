@@ -79,6 +79,29 @@ export class TournamentAdmin extends Command {
 					},
 				],
 			},
+			{
+				type: ApplicationCommandOptionType.Subcommand,
+				name: "pair",
+				description: "Associa un canale a uno scontro!",
+				options: [
+					{
+						type: ApplicationCommandOptionType.Integer,
+						name: "tournament",
+						description: "L'id del torneo",
+						required: true,
+					},
+					{
+						type: ApplicationCommandOptionType.Integer,
+						name: "match-id",
+						description: "L'id dello scontro",
+					},
+					{
+						type: ApplicationCommandOptionType.Channel,
+						name: "channel",
+						description: "Il canale da associare (default: quello corrente)",
+					},
+				],
+			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static advance = async (
@@ -238,6 +261,33 @@ export class TournamentAdmin extends Command {
 				:	""
 			}`,
 		});
+	};
+	static pair = async (
+		{ edit, defer }: ChatInputReplies,
+		{
+			interaction: {
+				channel: { id: channelId },
+			},
+			options: { tournament, "match-id": matchId, channel = channelId },
+		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "pair">,
+	) => {
+		defer();
+		const {
+			meta: { changed_db },
+		} = await env.DB.prepare(
+			`UPDATE Matches SET channelId = ?3 WHERE tournamentId = ?1 AND id = ?2`,
+		)
+			.bind(tournament, matchId, channel)
+			.run();
+
+		if (changed_db)
+			return edit({
+				content: `Il canale <#${channel}> è stato associato allo scontro ${matchId} con successo!`,
+			});
+		else
+			return edit({
+				content: "Non è stato possibile trovare il torneo o lo scontro!",
+			});
 	};
 	static abandoned = async (
 		{ defer, edit, reply }: ChatInputReplies,
