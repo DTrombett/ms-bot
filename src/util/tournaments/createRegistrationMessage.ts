@@ -10,14 +10,22 @@ import {
 } from "discord-api-types/v10";
 import { rest } from "../globals";
 import { placeholder } from "../strings";
+import { TimeUnit } from "../time";
 
 export const createRegistrationMessage = async (
-	tournamentId: number,
-	registrationTemplateLink: string,
-	registrationCount: number,
-	tournamentName: string,
-	minPlayers: number | undefined | null,
-	maxPlayers: number | undefined | null,
+	registrationTemplateLink: NonNullable<
+		Database.Tournament["registrationTemplateLink"]
+	>,
+	tournament: Pick<
+		Database.Tournament,
+		| "id"
+		| "maxPlayers"
+		| "minPlayers"
+		| "name"
+		| "participantCount"
+		| "registrationStart"
+		| "registrationEnd"
+	>,
 ): Promise<
 	RESTPostAPIChannelMessageJSONBody & RESTPatchAPIChannelMessageJSONBody
 > => {
@@ -30,15 +38,16 @@ export const createRegistrationMessage = async (
 		),
 	)) as RESTGetAPIChannelMessageResult;
 	const components: APIMessageTopLevelComponent[] = [];
+	const now = Date.now() / TimeUnit.Second;
 
 	if (message.content)
 		components.push({
 			type: ComponentType.TextDisplay,
 			content: placeholder(message.content, {
-				iscritti: registrationCount.toLocaleString("it-IT"),
-				nome: tournamentName,
-				minimo: (minPlayers ?? 0).toLocaleString("it-IT"),
-				massimo: (maxPlayers ?? 0).toLocaleString("it-IT"),
+				iscritti: tournament.participantCount.toLocaleString("it-IT"),
+				nome: tournament.name,
+				minimo: (tournament.minPlayers ?? 0).toLocaleString("it-IT"),
+				massimo: tournament.maxPlayers?.toLocaleString("it-IT") ?? "nessuno",
 			}),
 		});
 	if (message.attachments.length)
@@ -55,15 +64,19 @@ export const createRegistrationMessage = async (
 		components: [
 			{
 				type: ComponentType.Button,
-				custom_id: `tournament-reg-${tournamentId}`,
+				custom_id: `tournament-reg-${tournament.id}`,
 				style: ButtonStyle.Success,
 				emoji: { animated: true, id: "817094620700868678", name: "verified" },
 				label: "Iscriviti",
-				disabled: registrationCount >= (maxPlayers ?? -1),
+				disabled:
+					tournament.participantCount >= (tournament.maxPlayers ?? Infinity) ||
+					(!!tournament.registrationEnd && now >= tournament.registrationEnd) ||
+					(!!tournament.registrationStart &&
+						now < tournament.registrationStart),
 			},
 			{
 				type: ComponentType.Button,
-				custom_id: `tournament-unr-${tournamentId}`,
+				custom_id: `tournament-unr-${tournament.id}`,
 				style: ButtonStyle.Danger,
 				label: "Annulla iscrizione",
 			},

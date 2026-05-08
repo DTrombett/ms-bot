@@ -23,6 +23,7 @@ import { ok } from "./util/node";
 import normalizeError from "./util/normalizeError";
 import { TimeUnit } from "./util/time";
 import { createRegistrationMessage } from "./util/tournaments/createRegistrationMessage";
+import { editMessage } from "./util/tournaments/editMessage";
 import { resolveWinner } from "./util/tournaments/resolveWinner";
 
 export type Params = { id: number };
@@ -45,83 +46,116 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 
 			ok(tournament, "Tournament not found");
 			await this.sendRegistrationMessage(tournament, step);
+			await this.closeRegistrations(tournament, step);
 			await this.createBrackets(tournament, step);
 			await this.createChannels(tournament, step);
 		} catch (err) {
 			this.sendError(
 				step,
 				this.env.STATUS_CHANNEL,
-				err,
 				`Errore fatale durante la gestione del torneo ${event.payload.id}`,
+				err,
 			);
 			throw err;
 		}
 	}
 
 	private async sendRegistrationMessage(
-		tournament: Readonly<Database.Tournament>,
+		tournament: Database.Tournament,
 		step: WorkflowStep,
 	) {
 		if (
 			!tournament?.registrationStart ||
 			!tournament.registrationChannel ||
 			!tournament.registrationTemplateLink ||
+			tournament.registrationMessage ||
 			(tournament.registrationMode & RegistrationMode.Discord) === 0
 		)
 			return;
-		if (
-			tournament.registrationStart * TimeUnit.Second >
-			Date.now() + TimeUnit.Second
-		)
-			await step.sleepUntil(
-				"Wait for registration start",
-				new Date(tournament.registrationStart * TimeUnit.Second),
-			);
-
 		try {
-			const participantCount = await step.do("Get participant count", () =>
-				this.env.DB.prepare(
-					`
-						SELECT COUNT(*) as participantCount
-						FROM Participants
-						WHERE tournamentId = ?
-					`,
-				)
-					.bind(this.tournamentId)
-					.first<number>("participantCount"),
-			);
-			if (!tournament.registrationMessage) {
-				const id = await step.do<string>(
-					"Send registration message",
-					this.actuallySendMessage(
-						tournament,
-						tournament.registrationChannel,
-						tournament.registrationTemplateLink,
-						participantCount ?? 0,
-					),
+			if (
+				tournament.registrationStart * TimeUnit.Second >
+				Date.now() + TimeUnit.Second
+			) {
+				await step.sleepUntil(
+					"Wait for registration start",
+					new Date(tournament.registrationStart * TimeUnit.Second),
 				);
-
-				this.ctx.waitUntil(
-					step.do<void>("Add message to database", () =>
+				tournament.participantCount = (await step.do(
+					"Get initial participant count",
+					() =>
 						this.env.DB.prepare(
-							`
-								UPDATE Tournaments
-								SET registrationMessage = ?1
-								WHERE id = ?2
-							`,
+							`SELECT participantCount FROM Tournaments WHERE id = ?`,
 						)
-							.bind(id, this.tournamentId)
-							.run()
-							.then(() => {}),
-					),
-				);
+							.bind(this.tournamentId)
+							.first<number>("participantCount"),
+				))!;
 			}
+			tournament.registrationMessage = await step.do<string>(
+				"Send registration message",
+				this.actuallySendMessage(
+					tournament,
+					tournament.registrationChannel,
+					tournament.registrationTemplateLink,
+				),
+			);
+			await step.do<void>("Add message to database", () =>
+				this.env.DB.prepare(
+					`UPDATE Tournaments SET registrationMessage = ?1 WHERE id = ?2`,
+				)
+					.bind(tournament.registrationMessage, this.tournamentId)
+					.run()
+					.then(() => {}),
+			);
 		} catch (error) {
 			this.sendError(
 				step,
 				tournament.logChannel,
-				error,
 				"Impossibile inviare il messaggio di iscrizione nel canale specificato!",
+				error,
+			);
+		}
+	}
+
+	private async closeRegistrations(
+		tournament: Database.Tournament,
+		step: WorkflowStep,
+	) {
+		if (
+			!tournament?.registrationEnd ||
+			!tournament.registrationChannel ||
+			!tournament.registrationMessage ||
+			(tournament.registrationMode & RegistrationMode.Discord) === 0
+		)
+			return;
+		try {
+			if (
+				tournament.registrationEnd * TimeUnit.Second >
+				Date.now() + TimeUnit.Second
+			) {
+				await step.sleepUntil(
+					"Wait for registration end",
+					new Date(tournament.registrationEnd * TimeUnit.Second),
+				);
+				tournament.participantCount = (await step.do(
+					"Get final participant count",
+					() =>
+						this.env.DB.prepare(
+							`SELECT participantCount FROM Tournaments WHERE id = ?`,
+						)
+							.bind(this.tournamentId)
+							.first<number>("participantCount"),
+				))!;
+			}
+			await step.do<void>("Disable registration message", () =>
+				editMessage(tournament).then(() => {}),
+			);
+		} catch (error) {
+			this.sendError(
+				step,
+				tournament.logChannel,
+				"Impossibile disabilitare il messaggio di iscrizione!",
+				error,
 			);
 		}
 	}
@@ -131,17 +165,12 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			tournament: Database.Tournament,
 			channelId: string,
 			registrationTemplateLink: string,
-			registrationCount: number,
 		) =>
 		async () => {
 			const { id } = (await rest.post(Routes.channelMessages(channelId), {
 				body: await createRegistrationMessage(
-					this.tournamentId,
 					registrationTemplateLink,
-					registrationCount,
-					tournament.name,
-					tournament.minPlayers,
-					tournament.maxPlayers,
+					tournament,
 				),
 			})) as RESTPostAPIChannelMessageResult;
 
@@ -206,8 +235,8 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			this.sendError(
 				step,
 				tournament.logChannel,
-				error,
 				"Impossibile creare le brackets!",
+				error,
 			);
 		}
 	}
@@ -533,8 +562,8 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 	private sendError = (
 		step: WorkflowStep,
 		channelId: string,
-		error: unknown,
 		message?: string,
+		error?: unknown,
 	) => {
 		const id = crypto.randomUUID();
 

@@ -135,7 +135,7 @@ export const register = async (
 			throw new UserError("Le iscrizioni sono chiuse!", {
 				cause: { type: RegisterErrorType.Closed },
 			});
-		if (tournament.participantCount >= (tournament.maxPlayers ?? -1))
+		if (tournament.participantCount >= (tournament.maxPlayers ?? Infinity))
 			throw new UserError(
 				"Questo torneo ha raggiunto il massimo numero di iscritti!",
 				{ cause: { type: RegisterErrorType.MaxParticipants } },

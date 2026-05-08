@@ -107,31 +107,3 @@ UPDATE Tournaments
 SET participantCount = participantCount - 1
 WHERE id = OLD.tournamentId;
 END;
-CREATE TRIGGER ParticipantsCreate BEFORE
-INSERT ON Participants BEGIN
-SELECT CASE
-		WHEN (
-			SELECT participantCount
-			FROM Tournaments
-			WHERE id = NEW.tournamentId
-		) >= (
-			SELECT maxPlayers
-			FROM Tournaments
-			WHERE id = NEW.tournamentId
-		) THEN RAISE(ABORT, "Tournament is full")
-	END
-END;
-CREATE TRIGGER ParticipantsUpdate BEFORE
-UPDATE OF tournamentId ON Participants BEGIN
-SELECT CASE
-		WHEN (
-			SELECT participantCount
-			FROM Tournaments
-			WHERE id = NEW.tournamentId
-		) >= (
-			SELECT maxPlayers
-			FROM Tournaments
-			WHERE id = NEW.tournamentId
-		) THEN RAISE(ABORT, "Tournament is full")
-	END
-END;
