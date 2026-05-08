@@ -1244,15 +1244,21 @@ declare global {
 		type BattlePlayer = {
 			tag: string;
 			name: string;
-			brawler: { id: number; name: string; power: number; trophies: number };
+			brawler?: { id: number; name: string; power: number; trophies: number };
+			brawlers?: {
+				id: number;
+				name: string;
+				power: number;
+				trophies: number;
+			}[];
 		};
 		type BattleResult = {
 			mode: string;
 			type: string;
-			result: string;
-			duration: number;
-			trophyChange: number;
-			starPlayer: BattlePlayer;
+			result?: string;
+			duration?: number;
+			trophyChange?: number;
+			starPlayer?: BattlePlayer;
 			teams?: BattlePlayer[][];
 			players?: BattlePlayer[];
 		};

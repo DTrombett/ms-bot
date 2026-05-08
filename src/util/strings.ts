@@ -47,3 +47,9 @@ export const placeholder = <T extends Record<keyof any, string>>(
 		),
 		(_, t: keyof T) => placeholders[t]!,
 	);
+
+export const camelToSpace = (string: string) =>
+	string
+		.matchAll(/[\p{ID_Continue}$][a-z]*/gu)
+		.map((ar) => ar[0].toLowerCase())
+		.reduce((a, b) => `${a} ${b}`);

@@ -1244,7 +1244,7 @@ export class Clash extends Command {
 			components,
 		};
 	};
-	private static "parseAPIDate" = (d: string) =>
+	static "parseAPIDate" = (d: string) =>
 		Date.UTC(
 			+d.slice(0, 4),
 			+d.slice(4, 6) - 1,

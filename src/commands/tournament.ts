@@ -12,8 +12,10 @@ import {
 	type APISelectMenuOption,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { Temporal } from "temporal-polyfill";
 import { ColorNumbers } from "../app/utils/Colors";
 import Command from "../Command";
+import { forceCapitalize } from "../util/capitalize";
 import {
 	DBMatchStatus,
 	RegistrationMode,
@@ -23,7 +25,7 @@ import {
 } from "../util/Constants";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
-import { template } from "../util/strings";
+import { camelToSpace, template } from "../util/strings";
 import { TimeUnit } from "../util/time";
 import { matchStatus, roundName } from "../util/tournaments/Constants";
 import { finishRound } from "../util/tournaments/finishRound";
@@ -33,6 +35,7 @@ import { resolveWinner } from "../util/tournaments/resolveWinner";
 import { unregister } from "../util/tournaments/unregister";
 import { UserError } from "../util/UserError";
 import { Brawl } from "./brawl";
+import { Clash } from "./clash";
 
 export class Tournament extends Command {
 	static override chatInputData = {
@@ -594,35 +597,34 @@ export class Tournament extends Command {
 		{
 			args: [matchId, tournamentId],
 			user: { id: userId },
-			interaction: { member: { roles, permissions } = { roles: [] } as any },
+			interaction: {
+				member: { roles, permissions } = { roles: [] } as any,
+				locale,
+			},
 		}: ComponentArgs,
 	) => {
 		defer();
 		const match = await env.DB.prepare(
 			`
-				SELECT 
-					m.*,
-					t.game, t.rounds, t.flags, t.id as tournamentId,
+				SELECT m.*, t.game, t.rounds, t.flags,
 					p1.tag AS user1Tag, p2.tag AS user2Tag
-				FROM Matches m
-				JOIN Tournaments t ON m.tournamentId = t.id
-				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND p1.tournamentId = m.tournamentId
-				LEFT JOIN Participants p2 ON p2.userId = m.user2 AND p2.tournamentId = m.tournamentId
+				FROM Matches m JOIN Tournaments t ON m.tournamentId = t.id
+				LEFT JOIN Participants p1 ON p1.userId = m.user1
+					AND p1.tournamentId = m.tournamentId
+				LEFT JOIN Participants p2 ON p2.userId = m.user2
+					AND p2.tournamentId = m.tournamentId
 				WHERE m.id = ?1 AND m.tournamentId = ?2
 			`,
 		)
 			.bind(matchId, tournamentId)
 			.first<
 				Database.Match &
-					Pick<Database.Tournament, "game" | "rounds" | "flags"> & {
-						tournamentId: Database.Tournament["id"];
-					} & Partial<{
-						user1Tag: Database.Participant["tag"];
-						user2Tag: Database.Participant["tag"];
-					}>
+					Pick<Database.Tournament, "game" | "rounds" | "flags"> &
+					PossiblyNull<{ user1Tag: Database.Participant["tag"] }> &
+					PossiblyNull<{ user2Tag: Database.Participant["tag"] }>
 			>();
 
-		if (!match?.user1Tag) return edit({ content: "Torneo non trovato." });
+		if (!match?.id) return edit({ content: "Scontro non trovato!" });
 		if ((match.flags & TournamentFlags.AutoDetectResults) === 0)
 			return edit({
 				content:
@@ -644,18 +646,20 @@ export class Tournament extends Command {
 				content:
 					"Solo gli amministratori possono aggiornare i risultati dopo che la partita è terminata!",
 			});
+		if (!match.user1Tag || !match.user2Tag)
+			return edit({
+				content: "Entrambi i partecipanti devono avere il tag collegato!",
+			});
 		try {
+			const tag = userId === match.user1 ? match.user1Tag : match.user2Tag;
 			const rounds = JSON.parse(match.rounds) as Database.Round[];
 			const round =
 				rounds[Math.floor(Math.log2(match.id + 1))] ?? rounds.at(-1)!;
-			const resolvedMode = round.mode
-				.toLowerCase()
-				.split(/\s+/)
-				.reduce((a, b) => a + (b[0]?.toUpperCase() ?? "") + b.slice(1));
-			const battleLog = (await Brawl.getBattleLog(match.user1Tag))
+			const battles = await Brawl.getBattleLog(tag, { cache: false });
+			const filteredBattles = battles
 				.filter(
 					(b) =>
-						b.battle.mode === resolvedMode &&
+						camelToSpace(b.battle.mode) === round.mode.toLowerCase() &&
 						(b.battle.result === "defeat" || b.battle.result === "victory") &&
 						(b.battle.teams?.every(
 							(t) =>
@@ -669,11 +673,15 @@ export class Tournament extends Command {
 				.reverse()
 				.slice(0, round.bof);
 
-			if (!battleLog.length)
+			if (!filteredBattles.length)
 				return edit({
-					content: `Non risulta alcuna partita corrispondente!\n-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Tag} e ${match.user2Tag} vengono considerate\n`,
+					content: template`
+						Non risulta alcuna partita corrispondente! Assicurati di giocare le partite richieste prima di controllare i risultati.
+						-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Tag} e ${match.user2Tag} vengono considerate
+						${battles[0]}-# Ultima partita di ${tag} registrata il <t:${Clash.parseAPIDate(battles[0]?.battleTime ?? "")}:s>
+					`,
 				});
-			const result = battleLog.reduce<[number, number]>(
+			const result = filteredBattles.reduce<[number, number]>(
 				(result, { battle }) =>
 					battle.result === "defeat" ?
 						[result[0], result[1] + 1]
@@ -685,10 +693,8 @@ export class Tournament extends Command {
 				match.id,
 				env.DB.prepare(
 					`
-						UPDATE Matches
-						SET result1 = ?3, result2 = ?4, status = ?5
-						WHERE tournamentId = ?1 AND id = ?2
-						RETURNING *
+						UPDATE Matches SET result1 = ?3, result2 = ?4, status = ?5
+						WHERE tournamentId = ?1 AND id = ?2 RETURNING *
 					`,
 				).bind(
 					match.tournamentId,
@@ -704,7 +710,64 @@ export class Tournament extends Command {
 
 			if (newMatch)
 				return edit({
-					content: `## ${displayMatchScore(newMatch)} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+					flags: MessageFlags.IsComponentsV2,
+					components: [
+						{
+							type: ComponentType.TextDisplay,
+							content: `## ${displayMatchScore(newMatch)} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+						},
+						...filteredBattles
+							.reverse()
+							.slice(0, 9)
+							.map<APIMessageTopLevelComponent>((battle) => ({
+								type: ComponentType.Container,
+								accent_color:
+									battle.battle.result === "defeat" ? ColorNumbers.Danger
+									: battle.battle.result === "victory" ? ColorNumbers.Success
+									: undefined,
+								components: [
+									{
+										type: ComponentType.Section,
+										accessory: {
+											type: ComponentType.Thumbnail,
+											media: {
+												url: `https://cdn.brawlify.com/game-modes/regular/${48000000 + battle.event.modeId}.png`,
+											},
+										},
+										components: [
+											{
+												type: ComponentType.TextDisplay,
+												content: template`
+													## ${(
+														battle.battle.players?.map(
+															this.stringifyBattlePlayer,
+														) ??
+														battle.battle.teams?.map((t) =>
+															t.map(this.stringifyBattlePlayer).join(", "),
+														)
+													)?.join("\tVS\t")}
+													Modalità: **${camelToSpace(battle.battle.mode)}**
+													Mappa: **${battle.event.map}**
+													Tipo: **${battle.battle.type}**
+													Risultato: **${
+														(battle.battle.result &&
+															{
+																victory: "Vittoria",
+																defeat: "Sconfitta",
+																draw: "Pareggio",
+															}[battle.battle.result]) ??
+														battle.battle.result
+													}**
+													Durata: **${Temporal.Duration.from({ seconds: battle.battle.duration })
+														.round({ largestUnit: "day" })
+														.toLocaleString(locale, { style: "narrow" })}**
+												`,
+											},
+										],
+									},
+								],
+							})),
+					],
 					allowed_mentions: { parse: [] },
 				});
 		} catch (err) {
@@ -761,6 +824,12 @@ export class Tournament extends Command {
 			});
 		return this.handleTournament(tournament, edit, id, { tag, team });
 	};
+	static stringifyBattlePlayer = (battlePlayer: Brawl.BattlePlayer) =>
+		`${battlePlayer.name} (${forceCapitalize(
+			(battlePlayer.brawlers ?? [battlePlayer.brawler!])
+				.map((b) => b.name)
+				.join(", "),
+		)})`;
 	static buildModal = (options: {
 		id: string;
 		team?: string;
