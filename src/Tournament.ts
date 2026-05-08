@@ -84,12 +84,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				);
 				tournament.participantCount = (await step.do(
 					"Get initial participant count",
-					() =>
-						this.env.DB.prepare(
-							`SELECT participantCount FROM Tournaments WHERE id = ?`,
-						)
-							.bind(this.tournamentId)
-							.first<number>("participantCount"),
+					this.getParticipantCount,
 				))!;
 			}
 			tournament.registrationMessage = await step.do<string>(
@@ -139,13 +134,8 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					new Date(tournament.registrationEnd * TimeUnit.Second),
 				);
 				tournament.participantCount = (await step.do(
-					"Get final participant count",
-					() =>
-						this.env.DB.prepare(
-							`SELECT participantCount FROM Tournaments WHERE id = ?`,
-						)
-							.bind(this.tournamentId)
-							.first<number>("participantCount"),
+					"Get updated participant count",
+					this.getParticipantCount,
 				))!;
 			}
 			await step.do<void>("Disable registration message", () =>
@@ -201,6 +191,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				this.loadParticipants,
 			);
 
+			tournament.participantCount = participants.length;
 			if (participants.length < (tournament.minPlayers ?? 0))
 				await step.do<never>(
 					"Participants count not satisfied",
@@ -318,27 +309,21 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		if (
 			tournament.channelsTime * TimeUnit.Second >
 			Date.now() + TimeUnit.Second
-		)
+		) {
 			await step.sleepUntil(
 				"Wait for channels time",
 				new Date(tournament.channelsTime * TimeUnit.Second),
 			);
-		const participantCount = await step.do("Get new participant count", () =>
-			this.env.DB.prepare(
-				`
-					SELECT COUNT(*) as participantCount
-					FROM Participants
-					WHERE tournamentId = ?
-				`,
-			)
-				.bind(this.tournamentId)
-				.first<number>("participantCount"),
-		);
-
-		if (!participantCount || participantCount < 2) return;
+			tournament.participantCount = (await step.do(
+				"Get final participant count",
+				this.getParticipantCount,
+			))!;
+		}
+		if (!tournament.participantCount || tournament.participantCount < 2) return;
 		for (
 			let round =
-				tournament.currentRound ?? Math.ceil(Math.log2(participantCount)) - 1;
+				tournament.currentRound ??
+				Math.ceil(Math.log2(tournament.participantCount)) - 1;
 			round >= 0;
 			round--
 		) {
@@ -615,4 +600,9 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					.then(() => {}),
 			),
 		);
+
+	private getParticipantCount = () =>
+		this.env.DB.prepare(`SELECT participantCount FROM Tournaments WHERE id = ?`)
+			.bind(this.tournamentId)
+			.first<number>("participantCount") as Promise<number>;
 }
