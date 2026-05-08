@@ -382,8 +382,10 @@ export class Tournament extends Command {
 		if (tag)
 			try {
 				deferUpdate();
-				await register(Number(tournamentId), id, RegistrationMode.Discord, {
+				await register(Number(tournamentId), {
 					tag,
+					userId: id,
+					mode: RegistrationMode.Discord,
 				});
 				return edit({
 					content: "Ti sei iscritto con successo!",

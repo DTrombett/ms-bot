@@ -2,6 +2,7 @@ import { env, waitUntil } from "cloudflare:workers";
 import { Routes, type RESTGetAPIUserResult } from "discord-api-types/v10";
 import { Brawl, Clash } from "../../commands";
 import {
+	DiscordIdRegex,
 	RegistrationMode,
 	TournamentFlags,
 	type SupercellPlayerType,
@@ -12,6 +13,7 @@ import { TimeUnit } from "../time";
 import { editMessage } from "./editMessage";
 
 export enum RegisterErrorType {
+	InvalidId,
 	UnknownTournament,
 	WrongMode,
 	AlreadyRegistered,
@@ -36,10 +38,34 @@ const resolveName = async (
 };
 export const register = async (
 	tournamentId: number,
-	userId: string,
-	mode: RegistrationMode,
-	{ tag, name }: { tag?: string; name?: string } = {},
-) => {
+	{
+		admin,
+		mode,
+		name,
+		tag,
+		userId,
+		addRoles = true,
+		updateMessage = true,
+	}: (
+		| { admin: string; mode?: RegistrationMode }
+		| { admin?: false; mode: RegistrationMode }
+	) & {
+		tag?: string;
+		name?: string;
+		userId: string;
+		updateMessage?: boolean;
+		addRoles?: boolean;
+	},
+): Promise<Database.Participant> => {
+	if (!DiscordIdRegex.test(userId))
+		throw new UserError("L'id utente non è valido!", {
+			cause: { type: RegisterErrorType.InvalidId },
+		});
+	tag &&= Brawl.normalizeTag(tag);
+	if (Number.isNaN(tournamentId))
+		throw new UserError("L'id torneo non è valido!", {
+			cause: { type: RegisterErrorType.UnknownTournament },
+		});
 	const tournament = await env.DB.prepare(
 		`
 			SELECT t.flags, t.game, t.id, t.maxPlayers, t.minPlayers,
@@ -93,35 +119,37 @@ export const register = async (
 		throw new UserError("Torneo non trovato!", {
 			cause: { type: RegisterErrorType.UnknownTournament },
 		});
-	if ((tournament.registrationMode & mode) === 0)
-		throw new UserError(
-			`Questo torneo non accetta iscrizioni tramite ${RegistrationMode[mode]}!`,
-			{ cause: { type: RegisterErrorType.WrongMode } },
-		);
+	const tagRequired = (tournament.flags & TournamentFlags.TagRequired) != 0;
 	if (tournament.userId)
 		throw new UserError(
 			`Sei già iscritto a questo torneo come **${tournament.participantName}**${tournament.tag ? ` (${tournament.tag})` : ""}!`,
 			{ cause: { type: RegisterErrorType.AlreadyRegistered } },
 		);
-	if (now > tournament.registrationEnd!)
-		throw new UserError("Le iscrizioni sono chiuse!", {
-			cause: { type: RegisterErrorType.Closed },
-		});
-	if (tournament.participantCount >= (tournament.maxPlayers ?? -1))
-		throw new UserError(
-			"Questo torneo ha raggiunto il massimo numero di iscritti!",
-			{ cause: { type: RegisterErrorType.MaxParticipants } },
-		);
-	if (!tournament.registrationStart || tournament.registrationStart > now)
-		throw new UserError("Le iscrizioni ancora non aprono!", {
-			cause: { type: RegisterErrorType.NotOpenYet },
-		});
-	const tagRequired = (tournament.flags & TournamentFlags.TagRequired) != 0;
-	if (tagRequired && !tag)
-		throw new UserError(
-			"È richiesto inserire un tag per iscriversi a questo torneo!",
-			{ cause: { type: RegisterErrorType.UnknownTournament } },
-		);
+	if (typeof admin !== "string") {
+		if ((tournament.registrationMode & mode!) === 0)
+			throw new UserError(
+				`Questo torneo non accetta iscrizioni tramite ${RegistrationMode[mode!]}!`,
+				{ cause: { type: RegisterErrorType.WrongMode } },
+			);
+		if (now > tournament.registrationEnd!)
+			throw new UserError("Le iscrizioni sono chiuse!", {
+				cause: { type: RegisterErrorType.Closed },
+			});
+		if (tournament.participantCount >= (tournament.maxPlayers ?? -1))
+			throw new UserError(
+				"Questo torneo ha raggiunto il massimo numero di iscritti!",
+				{ cause: { type: RegisterErrorType.MaxParticipants } },
+			);
+		if (!tournament.registrationStart || tournament.registrationStart > now)
+			throw new UserError("Le iscrizioni ancora non aprono!", {
+				cause: { type: RegisterErrorType.NotOpenYet },
+			});
+		if (tagRequired && !tag)
+			throw new UserError(
+				"È richiesto inserire un tag per iscriversi a questo torneo!",
+				{ cause: { type: RegisterErrorType.UnknownTournament } },
+			);
+	}
 	name ??= await resolveName(tagRequired, tournament.game, userId, tag);
 	if (tag) {
 		const existing = await env.DB.prepare(
@@ -147,9 +175,10 @@ export const register = async (
 			);
 	}
 	tournament.participantCount++;
-	waitUntil(editMessage(tournament));
+	if (updateMessage) waitUntil(editMessage(tournament));
 	await Promise.all([
 		tournament.registrationRole &&
+			addRoles &&
 			rest.put(
 				Routes.guildMemberRole(
 					env.MAIN_GUILD,
@@ -157,7 +186,7 @@ export const register = async (
 					tournament.registrationRole,
 				),
 				{
-					reason: `Iscrizione al torneo ${tournament.name}${tag ? ` come ${tag}` : ""} (${tournament.participantCount} iscritti totali)`,
+					reason: `Iscrizione al torneo ${tournament.name}${tag ? ` come ${tag}` : ""}${admin ? ` da parte di ${admin}` : ""} (${tournament.participantCount} iscritti totali)`,
 				},
 			),
 		env.DB.prepare(
@@ -169,5 +198,5 @@ export const register = async (
 			.bind(tournamentId, userId, name, tag || null)
 			.run(),
 	]);
-	return tournament;
+	return { tournamentId, userId, name, tag };
 };

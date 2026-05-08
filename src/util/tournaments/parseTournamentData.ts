@@ -1,6 +1,10 @@
 import { Routes, type RESTGetAPIChannelResult } from "discord-api-types/v10";
 import { match } from "node:assert/strict";
-import { RegistrationMode, TournamentFlags } from "../Constants";
+import {
+	DiscordIdRegex,
+	RegistrationMode,
+	TournamentFlags,
+} from "../Constants";
 import { parseForm, ParseType } from "../forms";
 import { rest } from "../globals";
 import { ok } from "../node";
@@ -54,13 +58,16 @@ export const parseTournamentData = async (
 		.map((mode, i) => ({ mode: (mode as string).toString(), bof: +bof[i]! }));
 
 	try {
-		const idRegex = /^\d{16,32}$/;
 		const linkRegex =
 			/^https?:\/\/(?:[^.]+\.)?discord\.com\/channels\/(?<guild>\d{16,32}|@me)\/(?<channel>\d{16,32})\/(?<message>\d{16,32})$/;
 
 		ok(form.title, "Il titolo è richiesto");
 		ok(form.logChannel, "Il canale di log è richiesto");
-		match(form.logChannel, idRegex, "L'id del canale di log non è valido");
+		match(
+			form.logChannel,
+			DiscordIdRegex,
+			"L'id del canale di log non è valido",
+		);
 		ok(form.game != null, "Il gioco è richiesto");
 		ok(!Number.isNaN(form.game), "Il gioco non è valido");
 		ok(form.team, "La dimensione della squadra è richiesta");
@@ -104,11 +111,15 @@ export const parseTournamentData = async (
 		if (form.channelId)
 			match(
 				form.channelId,
-				idRegex,
+				DiscordIdRegex,
 				"L'id del canale di iscrizione non è valido",
 			);
 		if (form.roleId)
-			match(form.roleId, idRegex, "L'id del ruolo di iscrizione non è valido");
+			match(
+				form.roleId,
+				DiscordIdRegex,
+				"L'id del ruolo di iscrizione non è valido",
+			);
 		ok(
 			!Number.isNaN(form.registrationStartTime),
 			"La data di inizio registrazioni non è valida",
@@ -160,13 +171,13 @@ export const parseTournamentData = async (
 		if (form.categoryId)
 			match(
 				form.categoryId,
-				idRegex,
+				DiscordIdRegex,
 				"L'id della categoria in cui creare i canali non è valido",
 			);
 		if (form.endedCategoryId)
 			match(
 				form.endedCategoryId,
-				idRegex,
+				DiscordIdRegex,
 				"L'id della categoria in cui spostare i canali non è valido",
 			);
 		if (form.matchMessageLink) {

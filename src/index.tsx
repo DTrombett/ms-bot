@@ -14,9 +14,9 @@ import * as commands from "./commands/index";
 import { CommandHandler } from "./util/CommandHandler";
 import {
 	DBMatchStatus,
+	DiscordIdRegex,
 	RegistrationMode,
 	SupercellPlayerType,
-	TournamentFlags,
 } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
 import { parseForm, ParseType } from "./util/forms";
@@ -37,7 +37,6 @@ import {
 	tokenFromResponse,
 	updateToken,
 } from "./util/token";
-import { editMessage } from "./util/tournaments/editMessage";
 import { parseTournamentData } from "./util/tournaments/parseTournamentData";
 import { runPatchRequest } from "./util/tournaments/patchMatch";
 import { register } from "./util/tournaments/register";
@@ -195,7 +194,8 @@ const server: ExportedHandler<Env> = {
 									`
 										SELECT t.*, p.userId IS NOT NULL AS isRegistered,
 											EXISTS (
-												SELECT 1 FROM SupercellPlayers sp WHERE sp.userId = ?1
+												SELECT TRUE FROM SupercellPlayers sp
+												WHERE sp.userId = ?1 AND active = TRUE
 											) AS hasPlayer
 										FROM Tournaments t
 										LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
@@ -588,11 +588,10 @@ const server: ExportedHandler<Env> = {
 					},
 				});
 			try {
-				await register(
-					Number(matchResult[1]),
-					token.i,
-					RegistrationMode.Dashboard,
-				);
+				await register(Number(matchResult[1]), {
+					userId: token.i,
+					mode: RegistrationMode.Dashboard,
+				});
 				return new Response(null, {
 					status: 303,
 					headers: {
@@ -709,12 +708,10 @@ const server: ExportedHandler<Env> = {
 						},
 					},
 				);
-			const data: {
-				userId: string | null;
-				tag: string | null;
-				name?: string;
-				tournamentId?: number;
-			} = parseForm(body, { userId: ParseType.Text, tag: ParseType.Text });
+			const data = parseForm(body, {
+				userId: ParseType.Text,
+				tag: ParseType.Text,
+			});
 			if (!data.userId)
 				return Response.json(
 					{ message: "L'ID utente è obbligatorio" },
@@ -726,199 +723,33 @@ const server: ExportedHandler<Env> = {
 						},
 					},
 				);
-			if (!data.userId.match(/^\d{16,32}$/))
+			try {
 				return Response.json(
-					{ message: "L'ID utente non è valido" },
+					await register(Number(matchResult[1]), {
+						userId: data.userId,
+						admin: `${token.d ?? token.u} (<@${token.i}>)`,
+						tag: data.tag ?? undefined,
+					}),
 					{
-						status: 400,
+						status: 200,
 						headers: {
 							"accept-ch": "Sec-CH-UA-Mobile",
 							"set-cookie": setCookie,
 						},
 					},
 				);
-			data.tournamentId = Number(matchResult[1]);
-			if (data.tag)
-				try {
-					data.tag = Brawl.normalizeTag(data.tag);
-				} catch (err) {
-					return Response.json(
-						{ message: (err as Error).message },
-						{
-							status: 400,
-							headers: {
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"set-cookie": setCookie,
-							},
-						},
-					);
-				}
-			try {
-				const { results } = await env.DB.prepare(
-					`
-						SELECT t.id, t.name, t.game, p.tag, p.userId, t.registrationRole,
-							t.registrationChannel, t.registrationMessage, t.flags,
-							t.minPlayers, t.maxPlayers, t.registrationTemplateLink,
-							sp.tag as foundTag, sp.name as foundName, t.participantCount
-						FROM Tournaments t
-						LEFT JOIN Participants p ON
-							p.tournamentId = t.id AND (p.userId = ?1 OR p.tag = ?2)
-						LEFT JOIN SupercellPlayers sp ON
-							sp.userId = ?1 AND sp.type = t.game AND sp.active = 1
-						WHERE t.id = ?3
-					`,
-				)
-					.bind(data.userId, data.tag, matchResult[1])
-					.run<
-						Pick<
-							Database.Tournament,
-							| "registrationRole"
-							| "name"
-							| "registrationChannel"
-							| "registrationMessage"
-							| "minPlayers"
-							| "maxPlayers"
-							| "registrationTemplateLink"
-							| "participantCount"
-							| "id"
-							| "game"
-							| "flags"
-						> &
-							Partial<Pick<Database.Participant, "tag" | "userId">> & {
-								foundTag?: Database.SupercellPlayer["tag"];
-								foundName?: Database.SupercellPlayer["name"];
-							}
-					>();
-				const tournament = results[0];
-
-				if (!tournament)
-					return Response.json(
-						{ message: "Torneo non trovato" },
-						{
-							status: 404,
-							headers: {
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"set-cookie": setCookie,
-							},
-						},
-					);
-				if (results.some((v) => v.userId === data.userId))
-					return Response.json(
-						{ message: "Utente già registrato" },
-						{
-							status: 400,
-							headers: {
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"set-cookie": setCookie,
-							},
-						},
-					);
-				if (data.tag && results.some((v) => v.tag === data.tag))
-					return Response.json(
-						{
-							message:
-								"Esiste già un altro utente registrato con lo stesso tag",
-						},
-						{
-							status: 400,
-							headers: {
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"set-cookie": setCookie,
-							},
-						},
-					);
-				if (data.tag) {
-					({ name: data.name } = await (
-						tournament.game === SupercellPlayerType.BrawlStars ?
-							commands.Brawl
-						:	commands.Clash)
-						.getPlayer(data.tag)
-						.catch(() => ({ name: "" })));
-					if (!data.name)
-						return Response.json(
-							{ message: "Non è stato possibile verificare il tag" },
-							{
-								status: 400,
-								headers: {
-									"accept-ch": "Sec-CH-UA-Mobile",
-									"set-cookie": setCookie,
-								},
-							},
-						);
-					const existing = await env.DB.prepare(
-						`
-							INSERT INTO SupercellPlayers (tag, userId, type, name, active)
-							VALUES (?1, ?2, ?3, ?4, NOT EXISTS (
-								SELECT TRUE
-								FROM SupercellPlayers
-								WHERE userId = ?2 AND type = ?3 AND active = TRUE
-							))
-							ON CONFLICT(tag, type) DO UPDATE
-							SET name = excluded.name RETURNING userId
-						`,
-					)
-						.bind(data.tag, data.userId, tournament.game, data.name)
-						.first<Database.SupercellPlayer["userId"]>("userId");
-
-					if (existing && existing !== data.userId)
-						return Response.json(
-							{ message: `Questo tag risulta collegato a ${existing}` },
-							{
-								status: 400,
-								headers: {
-									"accept-ch": "Sec-CH-UA-Mobile",
-									"set-cookie": setCookie,
-								},
-							},
-						);
-				} else {
-					data.tag = tournament.foundTag ?? null;
-					data.name = tournament.foundName;
-				}
-				if (!data.tag && tournament.flags & TournamentFlags.TagRequired)
-					return Response.json(
-						{ message: "Il tag è richiesto in questo torneo" },
-						{
-							status: 400,
-							headers: {
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"set-cookie": setCookie,
-							},
-						},
-					);
-				tournament.participantCount++;
-				await Promise.all([
-					env.DB.prepare(
-						`
-							INSERT INTO Participants (tournamentId, userId, tag, name)
-							VALUES (?1, ?2, ?3, ?4)
-						`,
-					)
-						.bind(
-							tournament.id,
-							data.userId,
-							data.tag ?? null,
-							data.name ?? null,
-						)
-						.run(),
-					tournament.registrationRole &&
-						rest.put(
-							Routes.guildMemberRole(
-								env.MAIN_GUILD,
-								data.userId,
-								tournament.registrationRole,
-							),
-							{
-								reason: `Iscrizione al torneo ${tournament.name}${data.tag ? ` come ${data.tag}` : ""} da parte di ${token.u} (${tournament.participantCount} iscritti totali)`,
-							},
-						),
-					editMessage(tournament),
-				]);
-				return Response.json(data, {
-					status: 200,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				});
 			} catch (err) {
+				if (err instanceof UserError)
+					return Response.json(
+						{ message: err.message },
+						{
+							status: 400,
+							headers: {
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"set-cookie": setCookie,
+							},
+						},
+					);
 				console.error(err);
 				return new Response(null, {
 					status: 500,
@@ -962,7 +793,7 @@ const server: ExportedHandler<Env> = {
 					},
 				);
 			body = await body;
-			if (!Array.isArray(body) || !body.every((i) => /^\d{16,32}$/.test(i)))
+			if (!Array.isArray(body) || !body.every((i) => DiscordIdRegex.test(i)))
 				return Response.json(
 					{ message: "Dati non validi" },
 					{
@@ -986,7 +817,7 @@ const server: ExportedHandler<Env> = {
 				);
 			try {
 				await unregister(Number(matchResult[1]), {
-					admin: true,
+					admin: `${token.d ?? token.u} (<@${token.i}>)`,
 					userIds: body,
 				});
 				return new Response(null, {
@@ -1047,7 +878,7 @@ const server: ExportedHandler<Env> = {
 				);
 			try {
 				await unregister(Number(matchResult[1]), {
-					admin,
+					admin: admin ? `${token.d ?? token.u} (<@${token.i}>)` : false,
 					userId: matchResult[2]!,
 					mode: RegistrationMode.Dashboard,
 				});

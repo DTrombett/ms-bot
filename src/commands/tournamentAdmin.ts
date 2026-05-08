@@ -16,6 +16,7 @@ import { DBMatchStatus, TournamentStatusFlags } from "../util/Constants";
 import { rest } from "../util/globals";
 import normalizeError from "../util/normalizeError";
 import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
+import { unregister } from "../util/tournaments/unregister";
 
 export class TournamentAdmin extends Command {
 	static override chatInputData = {
@@ -149,6 +150,7 @@ export class TournamentAdmin extends Command {
 		{ edit, reply }: ChatInputReplies,
 		{
 			options: { tournament, offset },
+			user,
 		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "members">,
 	) => {
 		const [
@@ -210,11 +212,11 @@ export class TournamentAdmin extends Command {
 			}
 		if (toRemove.length)
 			values.push(
-				env.DB.prepare(
-					`DELETE FROM Participants WHERE tournamentId = ? AND userId IN (${new Array(toRemove.length).fill("?").join(",")})`,
-				)
-					.bind(tournament, ...toRemove)
-					.first(),
+				unregister(tournament, {
+					admin: `${user.global_name ?? user.username} (<@${user.id}>)`,
+					userIds: toRemove,
+					removeRoles: false,
+				}),
 			);
 		errors.push(
 			...(await Promise.allSettled(values))

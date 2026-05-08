@@ -1,11 +1,16 @@
 import { env, waitUntil } from "cloudflare:workers";
 import { Routes } from "discord-api-types/v10";
-import { RegistrationMode, TournamentStatusFlags } from "../Constants";
+import {
+	DiscordIdRegex,
+	RegistrationMode,
+	TournamentStatusFlags,
+} from "../Constants";
 import { UserError } from "../UserError";
 import { rest } from "../globals";
 import { editMessage } from "./editMessage";
 
 export enum UnregisterErrorType {
+	InvalidId,
 	UnknownTournament,
 	WrongMode,
 	NotRegistered,
@@ -19,18 +24,24 @@ export const unregister = async (
 		mode,
 		userId,
 		userIds = [userId!],
-	}:
-		| ({ admin: true; mode?: RegistrationMode } & (
+		removeRoles = true,
+		updateMessage = true,
+	}: (
+		| ({ admin: string; mode?: RegistrationMode } & (
 				| { userId: string; userIds?: never }
 				| { userId?: never; userIds: string[] }
 		  ))
-		| {
-				admin?: false;
-				mode: RegistrationMode;
-				userId: string;
-				userIds?: never;
-		  },
+		| { admin?: false; mode: RegistrationMode; userId: string; userIds?: never }
+	) & { updateMessage?: boolean; removeRoles?: boolean },
 ) => {
+	if (userId && !DiscordIdRegex.test(userId))
+		throw new UserError("L'id utente non è valido!", {
+			cause: { type: UnregisterErrorType.InvalidId },
+		});
+	if (Number.isNaN(tournamentId))
+		throw new UserError("L'id torneo non è valido!", {
+			cause: { type: UnregisterErrorType.UnknownTournament },
+		});
 	if (userIds.length === 0) return;
 	const tournament = await env.DB.prepare(
 		`
@@ -72,7 +83,7 @@ export const unregister = async (
 		throw new UserError("Le iscrizioni sono chiuse!", {
 			cause: { type: UnregisterErrorType.Closed },
 		});
-	if (!admin) {
+	if (typeof admin !== "string") {
 		if ((tournament.registrationMode & mode) === 0)
 			throw new UserError(
 				`Questo torneo non accetta iscrizioni tramite ${RegistrationMode[mode]}!`,
@@ -94,8 +105,9 @@ export const unregister = async (
 	)
 		.bind(tournamentId, ...userIds)
 		.run();
+	// Every deletion causes a modification of Tournament
 	tournament.participantCount -= Math.floor(changes / 2);
-	if (tournament.registrationRole)
+	if (tournament.registrationRole && removeRoles)
 		waitUntil(
 			Promise.all(
 				userIds.map((memberId) =>
@@ -106,11 +118,11 @@ export const unregister = async (
 							tournament.registrationRole!,
 						),
 						{
-							reason: `Rimozione iscrizione al torneo ${tournament.name} (${tournament.participantCount} iscritti totali)`,
+							reason: `Rimozione iscrizione al torneo ${tournament.name}${admin ? ` da parte di ${admin}` : ""} (${tournament.participantCount} iscritti totali)`,
 						},
 					),
 				),
 			),
 		);
-	waitUntil(editMessage(tournament));
+	if (updateMessage) waitUntil(editMessage(tournament));
 };
