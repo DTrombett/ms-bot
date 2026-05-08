@@ -2,12 +2,10 @@ import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	ComponentType,
 	MessageFlags,
 	MessageReferenceType,
 	Routes,
 	type APIApplicationCommand,
-	type RESTGetAPIGuildChannelsResult,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
@@ -268,18 +266,7 @@ export class Dev extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIChatInputApplicationCommandsJSONBody;
-	static test = async ({ defer, edit }: ChatInputReplies) => {
-		defer();
-		for (const channel of (await rest.get(
-			Routes.guildChannels(env.MAIN_GUILD),
-		)) as RESTGetAPIGuildChannelsResult)
-			if (channel.name.match(/^\d+-/))
-				await rest.delete(Routes.channel(channel.id));
-		return edit({
-			flags: MessageFlags.IsComponentsV2,
-			components: [{ type: ComponentType.TextDisplay, content: "Fatt" }],
-		});
-	};
+	// static test = async () => {};
 	static "update-players" = async (
 		{ defer, edit }: ChatInputReplies,
 		{ options }: ChatInputArgs<typeof Dev.chatInputData, "update-players">,

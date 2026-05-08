@@ -68,7 +68,7 @@ export const register = async (
 		});
 	const tournament = await env.DB.prepare(
 		`
-			SELECT t.flags, t.game, t.id, t.maxPlayers, t.minPlayers,
+			SELECT t.flags, t.game, t.guildId, t.id, t.maxPlayers, t.minPlayers,
 				t.name, t.participantCount, t.registrationChannel,
 				t.registrationMessage, t.registrationMode, t.registrationRole,
 				t.registrationStart, t.registrationEnd, t.registrationTemplateLink,
@@ -90,6 +90,7 @@ export const register = async (
 				Database.Tournament,
 				| "flags"
 				| "game"
+				| "guildId"
 				| "id"
 				| "maxPlayers"
 				| "minPlayers"
@@ -181,7 +182,7 @@ export const register = async (
 			addRoles &&
 			rest.put(
 				Routes.guildMemberRole(
-					env.MAIN_GUILD,
+					tournament.guildId,
 					userId,
 					tournament.registrationRole,
 				),

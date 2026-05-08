@@ -5,6 +5,7 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionContextType,
 	MessageFlags,
 	PermissionFlagsBits,
 	Routes,
@@ -23,6 +24,7 @@ export class TournamentAdmin extends Command {
 		name: "tournament-admin",
 		description: "Gestisci i tornei",
 		default_member_permissions: String(PermissionFlagsBits.ManageGuild),
+		contexts: [InteractionContextType.Guild],
 		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
@@ -108,12 +110,13 @@ export class TournamentAdmin extends Command {
 		{ defer, edit }: ChatInputReplies,
 		{
 			options: { tournament },
+			interaction: { guild_id },
 		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "advance">,
 	) => {
 		defer();
 		const { results } = await env.DB.prepare(
 			`
-				SELECT t.currentRound, t.id, t.name,
+				SELECT t.currentRound, t.id, t.name
 				(
 					SELECT COUNT(*)
 					FROM Matches m
@@ -125,7 +128,7 @@ export class TournamentAdmin extends Command {
 						  ((1 << (t.currentRound + 1)) - 2)
 				) AS pendingMatches
 				FROM Tournaments t
-				WHERE (t.id = ?1) OR (?1 IS NULL AND t.currentRound IS NOT NULL AND (t.statusFlags & ?2) = 0)
+				WHERE ((t.id = ?1) OR (?1 IS NULL AND t.currentRound IS NOT NULL AND (t.statusFlags & ?2) = 0)) AND t.guildId = ?5
 			`,
 		)
 			.bind(
@@ -133,6 +136,7 @@ export class TournamentAdmin extends Command {
 				TournamentStatusFlags.Finished,
 				DBMatchStatus.Playing,
 				DBMatchStatus.ToBePlayed,
+				guild_id,
 			)
 			.run<
 				Pick<Database.Tournament, "currentRound" | "id" | "name"> & {
@@ -174,17 +178,18 @@ export class TournamentAdmin extends Command {
 		{
 			options: { tournament, offset },
 			user,
+			interaction: { guild_id },
 		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "members">,
 	) => {
 		const [
 			{
-				results: [{ registrationRole } = {}],
+				results: [{ registrationRole, guildId } = {}],
 			},
 			{ results },
 		] = (await env.DB.batch([
 			env.DB.prepare(
-				`SELECT registrationRole FROM Tournaments WHERE id = ?1`,
-			).bind(tournament),
+				`SELECT registrationRole, guildId FROM Tournaments WHERE id = ?1 AND guildId = ?2`,
+			).bind(tournament, guild_id),
 			env.DB.prepare(
 				`
 					SELECT userId FROM Participants WHERE tournamentId = ?1
@@ -192,12 +197,17 @@ export class TournamentAdmin extends Command {
 				`,
 			).bind(tournament, offset ?? 0),
 		])) as [
-			D1Result<Pick<Database.Tournament, "registrationRole">>,
+			D1Result<Pick<Database.Tournament, "registrationRole" | "guildId">>,
 			D1Result<Pick<Database.Participant, "userId">>,
 		];
+		if (!guildId)
+			return reply({
+				content: "Torneo non trovato!",
+				flags: MessageFlags.Ephemeral,
+			});
 		if (!registrationRole)
 			return reply({
-				content: "Torneo non trovato o senza ruolo!",
+				content: "Torneo senza ruolo!",
 				flags: MessageFlags.Ephemeral,
 			});
 		if (!results.length)
@@ -216,15 +226,14 @@ export class TournamentAdmin extends Command {
 			try {
 				count++;
 				if (signal.aborted) break;
-				const { roles } = (await rest.get(
-					Routes.guildMember(env.MAIN_GUILD, userId),
-					{ signal },
-				)) as RESTGetAPIGuildMemberResult;
+				const { roles } = (await rest.get(Routes.guildMember(guildId, userId), {
+					signal,
+				})) as RESTGetAPIGuildMemberResult;
 
 				if (!roles.includes(registrationRole))
 					values.push(
 						rest.put(
-							Routes.guildMemberRole(env.MAIN_GUILD, userId, registrationRole),
+							Routes.guildMemberRole(guildId, userId, registrationRole),
 							{ signal, reason: "Controllo membri senza ruolo torneo" },
 						),
 					);
@@ -267,6 +276,7 @@ export class TournamentAdmin extends Command {
 		{
 			interaction: {
 				channel: { id: channelId },
+				guild_id,
 			},
 			options: { tournament, "match-id": matchId, channel = channelId },
 		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "pair">,
@@ -275,9 +285,14 @@ export class TournamentAdmin extends Command {
 		const {
 			meta: { changed_db },
 		} = await env.DB.prepare(
-			`UPDATE Matches SET channelId = ?3 WHERE tournamentId = ?1 AND id = ?2`,
+			`
+				UPDATE Matches SET channelId = ?3
+				WHERE tournamentId = ?1 AND id = ?2 AND channelId != ?3 AND EXISTS (
+					SELECT TRUE FROM Tournaments WHERE id = ?1 AND guildId = ?4
+				)
+			`,
 		)
-			.bind(tournament, matchId, channel)
+			.bind(tournament, matchId, channel, guild_id)
 			.run();
 
 		if (changed_db)
@@ -286,7 +301,8 @@ export class TournamentAdmin extends Command {
 			});
 		else
 			return edit({
-				content: "Non è stato possibile trovare il torneo o lo scontro!",
+				content:
+					"Non è stato possibile trovare il torneo, lo scontro o il canale è già associato!",
 			});
 	};
 	static abandoned = async (

@@ -36,6 +36,7 @@ CREATE TABLE Tournaments (
 	flags INTEGER NOT NULL,
 	game INTEGER NOT NULL,
 	logChannel TEXT NOT NULL,
+	guildId TEXT NOT NULL,
 	registrationMode INTEGER NOT NULL DEFAULT 0,
 	rounds TEXT NOT NULL,
 	statusFlags INTEGER NOT NULL DEFAULT 0,

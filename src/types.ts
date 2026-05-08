@@ -395,6 +395,7 @@ declare global {
 			rounds: string;
 			statusFlags: number;
 			team: number;
+			guildId: string;
 			bracketsTime?: number | null;
 			categoryId?: string | null;
 			channelName?: string | null;

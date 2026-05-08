@@ -47,7 +47,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 					async () => {
 						try {
 							const { id } = (await rest.post(
-								Routes.guildChannels(this.env.MAIN_GUILD),
+								Routes.guildChannels(event.payload.tournament.guildId),
 								{
 									body: {
 										name: placeholder(
@@ -66,7 +66,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 										type: ChannelType.GuildText,
 										permission_overwrites: [
 											{
-												id: this.env.MAIN_GUILD,
+												id: event.payload.tournament.guildId,
 												type: OverwriteType.Role,
 												deny: String(PermissionFlagsBits.ViewChannel),
 											},

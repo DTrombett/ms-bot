@@ -112,6 +112,7 @@ const server: ExportedHandler<Env> = {
 							registrationMode,
 							rounds,
 							team,
+							guildId,
 							bracketsTime,
 							categoryId,
 							channelName,
@@ -130,7 +131,7 @@ const server: ExportedHandler<Env> = {
 							roundType,
 							workflowId
 						)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					)
 						.bind(
 							tournament.name,
@@ -140,6 +141,7 @@ const server: ExportedHandler<Env> = {
 							tournament.registrationMode,
 							tournament.rounds,
 							tournament.team,
+							tournament.guildId,
 							tournament.bracketsTime,
 							tournament.categoryId,
 							tournament.channelName,
@@ -443,6 +445,7 @@ const server: ExportedHandler<Env> = {
 								registrationMode = ?,
 								rounds = ?,
 								team = ?,
+								guildId = ?,
 								bracketsTime = ?,
 								categoryId = ?,
 								channelName = ?,
@@ -471,6 +474,7 @@ const server: ExportedHandler<Env> = {
 							tournament.registrationMode,
 							tournament.rounds,
 							tournament.team,
+							tournament.guildId,
 							tournament.bracketsTime,
 							tournament.categoryId,
 							tournament.channelName,
@@ -1016,27 +1020,27 @@ const server: ExportedHandler<Env> = {
 					tag2 = url.searchParams.get("tag2"),
 					userId1 = url.searchParams.get("user1"),
 					userId2 = url.searchParams.get("user2");
-				const game = await env.DB.prepare(
-					`SELECT game FROM Tournaments WHERE id = ?`,
+				const result = await env.DB.prepare(
+					`SELECT game, guildId FROM Tournaments WHERE id = ?`,
 				)
 					.bind(Number(matchResult[1]))
-					.first<Database.Tournament["game"]>("game");
+					.first<Pick<Database.Tournament, "game" | "guildId">>();
 
-				if (game == null)
+				if (!result)
 					return Response.json(
 						{ message: "Torneo non trovato" },
 						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
 					);
 				const [user1, user2, player1, player2] = await allSettled([
-					userId1 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId1)),
-					userId2 && rest.get(Routes.guildMember(env.MAIN_GUILD, userId2)),
+					userId1 && rest.get(Routes.guildMember(result.guildId, userId1)),
+					userId2 && rest.get(Routes.guildMember(result.guildId, userId2)),
 					tag1 &&
-						(game === SupercellPlayerType.BrawlStars ?
+						(result.game === SupercellPlayerType.BrawlStars ?
 							commands.Brawl
 						:	commands.Clash
 						).getPlayer(tag1),
 					tag2 &&
-						(game === SupercellPlayerType.BrawlStars ?
+						(result.game === SupercellPlayerType.BrawlStars ?
 							commands.Brawl
 						:	commands.Clash
 						).getPlayer(tag2),

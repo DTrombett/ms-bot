@@ -45,7 +45,7 @@ export const unregister = async (
 	if (userIds.length === 0) return;
 	const tournament = await env.DB.prepare(
 		`
-			SELECT t.id, t.maxPlayers, t.minPlayers, t.name,
+			SELECT t.guildId, t.id, t.maxPlayers, t.minPlayers, t.name,
 				t.participantCount, t.registrationChannel, t.registrationMessage,
 				t.registrationMode, t.registrationRole, t.registrationStart,
 				t.registrationEnd, t.registrationTemplateLink, t.statusFlags, p.userId
@@ -58,6 +58,7 @@ export const unregister = async (
 		.first<
 			Pick<
 				Database.Tournament,
+				| "guildId"
 				| "id"
 				| "maxPlayers"
 				| "minPlayers"
@@ -113,7 +114,7 @@ export const unregister = async (
 				userIds.map((memberId) =>
 					rest.delete(
 						Routes.guildMemberRole(
-							env.MAIN_GUILD,
+							tournament.guildId,
 							memberId,
 							tournament.registrationRole!,
 						),

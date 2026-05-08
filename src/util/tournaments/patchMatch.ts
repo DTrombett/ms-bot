@@ -155,7 +155,8 @@ export const patchMatch = async (
 		).bind(tournamentId, matchId + (matchId % 2 || -1)),
 		env.DB.prepare(
 			`
-				SELECT t.logChannel, t.currentRound, t.roundType, t.workflowId, t.endedCategoryId, t.endedChannelName, m.channelId, m.user1, m.user2,
+				SELECT t.logChannel, t.currentRound, t.roundType, t.workflowId, t.endedCategoryId,
+					t.endedChannelName, t.guildId, m.channelId, m.user1, m.user2,
 				(
 					SELECT COUNT(*)
 					FROM Matches m2
@@ -189,6 +190,7 @@ export const patchMatch = async (
 				| "roundType"
 				| "workflowId"
 				| "endedCategoryId"
+				| "guildId"
 				| "endedChannelName"
 			> &
 				Partial<Pick<Database.Match, "channelId" | "user1" | "user2">> & {
@@ -279,7 +281,7 @@ export const patchMatch = async (
 						body: {
 							permission_overwrites: [
 								{
-									id: env.MAIN_GUILD,
+									id: tournament.guildId,
 									type: OverwriteType.Role,
 									deny: String(PermissionFlagsBits.ViewChannel),
 								},

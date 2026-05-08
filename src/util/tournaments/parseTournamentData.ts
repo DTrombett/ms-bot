@@ -28,6 +28,7 @@ export const parseTournamentData = async (
 		logChannel: ParseType.Text,
 		game: ParseType.Number,
 		team: ParseType.Number,
+		guildId: ParseType.Text,
 		message: ParseType.Boolean,
 		dashboard: ParseType.Boolean,
 		minPlayers: ParseType.Number,
@@ -71,6 +72,7 @@ export const parseTournamentData = async (
 		ok(form.game != null, "Il gioco è richiesto");
 		ok(!Number.isNaN(form.game), "Il gioco non è valido");
 		ok(form.team, "La dimensione della squadra è richiesta");
+		ok(form.guildId, "L'id del server dove si svolge il torneo è richiesto");
 		ok(!Number.isNaN(form.team), "La dimensione della squadra non è valida");
 		ok(form.team > 0, "La dimensione della squadra deve essere maggiore di 0");
 		ok(
@@ -234,6 +236,7 @@ export const parseTournamentData = async (
 		registrationMode,
 		rounds: JSON.stringify(rounds),
 		team: form.team,
+		guildId: form.guildId,
 		bracketsTime: form.bracketsTime,
 		categoryId: form.categoryId,
 		channelName: form.channelName,
