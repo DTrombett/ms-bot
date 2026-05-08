@@ -3,6 +3,7 @@ import {
 	type WorkflowEvent,
 	type WorkflowStep,
 } from "cloudflare:workers";
+import { NonRetryableError } from "cloudflare:workflows";
 import {
 	ComponentType,
 	MessageFlags,
@@ -206,7 +207,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					{ retries: { limit: 0, delay: 0 } },
 					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
 						Promise,
-						new Error(
+						new NonRetryableError(
 							`Minimo partecipanti non soddisfatto: ${participants.length} < ${tournament.minPlayers}`,
 						),
 					),
@@ -217,7 +218,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					{ retries: { limit: 0, delay: 0 } },
 					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
 						Promise,
-						new Error(
+						new NonRetryableError(
 							`Massimo partecipanti non soddisfatto: ${participants.length} > ${tournament.maxPlayers}`,
 						),
 					),
