@@ -5,6 +5,7 @@ import {
 } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import {
+	ButtonStyle,
 	ComponentType,
 	MessageFlags,
 	Routes,
@@ -17,6 +18,7 @@ import {
 	DBMatchStatus,
 	RegistrationMode,
 	TournamentFlags,
+	TournamentRoundMode,
 	TournamentStatusFlags,
 } from "./util/Constants";
 import { rest } from "./util/globals";
@@ -320,38 +322,65 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 			))!;
 		}
 		if (!tournament.participantCount || tournament.participantCount < 2) return;
+		let skip = false;
+		if (tournament.currentRound == null) {
+			tournament.currentRound = Math.ceil(
+				Math.log2(tournament.participantCount),
+			);
+			if (tournament.roundType === TournamentRoundMode.Manual)
+				await step.do<void>("Signal tournament ready to start", () =>
+					rest
+						.post(Routes.channelMessages(tournament.logChannel), {
+							body: {
+								content: "Il torneo è pronto per iniziare!",
+								components: [
+									{
+										type: ComponentType.ActionRow,
+										components: [
+											{
+												type: ComponentType.Button,
+												custom_id: `tournament-ava-${this.tournamentId}-${tournament.currentRound!}`,
+												style: ButtonStyle.Success,
+												emoji: { name: "🚀" },
+												label: "Inizia",
+											},
+										],
+									},
+								],
+							} satisfies RESTPostAPIChannelMessageJSONBody,
+						})
+						.then(() => {}),
+				);
+			else skip = true;
+		}
 		for (
-			let round =
-				tournament.currentRound ??
-				Math.ceil(Math.log2(tournament.participantCount)) - 1;
-			round >= 0;
-			round--
+			tournament.currentRound--;
+			tournament.currentRound >= 0;
+			tournament.currentRound--
 		) {
+			if (skip) skip = false;
+			else
+				await step.waitForEvent(
+					`Wait for round ${tournament.currentRound} to start`,
+					{ type: `round-${tournament.currentRound + 1}` },
+				);
 			const [matches, message] = await Promise.all([
 				this.createRoundAndDeleteChannels(
 					step,
-					round,
+					tournament.currentRound,
 					tournament.logChannel,
 					tournament.flags,
 				),
 				tournament.matchMessageLink &&
 					step.do(
-						`Fetch message for round ${round}`,
+						`Fetch message for round ${tournament.currentRound}`,
 						this.fetchMatchMessage(tournament.matchMessageLink),
 					),
-				step.do<void>(`Set current round to ${round}`, () =>
-					this.env.DB.prepare(
-						`UPDATE Tournaments SET currentRound = ?1 WHERE id = ?2`,
-					)
-						.bind(round, this.tournamentId)
-						.run()
-						.then(() => {}),
-				),
 			]);
 
 			if (matches.length)
 				await step.do<void>(
-					`Create channels workflows for round ${round}`,
+					`Create channels workflows for round ${tournament.currentRound}`,
 					() =>
 						this.env.CHANNELS.createBatch(
 							matches
@@ -365,10 +394,20 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 								})),
 						).then(() => {}),
 				);
-			await step.waitForEvent(`Wait for round ${round} to finish`, {
-				type: `round-${round}`,
-			});
+			await step.do<void>(
+				`Set current round to ${tournament.currentRound}`,
+				() =>
+					this.env.DB.prepare(
+						`UPDATE Tournaments SET currentRound = ?1 WHERE id = ?2`,
+					)
+						.bind(tournament.currentRound, this.tournamentId)
+						.run()
+						.then(() => {}),
+			);
 		}
+		await step.waitForEvent("Wait for tournament to finish", {
+			type: "round-0",
+		});
 		await step.do<void>("Finish tournament", () =>
 			this.env.DB.prepare(
 				`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,

@@ -572,11 +572,7 @@ export class Tournament extends Command {
 			});
 		defer();
 		const tournament = await env.DB.prepare(
-			`
-				SELECT workflowId
-				FROM Tournaments
-				WHERE id = ?1
-			`,
+			`SELECT workflowId FROM Tournaments WHERE id = ?1`,
 		)
 			.bind(tournamentId)
 			.first<Pick<Database.Tournament, "workflowId">>();
@@ -585,7 +581,7 @@ export class Tournament extends Command {
 			return edit({ content: "Torneo non trovato." });
 		try {
 			await finishRound(tournament.workflowId, Number(round));
-			return edit({ content: "Il round successivo è iniziato!" });
+			return edit({ content: "Il round è iniziato!" });
 		} catch (err) {
 			return edit({
 				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,
