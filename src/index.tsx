@@ -20,7 +20,7 @@ import {
 } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
 import { parseForm, ParseType } from "./util/forms";
-import { rest, textDecoder, textEncoder } from "./util/globals";
+import { textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
@@ -1018,48 +1018,59 @@ const server: ExportedHandler<Env> = {
 			try {
 				const tag1 = url.searchParams.get("tag1"),
 					tag2 = url.searchParams.get("tag2"),
-					userId1 = url.searchParams.get("user1"),
-					userId2 = url.searchParams.get("user2");
-				const result = await env.DB.prepare(
-					`SELECT game, guildId FROM Tournaments WHERE id = ?`,
-				)
-					.bind(Number(matchResult[1]))
-					.first<Pick<Database.Tournament, "game" | "guildId">>();
-
-				if (!result)
+					id = Number(url.searchParams.get("id"));
+				const tournamentId = Number(matchResult[1]);
+				if (Number.isNaN(tournamentId))
 					return Response.json(
 						{ message: "Torneo non trovato" },
 						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
 					);
-				const [user1, user2, player1, player2] = await allSettled([
-					userId1 && rest.get(Routes.guildMember(result.guildId, userId1)),
-					userId2 && rest.get(Routes.guildMember(result.guildId, userId2)),
+				const statements: D1PreparedStatement[] = [
+					env.DB.prepare(`SELECT game FROM Tournaments WHERE id = ?`).bind(
+						tournamentId,
+					),
+				];
+
+				if (!Number.isNaN(id))
+					statements.push(
+						env.DB.prepare(
+							`SELECT * FROM Matches WHERE tournamentId = ?1 AND id = ?2`,
+						).bind(tournamentId, id),
+					);
+				const [
+					{
+						results: [tournament],
+					},
+					{ results: [match] } = { results: [] },
+				] = (await env.DB.batch(statements)) as [
+					D1Result<Pick<Database.Tournament, "game">>,
+					D1Result<Database.Match> | undefined,
+				];
+				if (!tournament)
+					return Response.json(
+						{ message: "Torneo non trovato" },
+						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
+					);
+				const [player1, player2] = await allSettled([
 					tag1 &&
-						(result.game === SupercellPlayerType.BrawlStars ?
+						(tournament.game === SupercellPlayerType.BrawlStars ?
 							commands.Brawl
 						:	commands.Clash
 						).getPlayer(tag1),
 					tag2 &&
-						(result.game === SupercellPlayerType.BrawlStars ?
+						(tournament.game === SupercellPlayerType.BrawlStars ?
 							commands.Brawl
 						:	commands.Clash
 						).getPlayer(tag2),
 				]);
 				return Response.json(
-					{ user1, user2, player1, player2 },
+					{ player1, player2, match },
 					{
 						status: 200,
 						headers: {
 							"accept-ch": "Sec-CH-UA-Mobile",
 							"cache-control": `public${
-								(
-									(tag1 && !player1) ||
-									(tag2 && !player2) ||
-									(userId1 && !user1) ||
-									(userId2 && !user2)
-								) ?
-									""
-								:	", max-age=300"
+								(tag1 && !player1) || (tag2 && !player2) ? "" : ", max-age=300"
 							}`,
 						},
 					},

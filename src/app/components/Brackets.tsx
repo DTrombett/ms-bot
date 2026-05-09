@@ -1,7 +1,3 @@
-import type {
-	RESTGetAPIChannelResult,
-	RESTGetAPIGuildMemberResult,
-} from "discord-api-types/v10";
 import {
 	memo,
 	useEffect,
@@ -87,6 +83,37 @@ const resolveMatchParticipant = (
 		},
 	].sort(({ r: a }, { r: b }) => b - a)[0]!.u;
 };
+const updateMatch = (
+	resolved: ResolvedMatch,
+	newMatch:
+		| Pick<
+				Database.Match,
+				| "channelId"
+				| "id"
+				| "result1"
+				| "result2"
+				| "status"
+				| "user1"
+				| "user2"
+		  >
+		| undefined,
+) => {
+	if (!newMatch) return resolved;
+	resolved.participant1.result =
+		newMatch.status === DBMatchStatus.Abandoned && newMatch.result1 == null ?
+			"A"
+		:	String(newMatch.result1 ?? 0);
+	resolved.participant2.result =
+		newMatch.user2 ?
+			newMatch.status === DBMatchStatus.Abandoned && newMatch.result2 == null ?
+				"A"
+			:	String(newMatch.result2 ?? 0)
+		:	"N";
+	resolved.id = newMatch.id;
+	resolved.status = newMatch.status;
+	resolved.original = newMatch;
+	return resolved;
+};
 const resolveMatch = (
 	brackets: (Matches | undefined)[],
 	participantsMap: Record<string, Participants[number]>,
@@ -110,40 +137,31 @@ const resolveMatch = (
 		2,
 	);
 
-	return {
-		participant1: {
-			userId: participant1.userId,
-			player: {
-				name: participant1.name ?? undefined,
-				tag: participant1.tag ?? undefined,
+	return updateMatch(
+		{
+			participant1: {
+				userId: participant1.userId,
+				player: {
+					name: participant1.name ?? undefined,
+					tag: participant1.tag ?? undefined,
+				},
+				result: "-",
 			},
-			result:
-				match ?
-					match.status === DBMatchStatus.Abandoned && match.result1 == null ?
-						"A"
-					:	String(match.result1 ?? 0)
-				:	"-",
-		},
-		participant2: {
-			userId: participant2.userId,
-			player: {
-				name: participant2.name ?? undefined,
-				tag: participant2.tag ?? undefined,
+			participant2: {
+				userId: participant2.userId,
+				player: {
+					name: participant2.name ?? undefined,
+					tag: participant2.tag ?? undefined,
+				},
+				result: "-",
 			},
-			result:
-				match ?
-					match.user2 ?
-						match.status === DBMatchStatus.Abandoned && match.result2 == null ?
-							"A"
-						:	String(match.result2 ?? 0)
-					:	"N"
-				:	"-",
+			id: 2 ** (brackets.length - i - 1) - 1 + k,
+			status: DBMatchStatus.ToBePlayed,
+			round: i,
+			original: match,
 		},
-		id: match?.id ?? 2 ** (brackets.length - i - 1) - 1 + k,
-		status: match?.status ?? DBMatchStatus.ToBePlayed,
-		round: i,
-		original: match,
-	};
+		match,
+	);
 };
 
 const MatchParticipant = ({
@@ -220,9 +238,7 @@ const MatchParticipant = ({
 						fontFamily: "ggsans",
 						height: "1rem",
 					}}>
-					{participant.member?.nick ??
-						participant.member?.user.global_name ??
-						participant.member?.user.username}
+					{participant.userId}
 				</div>
 			</div>
 			{canEdit && !Number.isNaN(Number(participant.result)) ?
@@ -337,21 +353,18 @@ const MatchUI = ({
 		document.body.style.overflowY = "clip";
 		(async () => {
 			const params = toSearchParams({
-				user1: active.participant1.userId || null,
 				tag1: active.participant1.player?.tag,
-				user2: active.participant2.userId || null,
 				tag2: active.participant2.player?.tag,
+				id: active.original?.id,
 			}).toString();
 			if (!params) return;
 			const result = await fetch(`/tournaments/${id}/matchData?${params}`).then(
 				(res) =>
 					res.json<
 						| Partial<{
-								channel: RESTGetAPIChannelResult;
-								user1: RESTGetAPIGuildMemberResult;
-								user2: RESTGetAPIGuildMemberResult;
 								player1: Brawl.Player | Clash.Player;
 								player2: Brawl.Player | Clash.Player;
+								match: Database.Match;
 						  }>
 						| { message: string }
 					>(),
@@ -360,20 +373,21 @@ const MatchUI = ({
 			if ("message" in result) return console.error(result.message);
 			setActive(
 				(active) =>
-					active && {
-						...active,
-						channel: result.channel,
-						participant1: {
-							...active.participant1,
-							member: result.user1,
-							player: result.player1 ?? active.participant1.player,
+					active &&
+					updateMatch(
+						{
+							...active,
+							participant1: {
+								...active.participant1,
+								player: result.player1 ?? active.participant1.player,
+							},
+							participant2: {
+								...active.participant2,
+								player: result.player2 ?? active.participant2.player,
+							},
 						},
-						participant2: {
-							...active.participant2,
-							member: result.user2,
-							player: result.player2 ?? active.participant2.player,
-						},
-					},
+						result.match,
+					),
 			);
 		})().catch(console.error);
 		return () => {

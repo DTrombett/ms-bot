@@ -7,7 +7,6 @@ import type {
 	APIApplicationCommandSubcommandGroupOption,
 	APIApplicationCommandSubcommandOption,
 	APIChatInputApplicationCommandInteraction,
-	APIGuildMember,
 	APIInteraction,
 	APIInteractionResponse,
 	APIInteractionResponseChannelMessageWithSource,
@@ -606,7 +605,6 @@ declare global {
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
 
 	type Participant = {
-		member?: APIGuildMember;
 		userId: string;
 		result: string;
 		player?:
