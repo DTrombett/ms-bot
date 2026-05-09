@@ -43,7 +43,7 @@ export const queueHandlers: {
 			>();
 
 		if (!tournament) {
-			// Do not retry tournament not found
+			// Do not retry when tournament is not found
 			message.ack();
 			throw new Error("Tournament not found");
 		}
