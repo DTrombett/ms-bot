@@ -168,7 +168,7 @@ export default async ({
 								<ChannelMention
 									mobile={mobile}
 									children={t.registrationChannelName}
-									channel={`@me/${t.registrationChannel}${t.registrationMessage ? `/${t.registrationMessage}` : ""}`}
+									channel={`${t.guildId}/${t.registrationChannel}${t.registrationMessage ? `/${t.registrationMessage}` : ""}`}
 								/>
 							)
 						}

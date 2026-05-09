@@ -158,7 +158,7 @@ export default ({
 					maxWidth="42rem"
 					defaultValue={
 						tournament?.registrationTemplateLink ?
-							`https://discord.com/channels/@me/${tournament.registrationTemplateLink}`
+							`https://discord.com/channels/${tournament.guildId}/${tournament.registrationTemplateLink}`
 						:	undefined
 					}
 				/>
@@ -356,7 +356,7 @@ export default ({
 					maxWidth="42rem"
 					defaultValue={
 						tournament?.matchMessageLink ?
-							`https://discord.com/channels/@me/${tournament.matchMessageLink}`
+							`https://discord.com/channels/${tournament.guildId}/${tournament.matchMessageLink}`
 						:	undefined
 					}
 				/>
