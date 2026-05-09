@@ -3,6 +3,7 @@ import { Routes, type RESTGetAPIUserResult } from "discord-api-types/v10";
 import { Brawl, Clash } from "../../commands";
 import {
 	DiscordIdRegex,
+	QueueMessageType,
 	RegistrationMode,
 	TournamentFlags,
 	type SupercellPlayerType,
@@ -10,7 +11,6 @@ import {
 import { UserError } from "../UserError";
 import { rest } from "../globals";
 import { TimeUnit } from "../time";
-import { editMessage } from "./editMessage";
 
 export enum RegisterErrorType {
 	InvalidId,
@@ -45,17 +45,10 @@ export const register = async (
 		tag,
 		userId,
 		addRoles = true,
-		updateMessage = true,
 	}: (
 		| { admin: string; mode?: RegistrationMode }
 		| { admin?: false; mode: RegistrationMode }
-	) & {
-		tag?: string;
-		name?: string;
-		userId: string;
-		updateMessage?: boolean;
-		addRoles?: boolean;
-	},
+	) & { tag?: string; name?: string; userId: string; addRoles?: boolean },
 ): Promise<Database.Participant> => {
 	if (!DiscordIdRegex.test(userId))
 		throw new UserError("L'id utente non è valido!", {
@@ -68,10 +61,8 @@ export const register = async (
 		});
 	const tournament = await env.DB.prepare(
 		`
-			SELECT t.flags, t.game, t.guildId, t.id, t.maxPlayers, t.minPlayers,
-				t.name, t.participantCount, t.registrationChannel,
-				t.registrationMessage, t.registrationMode, t.registrationRole,
-				t.registrationStart, t.registrationEnd, t.registrationTemplateLink,
+			SELECT t.flags, t.game, t.guildId, t.maxPlayers, t.name, t.participantCount,
+				t.registrationMode, t.registrationRole, t.registrationStart, t.registrationEnd,
 				p.tag, p.userId, p.name AS participantName${tag ? "" : ", sp.tag as savedTag"}
 			FROM Tournaments t
 			LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?2
@@ -91,18 +82,13 @@ export const register = async (
 				| "flags"
 				| "game"
 				| "guildId"
-				| "id"
 				| "maxPlayers"
-				| "minPlayers"
 				| "name"
 				| "participantCount"
-				| "registrationChannel"
-				| "registrationMessage"
 				| "registrationMode"
 				| "registrationRole"
 				| "registrationStart"
 				| "registrationEnd"
-				| "registrationTemplateLink"
 			> &
 				PossiblyNull<
 					Pick<Database.Participant, "tag" | "userId"> & {
@@ -176,7 +162,12 @@ export const register = async (
 			);
 	}
 	tournament.participantCount++;
-	if (updateMessage) waitUntil(editMessage(tournament));
+	waitUntil(
+		env.QUEUE.send({
+			t: QueueMessageType.TournamentMessageEdit,
+			d: { id: tournamentId },
+		} satisfies QueueMessage),
+	);
 	await Promise.all([
 		tournament.registrationRole &&
 			addRoles &&

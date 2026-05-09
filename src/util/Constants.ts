@@ -62,3 +62,7 @@ export enum TournamentRoundMode {
 	Once,
 	Fast,
 }
+export enum QueueMessageType {
+	Ack,
+	TournamentMessageEdit,
+}

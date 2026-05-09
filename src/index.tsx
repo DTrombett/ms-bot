@@ -25,6 +25,7 @@ import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { toSearchParams } from "./util/objects";
 import { allSettled } from "./util/promises";
+import { queueHandlers } from "./util/queueHandlers";
 import type { RGB } from "./util/resolveColor";
 import { create403, create405 } from "./util/responses";
 import { TimeUnit } from "./util/time";
@@ -46,7 +47,7 @@ import { UserError } from "./util/UserError";
 const handler = new CommandHandler(Object.values(commands));
 const authRedirectPath = "/auth/discord/callback";
 
-const server: ExportedHandler<Env> = {
+const server: ExportedHandler<Env, QueueMessage> = {
 	fetch: async (request) => {
 		const url = new URL(request.url);
 		let matchResult: RegExpMatchArray | null;
@@ -1276,6 +1277,19 @@ const server: ExportedHandler<Env> = {
 				...instances.map((r) => r.id),
 			);
 		}
+	},
+	queue: async (batch) => {
+		await Promise.all(
+			batch.messages.map(async (m) => {
+				try {
+					await queueHandlers[m.body.t](m as never, batch);
+					m.ack();
+				} catch (err) {
+					m.retry();
+					console.error(err);
+				}
+			}),
+		);
 	},
 };
 

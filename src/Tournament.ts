@@ -16,6 +16,7 @@ import {
 } from "discord-api-types/v10";
 import {
 	DBMatchStatus,
+	QueueMessageType,
 	RegistrationMode,
 	TournamentFlags,
 	TournamentRoundMode,
@@ -26,7 +27,6 @@ import { ok } from "./util/node";
 import normalizeError from "./util/normalizeError";
 import { TimeUnit } from "./util/time";
 import { createRegistrationMessage } from "./util/tournaments/createRegistrationMessage";
-import { editMessage } from "./util/tournaments/editMessage";
 import { resolveWinner } from "./util/tournaments/resolveWinner";
 
 export type Params = { id: number };
@@ -141,7 +141,10 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				))!;
 			}
 			await step.do<void>("Disable registration message", () =>
-				editMessage(tournament).then(() => {}),
+				this.env.QUEUE.send({
+					t: QueueMessageType.TournamentMessageEdit,
+					d: { id: this.tournamentId },
+				} satisfies QueueMessage).then(() => {}),
 			);
 		} catch (error) {
 			this.sendError(

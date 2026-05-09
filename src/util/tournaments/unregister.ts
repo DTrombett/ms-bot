@@ -2,12 +2,12 @@ import { env, waitUntil } from "cloudflare:workers";
 import { Routes } from "discord-api-types/v10";
 import {
 	DiscordIdRegex,
+	QueueMessageType,
 	RegistrationMode,
 	TournamentStatusFlags,
 } from "../Constants";
 import { UserError } from "../UserError";
 import { rest } from "../globals";
-import { editMessage } from "./editMessage";
 
 export enum UnregisterErrorType {
 	InvalidId,
@@ -25,14 +25,13 @@ export const unregister = async (
 		userId,
 		userIds = [userId!],
 		removeRoles = true,
-		updateMessage = true,
 	}: (
 		| ({ admin: string; mode?: RegistrationMode } & (
 				| { userId: string; userIds?: never }
 				| { userId?: never; userIds: string[] }
 		  ))
 		| { admin?: false; mode: RegistrationMode; userId: string; userIds?: never }
-	) & { updateMessage?: boolean; removeRoles?: boolean },
+	) & { removeRoles?: boolean },
 ) => {
 	if (userId && !DiscordIdRegex.test(userId))
 		throw new UserError("L'id utente non è valido!", {
@@ -45,10 +44,8 @@ export const unregister = async (
 	if (userIds.length === 0) return;
 	const tournament = await env.DB.prepare(
 		`
-			SELECT t.guildId, t.id, t.maxPlayers, t.minPlayers, t.name,
-				t.participantCount, t.registrationChannel, t.registrationMessage,
-				t.registrationMode, t.registrationRole, t.registrationStart,
-				t.registrationEnd, t.registrationTemplateLink, t.statusFlags, p.userId
+			SELECT t.guildId, t.name, t.participantCount, t.registrationMode,
+				t.registrationRole, t.statusFlags, p.userId
 			FROM Tournaments t
 			LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?2
 			WHERE t.id = ?1
@@ -59,18 +56,10 @@ export const unregister = async (
 			Pick<
 				Database.Tournament,
 				| "guildId"
-				| "id"
-				| "maxPlayers"
-				| "minPlayers"
 				| "name"
 				| "participantCount"
-				| "registrationChannel"
-				| "registrationMessage"
 				| "registrationMode"
 				| "registrationRole"
-				| "registrationStart"
-				| "registrationEnd"
-				| "registrationTemplateLink"
 				| "statusFlags"
 			> &
 				PossiblyNull<Pick<Database.Participant, "userId">>
@@ -125,5 +114,10 @@ export const unregister = async (
 				),
 			),
 		);
-	if (updateMessage) waitUntil(editMessage(tournament));
+	waitUntil(
+		env.QUEUE.send({
+			t: QueueMessageType.TournamentMessageEdit,
+			d: { id: tournamentId },
+		} satisfies QueueMessage),
+	);
 };

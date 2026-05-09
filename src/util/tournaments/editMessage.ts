@@ -1,4 +1,7 @@
-import { Routes } from "discord-api-types/v10";
+import {
+	Routes,
+	type RESTPatchAPIChannelMessageResult,
+} from "discord-api-types/v10";
 import { rest } from "../globals";
 import { createRegistrationMessage } from "./createRegistrationMessage";
 
@@ -20,7 +23,7 @@ export const editMessage = async (
 	tournament.registrationChannel &&
 	tournament.registrationMessage &&
 	tournament.registrationTemplateLink &&
-	rest.patch(
+	(rest.patch(
 		Routes.channelMessage(
 			tournament.registrationChannel,
 			tournament.registrationMessage,
@@ -31,4 +34,4 @@ export const editMessage = async (
 				tournament,
 			),
 		},
-	);
+	) as Promise<RESTPatchAPIChannelMessageResult>);

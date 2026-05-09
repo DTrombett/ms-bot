@@ -34,6 +34,7 @@ import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
 import type {
 	DBMatchStatus,
+	QueueMessageType,
 	SupercellPlayerType,
 	TournamentFlags,
 	TournamentRoundMode,
@@ -56,6 +57,10 @@ declare global {
 	type PossiblyNull<T> = T | { [P in keyof T]: null };
 
 	type PossiblyUndefined<T> = T | { [P in keyof T]?: never };
+
+	type QueueMessage =
+		| { t: QueueMessageType.Ack; d?: never }
+		| { t: QueueMessageType.TournamentMessageEdit; d: { id: number } };
 
 	type InteractionByType<
 		T extends InteractionType,
