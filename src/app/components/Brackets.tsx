@@ -1,6 +1,7 @@
 import {
 	memo,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -349,8 +350,14 @@ const MatchUI = ({
 	const [error, setError] = useState<string>();
 	const scrollPosition = useRef(window.scrollY);
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		document.body.style.overflowY = "clip";
+		return () => {
+			document.body.style.overflowY = "";
+			window.scrollTo({ top: scrollPosition.current, behavior: "instant" });
+		};
+	}, []);
+	useEffect(() => {
 		(async () => {
 			const params = toSearchParams({
 				tag1: active.participant1.player?.tag,
@@ -390,10 +397,6 @@ const MatchUI = ({
 					),
 			);
 		})().catch(console.error);
-		return () => {
-			document.body.style.overflowY = "";
-			window.scrollTo({ top: scrollPosition.current, behavior: "instant" });
-		};
 	}, []);
 	return (
 		<form
