@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
+	ApplicationIntegrationType,
 	MessageFlags,
 	MessageReferenceType,
 	Routes,
@@ -31,6 +32,7 @@ export class Dev extends Command {
 		description: "Developer commands",
 		type: ApplicationCommandType.ChatInput,
 		default_member_permissions: "0",
+		integration_types: [ApplicationIntegrationType.UserInstall],
 		options: [
 			{
 				name: "test",
@@ -62,7 +64,7 @@ export class Dev extends Command {
 						max_length: 2000,
 					},
 					{
-						type: ApplicationCommandOptionType.Channel,
+						type: ApplicationCommandOptionType.String,
 						name: "channel",
 						description:
 							"Il canale in cui mandare il messaggio (default: canale corrente)",
@@ -353,12 +355,12 @@ export class Dev extends Command {
 						env.TEST_GUILD,
 					),
 					{
-						body: commands
-							.filter((c) => isDev || c.private)
-							.flatMap((file) => [
+						body: (isDev ?
+							commands.flatMap((file) => [
 								...(file.chatInputData ? [file.chatInputData] : []),
 								...(file.contextMenuData ?? []),
-							]) satisfies AsConst<RESTPutAPIApplicationGuildCommandsJSONBody>,
+							])
+						:	[]) satisfies AsConst<RESTPutAPIApplicationGuildCommandsJSONBody>,
 					},
 				) as Promise<APIApplicationCommand[]>
 			).catch(normalizeError),
@@ -366,18 +368,24 @@ export class Dev extends Command {
 				[]
 			:	(
 					rest.put(Routes.applicationCommands(env.DISCORD_APPLICATION_ID), {
-						body: commands
-							.filter((c) => !c.private)
-							.flatMap((file) => [
-								...(file.chatInputData ? [file.chatInputData] : []),
-								...(file.contextMenuData ?? []),
-							]) satisfies AsConst<RESTPutAPIApplicationCommandsJSONBody>,
+						body: commands.flatMap((file) => [
+							...(file.chatInputData ? [file.chatInputData] : []),
+							...(file.contextMenuData ?? []),
+						]) satisfies AsConst<RESTPutAPIApplicationCommandsJSONBody>,
 					}) as Promise<APIApplicationCommand[]>
 				).catch(normalizeError),
 		]);
 
 		await edit({
-			content: `Private commands: \`${privateAPICommands instanceof Error ? privateAPICommands.message : privateAPICommands.map((c) => c.name).join(", ")}\`\nPublic commands: \`${publicAPICommands instanceof Error ? publicAPICommands.message : publicAPICommands.map((c) => c.name).join(", ")}\``,
+			content: `Private commands: \`${
+				privateAPICommands instanceof Error ?
+					privateAPICommands.message
+				:	privateAPICommands.map((c) => c.name).join(", ") || "nessuno"
+			}\`\nPublic commands: \`${
+				publicAPICommands instanceof Error ?
+					publicAPICommands.message
+				:	publicAPICommands.map((c) => c.name).join(", ") || "nessuno"
+			}\``,
 		});
 	};
 	static "send" = async (

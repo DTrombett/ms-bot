@@ -132,7 +132,7 @@ export class CommandHandler {
 			} (${interaction.channel?.id})`,
 		);
 		if (!Command) return new Response(null, { status: 400 });
-		if (Command.private && !env.OWNER_ID.includes(user.id))
+		if (Command.private && env.OWNER_ID !== user.id)
 			return new Response(null, { status: 403 });
 		const { promise, resolve } =
 			Promise.withResolvers<APIInteractionResponse>();
