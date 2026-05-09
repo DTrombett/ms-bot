@@ -116,7 +116,7 @@ export class TournamentAdmin extends Command {
 		defer();
 		const { results } = await env.DB.prepare(
 			`
-				SELECT t.currentRound, t.id, t.name
+				SELECT t.currentRound, t.id, t.name,
 				(
 					SELECT COUNT(*)
 					FROM Matches m
