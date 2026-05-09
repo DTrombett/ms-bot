@@ -64,7 +64,7 @@ export class Dev extends Command {
 						max_length: 2000,
 					},
 					{
-						type: ApplicationCommandOptionType.Channel,
+						type: ApplicationCommandOptionType.String,
 						name: "channel",
 						description:
 							"Il canale in cui mandare il messaggio (default: canale corrente)",
