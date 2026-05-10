@@ -15,6 +15,7 @@ import {
 	formatDuration,
 	idDiff,
 	idToTimestamp,
+	parseDuration,
 	parseTimeValue,
 } from "../util/time";
 
@@ -24,24 +25,6 @@ export class Time extends Command {
 		description: "Vari comandi per gestire il tempo",
 		type: ApplicationCommandType.ChatInput,
 		options: [
-			{
-				name: "stopwatch",
-				description: "Fai partire il cronometro!",
-				type: ApplicationCommandOptionType.Subcommand,
-			},
-			{
-				name: "resolve-id",
-				description: "Risolvi un ID Discord in un timestamp",
-				type: ApplicationCommandOptionType.Subcommand,
-				options: [
-					{
-						name: "id",
-						description: "ID Discord",
-						type: ApplicationCommandOptionType.String,
-						required: true,
-					},
-				],
-			},
 			{
 				name: "compare",
 				description: "Calcola la differenza tra due timestamp",
@@ -71,52 +54,47 @@ export class Time extends Command {
 					},
 				],
 			},
+			{
+				name: "stamp",
+				description: "Crea una timestamp Discord da un tempo qualsiasi",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "time",
+						description:
+							"Un tempo relativo o assoluto (es. 2d, 10/05/26, 13:00)",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+					},
+					{
+						name: "tz",
+						description:
+							"Il fuso orario in cui interpretare il tempo (default Europe/Rome)",
+						type: ApplicationCommandOptionType.String,
+					},
+				],
+			},
+			{
+				name: "resolve-id",
+				description: "Risolvi un ID Discord in un timestamp",
+				type: ApplicationCommandOptionType.Subcommand,
+				options: [
+					{
+						name: "id",
+						description: "ID Discord",
+						type: ApplicationCommandOptionType.String,
+						required: true,
+					},
+				],
+			},
+			{
+				name: "stopwatch",
+				description: "Fai partire il cronometro!",
+				type: ApplicationCommandOptionType.Subcommand,
+			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
-	static override customId = "time";
 	static override supportComponentMethods = true;
-	static stopwatch = async (
-		{ reply, edit }: ChatInputReplies,
-		{ fullRoute }: ChatInputArgs<typeof Time.chatInputData, "stopwatch">,
-	) => {
-		reply({
-			content: "Cronometro avviato",
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: "time-stop",
-							label: "Ferma",
-							emoji: { name: "⏹️" },
-							style: ButtonStyle.Primary,
-						},
-					],
-				},
-			],
-		});
-		// Wait for next tick
-		await timeout();
-		return edit({
-			content: `Cronometro avviato <t:${Math.round(Date.parse(((await rest.get(fullRoute)) as APIMessage).timestamp) / 1000)}:R>`,
-		});
-	};
-	static "resolve-id" = (
-		{ reply }: ChatInputReplies,
-		{ options: { id } }: ChatInputArgs<typeof Time.chatInputData, "resolve-id">,
-	) => {
-		try {
-			const timestamp = idToTimestamp(id);
-			const timestampSeconds = Math.round(timestamp / 1000);
-
-			reply({
-				content: `Timestamp: \`${timestamp}\`, <t:${timestampSeconds}:f>, <t:${timestampSeconds}:R>\n`,
-			});
-		} catch {
-			reply({ content: "ID non valido!", flags: MessageFlags.Ephemeral });
-		}
-	};
 	static compare = (
 		{ reply }: ChatInputReplies,
 		{
@@ -155,6 +133,80 @@ export class Time extends Command {
 				flags: MessageFlags.Ephemeral,
 			});
 		}
+	};
+	static stamp = (
+		{ reply }: ChatInputReplies,
+		{
+			options: { time, tz },
+			interaction: { id: interactionId },
+		}: ChatInputArgs<typeof Time.chatInputData, "stamp">,
+	) => {
+		let start;
+		try {
+			start = Temporal.Instant.fromEpochMilliseconds(
+				idToTimestamp(interactionId),
+			).toZonedDateTimeISO(tz ?? "Europe/Rome");
+		} catch (err) {
+			return reply({
+				content: "Il fuso orario inserito non è valido!",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
+		const target = parseDuration(time, start);
+
+		if (!target)
+			return reply({
+				content: "Il tempo inserito non è valido!",
+				flags: MessageFlags.Ephemeral,
+			});
+		const timestamp = Math.floor(target.epochMilliseconds / 1000);
+		reply({
+			content: ["t", "T", "d", "D", "f", "F", "s", "S", "R"]
+				.map((s) => `\`<t:${timestamp}:${s}>\`\t<t:${timestamp}:${s}>`)
+				.join("\n"),
+		});
+	};
+	static "resolve-id" = (
+		{ reply }: ChatInputReplies,
+		{ options: { id } }: ChatInputArgs<typeof Time.chatInputData, "resolve-id">,
+	) => {
+		try {
+			const timestamp = idToTimestamp(id);
+			const timestampSeconds = Math.round(timestamp / 1000);
+
+			reply({
+				content: `Timestamp: \`${timestamp}\`, <t:${timestampSeconds}:f>, <t:${timestampSeconds}:R>\n`,
+			});
+		} catch {
+			reply({ content: "ID non valido!", flags: MessageFlags.Ephemeral });
+		}
+	};
+	static stopwatch = async (
+		{ reply, edit }: ChatInputReplies,
+		{ fullRoute }: ChatInputArgs<typeof Time.chatInputData, "stopwatch">,
+	) => {
+		reply({
+			content: "Cronometro avviato",
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: "time-stop",
+							label: "Ferma",
+							emoji: { name: "⏹️" },
+							style: ButtonStyle.Primary,
+						},
+					],
+				},
+			],
+		});
+		// Wait for next tick
+		await timeout();
+		return edit({
+			content: `Cronometro avviato <t:${Math.round(Date.parse(((await rest.get(fullRoute)) as APIMessage).timestamp) / 1000)}:R>`,
+		});
 	};
 	static stop = (
 		{ reply, update }: ComponentReplies,
