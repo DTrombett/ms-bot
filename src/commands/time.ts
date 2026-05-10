@@ -4,6 +4,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	MessageFlags,
+	type APIApplicationCommandOptionChoice,
 	type APIMessage,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
@@ -20,6 +21,20 @@ import {
 } from "../util/time";
 
 export class Time extends Command {
+	static readonly TimestampStyles = [
+		{ name: "Short Time (16:20)", value: "t" },
+		{ name: "Medium Time (16:20:30)", value: "T" },
+		{ name: "Short Date (20/04/2021)", value: "d" },
+		{ name: "Long Date (20 aprile 2021)", value: "D" },
+		{ name: "Long Date, Short Time (20 aprile 2021 16:20)", value: "f" },
+		{
+			name: "Full Date, Short Time (martedì 20 aprile 2021 16:20)",
+			value: "F",
+		},
+		{ name: "Short Date, Short Time (20/04/2021 16:20)", value: "s" },
+		{ name: "Short Date, Medium Time (20/04/2021 16:20:30)", value: "S" },
+		{ name: "Relative Time (4 anni fa)", value: "R" },
+	] as const satisfies APIApplicationCommandOptionChoice<string>[];
 	static override chatInputData = {
 		name: "time",
 		description: "Vari comandi per gestire il tempo",
@@ -65,6 +80,13 @@ export class Time extends Command {
 							"Un tempo relativo o assoluto (es. 2d, 10/05/26, 13:00)",
 						type: ApplicationCommandOptionType.String,
 						required: true,
+					},
+					{
+						name: "style",
+						description:
+							"Lo stile della timestamp. Se specificato mostra solo quella",
+						type: ApplicationCommandOptionType.String,
+						choices: this.TimestampStyles,
 					},
 					{
 						name: "tz",
@@ -137,7 +159,7 @@ export class Time extends Command {
 	static stamp = (
 		{ reply }: ChatInputReplies,
 		{
-			options: { time, tz },
+			options: { time, tz, style },
 			interaction: { id: interactionId },
 		}: ChatInputArgs<typeof Time.chatInputData, "stamp">,
 	) => {
@@ -161,9 +183,13 @@ export class Time extends Command {
 			});
 		const timestamp = Math.floor(target.epochMilliseconds / 1000);
 		reply({
-			content: ["t", "T", "d", "D", "f", "F", "s", "S", "R"]
-				.map((s) => `\`<t:${timestamp}:${s}>\`\t<t:${timestamp}:${s}>`)
-				.join("\n"),
+			content:
+				style ?
+					`<t:${timestamp}:${style}>`
+				:	this.TimestampStyles.map(
+						(s) =>
+							`\`<t:${timestamp}:${s.value}>\`\t<t:${timestamp}:${s.value}>`,
+					).join("\n"),
 		});
 	};
 	static "resolve-id" = (
