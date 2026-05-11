@@ -4,6 +4,7 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	Locale,
 	MessageFlags,
 	PermissionFlagsBits,
 	SeparatorSpacingSize,
@@ -12,7 +13,6 @@ import {
 	type APIEmbed,
 	type APIMessageTopLevelComponent,
 	type APISectionComponent,
-	type Locale,
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
@@ -1498,12 +1498,17 @@ export class Brawl extends Command {
 		{
 			errors = {},
 			cache = true,
-		}: { errors?: Record<number, string>; cache?: boolean } = {},
+			locale = Locale.Italian,
+		}: {
+			errors?: Record<number, string>;
+			cache?: boolean;
+			locale?: Locale;
+		} = {},
 	) {
 		errors = { ...this.ERROR_MESSAGES, ...errors };
 		const request = new Request(
 			new URL(path, "https://ms-api.trombett.org/proxy/api.brawlstars.com/v1/"),
-			{ headers: { "x-env": env.NODE_ENV, "accept-language": "it" } },
+			{ headers: { "x-env": env.NODE_ENV, "accept-language": locale } },
 		);
 		let res = cache && (await caches.default.match(request));
 
@@ -1514,6 +1519,7 @@ export class Brawl extends Command {
 			res = await fetch(clone);
 			if (cache) waitUntil(caches.default.put(request, res.clone()));
 		}
+		console.log(res.headers);
 		if (res.ok) return res.json<T>();
 		const body = await res.text();
 		const json = await Promise.try<{ message: string }, [string]>(

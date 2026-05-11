@@ -7,7 +7,7 @@ import ggsans from "../fonts/ggsansvf.woff2" with { type: "asset" };
 
 export type Participants = Pick<
 	Database.Participant,
-	"tag" | "userId" | "name" | "team"
+	"tag" | "userId" | "name"
 >[];
 export type Matches = Pick<
 	Database.Match,

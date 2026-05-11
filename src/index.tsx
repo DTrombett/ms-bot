@@ -23,7 +23,7 @@ import { parseForm, ParseType } from "./util/forms";
 import { textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
-import { toSearchParams } from "./util/objects";
+import { pick, toSearchParams } from "./util/objects";
 import { allSettled } from "./util/promises";
 import { queueHandlers } from "./util/queueHandlers";
 import type { RGB } from "./util/resolveColor";
@@ -305,9 +305,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				).bind(Number(matchResult[1])),
 			])) as [
 				D1Result<Database.Tournament>,
-				D1Result<
-					Pick<Database.Participant, "tag" | "userId" | "team" | "name">
-				>,
+				D1Result<Pick<Database.Participant, "tag" | "userId" | "name">>,
 			];
 			if (!tournament)
 				return new Response(null, {
@@ -390,9 +388,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 								| "user2"
 							>
 						>,
-						D1Result<
-							Pick<Database.Participant, "tag" | "userId" | "team" | "name">
-						>,
+						D1Result<Pick<Database.Participant, "tag" | "userId" | "name">>,
 					]
 				>,
 			]);
@@ -730,11 +726,20 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				);
 			try {
 				return Response.json(
-					await register(Number(matchResult[1]), {
-						userId: data.userId,
-						admin: `${token.d ?? token.u} (<@${token.i}>)`,
-						tag: data.tag ?? undefined,
-					}),
+					pick<
+						Awaited<ReturnType<typeof register>>,
+						keyof Database.Participant
+					>(
+						await register(Number(matchResult[1]), {
+							userId: data.userId,
+							admin: `${token.d ?? token.u} (<@${token.i}>)`,
+							tag: data.tag ?? undefined,
+						}),
+						"name",
+						"tag",
+						"tournamentId",
+						"userId",
+					),
 					{
 						status: 200,
 						headers: {

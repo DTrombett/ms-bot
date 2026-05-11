@@ -426,7 +426,6 @@ declare global {
 			tournamentId: number;
 			userId: string;
 			tag?: string | null;
-			team?: number | null;
 			name?: string | null;
 		};
 		type Round = { mode: string; bof: number };
