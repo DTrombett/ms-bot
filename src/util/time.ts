@@ -30,8 +30,9 @@ export const formatDuration = (
 			| string;
 		locales?: Intl.LocalesArgument;
 		long?: boolean;
+		// roundTo?: Partial<Temporal.DurationRoundingOptions>;
 		roundTo?: Partial<Extract<Temporal.DurationRoundTo, object>>;
-		options?: Partial<Temporal.DurationFormatOptions>;
+		options?: Partial<Intl.DurationFormatOptions>;
 	} = {},
 ) => {
 	const duration = Temporal.Duration.from(item).round({
@@ -70,7 +71,7 @@ export const formatShortTime = (
 			| Temporal.ZonedDateTimeLike
 			| string;
 		locales?: Intl.LocalesArgument;
-		options?: Partial<Temporal.DurationFormatOptions>;
+		options?: Partial<Intl.DurationFormatOptions>;
 	} = {},
 ): string => {
 	const duration = Temporal.Duration.from(item);
