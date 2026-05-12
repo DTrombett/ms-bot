@@ -38,7 +38,8 @@ export const createRegistrationMessage = async (
 		),
 	)) as RESTGetAPIChannelMessageResult;
 	const components: APIMessageTopLevelComponent[] = [];
-	const now = Date.now() / TimeUnit.Second;
+	// +1 since the registration flow will require at least 1 second
+	const now = Date.now() / TimeUnit.Second + 1;
 
 	if (message.content)
 		components.push({

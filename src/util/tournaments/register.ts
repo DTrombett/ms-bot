@@ -115,7 +115,7 @@ export const register = async (
 						  >[];
 				}
 		>();
-	const now = Date.now() / TimeUnit.Second + 1;
+	const now = Date.now() / TimeUnit.Second;
 
 	if (!tournament)
 		throw new RegisterError(
