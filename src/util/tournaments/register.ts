@@ -202,16 +202,10 @@ export const register = async (
 					// SP name is not used much anyway and is discontinued in favor of Participants.name
 					.bind(tag, userId, tournament.game, tagRequired ? name : ""),
 			);
+		await env.DB.batch(statements);
 		tournament.participantCount++;
-		waitUntil(
-			env.QUEUE.send({
-				t: QueueMessageType.TournamentMessageEdit,
-				d: { id: tournamentId },
-			} satisfies QueueMessage),
-		);
-		await Promise.all([
-			tournament.registrationRole &&
-				addRoles &&
+		if (tournament.registrationRole && addRoles)
+			waitUntil(
 				rest.put(
 					Routes.guildMemberRole(
 						tournament.guildId,
@@ -222,8 +216,13 @@ export const register = async (
 						reason: `Iscrizione al torneo ${tournament.name}${tag ? ` come ${tag}` : ""}${admin ? ` da parte di ${admin}` : ""} (${tournament.participantCount} iscritti totali)`,
 					},
 				),
-			env.DB.batch(statements),
-		]);
+			);
+		waitUntil(
+			env.QUEUE.send({
+				t: QueueMessageType.TournamentMessageEdit,
+				d: { id: tournamentId },
+			} satisfies QueueMessage),
+		);
 	}
 	return {
 		tournament,
