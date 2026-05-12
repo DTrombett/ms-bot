@@ -4,6 +4,7 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionContextType,
 	MessageFlags,
 	PermissionFlagsBits,
 	TextInputStyle,
@@ -47,6 +48,7 @@ export class Tournament extends Command {
 		name: "tournament",
 		description: "Gestisci le tue iscrizioni ai tornei",
 		type: ApplicationCommandType.ChatInput,
+		contexts: [InteractionContextType.Guild],
 		options: [
 			{
 				type: ApplicationCommandOptionType.Subcommand,
@@ -160,13 +162,16 @@ export class Tournament extends Command {
 		{
 			user: { id },
 			options: { user = id, full },
+			interaction: { guild_id },
 		}: ChatInputArgs<typeof Tournament.chatInputData, "status">,
 	) => {
 		const { results } = await env.DB.prepare(
 			`
 				WITH t AS (
 					SELECT id FROM Tournaments
-					WHERE currentRound IS NOT NULL AND (statusFlags & ?2) = 0
+					WHERE currentRound IS NOT NULL
+						AND (statusFlags & ?2) = 0
+						AND guildId = ?4
 					LIMIT 1
 				)
 				SELECT * FROM Matches
@@ -178,7 +183,7 @@ export class Tournament extends Command {
 				LIMIT ?3
 			`,
 		)
-			.bind(user, TournamentStatusFlags.Finished, full ? 19 : 1)
+			.bind(user, TournamentStatusFlags.Finished, full ? 19 : 1, guild_id)
 			.run<Database.Match>();
 		const [match] = results;
 		const winner = resolveWinner(match);
