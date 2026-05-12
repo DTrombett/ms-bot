@@ -28,6 +28,7 @@ import {
 } from "../util/Constants";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
+import { randomArrayItem } from "../util/random";
 import { camelToSpace, template } from "../util/strings";
 import { matchStatus, roundName } from "../util/tournaments/Constants";
 import { finishRound } from "../util/tournaments/finishRound";
@@ -476,7 +477,11 @@ export class Tournament extends Command {
 				content: "Entrambi i partecipanti devono avere il tag collegato!",
 			});
 		try {
-			const tag = userId === match.user1 ? match.user1Tag : match.user2Tag;
+			const tags = [match.user1Tag, match.user2Tag];
+			const tag =
+				userId === match.user1 ? match.user1Tag
+				: userId === match.user2 ? match.user2Tag
+				: randomArrayItem(tags);
 			const rounds = JSON.parse(match.rounds) as Database.Round[];
 			const round =
 				rounds[Math.floor(Math.log2(match.id + 1))] ?? rounds.at(-1)!;
@@ -487,13 +492,9 @@ export class Tournament extends Command {
 						camelToSpace(b.battle.mode) === round.mode.toLowerCase() &&
 						(b.battle.result === "defeat" || b.battle.result === "victory") &&
 						(b.battle.teams?.every(
-							(t) =>
-								t.length === 1 &&
-								[match.user1Tag, match.user2Tag].includes(t[0]?.tag),
+							(t) => t.length === 1 && tags.includes(t[0]!.tag),
 						) ??
-							b.battle.players?.every((t) =>
-								[match.user1Tag, match.user2Tag].includes(t.tag),
-							)),
+							b.battle.players?.every((t) => tags.includes(t.tag))),
 				)
 				.reverse()
 				.slice(0, round.bof);
