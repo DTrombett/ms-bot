@@ -25,3 +25,4 @@ export * from "./share";
 export * from "./time";
 export * from "./tournament";
 export * from "./tournamentAdmin";
+export * from "./verifyMessage";
