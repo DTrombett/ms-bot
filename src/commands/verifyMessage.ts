@@ -63,6 +63,7 @@ export class VerifyMessage extends Command {
 		reply({
 			components,
 			flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+			allowed_mentions: { parse: [] },
 		});
 		try {
 			const channel = (await rest.get(
