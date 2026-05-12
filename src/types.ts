@@ -7,7 +7,6 @@ import type {
 	APIApplicationCommandSubcommandGroupOption,
 	APIApplicationCommandSubcommandOption,
 	APIChatInputApplicationCommandInteraction,
-	APIGuildMember,
 	APIInteraction,
 	APIInteractionResponse,
 	APIInteractionResponseChannelMessageWithSource,
@@ -35,7 +34,9 @@ import type Command from "./Command";
 import type { CommandHandler } from "./util/CommandHandler";
 import type {
 	DBMatchStatus,
+	QueueMessageType,
 	SupercellPlayerType,
+	TournamentFlags,
 	TournamentRoundMode,
 } from "./util/Constants";
 
@@ -52,6 +53,14 @@ declare global {
 	type AsConst<T> = { readonly [P in keyof T]: AsConst<T[P]> };
 
 	type RecursivePartial<T> = { [P in keyof T]?: RecursivePartial<T[P]> };
+
+	type PossiblyNull<T> = T | { [P in keyof T]: null };
+
+	type PossiblyUndefined<T> = T | { [P in keyof T]?: never };
+
+	type QueueMessage =
+		| { t: QueueMessageType.Ack; d?: never }
+		| { t: QueueMessageType.TournamentMessageEdit; d: { id: number } };
 
 	type InteractionByType<
 		T extends InteractionType,
@@ -383,13 +392,14 @@ declare global {
 		};
 		type Tournament = {
 			name: string;
-			flags: number;
+			flags: TournamentFlags;
 			game: SupercellPlayerType;
 			logChannel: string;
 			registrationMode: number;
 			rounds: string;
 			statusFlags: number;
 			team: number;
+			guildId: string;
 			bracketsTime?: number | null;
 			categoryId?: string | null;
 			channelName?: string | null;
@@ -409,13 +419,13 @@ declare global {
 			roundType?: TournamentRoundMode | null;
 			workflowId?: string | null;
 			currentRound?: number | null;
+			participantCount: number;
 			id: number;
 		};
 		type Participant = {
 			tournamentId: number;
 			userId: string;
 			tag?: string | null;
-			team?: number | null;
 			name?: string | null;
 		};
 		type Round = { mode: string; bof: number };
@@ -599,7 +609,6 @@ declare global {
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
 
 	type Participant = {
-		member?: APIGuildMember;
 		userId: string;
 		result: string;
 		player?:
@@ -1238,15 +1247,21 @@ declare global {
 		type BattlePlayer = {
 			tag: string;
 			name: string;
-			brawler: { id: number; name: string; power: number; trophies: number };
+			brawler?: { id: number; name: string; power: number; trophies: number };
+			brawlers?: {
+				id: number;
+				name: string;
+				power: number;
+				trophies: number;
+			}[];
 		};
 		type BattleResult = {
 			mode: string;
 			type: string;
-			result: string;
-			duration: number;
-			trophyChange: number;
-			starPlayer: BattlePlayer;
+			result?: string;
+			duration?: number;
+			trophyChange?: number;
+			starPlayer?: BattlePlayer;
 			teams?: BattlePlayer[][];
 			players?: BattlePlayer[];
 		};

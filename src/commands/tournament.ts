@@ -4,35 +4,52 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionContextType,
 	MessageFlags,
 	PermissionFlagsBits,
-	Routes,
 	TextInputStyle,
+	type APIMessageTopLevelComponent,
 	type APIModalInteractionResponseCallbackData,
 	type APISelectMenuOption,
+	type Locale,
+	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
+import { Temporal } from "temporal-polyfill";
+import { ColorNumbers } from "../app/utils/Colors";
 import Command from "../Command";
+import { forceCapitalize } from "../util/capitalize";
 import {
 	DBMatchStatus,
 	RegistrationMode,
 	SupercellPlayerType,
 	TournamentFlags,
+	TournamentStatusFlags,
 } from "../util/Constants";
-import { rest } from "../util/globals";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
-import { TimeUnit } from "../util/time";
-import { editMessage } from "../util/tournaments/editMessage";
+import { randomArrayItem } from "../util/random";
+import { camelToSpace, template } from "../util/strings";
+import { matchStatus, roundName } from "../util/tournaments/Constants";
 import { finishRound } from "../util/tournaments/finishRound";
 import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
+import {
+	register,
+	RegisterError,
+	RegisterErrorType,
+} from "../util/tournaments/register";
+import { resolveWinner } from "../util/tournaments/resolveWinner";
+import { unregister } from "../util/tournaments/unregister";
+import { UserError } from "../util/UserError";
 import { Brawl } from "./brawl";
+import { Clash } from "./clash";
 
 export class Tournament extends Command {
 	static override chatInputData = {
 		name: "tournament",
 		description: "Gestisci le tue iscrizioni ai tornei",
 		type: ApplicationCommandType.ChatInput,
+		contexts: [InteractionContextType.Guild],
 		options: [
 			{
 				type: ApplicationCommandOptionType.Subcommand,
@@ -46,68 +63,83 @@ export class Tournament extends Command {
 						min_length: 3,
 						max_length: 20,
 					},
+					// Team tournaments are currently not supported
+					// {
+					// 	type: ApplicationCommandOptionType.String,
+					// 	name: "team",
+					// 	description:
+					// 		"Il codice team con il quale iscriversi nei tornei a squadre (es. ABCD)",
+					// 	max_length: 20,
+					// },
+				],
+			},
+			{
+				type: ApplicationCommandOptionType.Subcommand,
+				name: "status",
+				description: "Controlla l'avanzamento nel torneo",
+				options: [
 					{
-						type: ApplicationCommandOptionType.String,
-						name: "team",
+						type: ApplicationCommandOptionType.User,
+						name: "user",
 						description:
-							"Il codice team con il quale iscriversi nei tornei a squadre (es. ABCD)",
-						max_length: 20,
+							"L'utente di cui controllare l'avanzamento (default: tu)",
+					},
+					{
+						type: ApplicationCommandOptionType.Boolean,
+						name: "full",
+						description: "Se vedere tutto lo storico del torneo",
 					},
 				],
 			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
-	static override customId = "tournament";
 	static override supportComponentMethods = true;
 	static register = async (
 		{ defer, edit, reply }: ChatInputReplies,
 		{
 			user: { id },
 			options,
-			interaction: { locale },
+			interaction: { locale, guild_id },
 		}: ChatInputArgs<typeof Tournament.chatInputData, "register">,
 	) => {
-		if (options.tag)
-			try {
-				options.tag = Brawl.normalizeTag(options.tag);
-			} catch (err) {
-				return reply({
-					flags: MessageFlags.Ephemeral,
-					content:
-						err instanceof Error ? err.message : "Il tag fornito non è valido.",
-				});
-			}
-		if (options.team && !/^[0-9a-v]+$/iu.test(options.team))
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content: "Il codice team non è valido.",
-			});
-		defer({ flags: MessageFlags.Ephemeral });
+		// if (options.team && !/^[0-9a-v]+$/iu.test(options.team))
+		// 	return reply({
+		// 		flags: MessageFlags.Ephemeral,
+		// 		content: "Il codice team non è valido.",
+		// 	});
 		const { results } = await env.DB.prepare(
 			`
-				SELECT t.id, t.name, t.flags, t.team, t.game, p.tag, p.team, p.userId IS NOT NULL AS registered
-				FROM Tournaments t
-				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
-				WHERE
-					(t.registrationMode & ?2) != 0
-					AND t.registrationStart < unixepoch('now')
-					AND t.registrationEnd > unixepoch('now') + 1
+				SELECT id, name FROM Tournaments
+				WHERE (registrationMode & ?1) != 0 AND
+					registrationStart <= unixepoch('now') AND
+					registrationEnd > unixepoch('now') + 1 AND
+					guildId = ?2
 			`,
 		)
-			.bind(id, RegistrationMode.Discord)
-			.run<
-				Pick<Database.Tournament, "id" | "name" | "flags" | "team" | "game"> &
-					Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 }
-			>();
+			.bind(RegistrationMode.Discord, guild_id)
+			.run<Pick<Database.Tournament, "id" | "name">>();
 		if (results.length === 0)
-			return edit({
+			return reply({
 				content: "Non è possibile iscriversi a nessun torneo al momento!",
+				flags: MessageFlags.Ephemeral,
 			});
+		defer({ flags: MessageFlags.Ephemeral });
 		if (results.length === 1)
-			return this.handleTournament(results[0]!, edit, id, {
-				...options,
-				locale,
-			});
+			try {
+				return edit(
+					this.createConfirmMessage(
+						await register(results[0]!.id, {
+							userId: id,
+							simulate: true,
+							tag: options.tag,
+							mode: RegistrationMode.Discord,
+						}),
+						locale,
+					),
+				);
+			} catch (err) {
+				return this.handleError(err, edit);
+			}
 		return edit({
 			content: "Sono aperte le iscrizioni per più tornei al momento!",
 			components: [
@@ -116,7 +148,7 @@ export class Tournament extends Command {
 					components: [
 						{
 							type: ComponentType.StringSelect,
-							custom_id: `tournament-cho-${options.tag ?? ""}-${options.team ?? ""}`,
+							custom_id: `tournament-cho-${options.tag ?? ""}`,
 							options: results.map((r) => ({
 								label: r.name,
 								value: r.id.toString(),
@@ -128,475 +160,228 @@ export class Tournament extends Command {
 			],
 		});
 	};
-	static handleTournament = async (
-		tournament: Pick<
-			Database.Tournament,
-			"id" | "name" | "team" | "flags" | "game"
-		> &
-			Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 },
-		edit: Replies["edit"],
-		userId: string,
-		options: {
-			tag?: string;
-			team?: string;
-			confirm?: boolean;
-			name?: string;
-			locale?: string;
-		},
+	static status = async (
+		{ reply }: ChatInputReplies,
+		{
+			user: { id },
+			options: { user = id, full },
+			interaction: { guild_id },
+		}: ChatInputArgs<typeof Tournament.chatInputData, "status">,
 	) => {
-		if (tournament.registered)
-			return edit({
-				content: `Sei già iscritto al torneo **${tournament.name}**${tournament.tag ? ` come **${tournament.tag}**` : ""}${tournament.team ? ` con il team **${tournament.team.toString(32).toUpperCase()}**` : ""}!\nSe vuoi modificare la tua iscrizione prima disiscriviti.`,
-				components: [
-					{
-						type: ComponentType.ActionRow,
+		const { results } = await env.DB.prepare(
+			`
+				WITH t AS (
+					SELECT id FROM Tournaments
+					WHERE currentRound IS NOT NULL
+						AND (statusFlags & ?2) = 0
+						AND guildId = ?4
+					LIMIT 1
+				)
+				SELECT * FROM Matches
+				WHERE tournamentId = (SELECT id FROM t) AND user1 = ?1
+				UNION ALL
+				SELECT * FROM Matches
+				WHERE tournamentId = (SELECT id FROM t) AND user2 = ?1
+				ORDER BY id
+				LIMIT ?3
+			`,
+		)
+			.bind(user, TournamentStatusFlags.Finished, full ? 19 : 1, guild_id)
+			.run<Database.Match>();
+		const [match] = results;
+		const winner = resolveWinner(match);
+
+		reply({
+			flags: MessageFlags.IsComponentsV2 | (full ? MessageFlags.Ephemeral : 0),
+			allowed_mentions: { parse: [] },
+			components: [
+				{
+					type: ComponentType.TextDisplay,
+					content:
+						match ?
+							winner === user && match.id === 0 ?
+								"Complimenti, hai vinto il torneo!"
+							: (
+								match.status === DBMatchStatus.Playing ||
+								(match.status === DBMatchStatus.ToBePlayed && match.channelId)
+							) ?
+								`Lo scontro è iniziato! ${
+									match.channelId ?
+										`Vai in <#${match.channelId}> e segui le istruzioni per giocare`
+									:	"Attendi che venga creato il canale per concordarti con il tuo avversario..."
+								}.`
+							: match.status === DBMatchStatus.ToBePlayed ?
+								"Attendi l'inizio del torneo per giocare!"
+							: match.status === DBMatchStatus.Postponed ?
+								"Il tuo scontro è stato posticipato! Attendi ulteriori indicazioni..."
+							: match.status === DBMatchStatus.Default ?
+								"Hai superato lo scontro di default in quanto non è stato estratto alcun avversario! Attendi pazientemente l'inizio del prossimo round..."
+							: match.status === DBMatchStatus.Abandoned ?
+								winner === user ?
+									"Hai superato lo scontro per abbandono del tuo avversario! Attendi pazientemente l'inizio del prossimo round..."
+								:	"Hai perso lo scontro per abbandono :(\nSperiamo di vederti al prossimo torneo!"
+							: winner === user ?
+								"Hai vinto lo scontro! Attendi pazientemente l'inizio del prossimo round..."
+								// Here status is Finished and resolveWinner always returns a value for finished matches
+							:	`Hai perso lo scontro contro <@${winner!}> :(\nSperiamo di vederti al prossimo torneo!`
+						:	"Non risulta alcuno scontro associato a te nel torneo in corso!\nAssicurati di essere correttamente iscritto e attendi che vengano create le brackets.",
+				},
+				...results.map((match): APIMessageTopLevelComponent => {
+					const winner = resolveWinner(match);
+					const round = Math.floor(Math.log2(match.id + 1));
+
+					return {
+						type: ComponentType.Container,
+						accent_color:
+							winner === user ? ColorNumbers.Success
+							: winner === undefined ? ColorNumbers.Primary
+							: ColorNumbers.Danger,
 						components: [
 							{
-								type: ComponentType.Button,
-								custom_id: `tournament-unr-${tournament.id}`,
-								style: ButtonStyle.Danger,
-								label: "Rimuovi iscrizione",
+								type: ComponentType.TextDisplay,
+								content: template`
+									## ${displayMatchScore(match)}
+									ID: **${match.id}**
+									Stato: **${matchStatus[match.status]}**
+									Round: **${roundName(round)}**
+									Canale: ${match.channelId ? `<#${match.channelId}>` : "**nessuno**"}
+								`,
 							},
 						],
-					},
-				],
-			});
-		if (options.tag && options.confirm) {
-			({ name: options.name } = await Brawl.getPlayer(options.tag, { edit }));
-			const existing = await env.DB.prepare(
-				`
-					INSERT INTO SupercellPlayers (tag, userId, active, type, name)
-					VALUES (
-						?1,
-						?2,
-						NOT EXISTS (
-							SELECT 1
-							FROM SupercellPlayers
-							WHERE userId = ?2 AND type = ?3 AND active = TRUE
-						),
-						?3,
-						?4
-					)
-					ON CONFLICT(tag, type) DO UPDATE
-					SET name = excluded.name
-					RETURNING userId
-				`,
-			)
-				.bind(options.tag, userId, tournament.game, options.name)
-				.first<Database.SupercellPlayer["userId"]>("userId");
-
-			if (existing && existing !== userId)
-				return edit({
-					content: `Questo tag risulta già collegato a <@${existing}>!`,
-				});
-		}
-		if (
-			(!(tournament.flags & TournamentFlags.TagRequired) && !options.tag) ||
-			(options.tag && options.confirm)
-		)
-			return this.completeRegistration(tournament, edit, userId, options);
-		const { results: saved } = await env.DB.prepare(
-			`SELECT tag, active, name FROM SupercellPlayers WHERE userId = ? AND type = ?`,
-		)
-			.bind(userId, tournament.game)
-			.run<Pick<Database.SupercellPlayer, "tag" | "active" | "name">>();
-		options.tag ||= (saved.find((g) => g.active) ?? saved[0])?.tag;
-		if (!options.tag)
-			return edit({
-				content:
-					"In questo torneo è obbligatorio specificare il proprio tag giocatore per iscriversi!",
-				components: [],
-			});
-		const player = await Brawl.getPlayer(options.tag, { edit });
-		return edit({
-			content: `Confermi la tua iscrizione al torneo **${tournament.name}** come **${player.name}**?`,
-			embeds: [Brawl.createPlayerEmbed(player, { locale: options.locale })],
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.StringSelect,
-							custom_id: `tournament-pro-${tournament.id}-${options.team ?? ""}`,
-							placeholder: "Cambia profilo",
-							options: [
-								...saved.map<APISelectMenuOption>((p) => ({
-									label: p.name,
-									description: p.tag,
-									value: p.tag,
-									default: p.tag === options.tag,
-								})),
-								{ label: "Inserisci tag...", value: "#" },
-							],
-						},
-					],
-				},
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: `tournament-reg-${tournament.id}-${player.tag}-${options.team ?? ""}`,
-							label: "Conferma",
-							emoji: {
-								animated: true,
-								id: "817094620700868678",
-								name: "verified",
-							},
-							style: ButtonStyle.Success,
-						},
-					],
-				},
-			],
-		});
-	};
-	static completeRegistration = async (
-		tournament: Pick<Database.Tournament, "id" | "name">,
-		edit: Replies["edit"],
-		userId: string,
-		{ tag, name }: { tag?: string; name?: string } = {},
-	) => {
-		const [, result] = await env.DB.batch<
-			Pick<
-				Database.Tournament,
-				| "minPlayers"
-				| "maxPlayers"
-				| "registrationMessage"
-				| "registrationTemplateLink"
-				| "registrationRole"
-				| "registrationChannel"
-				| "name"
-				| "id"
-			> & { participantCount: number }
-		>([
-			env.DB.prepare(
-				`
-					INSERT INTO Participants (tournamentId, userId, tag, name)
-					VALUES (?1, ?2, ?3, ?4)
-				`,
-			).bind(tournament.id, userId, tag || null, name || null),
-			env.DB.prepare(
-				`
-					SELECT minPlayers, maxPlayers, registrationMessage, registrationChannel, registrationTemplateLink, registrationRole, name, id,
-					(
-						SELECT COUNT(*)
-						FROM Participants
-						WHERE tournamentId = Tournaments.id
-					) AS participantCount
-					FROM Tournaments WHERE id = ?
-				`,
-			).bind(tournament.id),
-		]);
-		const data = result?.results[0];
-		if (!data)
-			return edit({
-				content: `Non è stato possibile completare l'iscrizione! Riprova o contatta un moderatore.`,
-			});
-		await Promise.all([
-			data.registrationRole &&
-				rest.put(
-					Routes.guildMemberRole(env.MAIN_GUILD, userId, data.registrationRole),
-					{
-						reason: `Iscrizione al torneo ${tournament.name}${tag ? ` come ${tag}` : ""} (${data.participantCount} iscritti totali)`,
-					},
-				),
-			editMessage(data),
-		]);
-		return edit({
-			content: `Ti sei iscritto con successo al torneo **${tournament.name}**!`,
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: `tournament-unr-${tournament.id}`,
-							style: ButtonStyle.Danger,
-							label: "Rimuovi iscrizione",
-						},
-					],
-				},
+					};
+				}),
 			],
 		});
 	};
 	static cho = async (
-		{ edit, deferUpdate }: ComponentReplies,
-		{ args: [tag, team], interaction: { data }, user: { id } }: ComponentArgs,
+		{ edit, deferUpdate, update }: ComponentReplies,
+		{ args: [tag], interaction: { data, locale }, user: { id } }: ComponentArgs,
 	) => {
 		ok(data.component_type === ComponentType.StringSelect);
-		deferUpdate();
-		const tournament = await env.DB.prepare(
-			`
-				SELECT t.id, t.name, t.flags, t.team, t.game, p.tag, p.team, p.userId IS NOT NULL AS registered
-				FROM Tournaments t
-				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
-				WHERE
-					t.id = ?2
-					AND (t.registrationMode & ?3) != 0
-					AND t.registrationStart < unixepoch('now')
-					AND t.registrationEnd > unixepoch('now') + 1
-			`,
-		)
-			.bind(id, data.values[0], RegistrationMode.Discord)
-			.first<
-				Pick<Database.Tournament, "id" | "name" | "flags" | "team" | "game"> &
-					Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 }
-			>();
-
-		if (!tournament)
-			return edit({
-				content: "Le iscrizioni per questo torneo non sono più disponibili.",
-				components: [],
-			});
-		return this.handleTournament(tournament, edit, id, { tag, team });
+		try {
+			return edit(
+				this.createConfirmMessage(
+					await register(Number(data.values[0]), {
+						tag,
+						userId: id,
+						simulate: true,
+						defer: deferUpdate,
+						mode: RegistrationMode.Discord,
+					}),
+					locale,
+				),
+			);
+		} catch (err) {
+			if (err instanceof RegisterError) return update({ content: err.message });
+			deferUpdate();
+			return this.handleError(err, edit);
+		}
 	};
 	static unr = async (
 		{ edit, defer }: ComponentReplies,
 		{ args: [tournament], user: { id } }: ComponentArgs,
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
-		const data = await env.DB.prepare(
-			`
-				SELECT 
-					t.minPlayers, t.maxPlayers, t.registrationMessage, t.registrationChannel, t.registrationTemplateLink, t.registrationRole, t.name, t.id,
-					p.userId IS NOT NULL AS participationExists,
-					(
-						(t.registrationMode & ?1) != 0
-						AND t.registrationStart < unixepoch('now')
-						AND t.registrationEnd > unixepoch('now') + 1
-					) AS registrationOpen,
-					(
-						SELECT COUNT(*)
-						FROM Participants
-						WHERE tournamentId = t.id
-					) AS participantCount
-				FROM Tournaments t
-				LEFT JOIN Participants p
-					ON p.tournamentId = t.id AND p.userId = ?2
-				WHERE t.id = ?3
-			`,
-		)
-			.bind(RegistrationMode.Discord, id, tournament)
-			.first<
-				{
-					participationExists: boolean;
-					registrationOpen: boolean;
-					participantCount: number;
-				} & Pick<
-					Database.Tournament,
-					| "minPlayers"
-					| "maxPlayers"
-					| "registrationMessage"
-					| "registrationChannel"
-					| "registrationTemplateLink"
-					| "registrationRole"
-					| "name"
-					| "id"
-				>
-			>();
-
-		if (!data?.registrationOpen)
-			return edit({ content: "Le iscrizioni per questo torneo sono chiuse!" });
-		if (!data.participationExists)
-			return edit({ content: "Non risulti iscritto a questo torneo!" });
-		data.participantCount--;
-		await Promise.all([
-			rest.delete(
-				Routes.guildMemberRole(env.MAIN_GUILD, id, data.registrationRole!),
-				{ reason: `Rimozione iscrizione al torneo ${data.name}` },
-			),
-			editMessage(data),
-			env.DB.prepare(
-				`DELETE FROM Participants WHERE tournamentId = ?1 AND userId = ?2`,
-			)
-				.bind(tournament, id)
-				.run(),
-		]);
-		return edit({ content: "Hai rimosso la tua iscrizione!" });
+		try {
+			await unregister(Number(tournament), {
+				mode: RegistrationMode.Discord,
+				userId: id,
+			});
+			return edit({ content: "Hai rimosso la tua iscrizione!" });
+		} catch (err) {
+			return this.handleError(err, edit);
+		}
 	};
 	static reg = async (
-		{ edit, deferUpdate, modal, defer, reply }: ComponentReplies,
+		{ edit, deferUpdate, modal, defer, reply, update }: ComponentReplies,
 		{
-			args: [tournamentId, tag, team],
+			args: [tournamentId, tag],
 			user: { id },
 			interaction: { locale },
 		}: ComponentArgs,
 	) => {
-		if (tag) {
-			deferUpdate();
-			const tournament = await env.DB.prepare(
-				`
-					SELECT t.id, t.name, t.flags, t.team, t.game, p.tag, p.team, p.userId IS NOT NULL AS registered
-					FROM Tournaments t
-					LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
-					WHERE
-						t.id = ?2
-						AND (t.registrationMode & ?3) != 0
-						AND t.registrationStart < unixepoch('now')
-						AND t.registrationEnd > unixepoch('now')
-				`,
-			)
-				.bind(id, tournamentId, RegistrationMode.Discord)
-				.first<
-					Pick<Database.Tournament, "id" | "name" | "flags" | "team" | "game"> &
-						Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 }
-				>();
-
-			if (!tournament)
-				return edit({
-					content: "Le iscrizioni per questo torneo non sono più disponibili.",
+		if (tag != null)
+			try {
+				await register(Number(tournamentId), {
+					tag,
+					userId: id,
+					defer: deferUpdate,
+					mode: RegistrationMode.Discord,
 				});
-			return this.handleTournament(tournament, edit, id, {
-				tag,
-				team,
-				confirm: true,
-			});
-		}
-		const { results } = await env.DB.prepare(
-			`
-				SELECT
-					sp.tag,
-					sp.active,
-					sp.name,
-					t.registrationMode,
-					t.registrationStart,
-					t.registrationEnd,
-					t.name AS tournamentName,
-					p.userId IS NOT NULL AS registered,
-					p.tag as pTag,
-					p.team as pTeam
-				FROM SupercellPlayers sp
-				JOIN Tournaments t ON sp.type = t.game
-				LEFT JOIN Participants p
-					ON p.tournamentId = t.id AND p.userId = sp.userId
-				WHERE t.id = ?1 AND sp.userId = ?2
-			`,
-		)
-			.bind(tournamentId, id)
-			.run<
-				Pick<Database.SupercellPlayer, "tag" | "active" | "name"> & {
-					tournamentName: Database.Tournament["name"];
-					registered: boolean;
-					pTag: Database.Participant["tag"];
-					pTeam: Database.Participant["team"];
-				} & Pick<
-						Database.Tournament,
-						"registrationMode" | "registrationStart" | "registrationEnd"
-					>
-			>();
-		const result = results.find((g) => g.active) ?? results[0];
-
-		if (!result) return modal(this.buildModal({ id: tournamentId!, team }));
-		if (result.registered)
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content: `Sei già iscritto al torneo **${result.tournamentName}**${result.pTag ? ` come **${result.pTag}**` : ""}${result.pTeam ? ` con il team **${result.pTeam.toString(32).toUpperCase()}**` : ""}!\nSe vuoi modificare la tua iscrizione prima disiscriviti.`,
-				components: [
-					{
-						type: ComponentType.ActionRow,
-						components: [
-							{
-								type: ComponentType.Button,
-								custom_id: `tournament-unr-${tournamentId}`,
-								style: ButtonStyle.Danger,
-								label: "Rimuovi iscrizione",
-							},
-						],
-					},
-				],
-			});
-		if (
-			!(result.registrationMode & RegistrationMode.Discord) ||
-			result.registrationStart! * TimeUnit.Second > Date.now() ||
-			(result.registrationEnd! - 1) * TimeUnit.Second < Date.now()
-		)
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content: "Le iscrizioni per questo torneo sono chiuse.",
-			});
-		defer({ flags: MessageFlags.Ephemeral });
-		({ tag } = result);
-		const player = await Brawl.getPlayer(tag, { edit });
-		return edit({
-			content: `Confermi la tua iscrizione al torneo **${result.tournamentName}** come **${player.name}**?`,
-			embeds: [Brawl.createPlayerEmbed(player, { locale })],
-			components: [
-				{
-					type: ComponentType.ActionRow,
+				return edit({
+					content: "Ti sei iscritto con successo!",
 					components: [
 						{
-							type: ComponentType.StringSelect,
-							custom_id: `tournament-pro-${tournamentId}-${team ?? ""}`,
-							placeholder: "Cambia profilo",
-							options: [
-								...results.map<APISelectMenuOption>((p) => ({
-									label: p.name,
-									description: p.tag,
-									value: p.tag,
-									default: p.tag === tag,
-								})),
-								{ label: "Inserisci tag...", value: "#" },
+							type: ComponentType.ActionRow,
+							components: [
+								{
+									type: ComponentType.Button,
+									custom_id: `tournament-unr-${tournamentId}`,
+									style: ButtonStyle.Danger,
+									label: "Rimuovi iscrizione",
+								},
 							],
 						},
 					],
-				},
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: `tournament-reg-${tournamentId}-${player.tag}-${team ?? ""}`,
-							label: "Conferma",
-							emoji: {
-								animated: true,
-								id: "817094620700868678",
-								name: "verified",
-							},
-							style: ButtonStyle.Success,
-						},
-					],
-				},
-			],
-		});
+				});
+			} catch (err) {
+				if (err instanceof RegisterError)
+					return update({ content: err.message });
+				deferUpdate();
+				return this.handleError(err, edit);
+			}
+		try {
+			return edit(
+				this.createConfirmMessage(
+					await register(Number(tournamentId), {
+						userId: id,
+						simulate: true,
+						mode: RegistrationMode.Discord,
+						defer: defer.bind(null, { flags: MessageFlags.Ephemeral }),
+					}),
+					locale,
+				),
+			);
+		} catch (err) {
+			if (err instanceof RegisterError)
+				return err.type === RegisterErrorType.TagRequired ?
+						modal(this.buildModal({ id: tournamentId! }))
+					:	reply({ content: err.message, flags: MessageFlags.Ephemeral });
+			defer({ flags: MessageFlags.Ephemeral });
+			return this.handleError(err, edit);
+		}
 	};
 	static pro = async (
-		{ edit, deferUpdate, modal }: ComponentReplies,
+		{ edit, deferUpdate, modal, update }: ComponentReplies,
 		{
-			args: [tournamentId, team],
-			interaction: { data },
+			args: [tournamentId],
+			interaction: { data, locale },
 			user: { id },
 		}: ComponentArgs,
 	) => {
 		ok(data.component_type === ComponentType.StringSelect);
-		if (data.values[0] === "#")
-			return modal(this.buildModal({ id: tournamentId!, team }));
-		deferUpdate();
-		const tournament = await env.DB.prepare(
-			`
-				SELECT t.id, t.name, t.flags, t.team, t.game, p.tag, p.team, p.userId IS NOT NULL AS registered
-				FROM Tournaments t
-				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
-				WHERE
-					t.id = ?2
-					AND (t.registrationMode & ?3) != 0
-					AND t.registrationStart < unixepoch('now')
-					AND t.registrationEnd > unixepoch('now') + 1
-			`,
-		)
-			.bind(id, tournamentId, RegistrationMode.Discord)
-			.first<
-				Pick<Database.Tournament, "id" | "name" | "flags" | "team" | "game"> &
-					Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 }
-			>();
+		const tag = data.values[0] ?? "#";
 
-		if (!tournament)
-			return edit({
-				content: "Le iscrizioni per questo torneo non sono più disponibili.",
-			});
-		return this.handleTournament(tournament, edit, id, {
-			tag: data.values[0],
-			team,
-		});
+		if (tag === "#") return modal(this.buildModal({ id: tournamentId! }));
+		try {
+			return edit(
+				this.createConfirmMessage(
+					await register(Number(tournamentId), {
+						tag,
+						userId: id,
+						simulate: true,
+						defer: deferUpdate,
+						mode: RegistrationMode.Discord,
+					}),
+					locale,
+				),
+			);
+		} catch (err) {
+			if (err instanceof RegisterError)
+				return update({ content: err.message, components: [], embeds: [] });
+			deferUpdate();
+			return this.handleError(err, edit);
+		}
 	};
 	static ava = async (
 		{ edit, defer, reply }: ComponentReplies,
@@ -615,11 +400,7 @@ export class Tournament extends Command {
 			});
 		defer();
 		const tournament = await env.DB.prepare(
-			`
-				SELECT workflowId
-				FROM Tournaments
-				WHERE id = ?1
-			`,
+			`SELECT workflowId FROM Tournaments WHERE id = ?1`,
 		)
 			.bind(tournamentId)
 			.first<Pick<Database.Tournament, "workflowId">>();
@@ -628,7 +409,10 @@ export class Tournament extends Command {
 			return edit({ content: "Torneo non trovato." });
 		try {
 			await finishRound(tournament.workflowId, Number(round));
-			return edit({ content: "Il round successivo è iniziato!" });
+			return edit({
+				content:
+					round === "0" ? "Il torneo è terminato" : "Il round è iniziato!",
+			});
 		} catch (err) {
 			return edit({
 				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,
@@ -640,35 +424,34 @@ export class Tournament extends Command {
 		{
 			args: [matchId, tournamentId],
 			user: { id: userId },
-			interaction: { member: { roles, permissions } = { roles: [] } as any },
+			interaction: {
+				member: { roles, permissions } = { roles: [] } as any,
+				locale,
+			},
 		}: ComponentArgs,
 	) => {
 		defer();
 		const match = await env.DB.prepare(
 			`
-				SELECT 
-					m.*,
-					t.game, t.rounds, t.flags, t.id as tournamentId,
+				SELECT m.*, t.game, t.rounds, t.flags,
 					p1.tag AS user1Tag, p2.tag AS user2Tag
-				FROM Matches m
-				JOIN Tournaments t ON m.tournamentId = t.id
-				LEFT JOIN Participants p1 ON p1.userId = m.user1 AND p1.tournamentId = m.tournamentId
-				LEFT JOIN Participants p2 ON p2.userId = m.user2 AND p2.tournamentId = m.tournamentId
+				FROM Matches m JOIN Tournaments t ON m.tournamentId = t.id
+				LEFT JOIN Participants p1 ON p1.userId = m.user1
+					AND p1.tournamentId = m.tournamentId
+				LEFT JOIN Participants p2 ON p2.userId = m.user2
+					AND p2.tournamentId = m.tournamentId
 				WHERE m.id = ?1 AND m.tournamentId = ?2
 			`,
 		)
 			.bind(matchId, tournamentId)
 			.first<
 				Database.Match &
-					Pick<Database.Tournament, "game" | "rounds" | "flags"> & {
-						tournamentId: Database.Tournament["id"];
-					} & Partial<{
-						user1Tag: Database.Participant["tag"];
-						user2Tag: Database.Participant["tag"];
-					}>
+					Pick<Database.Tournament, "game" | "rounds" | "flags"> &
+					PossiblyNull<{ user1Tag: Database.Participant["tag"] }> &
+					PossiblyNull<{ user2Tag: Database.Participant["tag"] }>
 			>();
 
-		if (!match?.user1Tag) return edit({ content: "Torneo non trovato." });
+		if (!match?.id) return edit({ content: "Scontro non trovato!" });
 		if ((match.flags & TournamentFlags.AutoDetectResults) === 0)
 			return edit({
 				content:
@@ -690,36 +473,42 @@ export class Tournament extends Command {
 				content:
 					"Solo gli amministratori possono aggiornare i risultati dopo che la partita è terminata!",
 			});
+		if (!match.user1Tag || !match.user2Tag)
+			return edit({
+				content: "Entrambi i partecipanti devono avere il tag collegato!",
+			});
 		try {
+			const tags = [match.user1Tag, match.user2Tag];
+			const tag =
+				userId === match.user1 ? match.user1Tag
+				: userId === match.user2 ? match.user2Tag
+				: randomArrayItem(tags);
 			const rounds = JSON.parse(match.rounds) as Database.Round[];
 			const round =
 				rounds[Math.floor(Math.log2(match.id + 1))] ?? rounds.at(-1)!;
-			const resolvedMode = round.mode
-				.toLowerCase()
-				.split(/\s+/)
-				.reduce((a, b) => a + (b[0]?.toUpperCase() ?? "") + b.slice(1));
-			const battleLog = (await Brawl.getBattleLog(match.user1Tag))
+			const battles = await Brawl.getBattleLog(tag);
+			const filteredBattles = battles
 				.filter(
 					(b) =>
-						b.battle.mode === resolvedMode &&
+						camelToSpace(b.battle.mode) === round.mode.toLowerCase() &&
 						(b.battle.result === "defeat" || b.battle.result === "victory") &&
 						(b.battle.teams?.every(
-							(t) =>
-								t.length === 1 &&
-								[match.user1Tag, match.user2Tag].includes(t[0]?.tag),
+							(t) => t.length === 1 && tags.includes(t[0]!.tag),
 						) ??
-							b.battle.players?.every((t) =>
-								[match.user1Tag, match.user2Tag].includes(t.tag),
-							)),
+							b.battle.players?.every((t) => tags.includes(t.tag))),
 				)
 				.reverse()
 				.slice(0, round.bof);
 
-			if (!battleLog.length)
+			if (!filteredBattles.length)
 				return edit({
-					content: `Non risulta alcuna partita corrispondente!\n-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Tag} e ${match.user2Tag} vengono considerate\n`,
+					content: template`
+						Non risulta alcuna partita corrispondente! Assicurati di giocare le partite richieste prima di controllare i risultati.
+						-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Tag} e ${match.user2Tag} vengono considerate
+						${battles[0]}-# Ultima partita di ${tag} registrata il <t:${Math.round(Clash.parseAPIDate(battles[0]?.battleTime ?? "") / 1000)}:s>
+					`,
 				});
-			const result = battleLog.reduce<[number, number]>(
+			const result = filteredBattles.reduce<[number, number]>(
 				(result, { battle }) =>
 					battle.result === "defeat" ?
 						[result[0], result[1] + 1]
@@ -731,10 +520,8 @@ export class Tournament extends Command {
 				match.id,
 				env.DB.prepare(
 					`
-						UPDATE Matches
-						SET result1 = ?3, result2 = ?4, status = ?5
-						WHERE tournamentId = ?1 AND id = ?2
-						RETURNING *
+						UPDATE Matches SET result1 = ?3, result2 = ?4, status = ?5
+						WHERE tournamentId = ?1 AND id = ?2 RETURNING *
 					`,
 				).bind(
 					match.tournamentId,
@@ -750,7 +537,64 @@ export class Tournament extends Command {
 
 			if (newMatch)
 				return edit({
-					content: `## ${displayMatchScore(newMatch)} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+					flags: MessageFlags.IsComponentsV2,
+					components: [
+						{
+							type: ComponentType.TextDisplay,
+							content: `## ${displayMatchScore(newMatch)} ${newMatch.status === DBMatchStatus.Playing ? "(provvisorio)" : ""}`,
+						},
+						...filteredBattles
+							.reverse()
+							.slice(0, 9)
+							.map<APIMessageTopLevelComponent>((battle) => ({
+								type: ComponentType.Container,
+								accent_color:
+									battle.battle.result === "defeat" ? ColorNumbers.Danger
+									: battle.battle.result === "victory" ? ColorNumbers.Success
+									: undefined,
+								components: [
+									{
+										type: ComponentType.Section,
+										accessory: {
+											type: ComponentType.Thumbnail,
+											media: {
+												url: `https://cdn.brawlify.com/game-modes/regular/${48000000 + battle.event.modeId}.png`,
+											},
+										},
+										components: [
+											{
+												type: ComponentType.TextDisplay,
+												content: template`
+													## ${(
+														battle.battle.players?.map(
+															this.stringifyBattlePlayer,
+														) ??
+														battle.battle.teams?.map((t) =>
+															t.map(this.stringifyBattlePlayer).join(", "),
+														)
+													)?.join("\tVS\t")}
+													Modalità: **${camelToSpace(battle.battle.mode)}**
+													Mappa: **${battle.event.map}**
+													Tipo: **${battle.battle.type}**
+													Risultato: **${
+														(battle.battle.result &&
+															{
+																victory: "Vittoria",
+																defeat: "Sconfitta",
+																draw: "Pareggio",
+															}[battle.battle.result]) ??
+														battle.battle.result
+													}**
+													Durata: **${Temporal.Duration.from({ seconds: battle.battle.duration })
+														.round({ largestUnit: "day" })
+														.toLocaleString(locale, { style: "narrow" })}**
+												`,
+											},
+										],
+									},
+								],
+							})),
+					],
 					allowed_mentions: { parse: [] },
 				});
 		} catch (err) {
@@ -762,9 +606,10 @@ export class Tournament extends Command {
 	static tag = async (
 		{ defer, edit, reply }: ModalReplies,
 		{
-			args: [tournamentId, team],
+			args: [tournamentId],
 			interaction: {
 				data: { components },
+				locale,
 			},
 			user: { id },
 		}: ModalArgs,
@@ -773,46 +618,39 @@ export class Tournament extends Command {
 			components[0]?.type === ComponentType.Label &&
 				components[0].component.type === ComponentType.TextInput,
 		);
-		let tag = components[0].component.value;
+		const tag = components[0].component.value;
+
 		try {
-			tag = Brawl.normalizeTag(tag);
+			return edit(
+				this.createConfirmMessage(
+					await register(Number(tournamentId), {
+						tag,
+						userId: id,
+						simulate: true,
+						defer: defer.bind(null, { flags: MessageFlags.Ephemeral }),
+						mode: RegistrationMode.Discord,
+					}),
+					locale,
+				),
+			);
 		} catch (err) {
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content:
-					err instanceof Error ? err.message : "Il tag fornito non è valido.",
-			});
+			if (err instanceof RegisterError)
+				return reply({ content: err.message, flags: MessageFlags.Ephemeral });
+			defer({ flags: MessageFlags.Ephemeral });
+			return this.handleError(err, edit);
 		}
-		defer({ flags: MessageFlags.Ephemeral });
-		const tournament = await env.DB.prepare(
-			`
-				SELECT t.id, t.name, t.flags, t.team, t.game, p.tag, p.team, p.userId IS NOT NULL AS registered
-				FROM Tournaments t
-				LEFT JOIN Participants p ON p.tournamentId = t.id AND p.userId = ?1
-				WHERE
-					t.id = ?2
-					AND (t.registrationMode & ?3) != 0
-					AND t.registrationStart < unixepoch('now')
-					AND t.registrationEnd > unixepoch('now') + 1
-			`,
-		)
-			.bind(id, tournamentId, RegistrationMode.Discord)
-			.first<
-				Pick<Database.Tournament, "id" | "name" | "flags" | "team" | "game"> &
-					Pick<Database.Participant, "tag" | "team"> & { registered: 0 | 1 }
-			>();
-		if (!tournament)
-			return edit({
-				content: "Le iscrizioni per questo torneo non sono più disponibili.",
-			});
-		return this.handleTournament(tournament, edit, id, { tag, team });
 	};
+	static stringifyBattlePlayer = (battlePlayer: Brawl.BattlePlayer) =>
+		`${battlePlayer.name} (${forceCapitalize(
+			(battlePlayer.brawlers ?? [battlePlayer.brawler!])
+				.map((b) => b.name)
+				.join(", "),
+		)})`;
 	static buildModal = (options: {
 		id: string;
-		team?: string;
 	}): APIModalInteractionResponseCallbackData => ({
 		title: "Iscrizione al torneo",
-		custom_id: `tournament-tag-${options.id}-${options.team ?? ""}`,
+		custom_id: `tournament-tag-${options.id}`,
 		components: [
 			{
 				type: ComponentType.Label,
@@ -832,4 +670,69 @@ export class Tournament extends Command {
 			},
 		],
 	});
+	static handleError = (err: unknown, edit: BaseReplies["edit"]) => {
+		if (err instanceof UserError) return edit({ content: err.message });
+		console.error(err);
+		return edit({
+			content: "Si è verificato un errore imprevisto! Contatta un moderatore.",
+			components: [],
+		});
+	};
+	private static createConfirmMessage(
+		result: Awaited<ReturnType<typeof register>>,
+		locale: Locale,
+	): RESTPatchAPIWebhookWithTokenMessageJSONBody {
+		const { tournament, player, name, tag, savedPlayers, tournamentId } =
+			result;
+
+		return {
+			content: `Confermi la tua iscrizione al torneo **${tournament.name}** come **${name}**?`,
+			embeds:
+				player ?
+					[
+						([Brawl, Clash] as const)[tournament.game].createPlayerEmbed(
+							player as never,
+							{ locale },
+						),
+					]
+				:	undefined,
+			components: [
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.StringSelect,
+							custom_id: `tournament-pro-${tournamentId}`,
+							placeholder: "Cambia profilo",
+							options: [
+								...savedPlayers.map<APISelectMenuOption>((p) => ({
+									label: p.name,
+									description: p.tag,
+									value: p.tag,
+									default: p.tag === tag,
+								})),
+								{ label: "Inserisci tag...", value: "#" },
+							],
+						},
+					],
+				},
+				{
+					type: ComponentType.ActionRow,
+					components: [
+						{
+							type: ComponentType.Button,
+							custom_id: `tournament-reg-${tournamentId}-${tag ?? ""}`,
+							label: "Conferma",
+							emoji: {
+								animated: true,
+								id: "817094620700868678",
+								name: "verified",
+							},
+							style: ButtonStyle.Success,
+						},
+					],
+				},
+			],
+		};
+	}
 }

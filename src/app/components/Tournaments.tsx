@@ -106,7 +106,11 @@ export default async ({
 						justifyContent: "space-between",
 						marginBottom: "0.5rem",
 					}}>
-					<span>{t.name}</span>
+					<a
+						href={`/tournaments/${t.id}`}
+						style={{ color: "inherit", textDecoration: "none" }}>
+						{t.name}
+					</a>
 					<span style={{ color: statusColor[status] }}>
 						{statusText[status]}
 					</span>
@@ -168,7 +172,7 @@ export default async ({
 								<ChannelMention
 									mobile={mobile}
 									children={t.registrationChannelName}
-									channel={`@me/${t.registrationChannel}${t.registrationMessage ? `/${t.registrationMessage}` : ""}`}
+									channel={`${t.guildId}/${t.registrationChannel}${t.registrationMessage ? `/${t.registrationMessage}` : ""}`}
 								/>
 							)
 						}
@@ -239,14 +243,6 @@ export default async ({
 								justifyContent: "center",
 								gap: "1rem",
 							}}>
-							<HomeButton
-								label="Gestisci"
-								style={{
-									backgroundColor: Colors.Primary,
-									lineHeight: "1.75rem",
-								}}
-								href={`/tournaments/${t.id}`}
-							/>
 							<HomeButton
 								label="Modifica"
 								style={{

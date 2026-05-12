@@ -5,6 +5,7 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	InteractionContextType,
 	MessageFlags,
 	PermissionFlagsBits,
 	Routes,
@@ -16,12 +17,14 @@ import { DBMatchStatus, TournamentStatusFlags } from "../util/Constants";
 import { rest } from "../util/globals";
 import normalizeError from "../util/normalizeError";
 import { displayMatchScore, patchMatch } from "../util/tournaments/patchMatch";
+import { unregister } from "../util/tournaments/unregister";
 
 export class TournamentAdmin extends Command {
 	static override chatInputData = {
 		name: "tournament-admin",
 		description: "Gestisci i tornei",
 		default_member_permissions: String(PermissionFlagsBits.ManageGuild),
+		contexts: [InteractionContextType.Guild],
 		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
@@ -78,12 +81,37 @@ export class TournamentAdmin extends Command {
 					},
 				],
 			},
+			{
+				type: ApplicationCommandOptionType.Subcommand,
+				name: "pair",
+				description: "Associa un canale a uno scontro!",
+				options: [
+					{
+						type: ApplicationCommandOptionType.Integer,
+						name: "tournament",
+						description: "L'id del torneo",
+						required: true,
+					},
+					{
+						type: ApplicationCommandOptionType.Integer,
+						name: "match-id",
+						description: "L'id dello scontro",
+						required: true,
+					},
+					{
+						type: ApplicationCommandOptionType.Channel,
+						name: "channel",
+						description: "Il canale da associare (default: quello corrente)",
+					},
+				],
+			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static advance = async (
 		{ defer, edit }: ChatInputReplies,
 		{
 			options: { tournament },
+			interaction: { guild_id },
 		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "advance">,
 	) => {
 		defer();
@@ -101,7 +129,7 @@ export class TournamentAdmin extends Command {
 						  ((1 << (t.currentRound + 1)) - 2)
 				) AS pendingMatches
 				FROM Tournaments t
-				WHERE (t.id = ?1) OR (?1 IS NULL AND t.currentRound IS NOT NULL AND (t.statusFlags & ?2) = 0)
+				WHERE ((t.id = ?1) OR (?1 IS NULL AND t.currentRound IS NOT NULL AND (t.statusFlags & ?2) = 0)) AND t.guildId = ?5
 			`,
 		)
 			.bind(
@@ -109,6 +137,7 @@ export class TournamentAdmin extends Command {
 				TournamentStatusFlags.Finished,
 				DBMatchStatus.Playing,
 				DBMatchStatus.ToBePlayed,
+				guild_id,
 			)
 			.run<
 				Pick<Database.Tournament, "currentRound" | "id" | "name"> & {
@@ -128,7 +157,7 @@ export class TournamentAdmin extends Command {
 				content: `Ci sono ancora ${t.pendingMatches} partite da concludere nel round attuale!`,
 			});
 		return edit({
-			content: `Sei sicuro di voler terminare il round ${t.currentRound}?`,
+			content: "Sei sicuro di voler terminare il round?",
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -149,17 +178,19 @@ export class TournamentAdmin extends Command {
 		{ edit, reply }: ChatInputReplies,
 		{
 			options: { tournament, offset },
+			user,
+			interaction: { guild_id },
 		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "members">,
 	) => {
 		const [
 			{
-				results: [{ registrationRole } = {}],
+				results: [{ registrationRole, guildId } = {}],
 			},
 			{ results },
 		] = (await env.DB.batch([
 			env.DB.prepare(
-				`SELECT registrationRole FROM Tournaments WHERE id = ?1`,
-			).bind(tournament),
+				`SELECT registrationRole, guildId FROM Tournaments WHERE id = ?1 AND guildId = ?2`,
+			).bind(tournament, guild_id),
 			env.DB.prepare(
 				`
 					SELECT userId FROM Participants WHERE tournamentId = ?1
@@ -167,12 +198,17 @@ export class TournamentAdmin extends Command {
 				`,
 			).bind(tournament, offset ?? 0),
 		])) as [
-			D1Result<Pick<Database.Tournament, "registrationRole">>,
+			D1Result<Pick<Database.Tournament, "registrationRole" | "guildId">>,
 			D1Result<Pick<Database.Participant, "userId">>,
 		];
+		if (!guildId)
+			return reply({
+				content: "Torneo non trovato!",
+				flags: MessageFlags.Ephemeral,
+			});
 		if (!registrationRole)
 			return reply({
-				content: "Torneo non trovato o senza ruolo!",
+				content: "Torneo senza ruolo!",
 				flags: MessageFlags.Ephemeral,
 			});
 		if (!results.length)
@@ -191,15 +227,14 @@ export class TournamentAdmin extends Command {
 			try {
 				count++;
 				if (signal.aborted) break;
-				const { roles } = (await rest.get(
-					Routes.guildMember(env.MAIN_GUILD, userId),
-					{ signal },
-				)) as RESTGetAPIGuildMemberResult;
+				const { roles } = (await rest.get(Routes.guildMember(guildId, userId), {
+					signal,
+				})) as RESTGetAPIGuildMemberResult;
 
 				if (!roles.includes(registrationRole))
 					values.push(
 						rest.put(
-							Routes.guildMemberRole(env.MAIN_GUILD, userId, registrationRole),
+							Routes.guildMemberRole(guildId, userId, registrationRole),
 							{ signal, reason: "Controllo membri senza ruolo torneo" },
 						),
 					);
@@ -210,11 +245,11 @@ export class TournamentAdmin extends Command {
 			}
 		if (toRemove.length)
 			values.push(
-				env.DB.prepare(
-					`DELETE FROM Participants WHERE tournamentId = ? AND userId IN (${new Array(toRemove.length).fill("?").join(",")})`,
-				)
-					.bind(tournament, ...toRemove)
-					.first(),
+				unregister(tournament, {
+					admin: `${user.global_name ?? user.username} (<@${user.id}>)`,
+					userIds: toRemove,
+					removeRoles: false,
+				}),
 			);
 		errors.push(
 			...(await Promise.allSettled(values))
@@ -236,6 +271,40 @@ export class TournamentAdmin extends Command {
 				:	""
 			}`,
 		});
+	};
+	static pair = async (
+		{ edit, defer }: ChatInputReplies,
+		{
+			interaction: {
+				channel: { id: channelId },
+				guild_id,
+			},
+			options: { tournament, "match-id": matchId, channel = channelId },
+		}: ChatInputArgs<typeof TournamentAdmin.chatInputData, "pair">,
+	) => {
+		defer();
+		const {
+			meta: { changed_db },
+		} = await env.DB.prepare(
+			`
+				UPDATE Matches SET channelId = ?3
+				WHERE tournamentId = ?1 AND id = ?2 AND channelId != ?3 AND EXISTS (
+					SELECT TRUE FROM Tournaments WHERE id = ?1 AND guildId = ?4
+				)
+			`,
+		)
+			.bind(tournament, matchId, channel, guild_id)
+			.run();
+
+		if (changed_db)
+			return edit({
+				content: `Il canale <#${channel}> è stato associato allo scontro ${matchId} con successo!`,
+			});
+		else
+			return edit({
+				content:
+					"Non è stato possibile trovare il torneo, lo scontro o il canale è già associato!",
+			});
 	};
 	static abandoned = async (
 		{ defer, edit, reply }: ChatInputReplies,

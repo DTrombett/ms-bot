@@ -4,6 +4,7 @@ import {
 	ApplicationCommandType,
 	ButtonStyle,
 	ComponentType,
+	Locale,
 	MessageFlags,
 	PermissionFlagsBits,
 	SeparatorSpacingSize,
@@ -12,7 +13,6 @@ import {
 	type APIEmbed,
 	type APIMessageTopLevelComponent,
 	type APISectionComponent,
-	type Locale,
 	type RESTPatchAPIInteractionOriginalResponseJSONBody,
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
@@ -23,6 +23,7 @@ import { percentile } from "../util/maths";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
 import { template } from "../util/strings";
+import { UserError } from "../util/UserError";
 
 enum BrawlerOrder {
 	Name,
@@ -1497,12 +1498,17 @@ export class Brawl extends Command {
 		{
 			errors = {},
 			cache = true,
-		}: { errors?: Record<number, string>; cache?: boolean } = {},
+			locale = Locale.Italian,
+		}: {
+			errors?: Record<number, string>;
+			cache?: boolean;
+			locale?: Locale;
+		} = {},
 	) {
 		errors = { ...this.ERROR_MESSAGES, ...errors };
 		const request = new Request(
 			new URL(path, "https://ms-api.trombett.org/proxy/api.brawlstars.com/v1/"),
-			{ headers: { "x-env": env.NODE_ENV, "accept-language": "it" } },
+			{ headers: { "x-env": env.NODE_ENV, "accept-language": locale } },
 		);
 		let res = cache && (await caches.default.match(request));
 
@@ -1521,7 +1527,7 @@ export class Brawl extends Command {
 		).catch(() => {});
 
 		console.error(json ?? body);
-		throw new Error(
+		throw new UserError(
 			json?.message ??
 				errors[res.status] ??
 				`\`${res.status} ${res.statusText}\``,
@@ -1625,7 +1631,7 @@ export class Brawl extends Command {
 		tag = tag.toUpperCase().replace(/O/g, "0");
 		if (!tag.startsWith("#")) tag = `#${tag}`;
 		if (!/^#[0289PYLQGRJCUV]{3,15}$/.test(tag))
-			throw new TypeError("Tag non valido.");
+			throw new UserError("Tag non valido.");
 		return tag;
 	};
 	static override async chatInput(
@@ -1939,21 +1945,16 @@ export class Brawl extends Command {
 		deferUpdate();
 		userId ||= id;
 		const result = await env.DB.prepare(
-			`INSERT INTO SupercellPlayers (tag, userId, active, type, name)
-			VALUES (
-				?1,
-				?2,
-				NOT EXISTS (
-					SELECT 1
+			`
+				INSERT INTO SupercellPlayers (tag, userId, type, name, active)
+				VALUES (?1, ?2, ?3, ?4, NOT EXISTS (
+					SELECT TRUE
 					FROM SupercellPlayers
-					WHERE userId = ?2 AND type = ?3 AND active = 1
-				),
-				?3,
-				?4
-			)
-			ON CONFLICT(tag, type) DO UPDATE
-			SET active = active
-			RETURNING userId;`,
+					WHERE userId = ?2 AND type = ?3 AND active = TRUE
+				))
+				ON CONFLICT(tag, type) DO UPDATE
+				SET name = excluded.name RETURNING userId
+			`,
 		)
 			.bind(
 				tag,
@@ -1985,7 +1986,7 @@ export class Brawl extends Command {
 		});
 	};
 	static unlinkComponent = async (
-		{ update }: ComponentReplies,
+		{ update, reply }: ComponentReplies,
 		{
 			args: [tag, commandId, userId],
 			user: { id },
@@ -1995,22 +1996,36 @@ export class Brawl extends Command {
 		}: ComponentArgs,
 	) => {
 		userId ||= id;
-		const name = await env.DB.prepare(
-			`DELETE FROM SupercellPlayers
+		try {
+			const name = await env.DB.prepare(
+				`
+				DELETE FROM SupercellPlayers
 				WHERE tag = ? AND type = ? AND userId = ?
-				RETURNING name`,
-		)
-			.bind(tag, SupercellPlayerType.BrawlStars, userId)
-			.first<string>("name");
-		if (components?.[0]?.type === ComponentType.ActionRow)
-			components[0].components[0] = {
-				type: ComponentType.Button,
-				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}-${name ?? ""}`,
-				label: "Salva",
-				emoji: { name: "🔗" },
-				style: ButtonStyle.Success,
-			};
-		return update({ content: "Profilo scollegato con successo!", components });
+				RETURNING name
+			`,
+			)
+				.bind(tag, SupercellPlayerType.BrawlStars, userId)
+				.first<string>("name");
+			if (components?.[0]?.type === ComponentType.ActionRow)
+				components[0].components[0] = {
+					type: ComponentType.Button,
+					custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}-${name ?? ""}`,
+					label: "Salva",
+					emoji: { name: "🔗" },
+					style: ButtonStyle.Success,
+				};
+			return update({
+				content: "Profilo scollegato con successo!",
+				components,
+			});
+		} catch (err) {
+			console.error(err);
+			return reply({
+				content:
+					"Non è stato possibile scollegare il profilo, contatta un moderatore!",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
 	};
 	static brawlersComponent = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,

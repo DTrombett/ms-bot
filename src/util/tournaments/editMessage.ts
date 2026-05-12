@@ -1,34 +1,37 @@
-import { Routes } from "discord-api-types/v10";
+import {
+	Routes,
+	type RESTPatchAPIChannelMessageResult,
+} from "discord-api-types/v10";
 import { rest } from "../globals";
 import { createRegistrationMessage } from "./createRegistrationMessage";
 
 export const editMessage = async (
 	tournament: Pick<
 		Database.Tournament,
-		| "name"
-		| "minPlayers"
+		| "id"
 		| "maxPlayers"
+		| "minPlayers"
+		| "name"
+		| "participantCount"
 		| "registrationChannel"
-		| "registrationTemplateLink"
 		| "registrationMessage"
-	> & { participantCount: number; id: number },
+		| "registrationStart"
+		| "registrationEnd"
+		| "registrationTemplateLink"
+	>,
 ) =>
 	tournament.registrationChannel &&
 	tournament.registrationMessage &&
 	tournament.registrationTemplateLink &&
-	rest.patch(
+	(rest.patch(
 		Routes.channelMessage(
 			tournament.registrationChannel,
 			tournament.registrationMessage,
 		),
 		{
 			body: await createRegistrationMessage(
-				tournament.id,
 				tournament.registrationTemplateLink,
-				tournament.participantCount,
-				tournament.name,
-				tournament.minPlayers,
-				tournament.maxPlayers,
+				tournament,
 			),
 		},
-	);
+	) as Promise<RESTPatchAPIChannelMessageResult>);

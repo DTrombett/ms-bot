@@ -30,12 +30,12 @@ const editChannel = async (
 		return;
 	let { results } = await env.DB.prepare(
 		`
-			SELECT userId, tag, team, name
+			SELECT userId, tag, name
 			FROM Participants WHERE tournamentId = ?1 AND userId IN (?2, ?3)
 		`,
 	)
 		.bind(tournamentId, match.user1, match.user2)
-		.run<Pick<Database.Participant, "tag" | "userId" | "team" | "name">>();
+		.run<Pick<Database.Participant, "tag" | "userId" | "name">>();
 
 	if (results[1]?.userId === match.user1) results = [results[1], results[0]!];
 	return rest.patch(Routes.channel(match.channelId), {
@@ -64,17 +64,17 @@ export const displayMatchScore = (
 		"status" | "result1" | "result2" | "user1" | "user2"
 	>,
 ) =>
-	`<@${match.user1}> VS ${match.user2 ? `<@${match.user2}>` : "N/A"}: ${
+	`<@${match.user1}>\t${
 		match.status === DBMatchStatus.Abandoned && match.result1 == null ?
 			"A"
 		:	String(match.result1 ?? 0)
-	} - ${
+	} – ${
 		match.user2 ?
 			match.status === DBMatchStatus.Abandoned && match.result2 == null ?
 				"A"
 			:	String(match.result2 ?? 0)
 		:	"N"
-	}`;
+	}\t${match.user2 ? `<@${match.user2}>` : "BYE"}`;
 export const runPatchRequest = async (
 	request: Request,
 	tournamentId: number,
@@ -155,7 +155,8 @@ export const patchMatch = async (
 		).bind(tournamentId, matchId + (matchId % 2 || -1)),
 		env.DB.prepare(
 			`
-				SELECT t.logChannel, t.currentRound, t.roundType, t.workflowId, t.endedCategoryId, t.endedChannelName, m.channelId, m.user1, m.user2,
+				SELECT t.logChannel, t.currentRound, t.roundType, t.workflowId, t.endedCategoryId,
+					t.endedChannelName, t.guildId, m.channelId, m.user1, m.user2,
 				(
 					SELECT COUNT(*)
 					FROM Matches m2
@@ -189,6 +190,7 @@ export const patchMatch = async (
 				| "roundType"
 				| "workflowId"
 				| "endedCategoryId"
+				| "guildId"
 				| "endedChannelName"
 			> &
 				Partial<Pick<Database.Match, "channelId" | "user1" | "user2">> & {
@@ -279,7 +281,7 @@ export const patchMatch = async (
 						body: {
 							permission_overwrites: [
 								{
-									id: env.MAIN_GUILD,
+									id: tournament.guildId,
 									type: OverwriteType.Role,
 									deny: String(PermissionFlagsBits.ViewChannel),
 								},

@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { Suspense } from "react";
 import { Temporal } from "temporal-polyfill";
 import {
@@ -33,7 +34,7 @@ export default ({
 
 	return (
 		<form
-			method={"POST"}
+			method="POST"
 			action={
 				tournament ? `/tournaments/${tournament.id}/edit` : "/tournaments"
 			}
@@ -60,6 +61,15 @@ export default ({
 					placeholder="Il nome del torneo"
 					required
 					defaultValue={tournament?.name}
+				/>
+				<TextInput
+					name="guildId"
+					label="ID server torneo"
+					placeholder="L'ID del server dove si svolge il torneo"
+					pattern="\d{16,32}"
+					errorMessage="ID non valido"
+					required
+					defaultValue={tournament?.guildId ?? env.MAIN_GUILD}
 				/>
 				<TextInput
 					name="logChannel"
@@ -148,7 +158,7 @@ export default ({
 					maxWidth="42rem"
 					defaultValue={
 						tournament?.registrationTemplateLink ?
-							`https://discord.com/channels/@me/${tournament.registrationTemplateLink}`
+							`https://discord.com/channels/${tournament.guildId}/${tournament.registrationTemplateLink}`
 						:	undefined
 					}
 				/>
@@ -346,7 +356,7 @@ export default ({
 					maxWidth="42rem"
 					defaultValue={
 						tournament?.matchMessageLink ?
-							`https://discord.com/channels/@me/${tournament.matchMessageLink}`
+							`https://discord.com/channels/${tournament.guildId}/${tournament.matchMessageLink}`
 						:	undefined
 					}
 				/>

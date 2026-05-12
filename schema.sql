@@ -1,3 +1,4 @@
+-- Tables --
 CREATE TABLE Users (
 	id TEXT PRIMARY KEY,
 	dayPoints INTEGER,
@@ -35,6 +36,7 @@ CREATE TABLE Tournaments (
 	flags INTEGER NOT NULL,
 	game INTEGER NOT NULL,
 	logChannel TEXT NOT NULL,
+	guildId TEXT NOT NULL,
 	registrationMode INTEGER NOT NULL DEFAULT 0,
 	rounds TEXT NOT NULL,
 	statusFlags INTEGER NOT NULL DEFAULT 0,
@@ -43,7 +45,6 @@ CREATE TABLE Tournaments (
 	categoryId TEXT,
 	channelName TEXT,
 	channelsTime INTEGER,
-	currentRound INTEGER,
 	endedCategoryId TEXT,
 	endedChannelName TEXT,
 	matchMessageLink TEXT,
@@ -57,6 +58,8 @@ CREATE TABLE Tournaments (
 	registrationStart INTEGER,
 	registrationMessage TEXT,
 	roundType INTEGER,
+	currentRound INTEGER,
+	participantCount INTEGER NOT NULL DEFAULT 0,
 	workflowId TEXT,
 	id INTEGER PRIMARY KEY AUTOINCREMENT
 );
@@ -84,5 +87,24 @@ CREATE TABLE Matches (
 	FOREIGN KEY (tournamentId, user1) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT,
 	FOREIGN KEY (tournamentId, user2) REFERENCES Participants(tournamentId, userId) ON DELETE RESTRICT
 );
+-- Indexes --
 CREATE INDEX SupercellPlayersNotificationsIndex ON SupercellPlayers(notifications)
 WHERE notifications > 0;
+CREATE INDEX SupercellPlayersIndex ON SupercellPlayers(userId, type, active, tag, name);
+CREATE INDEX User1Matches ON Matches(tournamentId, user1);
+CREATE INDEX User2Matches ON Matches(tournamentId, user2);
+CREATE INDEX ParticipantsPlayerIndex ON Participants(tag, userId);
+-- Triggers --
+CREATE TRIGGER IncreaseParticipantCount
+AFTER
+INSERT ON Participants BEGIN
+UPDATE Tournaments
+SET participantCount = participantCount + 1
+WHERE id = NEW.tournamentId;
+END;
+CREATE TRIGGER DecreaseParticipantCount
+AFTER DELETE ON Participants BEGIN
+UPDATE Tournaments
+SET participantCount = participantCount - 1
+WHERE id = OLD.tournamentId;
+END;

@@ -3,6 +3,7 @@ export const Emojis = {
 	bann: "994261301364801537",
 	location: "1007330533954551929",
 };
+export const DiscordIdRegex = /^\d{16,32}$/;
 
 export enum MatchStatus {
 	ToBePlayed = "Upcoming",
@@ -60,4 +61,8 @@ export enum TournamentRoundMode {
 	Manual = 1,
 	Once,
 	Fast,
+}
+export enum QueueMessageType {
+	Ack,
+	TournamentMessageEdit,
 }

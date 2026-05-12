@@ -776,10 +776,9 @@ export class Clash extends Command {
 			},
 		];
 	};
-	static "createPlayerEmbed" = (
+	static createPlayerEmbed = (
 		player: Clash.Player,
-		locale: Locale,
-		playerId?: string,
+		{ playerId, locale }: { playerId?: string; locale?: string } = {},
 	): APIEmbed => {
 		let mergeTactics:
 			| { arena: Clash.Arena; trophies: number; bestTrophies: number }
@@ -1240,11 +1239,11 @@ export class Clash extends Command {
 			style: ButtonStyle.Primary,
 		});
 		return {
-			embeds: [this.createPlayerEmbed(player, locale, playerId)],
+			embeds: [this.createPlayerEmbed(player, { locale, playerId })],
 			components,
 		};
 	};
-	private static "parseAPIDate" = (d: string) =>
+	static "parseAPIDate" = (d: string) =>
 		Date.UTC(
 			+d.slice(0, 4),
 			+d.slice(4, 6) - 1,
