@@ -1,4 +1,5 @@
 import {
+	AllowedMentionsTypes,
 	ApplicationCommandType,
 	ComponentType,
 	EmbedType,
@@ -8,17 +9,19 @@ import {
 	Routes,
 	WebhookType,
 	type APITextDisplayComponent,
-	type APIWebhook,
+	type RESTGetAPIChannelResult,
 	type RESTGetAPIChannelWebhooksResult,
 	type RESTPostAPIChannelWebhookJSONBody,
 	type RESTPostAPIChannelWebhookResult,
 	type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 	type RESTPostAPIWebhookWithTokenJSONBody,
+	type RESTPostAPIWebhookWithTokenQuery,
 	type RESTPostAPIWebhookWithTokenWaitResult,
 } from "discord-api-types/v10";
 import Command from "../Command";
 import { rest } from "../util/globals";
 import normalizeError from "../util/normalizeError";
+import { toSearchParams } from "../util/objects";
 
 export class VerifyMessage extends Command {
 	static override contextMenuData = [
@@ -37,9 +40,8 @@ export class VerifyMessage extends Command {
 		const embed = message?.embeds.find(
 			(e) => e.type === EmbedType.AutoModerationMessage,
 		);
-		const channelId = embed?.fields?.find(
-			(f) => f.name === "channel_id",
-		)?.value;
+		let channelId = embed?.fields?.find((f) => f.name === "channel_id")?.value,
+			thread_id: string | undefined;
 		if (message?.type !== MessageType.AutoModerationAction || !embed)
 			return reply({
 				content: "Usa questo comando su un messaggio dell'automod!",
@@ -57,38 +59,39 @@ export class VerifyMessage extends Command {
 				content: `Sto inviando il seguente messaggio in <#${channelId}> come ${message.author.global_name ?? message.author.username}...`,
 			},
 		];
-		let webhook: APIWebhook | undefined;
 
+		reply({
+			components,
+			flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+		});
 		try {
+			const channel = (await rest.get(
+				Routes.channel(channelId),
+			)) as RESTGetAPIChannelResult;
+			if ("thread_metadata" in channel) {
+				thread_id = channelId;
+				channelId = channel.parent_id!;
+			}
 			const webhooks = (await rest.get(
 				Routes.channelWebhooks(channelId),
 			)) as RESTGetAPIChannelWebhooksResult;
-
-			webhook = webhooks.find(
-				(v) =>
-					v.type === WebhookType.Incoming &&
-					v.application_id === application_id,
-			);
-			reply({
-				components,
-				flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-			});
-		} catch (err) {
-			return reply({
-				content: normalizeError(err).toString(),
-				flags: MessageFlags.Ephemeral,
-			});
-		}
-		try {
-			webhook ??= (await rest.post(Routes.channelWebhooks(channelId), {
-				body: { name: "MS Bot" } satisfies RESTPostAPIChannelWebhookJSONBody,
-			})) as RESTPostAPIChannelWebhookResult;
+			const webhook =
+				webhooks.find(
+					(v) =>
+						v.type === WebhookType.Incoming &&
+						v.application_id === application_id,
+				) ??
+				((await rest.post(Routes.channelWebhooks(channelId), {
+					body: { name: "MS Bot" } satisfies RESTPostAPIChannelWebhookJSONBody,
+				})) as RESTPostAPIChannelWebhookResult);
 			const { id } = (await rest.post(
 				Routes.webhook(webhook.id, webhook.token),
 				{
-					query: new URLSearchParams({ wait: "true" }),
+					query: toSearchParams({
+						wait: true,
+						thread_id,
+					} satisfies RESTPostAPIWebhookWithTokenQuery),
 					body: {
-						content: embed.description,
 						avatar_url:
 							message.author.avatar ?
 								rest.cdn.avatar(message.author.id, message.author.avatar, {
@@ -101,11 +104,13 @@ export class VerifyMessage extends Command {
 									:	Number(message.author.discriminator) % 5,
 								),
 						username: message.author.global_name ?? message.author.username,
+						content: embed.description,
+						allowed_mentions: { parse: [AllowedMentionsTypes.User] },
 					} satisfies RESTPostAPIWebhookWithTokenJSONBody,
 				},
 			)) as RESTPostAPIWebhookWithTokenWaitResult;
 
-			components[1].content = `Messaggio inviato: https://discord.com/channels/${guild_id}/${channelId}/${id}`;
+			components[1].content = `Messaggio inviato: https://discord.com/channels/${guild_id}/${thread_id ?? channelId}/${id}`;
 			return edit({ components });
 		} catch (err) {
 			components[1].content = normalizeError(err).toString();
