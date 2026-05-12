@@ -193,6 +193,7 @@ export class Tournament extends Command {
 
 		reply({
 			flags: MessageFlags.IsComponentsV2 | (full ? MessageFlags.Ephemeral : 0),
+			allowed_mentions: { parse: [] },
 			components: [
 				{
 					type: ComponentType.TextDisplay,
