@@ -97,7 +97,7 @@ export class Tournament extends Command {
 		{
 			user: { id },
 			options,
-			interaction: { locale },
+			interaction: { locale, guild_id },
 		}: ChatInputArgs<typeof Tournament.chatInputData, "register">,
 	) => {
 		if (options.team && !/^[0-9a-v]+$/iu.test(options.team))
@@ -108,12 +108,13 @@ export class Tournament extends Command {
 		const { results } = await env.DB.prepare(
 			`
 				SELECT id, name FROM Tournaments
-				WHERE (registrationMode & ?2) != 0 AND
+				WHERE (registrationMode & ?1) != 0 AND
 					registrationStart <= unixepoch('now') AND
-					registrationEnd > unixepoch('now') + 1
+					registrationEnd > unixepoch('now') + 1 AND
+					guildId = ?2
 			`,
 		)
-			.bind(id, RegistrationMode.Discord)
+			.bind(RegistrationMode.Discord, guild_id)
 			.run<Pick<Database.Tournament, "id" | "name">>();
 		if (results.length === 0)
 			return reply({
