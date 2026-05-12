@@ -156,7 +156,7 @@ export class TournamentAdmin extends Command {
 				content: `Ci sono ancora ${t.pendingMatches} partite da concludere nel round attuale!`,
 			});
 		return edit({
-			content: `Sei sicuro di voler terminare il round ${t.currentRound}?`,
+			content: "Sei sicuro di voler terminare il round?",
 			components: [
 				{
 					type: ComponentType.ActionRow,

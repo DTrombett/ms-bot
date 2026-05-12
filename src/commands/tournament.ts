@@ -495,7 +495,10 @@ export class Tournament extends Command {
 			return edit({ content: "Torneo non trovato." });
 		try {
 			await finishRound(tournament.workflowId, Number(round));
-			return edit({ content: "Il round è iniziato!" });
+			return edit({
+				content:
+					round === "0" ? "Il torneo è terminato" : "Il round è iniziato!",
+			});
 		} catch (err) {
 			return edit({
 				content: `\`\`\`\n${normalizeError(err).stack?.slice(0, 3950)}\n\`\`\``,

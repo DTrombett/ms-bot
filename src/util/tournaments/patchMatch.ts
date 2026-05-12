@@ -35,7 +35,7 @@ const editChannel = async (
 		`,
 	)
 		.bind(tournamentId, match.user1, match.user2)
-		.run<Pick<Database.Participant, "tag" | "userId" | "team" | "name">>();
+		.run<Pick<Database.Participant, "tag" | "userId" | "name">>();
 
 	if (results[1]?.userId === match.user1) results = [results[1], results[0]!];
 	return rest.patch(Routes.channel(match.channelId), {

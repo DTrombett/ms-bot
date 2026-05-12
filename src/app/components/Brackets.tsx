@@ -84,35 +84,26 @@ const resolveMatchParticipant = (
 		},
 	].sort(({ r: a }, { r: b }) => b - a)[0]!.u;
 };
-const updateMatch = (
-	resolved: ResolvedMatch,
-	newMatch:
-		| Pick<
-				Database.Match,
-				| "channelId"
-				| "id"
-				| "result1"
-				| "result2"
-				| "status"
-				| "user1"
-				| "user2"
-		  >
-		| undefined,
-) => {
-	if (!newMatch) return resolved;
+const updateMatch = (resolved: ResolvedMatch) => {
+	if (!resolved.original) return resolved;
 	resolved.participant1.result =
-		newMatch.status === DBMatchStatus.Abandoned && newMatch.result1 == null ?
+		(
+			resolved.original.status === DBMatchStatus.Abandoned &&
+			resolved.original.result1 == null
+		) ?
 			"A"
-		:	String(newMatch.result1 ?? 0);
+		:	String(resolved.original.result1 ?? 0);
 	resolved.participant2.result =
-		newMatch.user2 ?
-			newMatch.status === DBMatchStatus.Abandoned && newMatch.result2 == null ?
+		resolved.original.user2 ?
+			(
+				resolved.original.status === DBMatchStatus.Abandoned &&
+				resolved.original.result2 == null
+			) ?
 				"A"
-			:	String(newMatch.result2 ?? 0)
+			:	String(resolved.original.result2 ?? 0)
 		:	"N";
-	resolved.id = newMatch.id;
-	resolved.status = newMatch.status;
-	resolved.original = newMatch;
+	resolved.id = resolved.original.id;
+	resolved.status = resolved.original.status;
 	return resolved;
 };
 const resolveMatch = (
@@ -138,31 +129,28 @@ const resolveMatch = (
 		2,
 	);
 
-	return updateMatch(
-		{
-			participant1: {
-				userId: participant1.userId,
-				player: {
-					name: participant1.name ?? undefined,
-					tag: participant1.tag ?? undefined,
-				},
-				result: "-",
+	return updateMatch({
+		participant1: {
+			userId: participant1.userId,
+			player: {
+				name: participant1.name ?? undefined,
+				tag: participant1.tag ?? undefined,
 			},
-			participant2: {
-				userId: participant2.userId,
-				player: {
-					name: participant2.name ?? undefined,
-					tag: participant2.tag ?? undefined,
-				},
-				result: "-",
-			},
-			id: 2 ** (brackets.length - i - 1) - 1 + k,
-			status: DBMatchStatus.ToBePlayed,
-			round: i,
-			original: match,
+			result: "-",
 		},
-		match,
-	);
+		participant2: {
+			userId: participant2.userId,
+			player: {
+				name: participant2.name ?? undefined,
+				tag: participant2.tag ?? undefined,
+			},
+			result: "-",
+		},
+		id: 2 ** (brackets.length - i - 1) - 1 + k,
+		status: DBMatchStatus.ToBePlayed,
+		round: i,
+		original: match,
+	});
 };
 
 const MatchParticipant = ({
@@ -295,6 +283,7 @@ const MatchParticipant = ({
 								match.original!,
 								await response.json<Partial<Database.Match>>(),
 							);
+							console.log(match.original);
 							setMatches((m) => m.slice());
 							setActive(undefined);
 						} else {
@@ -352,10 +341,6 @@ const MatchUI = ({
 
 	useLayoutEffect(() => {
 		document.body.style.overflowY = "clip";
-		return () => {
-			document.body.style.overflowY = "";
-			window.scrollTo({ top: scrollPosition.current, behavior: "instant" });
-		};
 	}, []);
 	useEffect(() => {
 		(async () => {
@@ -378,25 +363,28 @@ const MatchUI = ({
 			);
 
 			if ("message" in result) return console.error(result.message);
+			if (active.original) Object.assign(active.original, result.match);
+			else active.original = result.match;
 			setActive(
 				(active) =>
 					active &&
-					updateMatch(
-						{
-							...active,
-							participant1: {
-								...active.participant1,
-								player: result.player1 ?? active.participant1.player,
-							},
-							participant2: {
-								...active.participant2,
-								player: result.player2 ?? active.participant2.player,
-							},
+					updateMatch({
+						...active,
+						participant1: {
+							...active.participant1,
+							player: result.player1 ?? active.participant1.player,
 						},
-						result.match,
-					),
+						participant2: {
+							...active.participant2,
+							player: result.player2 ?? active.participant2.player,
+						},
+					}),
 			);
 		})().catch(console.error);
+		return () => {
+			document.body.style.overflowY = "";
+			window.scrollTo({ top: scrollPosition.current, behavior: "instant" });
+		};
 	}, []);
 	return (
 		<form

@@ -1075,9 +1075,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 						status: 200,
 						headers: {
 							"accept-ch": "Sec-CH-UA-Mobile",
-							"cache-control": `public${
-								(tag1 && !player1) || (tag2 && !player2) ? "" : ", max-age=300"
-							}`,
+							"cache-control": "public",
 						},
 					},
 				);

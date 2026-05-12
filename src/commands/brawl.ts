@@ -1519,7 +1519,6 @@ export class Brawl extends Command {
 			res = await fetch(clone);
 			if (cache) waitUntil(caches.default.put(request, res.clone()));
 		}
-		console.log(res.headers);
 		if (res.ok) return res.json<T>();
 		const body = await res.text();
 		const json = await Promise.try<{ message: string }, [string]>(
