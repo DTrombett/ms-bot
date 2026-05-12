@@ -283,7 +283,6 @@ const MatchParticipant = ({
 								match.original!,
 								await response.json<Partial<Database.Match>>(),
 							);
-							console.log(match.original);
 							setMatches((m) => m.slice());
 							setActive(undefined);
 						} else {
