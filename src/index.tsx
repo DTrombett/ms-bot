@@ -299,7 +299,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				),
 				env.DB.prepare(
 					`
-						SELECT userId, tag, team, name
+						SELECT userId, tag, name
 						FROM Participants WHERE tournamentId = ?
 					`,
 				).bind(Number(matchResult[1])),
@@ -369,7 +369,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 					).bind(Number(matchResult[1])),
 					env.DB.prepare(
 						`
-							SELECT userId, tag, team, name
+							SELECT userId, tag, name
 							FROM Participants WHERE tournamentId = ?
 						`,
 					).bind(Number(matchResult[1])),

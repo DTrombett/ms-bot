@@ -30,7 +30,7 @@ const editChannel = async (
 		return;
 	let { results } = await env.DB.prepare(
 		`
-			SELECT userId, tag, team, name
+			SELECT userId, tag, name
 			FROM Participants WHERE tournamentId = ?1 AND userId IN (?2, ?3)
 		`,
 	)
