@@ -62,13 +62,14 @@ export class Tournament extends Command {
 						min_length: 3,
 						max_length: 20,
 					},
-					{
-						type: ApplicationCommandOptionType.String,
-						name: "team",
-						description:
-							"Il codice team con il quale iscriversi nei tornei a squadre (es. ABCD)",
-						max_length: 20,
-					},
+					// Team tournaments are currently not supported
+					// {
+					// 	type: ApplicationCommandOptionType.String,
+					// 	name: "team",
+					// 	description:
+					// 		"Il codice team con il quale iscriversi nei tornei a squadre (es. ABCD)",
+					// 	max_length: 20,
+					// },
 				],
 			},
 			{
@@ -100,11 +101,11 @@ export class Tournament extends Command {
 			interaction: { locale, guild_id },
 		}: ChatInputArgs<typeof Tournament.chatInputData, "register">,
 	) => {
-		if (options.team && !/^[0-9a-v]+$/iu.test(options.team))
-			return reply({
-				flags: MessageFlags.Ephemeral,
-				content: "Il codice team non è valido.",
-			});
+		// if (options.team && !/^[0-9a-v]+$/iu.test(options.team))
+		// 	return reply({
+		// 		flags: MessageFlags.Ephemeral,
+		// 		content: "Il codice team non è valido.",
+		// 	});
 		const { results } = await env.DB.prepare(
 			`
 				SELECT id, name FROM Tournaments
@@ -351,7 +352,7 @@ export class Tournament extends Command {
 	static pro = async (
 		{ edit, deferUpdate, modal, update }: ComponentReplies,
 		{
-			args: [tournamentId, team],
+			args: [tournamentId],
 			interaction: { data, locale },
 			user: { id },
 		}: ComponentArgs,
@@ -359,7 +360,7 @@ export class Tournament extends Command {
 		ok(data.component_type === ComponentType.StringSelect);
 		const tag = data.values[0] ?? "#";
 
-		if (tag === "#") return modal(this.buildModal({ id: tournamentId!, team }));
+		if (tag === "#") return modal(this.buildModal({ id: tournamentId! }));
 		try {
 			return edit(
 				this.createConfirmMessage(
@@ -645,10 +646,9 @@ export class Tournament extends Command {
 		)})`;
 	static buildModal = (options: {
 		id: string;
-		team?: string;
 	}): APIModalInteractionResponseCallbackData => ({
 		title: "Iscrizione al torneo",
-		custom_id: `tournament-tag-${options.id}-${options.team ?? ""}`,
+		custom_id: `tournament-tag-${options.id}`,
 		components: [
 			{
 				type: ComponentType.Label,
