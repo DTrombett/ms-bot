@@ -316,7 +316,8 @@ export class Tournament extends Command {
 					],
 				});
 			} catch (err) {
-				if (err instanceof RegisterError) update({ content: err.message });
+				if (err instanceof RegisterError)
+					return update({ content: err.message });
 				deferUpdate();
 				return this.handleError(err, edit);
 			}
