@@ -73,6 +73,11 @@ export const parseTournamentData = async (
 		ok(!Number.isNaN(form.game), "Il gioco non è valido");
 		ok(form.team, "La dimensione della squadra è richiesta");
 		ok(form.guildId, "L'id del server dove si svolge il torneo è richiesto");
+		match(
+			form.guildId,
+			DiscordIdRegex,
+			"L'id del server dove si svolge il torneo non è valido",
+		);
 		ok(!Number.isNaN(form.team), "La dimensione della squadra non è valida");
 		ok(form.team > 0, "La dimensione della squadra deve essere maggiore di 0");
 		ok(
