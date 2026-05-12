@@ -1986,7 +1986,7 @@ export class Brawl extends Command {
 		});
 	};
 	static unlinkComponent = async (
-		{ update }: ComponentReplies,
+		{ update, reply }: ComponentReplies,
 		{
 			args: [tag, commandId, userId],
 			user: { id },
@@ -1996,22 +1996,36 @@ export class Brawl extends Command {
 		}: ComponentArgs,
 	) => {
 		userId ||= id;
-		const name = await env.DB.prepare(
-			`DELETE FROM SupercellPlayers
+		try {
+			const name = await env.DB.prepare(
+				`
+				DELETE FROM SupercellPlayers
 				WHERE tag = ? AND type = ? AND userId = ?
-				RETURNING name`,
-		)
-			.bind(tag, SupercellPlayerType.BrawlStars, userId)
-			.first<string>("name");
-		if (components?.[0]?.type === ComponentType.ActionRow)
-			components[0].components[0] = {
-				type: ComponentType.Button,
-				custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}-${name ?? ""}`,
-				label: "Salva",
-				emoji: { name: "🔗" },
-				style: ButtonStyle.Success,
-			};
-		return update({ content: "Profilo scollegato con successo!", components });
+				RETURNING name
+			`,
+			)
+				.bind(tag, SupercellPlayerType.BrawlStars, userId)
+				.first<string>("name");
+			if (components?.[0]?.type === ComponentType.ActionRow)
+				components[0].components[0] = {
+					type: ComponentType.Button,
+					custom_id: `brawl-link-${id}-${tag}-${commandId || "0"}-${userId}-${name ?? ""}`,
+					label: "Salva",
+					emoji: { name: "🔗" },
+					style: ButtonStyle.Success,
+				};
+			return update({
+				content: "Profilo scollegato con successo!",
+				components,
+			});
+		} catch (err) {
+			console.error(err);
+			return reply({
+				content:
+					"Non è stato possibile scollegare il profilo, contatta un moderatore!",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
 	};
 	static brawlersComponent = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
