@@ -96,6 +96,7 @@ export class TournamentAdmin extends Command {
 						type: ApplicationCommandOptionType.Integer,
 						name: "match-id",
 						description: "L'id dello scontro",
+						required: true,
 					},
 					{
 						type: ApplicationCommandOptionType.Channel,
