@@ -95,6 +95,7 @@ export const unregister = async (
 	)
 		.bind(tournamentId, ...userIds)
 		.run();
+	if (!changes) return;
 	// Every deletion causes a modification of Tournament
 	tournament.participantCount -= Math.floor(changes / 2);
 	if (tournament.registrationRole && removeRoles)
