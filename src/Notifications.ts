@@ -58,18 +58,19 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 				);
 			}),
 		);
-		const errors = [];
 
-		for (const result of results)
-			if (result.status === "rejected") {
-				console.error(result.reason);
-				errors.push(result.reason);
-			}
-		if (errors.length)
-			throw new Error(
-				`Failed to process Notifications for ${errors.length} users`,
-				{ cause: errors },
-			);
+		await step.do<void>(
+			"Check errors",
+			{ retries: { limit: 0, delay: 0 } },
+			() => {
+				const errors = results
+					.filter((r) => r.status === "rejected")
+					.map((r): unknown => r.reason);
+
+				if (errors.length) return Promise.reject(new AggregateError(errors));
+				return Promise.resolve();
+			},
+		);
 	}
 
 	private async processBrawlUser(
