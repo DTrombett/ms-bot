@@ -256,9 +256,14 @@ export class StaseraInTV extends Command {
 					content: `-# Dati di [Stasera in TV](${base})`,
 				},
 			);
-			return { flags: MessageFlags.IsComponentsV2, components };
+			return {
+				allowed_mentions: { parse: [] },
+				flags: MessageFlags.IsComponentsV2,
+				components,
+			};
 		} catch (err) {
 			return {
+				allowed_mentions: { parse: [] },
 				content: `Si è verificato un errore imprevisto: \`${normalizeError(err).message}\``,
 			};
 		}
