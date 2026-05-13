@@ -22,6 +22,7 @@ export * from "./remind";
 export * from "./rps";
 export * from "./search";
 export * from "./share";
+export * from "./staseraInTV";
 export * from "./time";
 export * from "./tournament";
 export * from "./tournamentAdmin";
