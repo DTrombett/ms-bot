@@ -33,5 +33,6 @@ export const editMessage = async (
 				tournament.registrationTemplateLink,
 				tournament,
 			),
+			signal: AbortSignal.timeout(25_000),
 		},
 	) as Promise<RESTPatchAPIChannelMessageResult>);
