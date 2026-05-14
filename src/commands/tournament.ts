@@ -515,6 +515,7 @@ export class Tournament extends Command {
 					:	[result[0] + 1, result[1]],
 				[0, 0],
 			);
+			if (tag === match.user2Tag) [result[1], result[0]] = result;
 			const newMatch = await patchMatch(
 				match.tournamentId,
 				match.id,
