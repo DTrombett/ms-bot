@@ -451,7 +451,7 @@ export class Tournament extends Command {
 					PossiblyNull<{ user2Tag: Database.Participant["tag"] }>
 			>();
 
-		if (!match?.id) return edit({ content: "Scontro non trovato!" });
+		if (!match) return edit({ content: "Scontro non trovato!" });
 		if ((match.flags & TournamentFlags.AutoDetectResults) === 0)
 			return edit({
 				content:
