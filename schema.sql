@@ -93,6 +93,7 @@ WHERE notifications > 0;
 CREATE INDEX SupercellPlayersIndex ON SupercellPlayers(userId, type, active, tag, name);
 CREATE INDEX User1Matches ON Matches(tournamentId, user1);
 CREATE INDEX User2Matches ON Matches(tournamentId, user2);
+CREATE UNIQUE INDEX ChannelMatches ON Matches(channelId);
 CREATE INDEX ParticipantsPlayerIndex ON Participants(tag, userId);
 -- Triggers --
 CREATE TRIGGER IncreaseParticipantCount
