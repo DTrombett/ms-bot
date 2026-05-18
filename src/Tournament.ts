@@ -9,6 +9,7 @@ import {
 	ComponentType,
 	MessageFlags,
 	Routes,
+	type APIComponentInContainer,
 	type APIMessageTopLevelComponent,
 	type RESTGetAPIChannelMessageResult,
 	type RESTPostAPIChannelMessageJSONBody,
@@ -26,6 +27,7 @@ import {
 import { rest } from "./util/globals";
 import { ok } from "./util/node";
 import normalizeError from "./util/normalizeError";
+import { template } from "./util/strings";
 import { TimeUnit } from "./util/time";
 import { createRegistrationMessage } from "./util/tournaments/createRegistrationMessage";
 import { resolveWinner } from "./util/tournaments/resolveWinner";
@@ -345,6 +347,14 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					`Wait for round ${tournament.currentRound} to start`,
 					{ type: `round-${tournament.currentRound + 1}` },
 				);
+			if (!tournament.matchMessageLink) {
+				this.sendError(
+					step,
+					tournament.logChannel,
+					"Non è stato impostato il link al messaggio da mandare nei canali!",
+				);
+				throw new Error("Missing match message link");
+			}
 			const [matches, message] = await Promise.all([
 				this.createRoundAndDeleteChannels(
 					step,
@@ -352,11 +362,10 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					tournament.logChannel,
 					tournament.flags,
 				),
-				tournament.matchMessageLink &&
-					step.do(
-						`Fetch message for round ${tournament.currentRound}`,
-						this.fetchMatchMessage(tournament.matchMessageLink),
-					),
+				step.do(
+					`Fetch message for round ${tournament.currentRound}`,
+					this.fetchMatchMessage(tournament.matchMessageLink),
+				),
 			]);
 
 			if (matches.length)
@@ -572,8 +581,19 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		error?: unknown,
 	) => {
 		const id = crypto.randomUUID();
+		const newError = error == null ? null : normalizeError(error);
+		const component: APIComponentInContainer = {
+			type: ComponentType.TextDisplay,
+			content: template`
+				${message}### ${message}
+				${newError}\`\`\`\n${(newError?.stack ?? newError?.toString())?.slice(
+					0,
+					3952 - (message ? message.length + 5 : 0),
+				)}\n\`\`\`
+				-# ${id}
+			`,
+		};
 
-		error = normalizeError(error);
 		this.ctx.waitUntil(
 			step.do<void>(
 				`Report error ${id} in logs channel`,
@@ -587,12 +607,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 									{
 										type: ComponentType.Container,
 										accent_color: 0xff0000,
-										components: [
-											{
-												type: ComponentType.TextDisplay,
-												content: `${message ? `### ${message}\n` : ""}\`\`\`\n${(error as Error).stack?.slice(0, 3952 - (message ? message.length + 5 : 0))}\n\`\`\`\n-# ${id}`,
-											},
-										],
+										components: [component],
 									},
 								],
 							} satisfies RESTPostAPIChannelMessageJSONBody,
