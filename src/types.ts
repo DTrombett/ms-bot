@@ -58,6 +58,8 @@ declare global {
 
 	type PossiblyUndefined<T> = T | { [P in keyof T]?: never };
 
+	type Optional<T, K extends keyof T> = Omit<T, K> & { [P in K]?: T[P] };
+
 	type QueueMessage =
 		| { t: QueueMessageType.Ack; d?: never }
 		| { t: QueueMessageType.TournamentMessageEdit; d: { id: number } };

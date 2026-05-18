@@ -230,54 +230,45 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 
 	private saveParticipants =
 		(participants: Pick<Database.Participant, "userId">[]) => async () => {
-			const length = 2 ** (Math.ceil(Math.log2(participants.length)) - 1);
+			const length = 2 ** (Math.ceil(Math.log2(participants.length)) - 1),
+				query = this.env.DB.prepare(
+					`
+						INSERT INTO Matches (id, status, tournamentId, user1, user2)
+						VALUES (?1, ?2, ?3, ?4, ?5)
+					`,
+				);
 
 			await this.env.DB.batch(
 				// Shuffle so that bye matches are not only at the end
 				shuffleArray(
 					Array.from(
 						{ length },
-						(_, k): Omit<Database.Match, "id"> => ({
-							status: DBMatchStatus.ToBePlayed,
-							tournamentId: this.tournamentId,
+						(_, k): Pick<Database.Match, "user1" | "user2"> => ({
 							user1: participants[k]!.userId,
 							user2: participants[k + length]?.userId ?? null,
 						}),
 					),
 				)
-					.map(
-						this.createMatchQueries.bind(
-							null,
-							this.env.DB.prepare(
-								`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
-							),
+					.map((value, index) =>
+						query.bind(
+							index + length - 1,
+							value.user2 ? DBMatchStatus.ToBePlayed : DBMatchStatus.Default,
+							this.tournamentId,
+							value.user1,
+							value.user2,
 						),
 					)
 					.concat(
 						this.env.DB.prepare(
-							`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,
+							`
+								UPDATE Tournaments
+								SET statusFlags = statusFlags | ?1
+								WHERE id = ?2
+							`,
 						).bind(TournamentStatusFlags.BracketsCreated, this.tournamentId),
 					),
 			);
 		};
-
-	private createMatchQueries = <T extends Omit<Database.Match, "id">>(
-		query: D1PreparedStatement,
-		value: T,
-		index: number,
-		{ length }: T[],
-	) => {
-		const match: Database.Match = { id: index + length - 1, ...value };
-
-		if (!match.user2) match.status = DBMatchStatus.Default;
-		return query.bind(
-			match.id,
-			match.status,
-			match.tournamentId,
-			match.user1,
-			match.user2,
-		);
-	};
 
 	private loadParticipants = async () => {
 		const { results } = await this.env.DB.prepare(
