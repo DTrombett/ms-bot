@@ -28,7 +28,7 @@ import {
 } from "../util/Constants";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
-import { randomArrayItem } from "../util/random";
+import { randomArrayItem } from "../util/arrays";
 import { camelToSpace, template } from "../util/strings";
 import { matchStatus, roundName } from "../util/tournaments/Constants";
 import { finishRound } from "../util/tournaments/finishRound";

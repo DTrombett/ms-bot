@@ -5,9 +5,6 @@
  * @returns A random number between min and max
  */
 export const randomNumber = (min?: number, max?: number) =>
-	min === undefined || max === undefined
-		? Math.random()
-		: Math.floor(Math.random() * (max - min + 1)) + min;
-
-export const randomArrayItem = <T>(array: T[] | readonly T[]): T =>
-	array[Math.floor(Math.random() * array.length)]!;
+	min === undefined || max === undefined ?
+		Math.random()
+	:	Math.floor(Math.random() * (max - min + 1)) + min;

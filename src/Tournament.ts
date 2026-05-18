@@ -14,6 +14,7 @@ import {
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
+import { shuffleArray } from "./util/arrays";
 import {
 	DBMatchStatus,
 	QueueMessageType,
@@ -208,17 +209,6 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						),
 					),
 				);
-			if (participants.length > (tournament.maxPlayers ?? Infinity))
-				await step.do<never>(
-					"Participants count not satisfied",
-					{ retries: { limit: 0, delay: 0 } },
-					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
-						Promise,
-						new NonRetryableError(
-							`Massimo partecipanti non soddisfatto: ${participants.length} > ${tournament.maxPlayers}`,
-						),
-					),
-				);
 			if (participants.length > 1)
 				await step.do<void>(
 					"Save participants",
@@ -226,7 +216,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				);
 			this.log(step, tournament.logChannel, "Brackets create", {
 				type: ComponentType.TextDisplay,
-				content: `## Brackets create!\nhttps://ms-bot.trombett.org/tournaments/${this.tournamentId}`,
+				content: `## Brackets create!\nhttps://ms-bot.trombett.org/tournaments/${this.tournamentId}/brackets`,
 			});
 		} catch (error) {
 			this.sendError(
@@ -240,47 +230,54 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 
 	private saveParticipants =
 		(participants: Pick<Database.Participant, "userId">[]) => async () => {
-			const length = 2 ** (Math.ceil(Math.log2(participants.length)) - 1),
-				query = this.env.DB.prepare(
-					`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
-				);
+			const length = 2 ** (Math.ceil(Math.log2(participants.length)) - 1);
 
 			await this.env.DB.batch(
-				Array.from(
-					{ length },
-					this.createMatchQueries(length, participants, query),
-				).concat(
-					this.env.DB.prepare(
-						`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,
-					).bind(TournamentStatusFlags.BracketsCreated, this.tournamentId),
-				),
+				// Shuffle so that bye matches are not only at the end
+				shuffleArray(
+					Array.from(
+						{ length },
+						(_, k): Omit<Database.Match, "id"> => ({
+							status: DBMatchStatus.ToBePlayed,
+							tournamentId: this.tournamentId,
+							user1: participants[k]!.userId,
+							user2: participants[k + length]?.userId ?? null,
+						}),
+					),
+				)
+					.map(
+						this.createMatchQueries.bind(
+							null,
+							this.env.DB.prepare(
+								`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
+							),
+						),
+					)
+					.concat(
+						this.env.DB.prepare(
+							`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,
+						).bind(TournamentStatusFlags.BracketsCreated, this.tournamentId),
+					),
 			);
 		};
 
-	private createMatchQueries =
-		(
-			length: number,
-			participants: Pick<Database.Participant, "userId">[],
-			query: D1PreparedStatement,
-		) =>
-		(_: unknown, i: number) => {
-			const match: Database.Match = {
-				id: i + length - 1,
-				status: 0,
-				tournamentId: this.tournamentId,
-				user1: participants[i]!.userId,
-				user2: participants[i + length]?.userId ?? null,
-			};
+	private createMatchQueries = <T extends Omit<Database.Match, "id">>(
+		query: D1PreparedStatement,
+		value: T,
+		index: number,
+		{ length }: T[],
+	) => {
+		const match: Database.Match = { id: index + length - 1, ...value };
 
-			if (!match.user2) match.status = DBMatchStatus.Default;
-			return query.bind(
-				match.id,
-				match.status,
-				match.tournamentId,
-				match.user1,
-				match.user2,
-			);
-		};
+		if (!match.user2) match.status = DBMatchStatus.Default;
+		return query.bind(
+			match.id,
+			match.status,
+			match.tournamentId,
+			match.user1,
+			match.user2,
+		);
+	};
 
 	private loadParticipants = async () => {
 		const { results } = await this.env.DB.prepare(
@@ -288,18 +285,8 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		)
 			.bind(this.tournamentId)
 			.run<Pick<Database.Participant, "userId">>();
-		let currentIndex = results.length;
 
-		if (currentIndex <= 1) return results;
-		while (currentIndex != 0) {
-			const randomIndex = Math.floor(Math.random() * currentIndex--);
-
-			[results[currentIndex], results[randomIndex]] = [
-				results[randomIndex]!,
-				results[currentIndex]!,
-			];
-		}
-		return results;
+		return shuffleArray(results);
 	};
 
 	private createChannels = async (

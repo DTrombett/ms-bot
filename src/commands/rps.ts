@@ -9,7 +9,7 @@ import {
 } from "discord-api-types/v10";
 import Command from "../Command";
 import { ok } from "../util/node";
-import { randomArrayItem } from "../util/random";
+import { randomArrayItem } from "../util/arrays";
 
 type Choice = (typeof RPS.choices)[number];
 
