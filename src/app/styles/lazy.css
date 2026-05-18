@@ -139,6 +139,6 @@ input:user-invalid {
 input:checked {
 	opacity: 1 !important;
 }
-#brackets > div > div:hover {
+.match:hover {
 	background-color: rgba(63, 63, 70, 0.75) !important;
 }

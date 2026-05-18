@@ -1,9 +1,7 @@
 import {
 	memo,
 	useEffect,
-	useLayoutEffect,
 	useMemo,
-	useRef,
 	useState,
 	type CSSProperties,
 	type Dispatch,
@@ -109,23 +107,29 @@ const updateMatch = (resolved: ResolvedMatch) => {
 const resolveMatch = (
 	brackets: (Matches | undefined)[],
 	participantsMap: Record<string, Participants[number]>,
-	i: number,
-	k: number,
+	resolvable: Exclusive<{ i: number; k: number }, { id: number }> & {
+		level?: number;
+	},
 ): ResolvedMatch => {
-	const match = brackets[i]?.[k];
+	resolvable.id ??=
+		2 ** (brackets.length - resolvable.i - 1) - 1 + resolvable.k;
+	resolvable.level ??= Math.floor(Math.log2(resolvable.id + 1));
+	resolvable.i ??= brackets.length - resolvable.level - 1;
+	resolvable.k ??= resolvable.id - (2 ** resolvable.level - 1);
+	const match = brackets[resolvable.i]?.[resolvable.k];
 	const participant1 = resolveMatchParticipant(
 		participantsMap,
 		brackets,
 		match,
-		i,
-		k,
+		resolvable.i,
+		resolvable.k,
 	);
 	const participant2 = resolveMatchParticipant(
 		participantsMap,
 		brackets,
 		match,
-		i,
-		k,
+		resolvable.i,
+		resolvable.k,
 		2,
 	);
 
@@ -146,9 +150,11 @@ const resolveMatch = (
 			},
 			result: "-",
 		},
-		id: 2 ** (brackets.length - i - 1) - 1 + k,
+		id:
+			resolvable.id ??
+			2 ** (brackets.length - resolvable.i - 1) - 1 + resolvable.k,
 		status: DBMatchStatus.ToBePlayed,
-		round: i,
+		round: resolvable.i,
 		original: match,
 	});
 };
@@ -169,7 +175,7 @@ const MatchParticipant = ({
 	currentlyPlaying: number;
 	match: ResolvedMatch;
 	mobile: boolean;
-	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
+	setActive: Dispatch<SetStateAction<ResolvedMatch | null>>;
 	setDisabled: Dispatch<SetStateAction<boolean>>;
 	setError: Dispatch<SetStateAction<string | undefined>>;
 	setMatches: Dispatch<SetStateAction<Matches>>;
@@ -182,6 +188,11 @@ const MatchParticipant = ({
 		match.original &&
 		match.round <= currentlyPlaying &&
 		match.round >= currentlyPlaying - 1;
+	const dpr = typeof devicePixelRatio === "undefined" ? 1 : devicePixelRatio,
+		w =
+			(typeof document === "undefined" ? 16 : (
+				parseFloat(getComputedStyle(document.documentElement).fontSize)
+			)) * 8;
 
 	return (
 		<div
@@ -196,7 +207,7 @@ const MatchParticipant = ({
 			<img
 				alt=""
 				style={{ height: "8rem", width: "8rem", aspectRatio: 1 }}
-				src={`https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${parseFloat(getComputedStyle(document.documentElement).fontSize) * 8}/profile-icons/regular/${
+				src={`https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${dpr},w=${w}/profile-icons/regular/${
 					participant.player?.tag ?
 						"icon" in participant.player ?
 							participant.player.icon.id
@@ -204,7 +215,7 @@ const MatchParticipant = ({
 					:	"Unknown"
 				}.png`}
 				onError={(event) =>
-					(event.currentTarget.src = `https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${parseFloat(getComputedStyle(document.documentElement).fontSize) * 8}/profile-icons/regular/Unknown.png`)
+					(event.currentTarget.src = `https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${dpr},w=${w}/profile-icons/regular/Unknown.png`)
 				}
 			/>
 			<div>
@@ -284,7 +295,7 @@ const MatchParticipant = ({
 								await response.json<Partial<Database.Match>>(),
 							);
 							setMatches((m) => m.slice());
-							setActive(undefined);
+							setActive(null);
 						} else {
 							setError(
 								(
@@ -323,6 +334,7 @@ const MatchUI = ({
 	currentlyPlaying,
 	id,
 	mobile,
+	query,
 	setActive,
 	setMatches,
 }: {
@@ -331,16 +343,15 @@ const MatchUI = ({
 	currentlyPlaying: number;
 	id: number;
 	mobile: boolean;
-	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
+	query: URLSearchParams;
+	setActive: Dispatch<SetStateAction<ResolvedMatch | null>>;
 	setMatches: Dispatch<SetStateAction<Matches>>;
 }): ReactNode => {
 	const [disabled, setDisabled] = useState(false);
 	const [error, setError] = useState<string>();
-	const scrollPosition = useRef(window.scrollY);
+	const newQuery = new URLSearchParams(query);
 
-	useLayoutEffect(() => {
-		document.body.style.overflowY = "clip";
-	}, []);
+	newQuery.delete("match");
 	useEffect(() => {
 		(async () => {
 			const params = toSearchParams({
@@ -380,10 +391,6 @@ const MatchUI = ({
 					}),
 			);
 		})().catch(console.error);
-		return () => {
-			document.body.style.overflowY = "";
-			window.scrollTo({ top: scrollPosition.current, behavior: "instant" });
-		};
 	}, []);
 	return (
 		<form
@@ -434,7 +441,7 @@ const MatchUI = ({
 						await response.json<Partial<Database.Match>>(),
 					);
 					setMatches((m) => m.slice());
-					setActive(undefined);
+					setActive(null);
 				} else {
 					setError(
 						(
@@ -457,26 +464,31 @@ const MatchUI = ({
 				<span style={{ color: statusColors[active.status] }}>
 					{matchStatus[active.status]}
 				</span>
-				<button
+				<a
+					href={`?${newQuery}`}
 					type="button"
-					onClick={setActive.bind(null, undefined)}
+					onClick={(event) => {
+						setActive(null);
+						event.preventDefault();
+					}}
 					style={{
 						backgroundColor: "transparent",
 						border: "none",
 						borderRadius: "100%",
-						color: "white",
+						color: "inherit",
+						textDecoration: "none",
 						cursor: "pointer",
 						fontFamily: "ggsans",
 						fontSize: "2.5rem",
 						fontWeight: 600,
 						height: "2rem",
-						lineHeight: 0,
+						lineHeight: "2rem",
 						padding: 0,
 						userSelect: "none",
 						width: "2rem",
 					}}>
 					×
-				</button>
+				</a>
 			</div>
 			<div style={{ display: "flex", alignItems: "center" }}>
 				<MatchParticipant
@@ -485,9 +497,9 @@ const MatchUI = ({
 					admin={admin}
 					match={active}
 					currentlyPlaying={currentlyPlaying}
-					setMatches={setMatches}
-					setDisabled={setDisabled}
 					setActive={setActive}
+					setDisabled={setDisabled}
+					setMatches={setMatches}
 					tournamentId={id}
 					setError={setError}
 				/>
@@ -508,9 +520,9 @@ const MatchUI = ({
 					admin={admin}
 					match={active}
 					currentlyPlaying={currentlyPlaying}
-					setMatches={setMatches}
-					setDisabled={setDisabled}
 					setActive={setActive}
+					setDisabled={setDisabled}
+					setMatches={setMatches}
 					tournamentId={id}
 					setError={setError}
 				/>
@@ -555,7 +567,7 @@ const MatchUI = ({
 										await response.json<Partial<Database.Match>>(),
 									);
 									setMatches((m) => m.slice());
-									setActive(undefined);
+									setActive(null);
 								} else {
 									setError(
 										(
@@ -661,14 +673,18 @@ const BracketsUI = memo(
 		brackets,
 		currentlyPlaying,
 		participantsMap,
+		query,
+		round,
 		setActive,
 		setRound,
 	}: {
 		brackets: (Matches | undefined)[];
 		currentlyPlaying: number;
 		participantsMap: Record<string, Participants[number]>;
-		setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
-		setRound: Dispatch<SetStateAction<number | undefined>>;
+		query: URLSearchParams;
+		round: number | null;
+		setActive: Dispatch<SetStateAction<ResolvedMatch | null>>;
+		setRound: Dispatch<SetStateAction<number | null>>;
 	}): ReactNode => (
 		<div
 			style={{
@@ -680,33 +696,41 @@ const BracketsUI = memo(
 				width: "fit-content",
 			}}>
 			<div style={{ display: "flex", justifyContent: "space-between" }}>
-				{Array.from(brackets, (_, i) => (
-					<button
-						key={brackets.length - i}
-						onClick={setRound.bind(null, (round) =>
-							round === brackets.length - i - 1 ?
-								undefined
-							:	brackets.length - i - 1,
-						)}
-						className="deleteButton"
-						style={{
-							width: "calc(2.4px + 10rem)",
-							padding: "0.5rem",
-							fontFamily: "ggsans",
-							fontSize: "1rem",
-							lineHeight: "2rem",
-							color: "white",
-							cursor: "pointer",
-							backgroundColor: "transparent",
-							paddingBlock: 0,
-							paddingInline: 0,
-							border: "none",
-							borderRadius: "4px",
-						}}>
-						{currentlyPlaying === i && "🔴 "}
-						{roundName(brackets.length - i - 1)}
-					</button>
-				))}
+				{Array.from(brackets, (_, i) => {
+					const newRound = brackets.length - i - 1,
+						newQuery = new URLSearchParams(query);
+
+					if (round === newRound) newQuery.delete("round");
+					else newQuery.set("round", String(newRound));
+					return (
+						<a
+							href={`?${newQuery}`}
+							key={newRound}
+							onClick={(event) => {
+								setRound((round) => (round === newRound ? null : newRound));
+								event.preventDefault();
+							}}
+							className="deleteButton"
+							style={{
+								width: "calc(2.4px + 10rem)",
+								padding: "0.5rem",
+								fontFamily: "ggsans",
+								fontSize: "1rem",
+								lineHeight: "2rem",
+								color: "white",
+								cursor: "pointer",
+								backgroundColor: "transparent",
+								paddingBlock: 0,
+								paddingInline: 0,
+								border: "none",
+								borderRadius: "4px",
+								textDecoration: "none",
+							}}>
+							{currentlyPlaying === i && "🔴 "}
+							{roundName(brackets.length - i - 1)}
+						</a>
+					);
+				})}
 			</div>
 			<div
 				id="brackets"
@@ -728,19 +752,28 @@ const BracketsUI = memo(
 							justifyContent: "space-around",
 						}}>
 						{Array.from({ length: 2 ** (brackets.length - 1 - i) }, (_, k) => {
-							const match = resolveMatch(brackets, participantsMap, i, k);
+							const match = resolveMatch(brackets, participantsMap, { i, k }),
+								newQuery = new URLSearchParams(query);
 
+							newQuery.set("match", String(match.id));
 							return (
-								<div
+								<a
+									href={`?${newQuery}`}
 									style={{
 										position: "relative",
 										border: style.border,
 										borderRadius: "4px",
 										backgroundColor: style.backgroundColor,
 										cursor: "pointer",
+										color: "inherit",
+										textDecoration: "none",
 									}}
+									className="match"
 									key={match.id}
-									onClick={setActive.bind(null, match)}>
+									onClick={(event) => {
+										setActive(match);
+										event.preventDefault();
+									}}>
 									{i > 0 && (
 										<span style={{ pointerEvents: "none" }}>
 											<div
@@ -838,7 +871,7 @@ const BracketsUI = memo(
 											{match.participant2.result}
 										</span>
 									</div>
-								</div>
+								</a>
 							);
 						})}
 					</div>
@@ -851,24 +884,29 @@ const BracketsUI = memo(
 export default useClient(
 	"Brackets",
 	({
-		participants,
+		admin,
+		id,
 		matches,
 		mobile,
-		id,
-		admin,
+		participants,
+		query,
 		embed,
 	}: {
-		participants: Participants;
+		admin: boolean;
+		id: number;
 		matches: Matches;
 		mobile: boolean;
-		id: number;
-		admin: boolean;
+		participants: Participants;
+		query: URLSearchParams;
 		embed?: boolean;
 	}) => {
-		const [active, setActive] = useState<ResolvedMatch>();
+		if (typeof location !== "undefined")
+			query = new URLSearchParams(location.search);
 		const [currentMatches, setMatches] = useState(matches);
-		const [round, setRound] = useState<number>();
 		const [currentParticipants] = useState(participants);
+		const [round, setRound] = useState(() =>
+			query.has("round") ? +query.get("round")! : null,
+		);
 		const brackets = useMemo(() => {
 			const brackets: (Matches | undefined)[] = [];
 
@@ -884,6 +922,11 @@ export default useClient(
 			() => Object.fromEntries(currentParticipants.map((p) => [p.userId, p])),
 			[currentParticipants],
 		);
+		const [active, setActive] = useState(() =>
+			query.has("match") ?
+				resolveMatch(brackets, participantsMap, { id: +query.get("match")! })
+			:	null,
+		);
 		const currentlyPlaying = useMemo(
 			() =>
 				Math.max(
@@ -895,6 +938,32 @@ export default useClient(
 			[brackets],
 		);
 
+		useEffect(() => {
+			const listener = () => {
+				const query = new URLSearchParams(location.search);
+
+				setActive(
+					query.has("match") ?
+						resolveMatch(brackets, participantsMap, {
+							id: +query.get("match")!,
+						})
+					:	null,
+				);
+				setRound(query.has("round") ? +query.get("round")! : null);
+			};
+
+			addEventListener("popstate", listener);
+			return () => removeEventListener("popstate", listener);
+		}, []);
+		useEffect(() => {
+			const url = new URL(location.href);
+
+			if (active) url.searchParams.set("match", String(active.id));
+			else url.searchParams.delete("match");
+			if (round != null) url.searchParams.set("round", String(round));
+			else url.searchParams.delete("round");
+			if (url.href !== location.href) history.pushState(null, "", url);
+		}, [active, round]);
 		return (
 			<>
 				<div
@@ -939,11 +1008,7 @@ export default useClient(
 					<button
 						className="deleteButton"
 						type="button"
-						onClick={
-							typeof window === "undefined" ? undefined : (
-								window.location.reload.bind(window.location)
-							)
-						}
+						onClick={() => location.reload()}
 						style={{
 							backgroundColor: "transparent",
 							border: "none",
@@ -970,18 +1035,21 @@ export default useClient(
 				</div>
 				{active ?
 					<MatchUI
-						active={active}
-						setActive={setActive}
-						mobile={mobile}
-						id={id}
 						admin={admin}
+						id={id}
+						mobile={mobile}
+						query={query}
+						active={active}
 						currentlyPlaying={currentlyPlaying}
+						setActive={setActive}
 						setMatches={setMatches}
 					/>
 				:	<BracketsUI
+						query={query}
 						brackets={brackets}
 						currentlyPlaying={currentlyPlaying}
 						participantsMap={participantsMap}
+						round={round}
 						setActive={setActive}
 						setRound={setRound}
 					/>

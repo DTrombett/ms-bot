@@ -38,11 +38,12 @@ export default ({
 		}}
 		url={url}>
 		<Brackets
+			admin={admin}
+			id={tournament.id}
+			matches={matches}
 			mobile={mobile}
 			participants={participants}
-			matches={matches}
-			id={tournament.id}
-			admin={admin}
+			query={url.searchParams}
 			embed={embed}
 		/>
 	</Page>

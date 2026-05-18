@@ -105,6 +105,10 @@ declare global {
 		[K in Exclude<keyof B, keyof A>]?: B[K];
 	} & { [K in Extract<keyof A, keyof B>]: A[K] | B[K] };
 
+	type Exclusive<A, B> =
+		| (A & { [K in keyof B]?: never })
+		| (B & { [K in keyof A]?: never });
+
 	/**
 	 * Options to create a command
 	 */
