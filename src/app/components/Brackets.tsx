@@ -2,6 +2,7 @@ import {
 	memo,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 	type CSSProperties,
 	type Dispatch,
@@ -349,6 +350,7 @@ const MatchUI = ({
 }): ReactNode => {
 	const [disabled, setDisabled] = useState(false);
 	const [error, setError] = useState<string>();
+	const ref = useRef(typeof scrollY === "undefined" ? 0 : scrollY);
 	const newQuery = new URLSearchParams(query);
 
 	newQuery.delete("match");
@@ -391,6 +393,7 @@ const MatchUI = ({
 					}),
 			);
 		})().catch(console.error);
+		return () => scroll({ behavior: "instant", top: ref.current });
 	}, []);
 	return (
 		<form
