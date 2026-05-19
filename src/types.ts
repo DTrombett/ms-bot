@@ -431,8 +431,8 @@ declare global {
 		type Participant = {
 			tournamentId: number;
 			userId: string;
+			name: string;
 			tag?: string | null;
-			name?: string | null;
 		};
 		type Round = { mode: string; bof: number };
 		type Match = {
@@ -614,18 +614,13 @@ declare global {
 
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
 
-	type Participant = {
-		userId: string;
+	type Participant = Pick<Database.Participant, "name" | "tag" | "userId"> & {
 		result: string;
-		player?:
-			| Partial<Pick<Brawl.Player | Clash.Player, "name" | "tag">>
-			| Brawl.Player
-			| Clash.Player;
+		player?: Brawl.Player | Clash.Player;
 	};
 
 	type ResolvedMatch = {
-		participant1: Participant;
-		participant2: Participant;
+		participants: [Participant, Participant];
 		id: number;
 		status: DBMatchStatus;
 		round: number;
