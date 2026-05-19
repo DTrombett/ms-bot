@@ -1,6 +1,15 @@
 import type { DetailedHTMLProps, HTMLAttributes } from "react";
 import { DiscordLogo } from "./DiscordLogo";
 
+export const defaultColors = [
+	"#5865f2",
+	"#757e8a",
+	"#3ba55c",
+	"#faa61a",
+	"#ed4245",
+	"#eb459f",
+];
+
 export default ({
 	size,
 	...props

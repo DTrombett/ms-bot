@@ -20,7 +20,7 @@ import {
 } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
 import { parseForm, ParseType } from "./util/forms";
-import { textDecoder, textEncoder } from "./util/globals";
+import { rest, textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { pick, toSearchParams } from "./util/objects";
@@ -1024,6 +1024,8 @@ const server: ExportedHandler<Env, QueueMessage> = {
 			try {
 				const tag1 = url.searchParams.get("tag1"),
 					tag2 = url.searchParams.get("tag2"),
+					user1 = url.searchParams.get("user1"),
+					user2 = url.searchParams.get("user2"),
 					id = Number(url.searchParams.get("id"));
 				const tournamentId = Number(matchResult[1]);
 				if (Number.isNaN(tournamentId))
@@ -1032,9 +1034,9 @@ const server: ExportedHandler<Env, QueueMessage> = {
 						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
 					);
 				const statements: D1PreparedStatement[] = [
-					env.DB.prepare(`SELECT game FROM Tournaments WHERE id = ?`).bind(
-						tournamentId,
-					),
+					env.DB.prepare(
+						`SELECT game, guildId FROM Tournaments WHERE id = ?`,
+					).bind(tournamentId),
 				];
 
 				if (!Number.isNaN(id))
@@ -1049,7 +1051,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 					},
 					{ results: [match] } = { results: [] },
 				] = (await env.DB.batch(statements)) as [
-					D1Result<Pick<Database.Tournament, "game">>,
+					D1Result<Pick<Database.Tournament, "game" | "guildId">>,
 					D1Result<Database.Match> | undefined,
 				];
 				if (!tournament)
@@ -1057,7 +1059,8 @@ const server: ExportedHandler<Env, QueueMessage> = {
 						{ message: "Torneo non trovato" },
 						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
 					);
-				const [player1, player2] = await allSettled([
+				// TODO: find a way to stream these
+				const [player1, player2, member1, member2] = await allSettled([
 					tag1 &&
 						(tournament.game === SupercellPlayerType.BrawlStars ?
 							commands.Brawl
@@ -1068,9 +1071,11 @@ const server: ExportedHandler<Env, QueueMessage> = {
 							commands.Brawl
 						:	commands.Clash
 						).getPlayer(tag2),
+					user1 && rest.get(Routes.guildMember(tournament.guildId, user1)),
+					user2 && rest.get(Routes.guildMember(tournament.guildId, user2)),
 				]);
 				return Response.json(
-					{ player1, player2, match },
+					{ match, player1, player2, member1, member2 },
 					{
 						status: 200,
 						headers: {

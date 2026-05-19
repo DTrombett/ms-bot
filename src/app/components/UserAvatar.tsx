@@ -1,17 +1,7 @@
-import { CDN } from "@discordjs/rest";
 import type { APIUser } from "discord-api-types/v10";
 import type { DetailedHTMLProps, HTMLAttributes } from "react";
-import DefaultAvatar from "./DefaultAvatar";
-
-const cdn = new CDN();
-const defaultColors = [
-	"#5865f2",
-	"#757e8a",
-	"#3ba55c",
-	"#faa61a",
-	"#ed4245",
-	"#eb459f",
-];
+import { cdn } from "../utils/cdn";
+import DefaultAvatar, { defaultColors } from "./DefaultAvatar";
 
 export default ({
 	user,
@@ -23,7 +13,13 @@ export default ({
 }) => (
 	<div
 		{...props}
-		style={{ height: size, width: size, position: "relative", ...props.style }}>
+		style={{
+			aspectRatio: 1,
+			position: "relative",
+			height: size,
+			width: size,
+			...props.style,
+		}}>
 		<DefaultAvatar
 			size={size}
 			style={{

@@ -5,10 +5,6 @@ import lilitaOne from "../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
 import nougat from "../fonts/Nougat-Regular.ttf" with { type: "asset" };
 import ggsans from "../fonts/ggsansvf.woff2" with { type: "asset" };
 
-export type Participants = (Pick<
-	Database.Participant,
-	"tag" | "userId" | "name"
-> & { player?: Brawl.Player | Clash.Player })[];
 export type Matches = Pick<
 	Database.Match,
 	"channelId" | "id" | "result1" | "result2" | "status" | "user1" | "user2"
@@ -26,7 +22,7 @@ export default ({
 	mobile: boolean;
 	styles?: string[];
 	tournament: Database.Tournament;
-	participants: Participants;
+	participants: Participant[];
 	url: URL;
 }) => (
 	<Page

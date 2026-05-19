@@ -7,6 +7,7 @@ import type {
 	APIApplicationCommandSubcommandGroupOption,
 	APIApplicationCommandSubcommandOption,
 	APIChatInputApplicationCommandInteraction,
+	APIGuildMember,
 	APIInteraction,
 	APIInteractionResponse,
 	APIInteractionResponseChannelMessageWithSource,
@@ -614,13 +615,13 @@ declare global {
 
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
 
-	type Participant = Pick<Database.Participant, "name" | "tag" | "userId"> & {
-		result: string;
-		player?: Brawl.Player | Clash.Player;
-	};
+	type Participant = Pick<Database.Participant, "tag" | "userId" | "name"> &
+		Partial<{ player: Brawl.Player | Clash.Player; member: APIGuildMember }>;
+
+	type MatchParticipant = { participant: Participant; result: string };
 
 	type ResolvedMatch = {
-		participants: [Participant, Participant];
+		participants: [MatchParticipant, MatchParticipant];
 		id: number;
 		status: DBMatchStatus;
 		round: number;
