@@ -380,12 +380,7 @@ const AddParticipantUI = ({
 				});
 
 				if (response.ok) {
-					const result = await response.json<{
-						userId: string;
-						tournamentId: number;
-						tag: string | null;
-						name: string | null | undefined;
-					}>();
+					const result = await response.json<Database.Participant>();
 
 					setParticipants((p) => p.concat(result));
 					setUI(UI.List);
