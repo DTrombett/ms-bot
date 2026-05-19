@@ -829,6 +829,7 @@ export default useClient(
 	}) => {
 		if (typeof location !== "undefined")
 			query = new URLSearchParams(location.search);
+		const ref = useRef(false);
 		const [currentMatches, setMatches] = useState(matches);
 		const [participantsMap, setParticipantsMap] = useState(() =>
 			Object.fromEntries(participants.map((p) => [p.userId, p])),
@@ -932,7 +933,10 @@ export default useClient(
 			else url.searchParams.delete("match");
 			if (round != null) url.searchParams.set("round", String(round));
 			else url.searchParams.delete("round");
-			if (url.href !== location.href) history.pushState(null, "", url);
+			if (url.href !== location.href)
+				if (ref.current) history.pushState(null, "", url);
+				else history.replaceState(null, "", url);
+			ref.current = true;
 		}, [active, round]);
 		return (
 			<>
