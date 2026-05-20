@@ -29,7 +29,7 @@
 		"@discordjs/rest": "^2.6.1",
 		"@discordjs/ws": "^2.0.4",
 		"bufferutil": "^4.1.0",
-		"cloudflare": "^6.1.0",
+		"cloudflare": "^6.2.0",
 		"discord-api-types": "^0.38.47",
 		"entities": "^8.0.0",
 		"esbuild": "^0.28.0",
@@ -41,12 +41,12 @@
 		"@eslint/js": "^10.0.1",
 		"@tsconfig/recommended": "^1.0.13",
 		"@tsconfig/strictest": "^2.0.8",
-		"@types/node": "^24.12.3",
-		"@types/react": "^19.2.14",
+		"@types/node": "^24.12.4",
+		"@types/react": "^19.2.15",
 		"@types/react-dom": "^19.2.3",
-		"eslint": "^10.3.0",
+		"eslint": "^10.4.0",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.59.2",
-		"wrangler": "^4.90.0"
+		"typescript-eslint": "^8.59.4",
+		"wrangler": "^4.93.0"
 	}
 }

@@ -14,7 +14,6 @@ import {
 	type SetStateAction,
 } from "react";
 import { DBMatchStatus } from "../../util/Constants";
-import { toSearchParams } from "../../util/objects";
 import {
 	matchStatus,
 	roundName,
@@ -31,6 +30,7 @@ import {
 } from "../../util/trees";
 import type { Matches } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
+import JsonStreamSource from "../utils/JsonStreamSource";
 import useClient from "../utils/useClient";
 import DefaultAvatar, { defaultColors } from "./DefaultAvatar";
 
@@ -334,51 +334,46 @@ const MatchUI = ({
 		return <></>;
 	}
 	useEffect(() => {
-		(async () => {
-			const params = toSearchParams({
-				tag1: match.participants[0].participant.tag,
-				tag2: match.participants[1].participant.tag,
-				user1: match.participants[0].participant.userId,
-				user2: match.participants[1].participant.userId,
-				id: match.id,
-			}).toString();
-			if (!params) return;
-			const result = await fetch(`/tournaments/${id}/matchData?${params}`).then(
-				(res) =>
-					res.json<
-						| Partial<{
-								match: Database.Match;
-								player1: Brawl.Player | Clash.Player;
-								player2: Brawl.Player | Clash.Player;
-								member1: RESTGetAPIGuildMemberResult;
-								member2: RESTGetAPIGuildMemberResult;
-						  }>
-						| { message: string }
-					>(),
-			);
-
-			if ("message" in result) return console.error(result.message);
-			if (result.player1 || result.player2 || result.member1 || result.member2)
+		new JsonStreamSource(
+			`/tournaments/${id}/matchData?${new URLSearchParams([
+				["id", String(match.id)],
+				...match.participants
+					.map((p) => p.participant)
+					.filter((p) => !p.member || (p.tag && !p.player))
+					.map((p) => ["user", p.userId]),
+			])}`,
+		)
+			.on("match", (data: Matches[number]) => {
+				if (match.original) {
+					Object.assign(match.original, data);
+					setMatches((matches) => matches.slice());
+				} else setMatches((matches) => matches.concat(data));
+			})
+			.on(
+				"participant",
+				(data: Pick<Database.Participant, "userId" | "tag" | "name">) =>
+					setParticipantsMap((map) => {
+						Object.assign((map[data.userId] ??= data), data);
+						return { ...map };
+					}),
+			)
+			.on("member", (data: RESTGetAPIGuildMemberResult) =>
 				setParticipantsMap((map) => {
-					const participants = [
-						(map[match.participants[0].participant.userId] ??=
-							match.participants[0].participant),
-						(map[match.participants[1].participant.userId] ??=
-							match.participants[1].participant),
-					] as const;
-
-					if (result.player1) participants[0].player = result.player1;
-					if (result.player2) participants[1].player = result.player2;
-					if (result.member1) participants[0].member = result.member1;
-					if (result.member2) participants[1].member = result.member2;
+					map[data.user.id]!.member = data;
 					return { ...map };
-				});
-			if (match.original) {
-				Object.assign(match.original, result.match);
-				setMatches((m) => m.slice());
-			} else if (result.match)
-				setMatches((matches) => matches.concat(result.match!));
-		})().catch(console.error);
+				}),
+			)
+			.on("player", (data: Brawl.Player | Clash.Player) =>
+				setParticipantsMap((map) => {
+					const participant = match.participants.find(
+						(p) => p.participant.tag === data.tag,
+					)?.participant;
+
+					if (participant) participant.player = data;
+					else return map;
+					return { ...map };
+				}),
+			);
 		return () => scroll({ behavior: "instant", top: ref.current });
 	}, []);
 	newQuery.delete("match");

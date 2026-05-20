@@ -24,10 +24,9 @@ import { rest, textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
 import normalizeError from "./util/normalizeError";
 import { pick, toSearchParams } from "./util/objects";
-import { allSettled } from "./util/promises";
 import { queueHandlers } from "./util/queueHandlers";
 import type { RGB } from "./util/resolveColor";
-import { create403, create405 } from "./util/responses";
+import { create403, create405, JsonStreamResponse } from "./util/responses";
 import { TimeUnit } from "./util/time";
 import {
 	createSetCookie,
@@ -1022,16 +1021,20 @@ const server: ExportedHandler<Env, QueueMessage> = {
 			if (request.method !== "GET" && request.method !== "HEAD")
 				return create405();
 			try {
-				const tag1 = url.searchParams.get("tag1"),
-					tag2 = url.searchParams.get("tag2"),
-					user1 = url.searchParams.get("user1"),
-					user2 = url.searchParams.get("user2"),
+				const users = url.searchParams.getAll("user"),
 					id = Number(url.searchParams.get("id"));
 				const tournamentId = Number(matchResult[1]);
 				if (Number.isNaN(tournamentId))
-					return Response.json(
-						{ message: "Torneo non trovato" },
-						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
+					return new Response(
+						`data: ${JSON.stringify({ message: "Torneo non trovato" })}`,
+						{
+							status: 404,
+							headers: {
+								"content-type": "text/event-stream",
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"cache-control": "public",
+							},
+						},
 					);
 				const statements: D1PreparedStatement[] = [
 					env.DB.prepare(
@@ -1039,51 +1042,76 @@ const server: ExportedHandler<Env, QueueMessage> = {
 					).bind(tournamentId),
 				];
 
-				if (!Number.isNaN(id))
+				if (!Number.isNaN(id)) {
 					statements.push(
 						env.DB.prepare(
 							`SELECT * FROM Matches WHERE tournamentId = ?1 AND id = ?2`,
 						).bind(tournamentId, id),
 					);
+					if (users.length)
+						statements.push(
+							env.DB.prepare(
+								`
+									SELECT tag, userId, name FROM Participants
+									WHERE tournamentId = ? AND userId IN (${new Array(users.length)
+										.fill("?")
+										.join(",")})
+								`,
+							).bind(tournamentId, ...users),
+						);
+				}
 				const [
 					{
 						results: [tournament],
 					},
 					{ results: [match] } = { results: [] },
+					{ results: participants } = { results: [] },
 				] = (await env.DB.batch(statements)) as [
 					D1Result<Pick<Database.Tournament, "game" | "guildId">>,
 					D1Result<Database.Match> | undefined,
+					(
+						| D1Result<Pick<Database.Participant, "tag" | "userId" | "name">>
+						| undefined
+					),
 				];
 				if (!tournament)
-					return Response.json(
-						{ message: "Torneo non trovato" },
-						{ status: 404, headers: { "accept-ch": "Sec-CH-UA-Mobile" } },
-					);
-				// TODO: find a way to stream these
-				const [player1, player2, member1, member2] = await allSettled([
-					tag1 &&
-						(tournament.game === SupercellPlayerType.BrawlStars ?
-							commands.Brawl
-						:	commands.Clash
-						).getPlayer(tag1),
-					tag2 &&
-						(tournament.game === SupercellPlayerType.BrawlStars ?
-							commands.Brawl
-						:	commands.Clash
-						).getPlayer(tag2),
-					user1 && rest.get(Routes.guildMember(tournament.guildId, user1)),
-					user2 && rest.get(Routes.guildMember(tournament.guildId, user2)),
-				]);
-				return Response.json(
-					{ match, player1, player2, member1, member2 },
-					{
-						status: 200,
-						headers: {
-							"accept-ch": "Sec-CH-UA-Mobile",
-							"cache-control": "public",
+					return new Response(
+						`data: ${JSON.stringify({ message: "Torneo non trovato" })}`,
+						{
+							status: 404,
+							headers: {
+								"content-type": "text/event-stream",
+								"accept-ch": "Sec-CH-UA-Mobile",
+								"cache-control": "public",
+							},
 						},
+					);
+				const res = new JsonStreamResponse({
+					headers: {
+						"accept-ch": "Sec-CH-UA-Mobile",
+						"cache-control": "public",
 					},
+				}).sendAll(
+					{ event: "match", data: match },
+					...participants.map((data) => ({ event: "participant", data })),
 				);
+				for (const participant of participants) {
+					res.send(
+						"member",
+						rest.get(
+							Routes.guildMember(tournament.guildId, participant.userId),
+						),
+					);
+					if (participant.tag)
+						res.send(
+							"player",
+							(tournament.game === SupercellPlayerType.BrawlStars ?
+								commands.Brawl
+							:	commands.Clash
+							).getPlayer(participant.tag),
+						);
+				}
+				return res.end();
 			} catch (err) {
 				console.error(err);
 				return new Response(null, {
