@@ -1025,67 +1025,68 @@ const server: ExportedHandler<Env, QueueMessage> = {
 					id = Number(url.searchParams.get("id"));
 				const tournamentId = Number(matchResult[1]);
 				if (Number.isNaN(tournamentId))
-					return new Response(
-						`data: ${JSON.stringify({ message: "Torneo non trovato" })}`,
-						{
-							status: 404,
-							headers: {
-								"content-type": "text/event-stream",
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"cache-control": "public",
-							},
+					return JsonStreamResponse.error({
+						error: "Torneo non trovato",
+						status: 404,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"cache-control": "public",
 						},
-					);
+					});
+				if (Number.isNaN(id))
+					return JsonStreamResponse.error({
+						error: "ID scontro non valido",
+						status: 404,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"cache-control": "public",
+						},
+					});
 				const statements: D1PreparedStatement[] = [
 					env.DB.prepare(
 						`SELECT game, guildId FROM Tournaments WHERE id = ?`,
 					).bind(tournamentId),
+					env.DB.prepare(
+						`SELECT * FROM Matches WHERE tournamentId = ?1 AND id = ?2`,
+					).bind(tournamentId, id),
 				];
 
-				if (!Number.isNaN(id)) {
+				if (users.length)
 					statements.push(
 						env.DB.prepare(
-							`SELECT * FROM Matches WHERE tournamentId = ?1 AND id = ?2`,
-						).bind(tournamentId, id),
-					);
-					if (users.length)
-						statements.push(
-							env.DB.prepare(
-								`
+							`
 									SELECT tag, userId, name FROM Participants
 									WHERE tournamentId = ? AND userId IN (${new Array(users.length)
 										.fill("?")
 										.join(",")})
 								`,
-							).bind(tournamentId, ...users),
-						);
-				}
+						).bind(tournamentId, ...users),
+					);
 				const [
 					{
 						results: [tournament],
 					},
-					{ results: [match] } = { results: [] },
+					{
+						results: [match],
+					},
 					{ results: participants } = { results: [] },
 				] = (await env.DB.batch(statements)) as [
 					D1Result<Pick<Database.Tournament, "game" | "guildId">>,
-					D1Result<Database.Match> | undefined,
+					D1Result<Database.Match>,
 					(
 						| D1Result<Pick<Database.Participant, "tag" | "userId" | "name">>
 						| undefined
 					),
 				];
 				if (!tournament)
-					return new Response(
-						`data: ${JSON.stringify({ message: "Torneo non trovato" })}`,
-						{
-							status: 404,
-							headers: {
-								"content-type": "text/event-stream",
-								"accept-ch": "Sec-CH-UA-Mobile",
-								"cache-control": "public",
-							},
+					return JsonStreamResponse.error({
+						error: "Torneo non trovato",
+						status: 404,
+						headers: {
+							"accept-ch": "Sec-CH-UA-Mobile",
+							"cache-control": "public",
 						},
-					);
+					});
 				const res = new JsonStreamResponse({
 					headers: {
 						"accept-ch": "Sec-CH-UA-Mobile",

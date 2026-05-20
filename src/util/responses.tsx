@@ -46,6 +46,16 @@ export class JsonStreamResponse extends Response {
 		super(new ReadableStream({ start: (c) => (controller = c) }), init);
 		this.controller = controller;
 	}
+	static override error(init: ResponseInit & { error?: Error | string } = {}) {
+		return new this(init)
+			.send(
+				"error",
+				init.error === undefined ? undefined
+				: typeof init.error === "string" ? { message: init.error }
+				: { message: init.error.message, name: init.error.name },
+			)
+			.end();
+	}
 	send(event: string, data: any): this;
 	send(event: string, data: Promise<any>): this;
 	send(event: string, data: any) {
@@ -59,7 +69,7 @@ export class JsonStreamResponse extends Response {
 		else
 			this.controller.enqueue(
 				textEncoder.encode(
-					`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+					`event: ${event}${data === undefined ? "" : `\ndata: ${JSON.stringify(data)}`}\n\n`,
 				),
 			);
 		return this;
@@ -70,7 +80,7 @@ export class JsonStreamResponse extends Response {
 	}
 	end(): this {
 		void Promise.allSettled(this.promises)
-			.then(this.controller?.close.bind(this.controller))
+			.then(this.controller.close.bind(this.controller))
 			.finally(this.promises.clear.bind(this.promises));
 		return this;
 	}
