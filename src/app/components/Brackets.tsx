@@ -124,6 +124,8 @@ const ParticipantAvatar = ({
 					width={16}
 					sizes="8rem"
 					onLoad={loaded ? undefined : setLoaded.bind(null, true)}
+					srcSet={showPlayer ? undefined : srcSet}
+					src={showPlayer ? createBrawlIconURL(dpr, w, iconId) : avatarURL}
 					style={{
 						aspectRatio: 1,
 						height: "8rem",
@@ -132,8 +134,6 @@ const ParticipantAvatar = ({
 						zIndex: 1,
 						borderRadius: showPlayer ? undefined : "50%",
 					}}
-					srcSet={showPlayer ? undefined : srcSet}
-					src={showPlayer ? createBrawlIconURL(dpr, w, iconId) : avatarURL}
 				/>
 			)}
 		</div>
