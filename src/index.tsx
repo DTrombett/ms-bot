@@ -1291,10 +1291,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 	},
 	scheduled: async ({ cron }) => {
 		if (cron === "0 0 * * *")
-			await Promise.allSettled([
-				env.PREDICTIONS_REMINDERS.create(),
-				// env.WEBSOCKET.create(),
-			]);
+			await Promise.allSettled([env.PREDICTIONS_REMINDERS.create()]);
 		else if (cron === "*/5 * * * *") {
 			const { results } = await env.DB.prepare(
 				`SELECT * FROM SupercellPlayers WHERE notifications > 0`,
@@ -1337,6 +1334,5 @@ export { PredictionsReminders } from "./PredictionsReminders";
 export { Reminder } from "./Reminder";
 export { Shorten } from "./Shorten";
 export { Tournament } from "./Tournament";
-export { WebSocket } from "./WebSocket";
 
 export default server;

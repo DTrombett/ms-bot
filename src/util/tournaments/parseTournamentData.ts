@@ -1,5 +1,4 @@
 import { Routes, type RESTGetAPIChannelResult } from "discord-api-types/v10";
-import { match } from "node:assert/strict";
 import {
 	DiscordIdRegex,
 	RegistrationMode,
@@ -7,7 +6,7 @@ import {
 } from "../Constants";
 import { parseForm, ParseType } from "../forms";
 import { rest } from "../globals";
-import { ok } from "../node";
+import { match, ok } from "../node";
 import { create403 } from "../responses";
 import { createSetCookie, isAdmin } from "../token";
 

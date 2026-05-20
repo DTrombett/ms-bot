@@ -22,6 +22,22 @@ export const equal: <T>(
 			);
 };
 
+export const match = (
+	value: string,
+	regExp: RegExp,
+	message?: string | Error,
+): void => {
+	if (typeof value !== "string")
+		throw new TypeError('The "string" argument must be of type string.');
+	if (!regExp.test(value))
+		throw message instanceof Error ? message : (
+				new Error(
+					message ??
+						`The input did not match the regular expression ${regExp}. Input:\n\n'${value}'\n`,
+				)
+			);
+};
+
 export const timeout = (msDelay?: number) =>
 	new Promise((resolve) => {
 		setTimeout(resolve, msDelay);
