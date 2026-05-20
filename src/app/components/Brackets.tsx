@@ -140,7 +140,7 @@ const ParticipantAvatar = ({
 	);
 };
 const ParticipantDisplay = ({ participant }: { participant: Participant }) => {
-	const [showPlayer, setShowPlayer] = useState(true);
+	const [showPlayer, setShowPlayer] = useState(false);
 
 	return (
 		<>
