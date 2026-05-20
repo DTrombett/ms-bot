@@ -62,10 +62,14 @@ const ParticipantAvatar = ({
 	iconId,
 	user,
 	id,
+	showPlayer,
+	setShowPlayer,
 }: {
 	id: string;
 	iconId: number | string | undefined;
 	user: APIUser | undefined;
+	showPlayer: boolean;
+	setShowPlayer: Dispatch<SetStateAction<boolean>>;
 }): ReactNode => {
 	const dpr = typeof devicePixelRatio === "undefined" ? 1 : devicePixelRatio;
 	const w = useMemo(
@@ -79,9 +83,7 @@ const ParticipantAvatar = ({
 		() => defaultColors[Number(BigInt(id) >> 22n) % 6],
 		[id],
 	);
-	const [showIcon, setShowIcon] = useState(true);
-	const [showDefault, setShowDefault] = useState(true);
-	const showPlayerIcon = iconId != null && showIcon;
+	const [loaded, setLoaded] = useState(false);
 	const [srcSet, avatarURL] = useMemo(
 		() =>
 			user?.avatar ?
@@ -98,6 +100,7 @@ const ParticipantAvatar = ({
 		[user],
 	);
 
+	iconId ??= "Unknown";
 	return (
 		<div
 			style={{
@@ -105,35 +108,81 @@ const ParticipantAvatar = ({
 				height: "8rem",
 				width: "8rem",
 				position: "relative",
-			}}>
-			{showDefault && (
+			}}
+			onClick={setShowPlayer.bind(null, !showPlayer)}>
+			{(!loaded || !user?.avatar) && (
 				<DefaultAvatar
 					size="8rem"
 					style={{ backgroundColor, position: "absolute" }}
 				/>
 			)}
-			{(showPlayerIcon || user?.avatar) && (
+			{(showPlayer || user?.avatar) && (
 				<img
 					alt=""
 					loading="lazy"
 					height={16}
 					width={16}
 					sizes="8rem"
-					onClick={setShowIcon.bind(null, !showIcon)}
-					onLoad={showDefault ? setShowDefault.bind(null, false) : undefined}
-					srcSet={showPlayerIcon ? undefined : srcSet}
-					src={showPlayerIcon ? createBrawlIconURL(dpr, w, iconId) : avatarURL}
+					onLoad={loaded ? undefined : setLoaded.bind(null, true)}
 					style={{
 						aspectRatio: 1,
 						height: "8rem",
 						width: "8rem",
 						position: "relative",
 						zIndex: 1,
-						borderRadius: showPlayerIcon ? undefined : "100%",
+						borderRadius: showPlayer ? undefined : "50%",
 					}}
+					srcSet={showPlayer ? undefined : srcSet}
+					src={showPlayer ? createBrawlIconURL(dpr, w, iconId) : avatarURL}
 				/>
 			)}
 		</div>
+	);
+};
+const ParticipantDisplay = ({ participant }: { participant: Participant }) => {
+	const [showPlayer, setShowPlayer] = useState(true);
+
+	return (
+		<>
+			<ParticipantAvatar
+				iconId={
+					participant.player && "icon" in participant.player ?
+						participant.player.icon.id
+					:	undefined
+				}
+				showPlayer={showPlayer}
+				setShowPlayer={setShowPlayer}
+				id={participant.userId}
+				user={participant.member?.user}
+			/>
+			<div>
+				<div
+					style={{
+						fontSize: "1.25rem",
+						lineHeight: "1.75rem",
+						width: "12rem",
+						textOverflow: "ellipsis",
+						overflowX: "clip",
+					}}>
+					{(showPlayer ?
+						participant.player?.name
+					:	(participant.member?.nick ??
+						participant.member?.user.global_name ??
+						participant.member?.user.username)) ?? participant.name}
+				</div>
+				<div
+					style={{
+						fontSize: "0.75rem",
+						lineHeight: "normal",
+						textOverflow: "ellipsis",
+						overflowX: "clip",
+						fontFamily: "ggsans",
+						height: "1rem",
+					}}>
+					{showPlayer && participant.tag ? participant.tag : participant.userId}
+				</div>
+			</div>
+		</>
 	);
 };
 const MatchParticipant = ({
@@ -177,42 +226,7 @@ const MatchParticipant = ({
 				gap: "0.5rem",
 				height: "stretch",
 			}}>
-			<ParticipantAvatar
-				iconId={
-					participant.player && "icon" in participant.player ?
-						participant.player.icon.id
-					:	undefined
-				}
-				id={participant.userId}
-				user={participant.member?.user}
-			/>
-			<div>
-				<div
-					style={{
-						fontSize: "1.25rem",
-						lineHeight: "1.75rem",
-						width: "12.5rem",
-						textOverflow: "ellipsis",
-						overflowX: "clip",
-					}}>
-					{participant.name}
-				</div>
-				<div
-					style={{
-						fontSize: "0.75rem",
-						lineHeight: "normal",
-						textOverflow: "ellipsis",
-						overflowX: "clip",
-						fontFamily: "ggsans",
-						height: "2rem",
-					}}>
-					{participant.member?.nick ??
-						participant.member?.user.global_name ??
-						participant.member?.user.username}
-					<br />
-					{participant.userId}
-				</div>
-			</div>
+			<ParticipantDisplay participant={participant} />
 			{canEdit && !Number.isNaN(Number(result)) ?
 				<input
 					type="number"
@@ -339,7 +353,7 @@ const MatchUI = ({
 				["id", String(match.id)],
 				...match.participants
 					.map((p) => p.participant)
-					.filter((p) => !p.member || (p.tag && !p.player))
+					.filter((p) => p.userId && (!p.member || (p.tag && !p.player)))
 					.map((p) => ["user", p.userId]),
 			])}`,
 		)
@@ -475,7 +489,7 @@ const MatchUI = ({
 					×
 				</a>
 			</div>
-			<div style={{ display: "flex", alignItems: "center" }}>
+			<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
 				<MatchParticipant
 					participant={match.participants[0]}
 					mobile={mobile}
@@ -488,7 +502,7 @@ const MatchUI = ({
 					tournamentId={id}
 					setError={setError}
 				/>
-				<div>
+				<div style={{ width: "4rem" }}>
 					<div style={{ fontSize: "3rem", lineHeight: 1 }}>VS</div>
 					<div
 						style={{
