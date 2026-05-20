@@ -18,6 +18,7 @@ import {
 import { Temporal } from "temporal-polyfill";
 import { ColorNumbers } from "../app/utils/Colors";
 import Command from "../Command";
+import { randomArrayItem } from "../util/arrays";
 import { forceCapitalize } from "../util/capitalize";
 import {
 	DBMatchStatus,
@@ -28,7 +29,6 @@ import {
 } from "../util/Constants";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
-import { randomArrayItem } from "../util/arrays";
 import { camelToSpace, template } from "../util/strings";
 import { matchStatus, roundName } from "../util/tournaments/Constants";
 import { finishRound } from "../util/tournaments/finishRound";
@@ -193,7 +193,7 @@ export class Tournament extends Command {
 
 		reply({
 			flags: MessageFlags.IsComponentsV2 | (full ? MessageFlags.Ephemeral : 0),
-			allowed_mentions: { parse: [] },
+			allowed_mentions: { parse: [], users: user === id ? [] : [user] },
 			components: [
 				{
 					type: ComponentType.TextDisplay,
