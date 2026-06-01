@@ -1,6 +1,6 @@
 type Fonts = { src: string; type?: string }[];
 type Styles = { src: string; lazy: boolean }[];
-type Scripts = { src: string; module: boolean }[];
+type Scripts = { src: string; module: boolean; dependency?: boolean }[];
 type HeadOptions = Partial<{
 	title: string;
 	description: string;

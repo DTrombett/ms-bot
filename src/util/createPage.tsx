@@ -120,19 +120,18 @@ export const createPage = async (
 				if (!element.lazy)
 					response.headers.append(
 						"Link",
-						`<${encodeURI(element.src)}>; rel=preload; as=style`,
+						`<${encodeURI(element.src)}>; as=style; rel=preload`,
 					);
 			for (const element of router.route.fonts)
 				response.headers.append(
 					"Link",
-					`<${encodeURI(element.src)}>; rel=preload; as=font; crossorigin`,
+					`<${encodeURI(element.src)}>; as=font; crossorigin; rel=preload`,
 				);
 			for (const element of router.route.scripts)
 				if (element.module)
-					// TODO: also include imported modules
 					response.headers.append(
 						"Link",
-						`<${encodeURI(element.src)}>; rel=modulepreload`,
+						`<${encodeURI(element.src)}>; ${element.dependency ? "rel=modulepreload" : "as=script; crossorigin; rel=preload"}`,
 					);
 			result =
 				request.method === "HEAD" ?
@@ -144,11 +143,11 @@ export const createPage = async (
 						</html>,
 						{
 							bootstrapModules: router.route.scripts
-								.filter((s) => s.module)
-								.map((s) => s.src),
+								.filter((s) => s.module && !s.dependency)
+								.map((s) => encodeURI(s.src)),
 							bootstrapScripts: router.route.scripts
-								.filter((s) => !s.module)
-								.map((s) => s.src),
+								.filter((s) => !s.module && !s.dependency)
+								.map((s) => encodeURI(s.src)),
 						},
 					);
 		} else if (request.method === "HEAD") {

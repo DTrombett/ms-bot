@@ -1,6 +1,6 @@
 import { build } from "esbuild";
-import { writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, relative } from "node:path";
 import { template } from "../util/strings.ts";
 import type { PageData, ResolvedFont } from "./types";
 import { cwd, log, outdir, target } from "./utils.ts";
@@ -73,7 +73,9 @@ export const buildCss = async (
 				/\.css$/,
 				`.${Uint8Array.fromBase64(outputFile.hash).toBase64({ alphabet: "base64url", omitPadding: true })}.css`,
 			);
-			writeFile(outputFile.path, outputFile.contents).catch(console.error);
+			mkdir(dirname(outputFile.path), { recursive: true })
+				.then(() => writeFile(outputFile.path, outputFile.contents))
+				.catch(console.error);
 			return [
 				join(cwd, "src/app", relative(`${outdir}/static`, originalPath)),
 				"/" + relative(outdir, outputFile.path).replaceAll("\\", "/"),

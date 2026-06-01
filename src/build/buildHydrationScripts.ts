@@ -1,11 +1,8 @@
 import { build } from "esbuild";
-import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
-import { pipeline } from "node:stream/promises";
 import type { PageData, ResolvedFont } from "./types";
-import { log, outdir, setup, target } from "./utils.ts";
+import { cwd, log, outdir, setup, target } from "./utils.ts";
 
 export const buildHydrationScripts = async (
 	pages: PageData[],
@@ -15,27 +12,23 @@ export const buildHydrationScripts = async (
 ) => {
 	log("Compiling hydration files");
 	const hydratePath = JSON.stringify(resolve("src/app/hydrate.tsx"));
-	const entryPoints = await Promise.all(
+	const o = Object.fromEntries(
 		pages
 			.filter(({ components }) => components.length)
-			.map(async ({ components, path }) => {
-				path = join(
-					outdir,
-					relative("src/app", path.replace(/\.page\.tsx$/, ".hydrate.tsx")),
-				);
-				await mkdir(dirname(path), { recursive: true });
-				await writeFile(
-					path,
-					`
-						import hydrate from ${hydratePath};
-						${components.map(({ name, path }) => `import ${name} from ${path}`).join("\n")}
-						hydrate({${components.map(({ name }) => name).join(",")}});
-					`,
-				);
-				return path;
-			}),
+			.map(({ components, path }) => [
+				resolve(path.replace(/\.page\.tsx$/, ".hydrate.ts")),
+				`
+					import hydrate from ${hydratePath};
+					${components.map(({ name, path }) => `import ${name} from ${path}`).join("\n")}
+					hydrate({${components.map(({ name }) => name).join(",")}});
+				`,
+			]),
 	);
-	const hydrationResult = await build({
+	const entryPoints = Object.keys(o) as string[];
+	const {
+		outputFiles,
+		metafile: { outputs },
+	} = await build({
 		bundle: true,
 		charset: "utf8",
 		chunkNames: "[name].[hash]",
@@ -45,7 +38,7 @@ export const buildHydrationScripts = async (
 		legalComments: "inline",
 		metafile: true,
 		minify: true,
-		outbase: outdir,
+		outbase: "src/app",
 		outdir: `${outdir}/static/js`,
 		packages: "bundle",
 		platform: "browser",
@@ -53,10 +46,21 @@ export const buildHydrationScripts = async (
 		target,
 		treeShaking: true,
 		tsconfigRaw,
+		write: false,
 		plugins: [
 			{
 				name: "build",
 				setup: (build) => {
+					const filter = new RegExp(
+						entryPoints.map((e) => RegExp.escape(e)).join("|"),
+					);
+
+					build.onResolve({ filter }, (args) => ({ path: args.path }));
+					build.onLoad({ filter }, ({ path }) => ({
+						contents: o[path],
+						resolveDir: dirname(path),
+						loader: "ts",
+					}));
 					setup(build, {
 						file: ({ path }) => ({
 							contents: JSON.stringify(assetsMap[path]),
@@ -71,40 +75,60 @@ export const buildHydrationScripts = async (
 			},
 		],
 	});
+	const jsReverseMap = Object.fromEntries(
+		outputFiles.map((outputFile) => {
+			const originalPath = outputFile.path;
+			const isEntryPoint = originalPath.endsWith(".hydrate.js");
 
-	// TODO: Can we use write: false and built in hash?
-	return {
-		jsMap: Object.fromEntries(
-			await Promise.all(
-				Object.entries(hydrationResult.metafile.outputs)
-					.filter(
-						(entry): entry is typeof entry & [string, { entryPoint: string }] =>
-							entry[1].entryPoint != null,
-					)
-					.map<Promise<[string, Scripts]>>(async ([path, { entryPoint }]) => {
-						const hash = createHash("sha256");
+			if (isEntryPoint)
+				outputFile.path = outputFile.path.replace(
+					/\.js$/,
+					`.${Uint8Array.fromBase64(outputFile.hash).toBase64({ alphabet: "base64url", omitPadding: true })}.js`,
+				);
+			mkdir(dirname(outputFile.path), { recursive: true })
+				.then(() => writeFile(outputFile.path, outputFile.contents))
+				.catch(console.error);
+			return [
+				relative(cwd, originalPath).replaceAll("\\", "/"),
+				"/" + relative(outdir, outputFile.path).replaceAll("\\", "/"),
+			];
+		}),
+	);
+	const jsMap: Record<string, Scripts> = Object.fromEntries(
+		pages
+			.filter(({ components }) => components.length)
+			.map((page): [string, Scripts] => {
+				const path = join(
+					`${outdir}/static/js`,
+					relative("src/app", page.path.replace(/\.page\.tsx$/, ".hydrate.js")),
+				).replaceAll("\\", "/");
+				const dependencies = new Set<string>();
+				const stack = outputs[path]!.imports.slice();
 
-						rm(entryPoint, { force: true }).catch(console.error);
-						await pipeline(createReadStream(path), hash);
-						await rename(
-							path,
-							(path = path.replace(
-								/\.js$/,
-								`.${parseInt(hash.digest("hex").slice(0, 10), 16).toString(32).toUpperCase()}.js`,
-							)),
-						);
-						return [
-							entryPoint
-								.replace("build", "src/app")
-								.replace(/\.hydrate\.tsx$/, ".page.tsx")
-								.replaceAll("\\", "/"),
-							[path].map((path) => ({
-								src: path.replace(outdir, ""),
-								module: true,
-							})),
-						];
-					}),
-			),
-		) satisfies Record<string, Scripts>,
-	};
+				while (stack.length > 0) {
+					const current = stack.pop()!;
+					if (!(current.path in jsReverseMap) || dependencies.has(current.path))
+						continue;
+					dependencies.add(current.path);
+					const neighbors = outputs[current.path]?.imports;
+
+					for (const n of neighbors ?? [])
+						if (!n.external && !dependencies.has(n.path)) stack.push(n);
+				}
+				return [
+					page.path,
+					[
+						{ src: jsReverseMap[path]!, module: true, dependency: false },
+					].concat(
+						Array.from(dependencies, (p) => ({
+							src: jsReverseMap[p]!,
+							module: true,
+							dependency: true,
+						})),
+					),
+				];
+			}),
+	);
+
+	return { jsMap };
 };
