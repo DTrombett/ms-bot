@@ -8,7 +8,7 @@ upload_source_maps = true
 send_metrics = false
 
 [build]
-command = "node --enable-source-maps src/build.ts"
+command = "node --enable-source-maps src/build/index.ts"
 watch_dir = "src"
 
 [observability]

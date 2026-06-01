@@ -1,4 +1,4 @@
-@font-face {
+/* @font-face {
 	font-family: "ggsans";
 	src: url("../fonts/ggsansvf.woff2") format("woff2");
 	font-display: swap;
@@ -66,7 +66,7 @@
 	font-family: "Nougat";
 	src: url("../fonts/Nougat-Regular.ttf") format("truetype");
 	font-display: swap;
-}
+} */
 
 * {
 	transition-duration: 0.2s;

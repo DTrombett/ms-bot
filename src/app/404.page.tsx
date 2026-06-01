@@ -2,54 +2,52 @@ import { Page } from "./components/layout";
 import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
 import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf" with { type: "asset" };
 
-export default ({ styles }: { styles: string[] }) => (
-	<Page
-		head={{
-			fonts: [ggsans, { path: luckiestGuy, type: "font/ttf" }],
-			styles,
-			prefetch: [{ href: "/", as: "document" }],
-			title: "404 - Not Found",
-		}}>
-		<div
-			style={{
-				alignItems: "center",
-				display: "flex",
-				flexDirection: "column",
-				flex: 1,
-				height: "100%",
-				justifyContent: "center",
-			}}>
-			<span
+export const GET: PageHandler = ({ head }) => {
+	head.prefetch = [{ href: "/", as: "document" }];
+	head.title = "404 - Not Found";
+	return (
+		<Page>
+			<div
 				style={{
-					textShadow: "#0049ff 0.25rem 0.25rem",
-					fontFamily: "LuckiestGuy",
-					fontSize: "3rem",
-					lineHeight: 1,
-					margin: "0.5rem 0",
-					textAlign: "center",
+					alignItems: "center",
+					display: "flex",
+					flexDirection: "column",
+					flex: 1,
+					height: "100%",
+					justifyContent: "center",
 				}}>
-				404
-				<br />
-				NOT FOUND
-			</span>
-			<a
-				href="/"
-				style={{
-					fontWeight: 600,
-					fontSize: "1.125rem",
-					fontFamily: "ggsans",
-					lineHeight: "1.75rem",
-					margin: "0.75rem 0",
-					cursor: "pointer",
-					color: "#e0e3ff",
-					textDecoration: "none",
-					borderBottom: "1px solid currentColor",
-				}}>
-				<span>←</span>
-				<span style={{ marginLeft: "1rem" }}>Torna alla home</span>
-			</a>
-		</div>
-	</Page>
-);
+				<span
+					style={{
+						textShadow: "#0049ff 0.25rem 0.25rem",
+						fontFamily: luckiestGuy,
+						fontSize: "3rem",
+						lineHeight: 1,
+						margin: "0.5rem 0",
+						textAlign: "center",
+					}}>
+					404
+					<br />
+					NOT FOUND
+				</span>
+				<a
+					href="/"
+					style={{
+						fontWeight: 600,
+						fontSize: "1.125rem",
+						fontFamily: ggsans,
+						lineHeight: "1.75rem",
+						margin: "0.75rem 0",
+						cursor: "pointer",
+						color: "#e0e3ff",
+						textDecoration: "none",
+						borderBottom: "1px solid currentColor",
+					}}>
+					<span>←</span>
+					<span style={{ marginLeft: "1rem" }}>Torna alla home</span>
+				</a>
+			</div>
+		</Page>
+	);
+};
 
 export const cache = true;

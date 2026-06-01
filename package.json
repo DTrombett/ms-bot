@@ -16,7 +16,7 @@
 		"url": "https://github.com/DTrombett/ms-bot/issues"
 	},
 	"scripts": {
-		"build": "node --enable-source-maps src/build.ts",
+		"build": "node --enable-source-maps src/build/index.ts",
 		"deploy": "npm run build && wrangler deploy",
 		"dev": "wrangler dev --test-scheduled",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
@@ -31,6 +31,7 @@
 		"discord-api-types": "^0.38.47",
 		"entities": "^8.0.0",
 		"esbuild": "^0.28.0",
+		"fontkit": "^2.0.4",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
 		"temporal-polyfill": "^0.3.2"
@@ -39,6 +40,7 @@
 		"@eslint/js": "^10.0.1",
 		"@tsconfig/recommended": "^1.0.13",
 		"@tsconfig/strictest": "^2.0.8",
+		"@types/fontkit": "^2.0.9",
 		"@types/node": "^24.12.4",
 		"@types/react": "^19.2.15",
 		"@types/react-dom": "^19.2.3",

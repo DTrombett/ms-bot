@@ -1,50 +1,87 @@
+import { env } from "cloudflare:workers";
+import { isAdmin } from "../../../util/token";
 import Brackets from "../../components/Brackets";
 import { Page } from "../../components/layout";
-import lilitaOne from "../../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
-import ggsans from "../../fonts/ggsansvf.woff2" with { type: "asset" };
-import type { Matches } from "../[id].page";
 
-export default ({
-	admin,
-	mobile,
-	styles,
-	tournament,
-	matches,
-	participants,
+export const GET: PageHandler = async ({
+	head,
+	authenticate,
+	params: [id],
+	redirect,
+	isMobile,
+	request,
 	url,
-	embed,
-}: {
-	admin: boolean;
-	mobile: boolean;
-	styles?: string[];
-	tournament: Pick<Database.Tournament, "name" | "id">;
-	matches: Matches;
-	participants: Participant[];
-	url: URL;
-	embed: boolean;
-}) => (
-	<Page
-		mobile={mobile}
-		head={{
-			fonts: [{ path: lilitaOne, type: "font/ttf" }, ggsans],
-			styles,
-			title: `${tournament.name} - Brackets`,
-		}}
-		style={{
-			...(embed ?
-				{ background: undefined, backgroundColor: undefined }
-			:	{ backgroundAttachment: undefined }),
-			padding: undefined,
-		}}
-		url={url}>
-		<Brackets
-			admin={admin}
-			id={tournament.id}
-			matches={matches}
-			mobile={mobile}
-			participants={participants}
-			query={url.searchParams}
-			embed={embed}
-		/>
-	</Page>
-);
+}) => {
+	const [
+		admin,
+		[
+			{
+				results: [tournament],
+			},
+			{ results: matches },
+			{ results: participants },
+		],
+	] = await Promise.all([
+		authenticate().then(isAdmin),
+		env.DB.batch([
+			env.DB.prepare(`SELECT name, id FROM Tournaments WHERE id = ?`).bind(
+				Number(id),
+			),
+			env.DB.prepare(
+				`
+						SELECT channelId, id, result1,
+							result2, status, user1, user2
+						FROM Matches WHERE tournamentId = ?
+					`,
+			).bind(Number(id)),
+			env.DB.prepare(
+				`
+						SELECT userId, tag, name
+						FROM Participants WHERE tournamentId = ?
+					`,
+			).bind(Number(id)),
+		]) as Promise<
+			[
+				D1Result<Pick<Database.Tournament, "name" | "id">>,
+				D1Result<
+					Pick<
+						Database.Match,
+						| "channelId"
+						| "id"
+						| "result1"
+						| "result2"
+						| "status"
+						| "user1"
+						| "user2"
+					>
+				>,
+				D1Result<Pick<Database.Participant, "tag" | "userId" | "name">>,
+			]
+		>,
+	]);
+	if (!tournament) return redirect("/tournaments", 303);
+	head.title = `${tournament.name} - Brackets`;
+	// TODO: Add utility isIframe
+	const embed = request.headers.get("sec-fetch-dest") === "iframe";
+	const mobile = isMobile();
+
+	return (
+		<Page
+			style={{
+				...(embed ?
+					{ background: undefined, backgroundColor: undefined }
+				:	{ backgroundAttachment: undefined }),
+				padding: undefined,
+			}}>
+			<Brackets
+				admin={admin}
+				id={tournament.id}
+				matches={matches}
+				mobile={mobile}
+				participants={participants}
+				query={url.searchParams}
+				embed={embed}
+			/>
+		</Page>
+	);
+};

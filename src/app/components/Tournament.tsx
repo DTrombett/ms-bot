@@ -7,6 +7,8 @@ import {
 	TournamentFlags,
 	TournamentRoundMode,
 } from "../../util/Constants";
+import lilitaOne from "../fonts/LilitaOne-Regular.ttf";
+import ggsans from "../fonts/ggsansvf.woff2";
 import { Colors } from "../utils/Colors";
 import { Mode, ModeWithSuggestions } from "./Mode";
 import Rounds from "./Rounds";
@@ -44,7 +46,7 @@ export default ({
 				borderRadius: "8px",
 				display: "flex",
 				flexDirection: "column",
-				fontFamily: "LilitaOne",
+				fontFamily: lilitaOne,
 				fontSize: "1.25rem",
 				lineHeight: "1.75rem",
 				margin: "auto",
@@ -366,7 +368,7 @@ export default ({
 					style={{
 						color: "yellow",
 						display: "block",
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1rem",
 						lineHeight: "normal",
 					}}>
@@ -406,7 +408,7 @@ export default ({
 				style={{
 					backgroundColor: Colors.Success,
 					borderRadius: "0.5rem",
-					fontFamily: "ggsans",
+					fontFamily: ggsans,
 					fontSize: "1.125rem",
 					fontWeight: 600,
 					lineHeight: "1.75rem",

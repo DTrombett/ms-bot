@@ -4,13 +4,14 @@ import type {
 	HTMLAttributes,
 	ReactNode,
 } from "react";
+import ggsans from "../fonts/ggsansvf.woff2";
 
 export const styles = {
 	boxElement: { display: "flex", alignItems: "center", cursor: "pointer" },
 	boxGroup: {
 		display: "flex",
 		flexDirection: "column",
-		fontFamily: "ggsans",
+		fontFamily: ggsans,
 		fontSize: "1rem",
 		fontWeight: 500,
 		gap: "0.125rem",
@@ -32,7 +33,7 @@ export const styles = {
 	},
 	checkboxLabel: {
 		cursor: "pointer",
-		fontFamily: "ggsans",
+		fontFamily: ggsans,
 		fontSize: "1.125rem",
 		fontWeight: 600,
 		lineHeight: "normal",
@@ -48,7 +49,7 @@ export const styles = {
 		borderStyle: "solid",
 		borderWidth: "0.8px",
 		color: "white",
-		fontFamily: "ggsans",
+		fontFamily: ggsans,
 		fontSize: "1rem",
 		fontWeight: 500,
 		lineHeight: "1.5rem",
@@ -113,7 +114,7 @@ export const TextInput = ({
 			style={{
 				color: "yellow",
 				display: "block",
-				fontFamily: "ggsans",
+				fontFamily: ggsans,
 				fontSize: "1rem",
 				lineHeight: "normal",
 			}}>

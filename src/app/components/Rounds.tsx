@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import ggsans from "../fonts/ggsansvf.woff2";
 import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
 import { NumberInput } from "./forms";
@@ -49,7 +50,7 @@ export default useClient(
 						style={{
 							backgroundColor: Colors.Primary,
 							borderRadius: "0.5rem",
-							fontFamily: "ggsans",
+							fontFamily: ggsans,
 							fontSize: "1.125rem",
 							fontWeight: 600,
 							lineHeight: "1.75rem",
@@ -70,7 +71,7 @@ export default useClient(
 							style={{
 								backgroundColor: Colors.Danger,
 								borderRadius: "0.5rem",
-								fontFamily: "ggsans",
+								fontFamily: ggsans,
 								fontSize: "1.125rem",
 								fontWeight: 600,
 								lineHeight: "1.75rem",
