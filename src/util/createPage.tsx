@@ -83,7 +83,9 @@ export const createPage = async (
 				},
 			}),
 		).catch((err) =>
-			err instanceof ResponseError ? err.body : Promise.reject(err),
+			err instanceof ResponseError ? err.body
+			: err instanceof Response ? err
+			: Promise.reject(err),
 		);
 
 		// If the page handler returns a response do not modify it
@@ -109,6 +111,7 @@ export const createPage = async (
 		) {
 			if (!response.headers.has("content-type"))
 				response.headers.set("content-type", "text/html");
+			// TODO: also preload images
 			for (const element of router.route.styles)
 				if (!element.lazy)
 					response.headers.append(
@@ -118,7 +121,7 @@ export const createPage = async (
 			for (const element of router.route.fonts)
 				response.headers.append(
 					"Link",
-					`<${encodeURI(element.src)}>; rel=preload; as=font;${element.type == null ? "" : ` type=${element.type};`} crossorigin=anonymous`,
+					`<${encodeURI(element.src)}>; rel=preload; as=font; crossorigin`,
 				);
 			for (const element of router.route.scripts)
 				if (element.module)

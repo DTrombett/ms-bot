@@ -1,6 +1,6 @@
 import { Page } from "./components/layout";
-import ggsans from "./fonts/ggsansvf.woff2" with { type: "asset" };
-import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf" with { type: "asset" };
+import ggsans from "./fonts/ggsansvf.woff2";
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
 
 export const GET: PageHandler = ({ head }) => {
 	head.prefetch = [{ href: "/", as: "document" }];

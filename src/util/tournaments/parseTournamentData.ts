@@ -7,20 +7,20 @@ import {
 import { parseForm, ParseType } from "../forms";
 import { rest } from "../globals";
 import { match, ok } from "../node";
-import { create403 } from "../responses";
-import { createSetCookie, isAdmin } from "../token";
+import { isAdmin } from "../token";
 
 export const parseTournamentData = async (
 	request: Request,
 	pathname: string,
+	sendPage: PageHandlerContext["sendPage"],
+	authenticate: PageHandlerContext["authenticate"],
+	redirect: PageHandlerContext["redirect"],
 ): Promise<
-	| Response
-	| Omit<Database.Tournament, "id" | "participantCount" | "statusFlags">
+	Omit<Database.Tournament, "id" | "participantCount" | "statusFlags">
 > => {
 	const formDataPromise = request.formData();
-	const { setCookie, token } = await createSetCookie(request);
-	if (!(await isAdmin(token)))
-		return create403(request, { headers: { "set-cookie": setCookie } });
+	const token = await authenticate();
+	if (!(await isAdmin(token))) throw await sendPage("/403");
 	const formData = await formDataPromise;
 	const form = parseForm(formData, {
 		title: ParseType.Text,
@@ -223,14 +223,10 @@ export const parseTournamentData = async (
 		if (form.autoDetectResults) flags |= TournamentFlags.AutoDetectResults;
 		if (form.autoDeleteChannels) flags |= TournamentFlags.AutoDeleteChannels;
 	} catch (err) {
-		return new Response(null, {
-			status: 303,
-			headers: {
-				"accept-ch": "Sec-CH-UA-Mobile",
-				location: `${pathname}?error=${encodeURIComponent((err as Error).name)}&error_description=${encodeURIComponent((err as Error).message)}`,
-				"set-cookie": setCookie,
-			},
-		});
+		throw redirect(
+			`${pathname}?error=${encodeURIComponent((err as Error).name)}&error_description=${encodeURIComponent((err as Error).message)}`,
+			303,
+		);
 	}
 	return {
 		name: form.title,

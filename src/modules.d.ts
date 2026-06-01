@@ -7,7 +7,7 @@ type HeadOptions = Partial<{
 	prefetch: Prefetch;
 }>;
 type PageBody = React.ReactNode | Response | BodyInit | void;
-type PageHandler = (ctx: {
+type PageHandlerContext = {
 	head: HeadOptions;
 	params: string[];
 	request: Request;
@@ -24,7 +24,8 @@ type PageHandler = (ctx: {
 	) => Promise<Response>;
 	redirect: (typeof Response)["redirect"];
 	json: (data: unknown, status?: number) => Response;
-}) => Awaitable<PageBody>;
+};
+type PageHandler = (ctx: PageHandlerContext) => Awaitable<PageBody>;
 type Prefetch = { href: string; as: string }[];
 type Page = { handler: PageHandler };
 type RouteHandler = {

@@ -4,7 +4,7 @@ import HomeButton from "./components/HomeButton";
 import UserAvatar from "./components/UserAvatar";
 import { Page } from "./components/layout";
 import GintoDiscordMedium from "./fonts/GintoDiscord-Medium.woff2";
-import LuckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
 import avatar1 from "./img/avatar/160.avif" with { type: "image" };
 import avatar2 from "./img/avatar/200.avif" with { type: "image" };
 import avatar3 from "./img/avatar/250.avif" with { type: "image" };
@@ -52,7 +52,7 @@ export const GET: PageHandler = async ({ authenticate, head }) => {
 				</div>
 				<div
 					style={{
-						fontFamily: LuckiestGuy,
+						fontFamily: luckiestGuy,
 						fontSize: "3rem",
 						lineHeight: 1,
 						textAlign: "center",

@@ -1,31 +1,4 @@
-import { renderToReadableStream } from "react-dom/server";
-import Forbidden from "../app/403.page";
 import { textEncoder } from "./globals";
-import { isMobile } from "./isMobile";
-
-export const create403 = async (
-	request: Request,
-	init?: ResponseInit & { headers?: Record<string, string> },
-) =>
-	new Response(
-		request.method === "GET" ?
-			await renderToReadableStream(
-				<Forbidden mobile={isMobile(request.headers)} />,
-			)
-		:	null,
-		{
-			status: 403,
-			...init,
-			headers: {
-				"accept-ch": "Sec-CH-UA-Mobile",
-				"content-type": "text/html",
-				...init?.headers,
-			},
-		},
-	);
-
-export const create405 = (allow = "HEAD, GET") =>
-	new Response(null, { status: 405, headers: { allow } });
 
 export class JsonStreamResponse extends Response {
 	promises = new Set<Promise<void>>();
@@ -40,13 +13,13 @@ export class JsonStreamResponse extends Response {
 		super(new ReadableStream({ start: (c) => (controller = c) }), init);
 		this.controller = controller;
 	}
-	static override error(init: ResponseInit & { error?: Error | string } = {}) {
+	static override error(error?: Error | string, init: ResponseInit = {}) {
 		return new this(init)
 			.send(
 				"error",
-				init.error === undefined ? undefined
-				: typeof init.error === "string" ? { message: init.error }
-				: { message: init.error.message, name: init.error.name },
+				error === undefined ? undefined
+				: typeof error === "string" ? { message: error }
+				: { message: error.message, name: error.name },
 			)
 			.end();
 	}

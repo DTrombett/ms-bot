@@ -2,6 +2,8 @@ import React, { type CSSProperties } from "react";
 import { bitSetMap } from "../../util/bitSets";
 import { RegistrationMode, TournamentStatusFlags } from "../../util/Constants";
 import { TimeUnit } from "../../util/time";
+import ggsans from "../fonts/ggsansvf.woff2";
+import lilitaOne from "../fonts/LilitaOne-Regular.ttf";
 import { Colors } from "../utils/Colors";
 import formatDate from "../utils/formatDate";
 import { DiscordLogo } from "./DiscordLogo";
@@ -91,7 +93,7 @@ export default async ({
 					borderRadius: "8px",
 					display: "flex",
 					flexDirection: "column",
-					fontFamily: "LilitaOne",
+					fontFamily: lilitaOne,
 					fontSize: "1.5rem",
 					lineHeight: "2rem",
 					margin: "0 auto 1.5rem",
@@ -117,7 +119,7 @@ export default async ({
 				</div>
 				<div
 					style={{
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1rem",
 						lineHeight: "normal",
 					}}>
@@ -223,7 +225,7 @@ export default async ({
 											borderRadius: "0.5rem",
 											color: "white",
 											cursor: "pointer",
-											fontFamily: "ggsans",
+											fontFamily: ggsans,
 											fontSize: "1.125rem",
 											fontWeight: 600,
 											lineHeight: "1.75rem",

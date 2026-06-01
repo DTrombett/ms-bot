@@ -5,7 +5,7 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import type { PageData, ResolvedFont } from "./types";
-import { cwd, log, outdir, setup, target } from "./utils.ts";
+import { log, outdir, setup, target } from "./utils.ts";
 
 export const buildHydrationScripts = async (
 	pages: PageData[],
@@ -53,7 +53,6 @@ export const buildHydrationScripts = async (
 		target,
 		treeShaking: true,
 		tsconfigRaw,
-		write: false,
 		plugins: [
 			{
 				name: "build",
@@ -73,19 +72,7 @@ export const buildHydrationScripts = async (
 		],
 	});
 
-	hydrationResult.outputFiles.map((outputFile) => {
-		const path = outputFile.path.replace(
-			/\.css$/,
-			`.${Uint8Array.fromBase64(outputFile.hash).toBase64({ alphabet: "base64url", omitPadding: true })}.css`,
-		);
-
-		writeFile(outputFile.path, outputFile.contents).catch(console.error);
-		return [
-			join(cwd, "src/app", relative(`${outdir}/static/js`, outputFile.path)),
-			path.replace(outdir, ""),
-		];
-	});
-
+	// TODO: Can we use write: false and built in hash?
 	return {
 		jsMap: Object.fromEntries(
 			await Promise.all(

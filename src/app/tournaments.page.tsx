@@ -69,10 +69,21 @@ export const GET: PageHandler = async ({ head, isMobile, authenticate }) => {
 	);
 };
 
-export const POST: PageHandler = async ({ request, url, redirect }) => {
+export const POST: PageHandler = async ({
+	request,
+	url,
+	redirect,
+	sendPage,
+	authenticate,
+}) => {
 	try {
-		const tournament = await parseTournamentData(request, url.pathname);
-		if (tournament instanceof Response) return tournament;
+		const tournament = await parseTournamentData(
+			request,
+			url.pathname,
+			sendPage,
+			authenticate,
+			redirect,
+		);
 		const id = crypto.randomUUID();
 		const {
 			meta: { last_row_id },

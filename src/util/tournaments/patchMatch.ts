@@ -12,7 +12,7 @@ import { DBMatchStatus, TournamentRoundMode } from "../Constants";
 import { rest } from "../globals";
 import normalizeError from "../normalizeError";
 import { placeholder } from "../strings";
-import { createSetCookie, isAdmin } from "../token";
+import { isAdmin } from "../token";
 import { finishRound } from "./finishRound";
 import { resolveWinner } from "./resolveWinner";
 
@@ -76,53 +76,28 @@ export const displayMatchScore = (
 		:	"N"
 	}\t${match.user2 ? `<@${match.user2}>` : "BYE"}`;
 export const runPatchRequest = async (
-	request: Request,
 	tournamentId: number,
 	matchId: number,
 	statement: D1PreparedStatement,
+	authenticate: PageHandlerContext["authenticate"],
+	json: PageHandlerContext["json"],
 ) => {
-	const { setCookie, token } = await createSetCookie(request);
-	if (!token)
-		return Response.json(
-			{ message: "Effettua nuovamente il login" },
-			{
-				status: 401,
-				headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-			},
-		);
+	const token = await authenticate();
+	if (!token) return json({ message: "Effettua nuovamente il login" }, 401);
 	const admin = await isAdmin(token);
 
 	if (!admin)
-		return Response.json(
+		return json(
 			{ message: "Solo gli amministratori possono effettuare questa azione" },
-			{
-				status: 403,
-				headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-			},
+			403,
 		);
 	try {
 		const match = await patchMatch(tournamentId, matchId, statement, token.i);
 
-		if (!match)
-			return Response.json(
-				{ message: "Scontro non trovato" },
-				{
-					status: 404,
-					headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-				},
-			);
-		return Response.json(match, {
-			status: 200,
-			headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-		});
+		if (!match) return json({ message: "Scontro non trovato" }, 404);
+		return json(match);
 	} catch (err) {
-		return Response.json(
-			{ message: normalizeError(err).message },
-			{
-				status: 500,
-				headers: { "accept-ch": "Sec-CH-UA-Mobile", "set-cookie": setCookie },
-			},
-		);
+		return json({ message: normalizeError(err).message }, 500);
 	}
 };
 

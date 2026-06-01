@@ -55,11 +55,17 @@ export const POST: PageHandler = async ({
 	url,
 	params: [id],
 	redirect,
+	sendPage,
+	authenticate,
 }) => {
 	try {
-		const tournament = await parseTournamentData(request, url.pathname);
-		// TODO: Instead throw a ResponseReadyError
-		if (tournament instanceof Response) return tournament;
+		const tournament = await parseTournamentData(
+			request,
+			url.pathname,
+			sendPage,
+			authenticate,
+			redirect,
+		);
 		const workflowId = await env.DB.prepare(
 			`
 				UPDATE Tournaments SET

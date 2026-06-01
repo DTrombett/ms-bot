@@ -1,22 +1,29 @@
 import { build } from "esbuild";
 import { writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
-import type { PageData } from "./types";
+import { template } from "../util/strings.ts";
+import type { PageData, ResolvedFont } from "./types";
 import { cwd, log, outdir, target } from "./utils.ts";
 
-export const buildCss = async (pages: PageData[], tsconfigRaw: string) => {
+export const buildCss = async (
+	pages: PageData[],
+	tsconfigRaw: string,
+	fonts: Record<string, ResolvedFont>,
+	assetsMap: Record<string, string>,
+) => {
 	log("Compiling css files");
+	const cssFiles = Array.from(
+		pages.reduce(
+			(set, { styles, lazyStyles }) => set.union(styles).union(lazyStyles),
+			new Set<string>(),
+		),
+	);
 	const { outputFiles } = await build({
 		bundle: true,
 		charset: "utf8",
-		entryPoints: Array.from(
-			pages.reduce(
-				(set, { styles, lazyStyles }) => set.union(styles).union(lazyStyles),
-				new Set<string>(),
-			),
-		),
+		entryPoints: cssFiles.map((e) => e.replace(/^font-face:/, "")),
+		external: Object.values(assetsMap),
 		legalComments: "inline",
-		metafile: true,
 		minify: true,
 		outbase: "src/app",
 		outdir: `${outdir}/static`,
@@ -25,6 +32,38 @@ export const buildCss = async (pages: PageData[], tsconfigRaw: string) => {
 		treeShaking: true,
 		tsconfigRaw,
 		write: false,
+		plugins: [
+			{
+				name: "build",
+				setup: (build) => {
+					const filter = new RegExp(
+						cssFiles
+							.filter((e) => e.startsWith("font-face:"))
+							.map((e) => RegExp.escape(e.replace(/^font-face:/, "")))
+							.join("|"),
+					);
+
+					build.onResolve({ filter }, (args) => ({ path: args.path }));
+					build.onLoad({ filter }, ({ path }) => {
+						path = path.replace(/\.[^./]+$/, "");
+						const font = fonts[path]!;
+
+						return {
+							contents: template`
+								@font-face {
+									font-family: ${JSON.stringify(font.fontFamily)};
+									src: url(${JSON.stringify(assetsMap[path])});
+									${font.italic}font-style: italic;
+									${font.weight !== 400}font-weight: ${font.weight};
+									font-display: swap;
+								}
+							`,
+							loader: "css",
+						};
+					});
+				},
+			},
+		],
 	});
 	const cssReverseMap = Object.fromEntries(
 		outputFiles.map((outputFile) => {
@@ -37,7 +76,7 @@ export const buildCss = async (pages: PageData[], tsconfigRaw: string) => {
 			writeFile(outputFile.path, outputFile.contents).catch(console.error);
 			return [
 				join(cwd, "src/app", relative(`${outdir}/static`, originalPath)),
-				outputFile.path.replace(outdir, ""),
+				"/" + relative(outdir, outputFile.path).replaceAll("\\", "/"),
 			];
 		}),
 	);
@@ -47,7 +86,7 @@ export const buildCss = async (pages: PageData[], tsconfigRaw: string) => {
 			pages.map((i) => [
 				i.path,
 				Array.from(i.styles, (v) => ({
-					src: cssReverseMap[v]!,
+					src: cssReverseMap[v.replace(/^font-face:/, "")]!,
 					lazy: false,
 				})).concat(
 					Array.from(i.lazyStyles, (v) => ({

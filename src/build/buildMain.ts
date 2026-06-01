@@ -72,7 +72,9 @@ export const buildMain = async (
 									if (lastFragment !== "index") fragments.push(lastFragment);
 									for (const element of fragments)
 										currentRoute = currentRoute[element] ??= {};
-									pathMap[page.path] = fragments.concat("index").join(".");
+									pathMap[page.path] = fragments
+										.map((v) => `[${JSON.stringify(v)}]`)
+										.join("");
 									currentRoute.index = {
 										scripts: jsMap[page.path] ?? [],
 										styles: cssMap[page.path] ?? [],
@@ -98,7 +100,7 @@ export const buildMain = async (
 													)
 													.map(
 														(m) =>
-															`routes.${pathMap[im.path]}.methods.${m} = { handler: i${i}.${m} };`,
+															`routes${pathMap[im.path]}.index.methods.${m} = { handler: i${i}.${m} };`,
 													),
 											)
 											.join("")}

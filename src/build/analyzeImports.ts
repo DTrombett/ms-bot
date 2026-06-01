@@ -122,6 +122,8 @@ export const analyzeImports = async (tsconfigRaw: string) => {
 						(importObj.with?.lazy ? lazyStyles : styles).add(
 							importObj.path.replace(/^css:/, ""),
 						);
+					else if (importObj.path.startsWith("font-face:"))
+						styles.add(importObj.path);
 				for (const child of inputs[current].imports ?? [])
 					if (!child.external) stack.push(child.path);
 			}

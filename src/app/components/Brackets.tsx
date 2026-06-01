@@ -32,7 +32,9 @@ import type { Matches } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
 import JsonStreamSource from "../utils/JsonStreamSource";
 import useClient from "../utils/useClient";
+import ggsans from "../fonts/ggsansvf.woff2";
 import DefaultAvatar, { defaultColors } from "./DefaultAvatar";
+import lilitaOne from "../fonts/LilitaOne-Regular.ttf";
 
 const style = {
 	backgroundColor: "rgba(63, 63, 70, 0.25)",
@@ -40,7 +42,7 @@ const style = {
 	borderRadius: "8px",
 	display: "flex",
 	flexDirection: "column",
-	fontFamily: "LilitaOne",
+	fontFamily: lilitaOne,
 	fontSize: "1.5rem",
 	lineHeight: "2rem",
 	margin: "0 auto 1.5rem",
@@ -176,7 +178,7 @@ const ParticipantDisplay = ({ participant }: { participant: Participant }) => {
 						lineHeight: "normal",
 						textOverflow: "ellipsis",
 						overflowX: "clip",
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						height: "1rem",
 					}}>
 					{showPlayer && participant.tag ? participant.tag : participant.userId}
@@ -241,7 +243,7 @@ const MatchParticipant = ({
 						borderStyle: "solid",
 						borderWidth: "0.8px",
 						color: "white",
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1.25rem",
 						fontWeight: 500,
 						lineHeight: "1.5rem",
@@ -299,7 +301,7 @@ const MatchParticipant = ({
 						borderRadius: "0.5rem",
 						color: "white",
 						cursor: "pointer",
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1rem",
 						fontWeight: 500,
 						lineHeight: "normal",
@@ -397,7 +399,7 @@ const MatchUI = ({
 			style={{
 				display: "flex",
 				flexDirection: "column",
-				fontFamily: "LilitaOne",
+				fontFamily: lilitaOne,
 				fontSize: "1rem",
 				gap: "0.5rem",
 				lineHeight: "1.25rem",
@@ -477,7 +479,7 @@ const MatchUI = ({
 						color: "inherit",
 						textDecoration: "none",
 						cursor: "pointer",
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "2.5rem",
 						fontWeight: 600,
 						height: "2rem",
@@ -505,11 +507,7 @@ const MatchUI = ({
 				<div style={{ width: "4rem" }}>
 					<div style={{ fontSize: "3rem", lineHeight: 1 }}>VS</div>
 					<div
-						style={{
-							fontSize: "0.75rem",
-							lineHeight: 1,
-							fontFamily: "ggsans",
-						}}>
+						style={{ fontSize: "0.75rem", lineHeight: 1, fontFamily: ggsans }}>
 						({match.id})
 					</div>
 				</div>
@@ -534,7 +532,7 @@ const MatchUI = ({
 					<div
 						style={{
 							display: "flex",
-							fontFamily: "ggsans",
+							fontFamily: ggsans,
 							fontSize: "1.125rem",
 							fontWeight: 500,
 							gap: "0.75rem",
@@ -585,7 +583,7 @@ const MatchUI = ({
 								color: "white",
 								cursor: disabled ? "not-allowed" : "pointer",
 								padding: "0.5rem 0.75rem",
-								fontFamily: "ggsans",
+								fontFamily: ggsans,
 								fontSize: "1.125rem",
 								fontWeight: 500,
 							}}>
@@ -604,7 +602,7 @@ const MatchUI = ({
 								color: "white",
 								cursor: disabled ? "not-allowed" : "pointer",
 								padding: "0.5rem 0.75rem",
-								fontFamily: "ggsans",
+								fontFamily: ggsans,
 								fontSize: "1.125rem",
 								fontWeight: 500,
 							}}
@@ -623,7 +621,7 @@ const MatchUI = ({
 									color: "white",
 									cursor: disabled ? "not-allowed" : "pointer",
 									padding: "0.5rem 0.75rem",
-									fontFamily: "ggsans",
+									fontFamily: ggsans,
 									fontSize: "1.125rem",
 									fontWeight: 500,
 								}}
@@ -643,7 +641,7 @@ const MatchUI = ({
 									color: "white",
 									cursor: disabled ? "not-allowed" : "pointer",
 									padding: "0.5rem 0.75rem",
-									fontFamily: "ggsans",
+									fontFamily: ggsans,
 									fontSize: "1.125rem",
 									fontWeight: 500,
 								}}
@@ -655,7 +653,7 @@ const MatchUI = ({
 				<span
 					style={{
 						color: Colors.Danger,
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1rem",
 						fontWeight: "normal",
 						lineHeight: "1.5rem",
@@ -718,7 +716,7 @@ const BracketsUI = ({
 							style={{
 								width: "calc(2.4px + 10rem)",
 								padding: "0.5rem",
-								fontFamily: "ggsans",
+								fontFamily: ggsans,
 								fontSize: "1rem",
 								lineHeight: "2rem",
 								color: "white",
@@ -741,7 +739,7 @@ const BracketsUI = ({
 				style={{
 					display: "flex",
 					flexDirection: "row-reverse",
-					fontFamily: "LilitaOne",
+					fontFamily: lilitaOne,
 					fontSize: "0.875rem",
 					gap: "3rem",
 					lineHeight: "1.25rem",
@@ -812,7 +810,7 @@ const BracketsUI = ({
 												transform: `translate(${match.id ? "+" : "-"}50%, -50%)`,
 												pointerEvents: "none",
 												fontSize: "0.75rem",
-												fontFamily: "ggsans",
+												fontFamily: ggsans,
 												...(match.id ?
 													{ right: "calc(-0.75rem - 0.8px)" }
 												:	{ left: "calc(-0.75rem - 0.8px)" }),
@@ -1074,7 +1072,7 @@ export default useClient(
 								borderRadius: "0.5rem",
 								color: "white",
 								cursor: "pointer",
-								fontFamily: "ggsans",
+								fontFamily: ggsans,
 								fontSize: "2.5rem",
 								fontWeight: 600,
 								height: "2.5rem",
@@ -1097,7 +1095,7 @@ export default useClient(
 							borderRadius: "0.5rem",
 							color: "white",
 							cursor: "pointer",
-							fontFamily: "ggsans",
+							fontFamily: ggsans,
 							fontSize: "2.5rem",
 							fontWeight: 600,
 							height: "2.5rem",

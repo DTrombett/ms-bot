@@ -13,7 +13,7 @@ const [{ tsconfigRaw }] = await Promise.all([
 ]);
 const { assetsMap, fonts, fontsMap, pages } = await analyzeImports(tsconfigRaw);
 const [{ cssMap }, { jsMap }] = await Promise.all([
-	buildCss(pages, tsconfigRaw),
+	buildCss(pages, tsconfigRaw, fonts, assetsMap),
 	buildHydrationScripts(pages, tsconfigRaw, assetsMap, fonts),
 ]);
 

@@ -1,5 +1,5 @@
 import { Page } from "./components/layout";
-import LuckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
+import luckiestGuy from "./fonts/LuckiestGuy-Regular.ttf";
 import ggsans from "./fonts/ggsansvf.woff2";
 
 export const GET: PageHandler = ({ head }) => {
@@ -21,7 +21,7 @@ export const GET: PageHandler = ({ head }) => {
 				<span
 					style={{
 						textShadow: "#0049ff 0.25rem 0.25rem",
-						fontFamily: LuckiestGuy,
+						fontFamily: luckiestGuy,
 						fontSize: "3rem",
 						lineHeight: 1,
 						margin: "0.5rem 0",

@@ -8,6 +8,8 @@ import {
 import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
 import { Section, styles, TextInput } from "./forms";
+import ggsans from "../fonts/ggsansvf.woff2";
+import lilitaOne from "../fonts/LilitaOne-Regular.ttf";
 
 enum UI {
 	List,
@@ -20,7 +22,7 @@ const style: CSSProperties = {
 	borderRadius: "8px",
 	display: "flex",
 	flexDirection: "column",
-	fontFamily: "LilitaOne",
+	fontFamily: lilitaOne,
 	fontSize: "1.5rem",
 	lineHeight: "2rem",
 	margin: "0 auto 1.5rem",
@@ -93,7 +95,7 @@ const DeleteButton = ({
 				borderRadius: mobile ? "100%" : "0.5rem",
 				color: "white",
 				cursor: disabled ? "not-allowed" : "pointer",
-				fontFamily: "ggsans",
+				fontFamily: ggsans,
 				fontSize: mobile ? "2.5rem" : "0.875rem",
 				fontWeight: 600,
 				height: mobile ? "2.5rem" : undefined,
@@ -207,7 +209,7 @@ const ListUI = ({
 								borderRadius: mobile ? "100%" : "0.5rem",
 								color: "white",
 								cursor: disabled ? "not-allowed" : "pointer",
-								fontFamily: "ggsans",
+								fontFamily: ggsans,
 								fontSize: mobile ? "2.5rem" : "0.875rem",
 								fontWeight: 600,
 								height: mobile ? "2.5rem" : undefined,
@@ -296,7 +298,7 @@ const ListUI = ({
 							<span>{p.name ?? p.tag ?? p.userId}</span>
 							<div style={{ fontSize: "0.75rem", lineHeight: "1rem" }}>
 								<span>{p.tag}</span>
-								<span style={{ fontFamily: "ggsans", marginLeft: "0.25rem" }}>
+								<span style={{ fontFamily: ggsans, marginLeft: "0.25rem" }}>
 									({p.userId})
 								</span>
 							</div>
@@ -319,7 +321,7 @@ const ListUI = ({
 				<span
 					style={{
 						color: Colors.Danger,
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1rem",
 						fontWeight: "normal",
 						lineHeight: "1.5rem",
@@ -337,7 +339,7 @@ const ListUI = ({
 					style={{
 						backgroundColor: Colors.Primary,
 						borderRadius: "0.5rem",
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1.125rem",
 						fontWeight: 600,
 						lineHeight: "1.75rem",
@@ -422,7 +424,7 @@ const AddParticipantUI = ({
 				<span
 					style={{
 						color: Colors.Danger,
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1rem",
 						fontWeight: "normal",
 						lineHeight: "1.5rem",
@@ -440,7 +442,7 @@ const AddParticipantUI = ({
 					style={{
 						backgroundColor: Colors.Success,
 						borderRadius: "0.5rem",
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1.125rem",
 						fontWeight: 600,
 						lineHeight: "1.75rem",
@@ -461,7 +463,7 @@ const AddParticipantUI = ({
 					style={{
 						backgroundColor: Colors.Danger,
 						borderRadius: "0.5rem",
-						fontFamily: "ggsans",
+						fontFamily: ggsans,
 						fontSize: "1.125rem",
 						fontWeight: 600,
 						lineHeight: "1.75rem",
