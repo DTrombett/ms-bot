@@ -71,9 +71,13 @@ export const buildMain = async (
 
 									if (lastFragment !== "index") fragments.push(lastFragment);
 									for (const element of fragments)
-										currentRoute = currentRoute[element] ??= {};
+										currentRoute = currentRoute[
+											element.replace(/^\[.*\]$/, "[]")
+										] ??= {};
 									pathMap[page.path] = fragments
-										.map((v) => `[${JSON.stringify(v)}]`)
+										.map(
+											(v) => `[${JSON.stringify(v.replace(/^\[.*\]$/, "[]"))}]`,
+										)
 										.join("");
 									currentRoute.index = {
 										scripts: jsMap[page.path] ?? [],

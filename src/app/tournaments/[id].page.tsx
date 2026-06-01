@@ -11,7 +11,6 @@ export type Matches = Pick<
 	"channelId" | "id" | "result1" | "result2" | "status" | "user1" | "user2"
 >[];
 
-// TODO: [id] should be changed to [] in build
 export const GET: PageHandler = async ({
 	head,
 	authenticate,
