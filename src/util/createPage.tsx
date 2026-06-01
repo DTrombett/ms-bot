@@ -55,6 +55,10 @@ export const createPage = async (
 					}
 					return token!;
 				},
+				useHeader: (name: string) => {
+					response.headers.append("Vary", name);
+					return request.headers.get(name);
+				},
 				isMobile: () => {
 					response.headers.append("Vary", "Sec-CH-UA-Mobile");
 					return isMobile(request.headers);

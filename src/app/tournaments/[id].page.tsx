@@ -18,25 +18,31 @@ export const GET: PageHandler = async ({
 	redirect,
 	isMobile,
 }) => {
-	// TODO: Maybe we can Promise.all?
-	const token = await authenticate({ force: true });
 	const [
-		{
-			results: [tournament],
-		},
-		{ results: participants },
-	] = (await env.DB.batch([
-		env.DB.prepare(`SELECT * FROM Tournaments WHERE id = ?`).bind(Number(id)),
-		env.DB.prepare(
-			`
+		[
+			{
+				results: [tournament],
+			},
+			{ results: participants },
+		],
+		token,
+	] = await Promise.all([
+		env.DB.batch([
+			env.DB.prepare(`SELECT * FROM Tournaments WHERE id = ?`).bind(Number(id)),
+			env.DB.prepare(
+				`
 				SELECT userId, tag, name
 				FROM Participants WHERE tournamentId = ?
 			`,
-		).bind(Number(id)),
-	])) as [
-		D1Result<Database.Tournament>,
-		D1Result<Pick<Database.Participant, "tag" | "userId" | "name">>,
-	];
+			).bind(Number(id)),
+		]) as Promise<
+			[
+				D1Result<Database.Tournament>,
+				D1Result<Pick<Database.Participant, "tag" | "userId" | "name">>,
+			]
+		>,
+		authenticate({ force: true }),
+	]);
 	if (!tournament) return redirect("/tournaments", 303);
 	head.title = tournament.name;
 	const mobile = isMobile();

@@ -17,6 +17,7 @@ type PageHandlerContext = {
 		(options: { force: true }): Promise<JWT>;
 		(options?: Partial<{ force: false }>): Promise<JWT | undefined>;
 	};
+	useHeader: Headers["get"];
 	isMobile: () => boolean;
 	sendPage: (
 		path: string,

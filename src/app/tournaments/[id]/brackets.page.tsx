@@ -9,7 +9,7 @@ export const GET: PageHandler = async ({
 	params: [id],
 	redirect,
 	isMobile,
-	request,
+	useHeader,
 	url,
 }) => {
 	const [
@@ -29,16 +29,16 @@ export const GET: PageHandler = async ({
 			),
 			env.DB.prepare(
 				`
-						SELECT channelId, id, result1,
-							result2, status, user1, user2
-						FROM Matches WHERE tournamentId = ?
-					`,
+					SELECT channelId, id, result1,
+						result2, status, user1, user2
+					FROM Matches WHERE tournamentId = ?
+				`,
 			).bind(Number(id)),
 			env.DB.prepare(
 				`
-						SELECT userId, tag, name
-						FROM Participants WHERE tournamentId = ?
-					`,
+					SELECT userId, tag, name
+					FROM Participants WHERE tournamentId = ?
+				`,
 			).bind(Number(id)),
 		]) as Promise<
 			[
@@ -61,8 +61,7 @@ export const GET: PageHandler = async ({
 	]);
 	if (!tournament) return redirect("/tournaments", 303);
 	head.title = `${tournament.name} - Brackets`;
-	// TODO: Add utility isIframe
-	const embed = request.headers.get("sec-fetch-dest") === "iframe";
+	const embed = useHeader("Sec-Fetch-Dest") === "iframe";
 	const mobile = isMobile();
 
 	return (

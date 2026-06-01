@@ -11,18 +11,18 @@ import {
 
 export const GET: PageHandler = async ({
 	url,
-	request,
 	response,
 	redirect,
+	useHeader,
 }) => {
-	let r = url.searchParams.get("to") ?? request.headers.get("Referer");
+	let r = url.searchParams.get("to") ?? useHeader("Referer");
 	const scopes = new Set(url.searchParams.get("scope")?.split(" "));
 
 	if (r && URL.canParse(r)) r = new URL(r).pathname;
 	scopes.add("identify");
 	try {
 		const token = await parseToken(
-			request.headers.get("cookie")?.match(/(?:^|;\s*)token=([^;]*)/)?.[1],
+			useHeader("Cookie")?.match(/(?:^|;\s*)token=([^;]*)/)?.[1],
 			scopes,
 		);
 

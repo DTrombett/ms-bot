@@ -271,7 +271,6 @@ export const patchMatch = async (
 									allow: String(PermissionFlagsBits.ViewChannel),
 								},
 								{
-									// TODO: Add this as option to tournament
 									id: "1484914959673463004",
 									type: OverwriteType.Role,
 									allow: String(PermissionFlagsBits.ViewChannel),

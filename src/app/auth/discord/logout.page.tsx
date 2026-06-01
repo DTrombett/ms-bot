@@ -1,5 +1,5 @@
-export const GET: PageHandler = ({ url, request, response, redirect }) => {
-	let r = url.searchParams.get("to") ?? request.headers.get("Referer");
+export const GET: PageHandler = ({ url, response, redirect, useHeader }) => {
+	let r = url.searchParams.get("to") ?? useHeader("Referer");
 
 	if (r && URL.canParse(r)) r = new URL(r).pathname;
 	response.headers.set(

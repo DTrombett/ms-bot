@@ -11,11 +11,10 @@ export const Head = ({
 }: HeadOptions & { styles: Styles }) => (
 	<head>
 		{styles.map((style) =>
-			// TODO: load lazy styles in JS
 			style.lazy ?
 				<noscript
 					dangerouslySetInnerHTML={{
-						__html: `</noscript><link rel="preload" href="${style.src}" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="${style.src}">`,
+						__html: `</noscript><link rel="preload" fetchpriority="low" href="${style.src}" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="${style.src}">`,
 					}}
 				/>
 			:	<link rel="stylesheet" href={style.src} />,
@@ -52,9 +51,8 @@ export const Head = ({
 export const Page = ({
 	url,
 	children,
-	mobile,
 	...body
-}: { url?: URL; children?: ReactNode; mobile?: boolean } & DetailedHTMLProps<
+}: { url?: URL; children?: ReactNode } & DetailedHTMLProps<
 	HTMLAttributes<HTMLBodyElement>,
 	HTMLBodyElement
 >) => (
@@ -63,7 +61,7 @@ export const Page = ({
 		{...body}
 		style={{
 			background: `linear-gradient(rgba(39, 39, 42, 0.8), rgba(39, 39, 42, 0.8)), url("${background}"), linear-gradient(rgb(39, 39, 42), rgb(39, 39, 42))`,
-			backgroundAttachment: mobile === false ? "fixed" : "scroll",
+			backgroundAttachment: "fixed",
 			backgroundColor: "rgb(39, 39, 42)",
 			backgroundPosition: "center",
 			backgroundSize: "cover",
