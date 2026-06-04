@@ -1261,7 +1261,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				env.PREDICTIONS_REMINDERS.create(),
 				// env.WEBSOCKET.create(),
 			]);
-		else if (cron === "*/5 * * * *") {
+		else if (cron === "0 */1 * * *") {
 			const { results } = await env.DB.prepare(
 				`SELECT * FROM SupercellPlayers WHERE notifications > 0`,
 			).run<Database.SupercellPlayer>();
