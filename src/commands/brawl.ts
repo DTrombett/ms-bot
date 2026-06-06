@@ -1487,9 +1487,9 @@ export class Brawl extends Command {
 		prefix: RankedPrefix,
 		locale?: string,
 	) =>
-		`<:ranked:${(this.RANKED_TIERS[Math.floor((player[`${prefix}Rank`] - 1) / 3)] ?? this.RANKED_TIERS.at(-1))!.emoji}> ${player[
-			`${prefix}RankName`
-		]
+		`<:ranked:${(this.RANKED_TIERS[Math.trunc((player[`${prefix}Rank`] - 1) / 3)] ?? this.RANKED_TIERS.at(-1))!.emoji}> ${(
+			player[`${prefix}RankName`] ?? "BRONZE I"
+		)
 			.split(/\s+/)
 			.map((v, i) => (i ? v : forceCapitalize(v)))
 			.join(" ")} (${player[`${prefix}Elo`].toLocaleString(locale)})`;
