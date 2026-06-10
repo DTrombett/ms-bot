@@ -1155,7 +1155,8 @@ export class Brawl extends Command {
 						components: [
 							{
 								type: ComponentType.TextDisplay,
-								content: !hasMembers ?
+								content:
+									!hasMembers ?
 										`## ${club.name} (${club.tag})\n- Nessun membro nel club`
 									:	`## ${club.name} (${
 											club.tag
@@ -1163,9 +1164,13 @@ export class Brawl extends Command {
 											club.trophies / club.members.length,
 										).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
 											percentile(members, 0.5),
-										).toLocaleString(locale)}\n- 75° Percentile: 🏆 ${Math.round(
+										).toLocaleString(
+											locale,
+										)}\n- 75° Percentile: 🏆 ${Math.round(
 											percentile(members, 0.75),
-										).toLocaleString(locale)}\n- 90° Percentile: 🏆 ${Math.round(
+										).toLocaleString(
+											locale,
+										)}\n- 90° Percentile: 🏆 ${Math.round(
 											percentile(members, 0.9),
 										).toLocaleString(locale)}`,
 							},
@@ -1335,7 +1340,7 @@ export class Brawl extends Command {
 			vicePresident: string[];
 			senior: string[];
 		} = {
-			president: { name: "*Non trovato*", nameColor: "" },
+			president: { name: "*Nessuno*", nameColor: "" },
 			vicePresident: [],
 			senior: [],
 		};
@@ -1371,11 +1376,13 @@ export class Brawl extends Command {
 						type: ComponentType.StringSelect,
 						custom_id: "brawl-player",
 						placeholder: "Visualizza un membro...",
-						options: club.members.slice(0, 25).map((m) => ({
-							label: m.name,
-							value: m.tag,
-							emoji: { name: MemberEmoji[m.role] ?? "👤" },
-						})),
+						options: club.members
+							.slice(0, 25)
+							.map((m) => ({
+								label: m.name,
+								value: m.tag,
+								emoji: { name: MemberEmoji[m.role] ?? "👤" },
+							})),
 					},
 				],
 			});
@@ -1409,9 +1416,9 @@ export class Brawl extends Command {
 						},
 						{
 							name: "🏆 Membri",
-							value: !members.length ?
-									"*Nessun membro*"
-								:	`**Trofei medi**: ${Math.round(
+							value:
+								!members.length ? "*Nessun membro*" : (
+									`**Trofei medi**: ${Math.round(
 										club.trophies / club.members.length,
 									).toLocaleString(locale)}\n**Mediana**: ${Math.round(
 										percentile(members, 0.5),
@@ -1419,7 +1426,8 @@ export class Brawl extends Command {
 										percentile(members, 0.75),
 									).toLocaleString(locale)}\n**90° Percentile**: ${Math.round(
 										percentile(members, 0.9),
-									).toLocaleString(locale)}`,
+									).toLocaleString(locale)}`
+								),
 							inline: true,
 						},
 						{
