@@ -1272,7 +1272,7 @@ declare global {
 	}
 	namespace Clash {
 		type Player = {
-			clan: PlayerClan;
+			clan?: PlayerClan;
 			legacyTrophyRoadHighScore?: number;
 			currentDeck: PlayerItemLevelList;
 			currentDeckSupportCards: PlayerItemLevelList;
