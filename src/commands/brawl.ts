@@ -1292,7 +1292,9 @@ export class Brawl extends Command {
 				name: "🏆 Trofei",
 				value: `**Attuali**: ${player.trophies.toLocaleString(locale)}\n**Record**: ${player.highestTrophies.toLocaleString(
 					locale,
-				)}\n**Cammino**: ${
+				)}\n**Media Brawler**: ${Math.round(
+					player.trophies / player.brawlers.length,
+				).toLocaleString(locale)}\n**Cammino**: ${
 					(
 						this.TROPHY_ROAD_TIERS.findLast(
 							({ max }) => max <= player.highestTrophies,
@@ -1303,19 +1305,44 @@ export class Brawl extends Command {
 			},
 			{
 				name: "🔫 Brawler",
-				value: `**Ottenuti**: ${player.brawlers.length.toLocaleString(locale)}\n**Prestigio**: ${player.totalPrestigeLevel.toLocaleString(
+				value: `**Ottenuti**: ${player.brawlers.length.toLocaleString(
 					locale,
-				)}\n**Trofei medi**: ${Math.round(player.trophies / player.brawlers.length).toLocaleString(locale)}`,
+				)}\n**Gadget**: ${player.brawlers.reduce(
+					(c, b) => c + b.gadgets.length,
+					0,
+				)}\n**Star Power**: ${player.brawlers.reduce(
+					(c, b) => c + b.starPowers.length,
+					0,
+				)}\n**Overdrive**: ${player.brawlers.reduce(
+					(c, b) => c + b.hyperCharges.length,
+					0,
+				)}`,
 				inline: true,
 			},
 			{
 				name: "🏅 Vittorie",
-				value: `**3v3**: ${player["3vs3Victories"].toLocaleString(locale)}\n**Solo**: ${player.soloVictories.toLocaleString(locale)}\n**Duo**: ${player.duoVictories.toLocaleString(locale)}`,
+				value: `**3v3**: ${player["3vs3Victories"].toLocaleString(
+					locale,
+				)}\n**Solo**: ${player.soloVictories.toLocaleString(locale)}\n**Duo**: ${player.duoVictories.toLocaleString(
+					locale,
+				)}\n**Prestigio**: ${player.totalPrestigeLevel.toLocaleString(locale)}`,
 				inline: true,
 			},
 			{
 				name: "👑 Classificata",
-				value: `**Attuale**: ${this.resolveRanked(player, "ranked", locale)}\n**Migliore**: ${this.resolveRanked(player, "highestAllTimeRanked", locale)}\n**Stagione**: ${this.resolveRanked(player, "highestSeasonRanked", locale)}`,
+				value: `**Attuale**: ${this.resolveRanked(
+					player,
+					"ranked",
+					locale,
+				)}\n**Migliore**: ${this.resolveRanked(
+					player,
+					"highestAllTimeRanked",
+					locale,
+				)}\n**Stagione**: ${this.resolveRanked(
+					player,
+					"highestSeasonRanked",
+					locale,
+				)}`,
 				inline: true,
 			},
 			{
@@ -1324,7 +1351,9 @@ export class Brawl extends Command {
 					this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]
 				}\n**Big Game**: ${
 					this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]
-				}\n**Serie vittorie**: ${player.brawlers.reduce((m, b) => (b.maxWinStreak > m ? b.maxWinStreak : m), 0).toLocaleString(locale)}`,
+				}\n**Serie vittorie**: ${player.brawlers
+					.reduce((m, b) => (b.maxWinStreak > m ? b.maxWinStreak : m), 0)
+					.toLocaleString(locale)}`,
 				inline: true,
 			},
 		],
