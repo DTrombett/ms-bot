@@ -32,7 +32,7 @@
 		"cloudflare": "^6.3.0",
 		"discord-api-types": "^0.38.48",
 		"entities": "^8.0.0",
-		"esbuild": "^0.28.0",
+		"esbuild": "^0.28.1",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
 		"temporal-polyfill": "^0.3.2"
