@@ -130,7 +130,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 			const newRank = Math.floor((newPlayer.rankedRank - 1) / 3),
 				oldRank = Math.floor((oldPlayer.rankedRank - 1) / 3);
 
-			if (newRank > oldRank)
+			if (newRank > oldRank && oldRank !== -1)
 				components.push({
 					type: ComponentType.Container,
 					accent_color:
