@@ -1088,10 +1088,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 						},
 					});
 				const res = new JsonStreamResponse({
-					headers: {
-						"accept-ch": "Sec-CH-UA-Mobile",
-						"cache-control": "public",
-					},
+					headers: { "accept-ch": "Sec-CH-UA-Mobile" },
 				}).sendAll(
 					{ event: "match", data: match },
 					...participants.map((data) => ({ event: "participant", data })),
