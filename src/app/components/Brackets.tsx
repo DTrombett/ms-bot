@@ -905,7 +905,7 @@ const parseQueryNumber = (
 	let value: string | number | null = query.get(name);
 
 	if (value == null) return null;
-	value = value in aliases ? aliases[value]! : +value;
+	value = Object.hasOwn(aliases, value) ? aliases[value]! : +value;
 	if ((!allowNaN && Number.isNaN(value)) || value < min || value > max)
 		return null;
 	return value;
