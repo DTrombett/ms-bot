@@ -328,7 +328,7 @@ export class TournamentAdmin extends Command {
 			});
 		defer();
 		const match = await env.DB.prepare(
-			`SELECT * FROM Matches WHERE channelId = ? LIMIT 1`,
+			`SELECT * FROM Matches WHERE channelId = ?`,
 		)
 			.bind(channelId)
 			.first<Database.Match>();

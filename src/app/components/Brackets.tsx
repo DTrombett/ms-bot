@@ -1,7 +1,10 @@
+import { CDN } from "@discordjs/rest";
+import type {
+	APIUser,
+	RESTGetAPIGuildMemberResult,
+} from "discord-api-types/v10";
 import {
-	memo,
 	useEffect,
-	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -11,15 +14,25 @@ import {
 	type SetStateAction,
 } from "react";
 import { DBMatchStatus } from "../../util/Constants";
-import { toSearchParams } from "../../util/objects";
 import {
 	matchStatus,
 	roundName,
 	statusColors,
 } from "../../util/tournaments/Constants";
-import type { Matches, Participants } from "../tournaments/[id].page";
+import { resolveWinner } from "../../util/tournaments/resolveWinner";
+import {
+	getElementsCount,
+	getFirstIndex,
+	getLastIndex,
+	getLastLevel,
+	getLevel,
+	getLevelsCount,
+} from "../../util/trees";
+import type { Matches } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
+import JsonStreamSource from "../utils/JsonStreamSource";
 import useClient from "../utils/useClient";
+import DefaultAvatar, { defaultColors } from "./DefaultAvatar";
 
 const style = {
 	backgroundColor: "rgba(63, 63, 70, 0.25)",
@@ -37,122 +50,141 @@ const style = {
 	height: "24rem",
 } as const satisfies CSSProperties;
 
-const resolveParticipant = (
-	participantsMap: Record<string, Participants[number]>,
-	id: string,
-) => participantsMap[id] ?? { name: undefined, userId: id };
-const resolveMatchParticipant = (
-	participantsMap: Record<string, Participants[number]>,
-	brackets: (Matches | undefined)[],
-	match: Matches[number] | undefined,
-	i: number,
-	k: number,
-	offset: 1 | 2 = 1,
-): Participants[number] => {
-	const user = match?.[`user${offset}`];
-	if (match)
-		return user ?
-				resolveParticipant(participantsMap, user)
-			:	{ name: "N/A", userId: "" };
-	const parent = brackets[i - 1]?.[k * 2 + offset - 1];
+const cdn = new CDN();
+const createBrawlIconURL = (
+	dpr: number,
+	w: number,
+	iconId: number | string,
+): string =>
+	`https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${dpr},w=${w}/profile-icons/regular/${iconId}.png`;
 
-	if (
-		!parent ||
-		parent.status === DBMatchStatus.ToBePlayed ||
-		parent.status === DBMatchStatus.Playing ||
-		parent.status === DBMatchStatus.Postponed
-	)
-		return { name: "TBD", userId: "" };
-	if (parent.status === DBMatchStatus.Default)
-		return resolveParticipant(participantsMap, parent.user1);
-	if (parent.status === DBMatchStatus.Abandoned)
-		return (
-			parent.result1 == null ?
-				parent.result2 == null ?
-					{ name: "N/A", userId: "" }
-				:	resolveParticipant(participantsMap, parent.user2!)
-			:	resolveParticipant(participantsMap, parent.user1)
-		);
-	return [
-		{
-			u: resolveParticipant(participantsMap, parent.user1),
-			r: parent.result1!,
-		},
-		{
-			u: resolveParticipant(participantsMap, parent.user2!),
-			r: parent.result2!,
-		},
-	].sort(({ r: a }, { r: b }) => b - a)[0]!.u;
-};
-const updateMatch = (resolved: ResolvedMatch) => {
-	if (!resolved.original) return resolved;
-	resolved.participant1.result =
-		(
-			resolved.original.status === DBMatchStatus.Abandoned &&
-			resolved.original.result1 == null
-		) ?
-			"A"
-		:	String(resolved.original.result1 ?? 0);
-	resolved.participant2.result =
-		resolved.original.user2 ?
-			(
-				resolved.original.status === DBMatchStatus.Abandoned &&
-				resolved.original.result2 == null
-			) ?
-				"A"
-			:	String(resolved.original.result2 ?? 0)
-		:	"N";
-	resolved.id = resolved.original.id;
-	resolved.status = resolved.original.status;
-	return resolved;
-};
-const resolveMatch = (
-	brackets: (Matches | undefined)[],
-	participantsMap: Record<string, Participants[number]>,
-	i: number,
-	k: number,
-): ResolvedMatch => {
-	const match = brackets[i]?.[k];
-	const participant1 = resolveMatchParticipant(
-		participantsMap,
-		brackets,
-		match,
-		i,
-		k,
+const ParticipantAvatar = ({
+	iconId,
+	user,
+	id,
+	showPlayer,
+	setShowPlayer,
+}: {
+	id: string;
+	iconId: number | string | undefined;
+	user: APIUser | undefined;
+	showPlayer: boolean;
+	setShowPlayer: Dispatch<SetStateAction<boolean>>;
+}): ReactNode => {
+	const dpr = typeof devicePixelRatio === "undefined" ? 1 : devicePixelRatio;
+	const w = useMemo(
+		() =>
+			(typeof document === "undefined" ? 16 : (
+				parseFloat(getComputedStyle(document.documentElement).fontSize)
+			)) * 8,
+		[],
 	);
-	const participant2 = resolveMatchParticipant(
-		participantsMap,
-		brackets,
-		match,
-		i,
-		k,
-		2,
+	const backgroundColor = useMemo(
+		() => defaultColors[Number(BigInt(id) >> 22n) % 6],
+		[id],
+	);
+	const [loaded, setLoaded] = useState(false);
+	const [srcSet, avatarURL] = useMemo(
+		() =>
+			user?.avatar ?
+				([
+					[16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+						.map(
+							(size) =>
+								`${cdn.avatar(user.id, user.avatar!, { size, extension: "webp" })} ${size}w`,
+						)
+						.join(", "),
+					cdn.avatar(user.id, user.avatar, { size: 16, extension: "webp" }),
+				] as const)
+			:	[],
+		[user],
 	);
 
-	return updateMatch({
-		participant1: {
-			userId: participant1.userId,
-			player: {
-				name: participant1.name ?? undefined,
-				tag: participant1.tag ?? undefined,
-			},
-			result: "-",
-		},
-		participant2: {
-			userId: participant2.userId,
-			player: {
-				name: participant2.name ?? undefined,
-				tag: participant2.tag ?? undefined,
-			},
-			result: "-",
-		},
-		id: 2 ** (brackets.length - i - 1) - 1 + k,
-		status: DBMatchStatus.ToBePlayed,
-		round: i,
-		original: match,
-	});
+	iconId ??= "Unknown";
+	return (
+		<div
+			style={{
+				aspectRatio: 1,
+				height: "8rem",
+				width: "8rem",
+				position: "relative",
+			}}
+			onClick={setShowPlayer.bind(null, !showPlayer)}>
+			{(!loaded || !user?.avatar) && (
+				<DefaultAvatar
+					size="8rem"
+					style={{ backgroundColor, position: "absolute" }}
+				/>
+			)}
+			{(showPlayer || user?.avatar) && (
+				<img
+					alt=""
+					loading="lazy"
+					height={16}
+					width={16}
+					sizes="8rem"
+					onLoad={loaded ? undefined : setLoaded.bind(null, true)}
+					srcSet={showPlayer ? undefined : srcSet}
+					src={showPlayer ? createBrawlIconURL(dpr, w, iconId) : avatarURL}
+					style={{
+						aspectRatio: 1,
+						height: "8rem",
+						width: "8rem",
+						position: "relative",
+						zIndex: 1,
+						borderRadius: showPlayer ? undefined : "50%",
+					}}
+				/>
+			)}
+		</div>
+	);
 };
+const ParticipantDisplay = ({ participant }: { participant: Participant }) => {
+	const [showPlayer, setShowPlayer] = useState(false);
 
+	return (
+		<>
+			<ParticipantAvatar
+				iconId={
+					participant.player && "icon" in participant.player ?
+						participant.player.icon.id
+					:	undefined
+				}
+				showPlayer={showPlayer}
+				setShowPlayer={setShowPlayer}
+				id={participant.userId}
+				user={participant.member?.user}
+			/>
+			<div>
+				<div
+					style={{
+						fontSize: "1.25rem",
+						lineHeight: "1.75rem",
+						width: "12rem",
+						textOverflow: "ellipsis",
+						overflowX: "clip",
+					}}>
+					{(showPlayer ?
+						participant.player?.name
+					:	(participant.member?.nick ??
+						participant.member?.user.global_name ??
+						participant.member?.user.username)) ?? participant.name}
+				</div>
+				<div
+					style={{
+						fontSize: "0.75rem",
+						lineHeight: "normal",
+						textOverflow: "ellipsis",
+						overflowX: "clip",
+						fontFamily: "ggsans",
+						height: "1rem",
+					}}>
+					{showPlayer && participant.tag ? participant.tag : participant.userId}
+				</div>
+			</div>
+		</>
+	);
+};
 const MatchParticipant = ({
 	admin,
 	currentlyPlaying,
@@ -163,13 +195,14 @@ const MatchParticipant = ({
 	setError,
 	setMatches,
 	tournamentId,
-	...participant
-}: Participant & {
+	participant: { participant, result },
+}: {
+	participant: MatchParticipant;
 	admin: boolean;
 	currentlyPlaying: number;
 	match: ResolvedMatch;
 	mobile: boolean;
-	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
+	setActive: Dispatch<SetStateAction<number | null>>;
 	setDisabled: Dispatch<SetStateAction<boolean>>;
 	setError: Dispatch<SetStateAction<string | undefined>>;
 	setMatches: Dispatch<SetStateAction<Matches>>;
@@ -193,48 +226,12 @@ const MatchParticipant = ({
 				gap: "0.5rem",
 				height: "stretch",
 			}}>
-			<img
-				alt=""
-				style={{ height: "8rem", width: "8rem", aspectRatio: 1 }}
-				src={`https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${parseFloat(getComputedStyle(document.documentElement).fontSize) * 8}/profile-icons/regular/${
-					participant.player?.tag ?
-						"icon" in participant.player ?
-							participant.player.icon.id
-						:	"28000000"
-					:	"Unknown"
-				}.png`}
-				onError={(event) =>
-					(event.currentTarget.src = `https://cdn.brawlify.com/cdn-cgi/image/f=auto,q=high,onerror=redirect,dpr=${window.devicePixelRatio},w=${parseFloat(getComputedStyle(document.documentElement).fontSize) * 8}/profile-icons/regular/Unknown.png`)
-				}
-			/>
-			<div>
-				<div
-					style={{
-						fontSize: "1.25rem",
-						lineHeight: "1.75rem",
-						width: "12.5rem",
-						textOverflow: "ellipsis",
-						overflowX: "clip",
-					}}>
-					{participant.player?.name ?? "???"}
-				</div>
-				<div
-					style={{
-						fontSize: "0.75rem",
-						lineHeight: "normal",
-						textOverflow: "ellipsis",
-						overflowX: "clip",
-						fontFamily: "ggsans",
-						height: "1rem",
-					}}>
-					{participant.userId}
-				</div>
-			</div>
-			{canEdit && !Number.isNaN(Number(participant.result)) ?
+			<ParticipantDisplay participant={participant} />
+			{canEdit && !Number.isNaN(Number(result)) ?
 				<input
 					type="number"
-					name={`result${+(participant.userId === match.participant2.userId) + 1}`}
-					defaultValue={participant.result}
+					name={`result${match.participants.findIndex((p) => p.participant === participant) + 1}`}
+					defaultValue={result}
 					min={0}
 					max={100}
 					style={{
@@ -263,7 +260,7 @@ const MatchParticipant = ({
 						overflowX: "clip",
 						textOverflow: "ellipsis",
 					}}>
-					{participant.result}
+					{result}
 				</div>
 			}
 			{canEdit && (
@@ -275,7 +272,7 @@ const MatchParticipant = ({
 						setDisabled(true);
 						const response = await fetch(
 							`/tournaments/${tournamentId}/matches/${match.id}/abandoned?user=${participant.userId}`,
-							{ method: participant.result === "A" ? "DELETE" : "POST" },
+							{ method: result === "A" ? "DELETE" : "POST" },
 						);
 
 						if (response.ok) {
@@ -284,7 +281,7 @@ const MatchParticipant = ({
 								await response.json<Partial<Database.Match>>(),
 							);
 							setMatches((m) => m.slice());
-							setActive(undefined);
+							setActive(null);
 						} else {
 							setError(
 								(
@@ -311,7 +308,7 @@ const MatchParticipant = ({
 						userSelect: "none",
 						width: "fit-content",
 					}}>
-					{participant.result === "A" ? "Annulla" : "Segna"} abbandono
+					{result === "A" ? "Annulla" : "Segna"} abbandono
 				</button>
 			)}
 		</div>
@@ -320,71 +317,84 @@ const MatchParticipant = ({
 const MatchUI = ({
 	active,
 	admin,
+	brackets,
 	currentlyPlaying,
 	id,
 	mobile,
+	query,
 	setActive,
+	setParticipantsMap,
 	setMatches,
 }: {
-	active: ResolvedMatch;
+	active: number;
 	admin: boolean;
+	brackets: ResolvedMatch[];
 	currentlyPlaying: number;
 	id: number;
 	mobile: boolean;
-	setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
+	query: URLSearchParams;
+	setActive: Dispatch<SetStateAction<number | null>>;
+	setParticipantsMap: Dispatch<SetStateAction<Record<string, Participant>>>;
 	setMatches: Dispatch<SetStateAction<Matches>>;
 }): ReactNode => {
 	const [disabled, setDisabled] = useState(false);
 	const [error, setError] = useState<string>();
-	const scrollPosition = useRef(window.scrollY);
+	const ref = useRef(typeof scrollY === "undefined" ? 0 : scrollY);
+	const newQuery = new URLSearchParams(query);
+	const match = brackets[active];
 
-	useLayoutEffect(() => {
-		document.body.style.overflowY = "clip";
-	}, []);
+	if (!match) {
+		setActive(null);
+		return <></>;
+	}
 	useEffect(() => {
-		(async () => {
-			const params = toSearchParams({
-				tag1: active.participant1.player?.tag,
-				tag2: active.participant2.player?.tag,
-				id: active.original?.id,
-			}).toString();
-			if (!params) return;
-			const result = await fetch(`/tournaments/${id}/matchData?${params}`).then(
-				(res) =>
-					res.json<
-						| Partial<{
-								player1: Brawl.Player | Clash.Player;
-								player2: Brawl.Player | Clash.Player;
-								match: Database.Match;
-						  }>
-						| { message: string }
-					>(),
+		const { eventSource } = new JsonStreamSource(
+			`/tournaments/${id}/matchData?${new URLSearchParams([
+				["id", String(match.id)],
+				...match.participants
+					.map((p) => p.participant)
+					.filter((p) => p.userId && (!p.member || (p.tag && !p.player)))
+					.map((p) => ["user", p.userId]),
+			])}`,
+		)
+			.on("match", (data: Matches[number]) => {
+				if (match.original) {
+					Object.assign(match.original, data);
+					setMatches((matches) => matches.slice());
+				} else setMatches((matches) => matches.concat(data));
+			})
+			.on(
+				"participant",
+				(data: Pick<Database.Participant, "userId" | "tag" | "name">) =>
+					setParticipantsMap((map) => {
+						Object.assign((map[data.userId] ??= data), data);
+						return { ...map };
+					}),
+			)
+			.on("member", (data: RESTGetAPIGuildMemberResult) =>
+				setParticipantsMap((map) => {
+					map[data.user.id]!.member = data;
+					return { ...map };
+				}),
+			)
+			.on("player", (data: Brawl.Player | Clash.Player) =>
+				setParticipantsMap((map) => {
+					const participant = match.participants.find(
+						(p) => p.participant.tag === data.tag,
+					)?.participant;
+
+					if (participant) participant.player = data;
+					else return map;
+					return { ...map };
+				}),
 			);
 
-			if ("message" in result) return console.error(result.message);
-			if (active.original) Object.assign(active.original, result.match);
-			else active.original = result.match;
-			setActive(
-				(active) =>
-					active &&
-					updateMatch({
-						...active,
-						participant1: {
-							...active.participant1,
-							player: result.player1 ?? active.participant1.player,
-						},
-						participant2: {
-							...active.participant2,
-							player: result.player2 ?? active.participant2.player,
-						},
-					}),
-			);
-		})().catch(console.error);
 		return () => {
-			document.body.style.overflowY = "";
-			window.scrollTo({ top: scrollPosition.current, behavior: "instant" });
+			scroll({ behavior: "instant", top: ref.current });
+			eventSource.close();
 		};
 	}, []);
+	newQuery.delete("match");
 	return (
 		<form
 			id="match"
@@ -413,8 +423,8 @@ const MatchUI = ({
 				);
 				const temp =
 					event.nativeEvent.submitter?.id === "temp" &&
-					active.status !== DBMatchStatus.Finished &&
-					active.status !== DBMatchStatus.Abandoned;
+					match.status !== DBMatchStatus.Finished &&
+					match.status !== DBMatchStatus.Abandoned;
 
 				if (
 					urlsp.get("result1") === urlsp.get("result2") &&
@@ -425,16 +435,16 @@ const MatchUI = ({
 					return setDisabled(false);
 				}
 				const response = await fetch(
-					`/tournaments/${id}/matches/${active.id}?${urlsp.toString()}${active.status === DBMatchStatus.Abandoned || temp ? "" : `&status=${event.nativeEvent.submitter?.id === "cancel" ? DBMatchStatus.Playing : DBMatchStatus.Finished}`}`,
+					`/tournaments/${id}/matches/${match.id}?${urlsp.toString()}${match.status === DBMatchStatus.Abandoned || temp ? "" : `&status=${event.nativeEvent.submitter?.id === "cancel" ? DBMatchStatus.Playing : DBMatchStatus.Finished}`}`,
 					{ method: "PATCH" },
 				);
 				if (response.ok) {
 					Object.assign(
-						active.original!,
+						match.original!,
 						await response.json<Partial<Database.Match>>(),
 					);
 					setMatches((m) => m.slice());
-					setActive(undefined);
+					setActive(null);
 				} else {
 					setError(
 						(
@@ -454,44 +464,49 @@ const MatchUI = ({
 					lineHeight: "1.75rem",
 					alignItems: "center",
 				}}>
-				<span style={{ color: statusColors[active.status] }}>
-					{matchStatus[active.status]}
+				<span style={{ color: statusColors[match.status] }}>
+					{matchStatus[match.status]}
 				</span>
-				<button
+				<a
+					href={`?${newQuery}`}
 					type="button"
-					onClick={setActive.bind(null, undefined)}
+					onClick={(event) => {
+						setActive(null);
+						event.preventDefault();
+					}}
 					style={{
 						backgroundColor: "transparent",
 						border: "none",
 						borderRadius: "100%",
-						color: "white",
+						color: "inherit",
+						textDecoration: "none",
 						cursor: "pointer",
 						fontFamily: "ggsans",
 						fontSize: "2.5rem",
 						fontWeight: 600,
 						height: "2rem",
-						lineHeight: 0,
+						lineHeight: "2rem",
 						padding: 0,
 						userSelect: "none",
 						width: "2rem",
 					}}>
 					×
-				</button>
+				</a>
 			</div>
-			<div style={{ display: "flex", alignItems: "center" }}>
+			<div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
 				<MatchParticipant
-					{...active.participant1}
+					participant={match.participants[0]}
 					mobile={mobile}
 					admin={admin}
-					match={active}
+					match={match}
 					currentlyPlaying={currentlyPlaying}
-					setMatches={setMatches}
-					setDisabled={setDisabled}
 					setActive={setActive}
+					setDisabled={setDisabled}
+					setMatches={setMatches}
 					tournamentId={id}
 					setError={setError}
 				/>
-				<div>
+				<div style={{ width: "4rem" }}>
 					<div style={{ fontSize: "3rem", lineHeight: 1 }}>VS</div>
 					<div
 						style={{
@@ -499,27 +514,27 @@ const MatchUI = ({
 							lineHeight: 1,
 							fontFamily: "ggsans",
 						}}>
-						({active.id})
+						({match.id})
 					</div>
 				</div>
 				<MatchParticipant
-					{...active.participant2}
+					participant={match.participants[1]}
 					mobile={mobile}
 					admin={admin}
-					match={active}
+					match={match}
 					currentlyPlaying={currentlyPlaying}
-					setMatches={setMatches}
-					setDisabled={setDisabled}
 					setActive={setActive}
+					setDisabled={setDisabled}
+					setMatches={setMatches}
 					tournamentId={id}
 					setError={setError}
 				/>
 			</div>
 			{admin &&
-				active.status !== DBMatchStatus.Default &&
-				active.original &&
-				active.round <= currentlyPlaying &&
-				active.round >= currentlyPlaying - 1 && (
+				match.status !== DBMatchStatus.Default &&
+				match.original &&
+				match.round <= currentlyPlaying &&
+				match.round >= currentlyPlaying - 1 && (
 					<div
 						style={{
 							display: "flex",
@@ -540,10 +555,10 @@ const MatchUI = ({
 							onClick={async () => {
 								setDisabled(true);
 								const response = await fetch(
-									`/tournaments/${id}/matches/${active.id}/abandoned`,
+									`/tournaments/${id}/matches/${match.id}/abandoned`,
 									{
 										method:
-											active.status === DBMatchStatus.Abandoned ?
+											match.status === DBMatchStatus.Abandoned ?
 												"DELETE"
 											:	"POST",
 									},
@@ -551,11 +566,11 @@ const MatchUI = ({
 
 								if (response.ok) {
 									Object.assign(
-										active.original!,
+										match.original!,
 										await response.json<Partial<Database.Match>>(),
 									);
 									setMatches((m) => m.slice());
-									setActive(undefined);
+									setActive(null);
 								} else {
 									setError(
 										(
@@ -578,7 +593,7 @@ const MatchUI = ({
 								fontSize: "1.125rem",
 								fontWeight: 500,
 							}}>
-							{active.status === DBMatchStatus.Abandoned ? "Annulla" : "Segna"}{" "}
+							{match.status === DBMatchStatus.Abandoned ? "Annulla" : "Segna"}{" "}
 							abbandono
 						</button>
 						<input
@@ -598,7 +613,7 @@ const MatchUI = ({
 								fontWeight: 500,
 							}}
 						/>
-						{active.status === DBMatchStatus.Finished ?
+						{match.status === DBMatchStatus.Finished ?
 							<input
 								value="Segna come non finita"
 								className="button"
@@ -617,7 +632,7 @@ const MatchUI = ({
 									fontWeight: 500,
 								}}
 							/>
-						: active.status === DBMatchStatus.Abandoned ?
+						: match.status === DBMatchStatus.Abandoned ?
 							<></>
 						:	<input
 								value="Invia provvisorio"
@@ -656,20 +671,25 @@ const MatchUI = ({
 		</form>
 	);
 };
-const BracketsUI = memo(
-	({
-		brackets,
-		currentlyPlaying,
-		participantsMap,
-		setActive,
-		setRound,
-	}: {
-		brackets: (Matches | undefined)[];
-		currentlyPlaying: number;
-		participantsMap: Record<string, Participants[number]>;
-		setActive: Dispatch<SetStateAction<ResolvedMatch | undefined>>;
-		setRound: Dispatch<SetStateAction<number | undefined>>;
-	}): ReactNode => (
+const BracketsUI = ({
+	brackets,
+	currentlyPlaying,
+	query,
+	selectedRound,
+	setActive,
+	setRound,
+}: {
+	brackets: ResolvedMatch[];
+	currentlyPlaying: number;
+	query: URLSearchParams;
+	selectedRound: number | null;
+	setActive: Dispatch<SetStateAction<number | null>>;
+	setRound: Dispatch<SetStateAction<number | null>>;
+}): ReactNode => {
+	const length =
+		selectedRound == null ? getLevelsCount(brackets.length) : selectedRound + 1;
+
+	return (
 		<div
 			style={{
 				display: "flex",
@@ -679,229 +699,363 @@ const BracketsUI = memo(
 				textAlign: "center",
 				width: "fit-content",
 			}}>
-			<div style={{ display: "flex", justifyContent: "space-between" }}>
-				{Array.from(brackets, (_, i) => (
-					<button
-						key={brackets.length - i}
-						onClick={setRound.bind(null, (round) =>
-							round === brackets.length - i - 1 ?
-								undefined
-							:	brackets.length - i - 1,
-						)}
-						className="deleteButton"
-						style={{
-							width: "calc(2.4px + 10rem)",
-							padding: "0.5rem",
-							fontFamily: "ggsans",
-							fontSize: "1rem",
-							lineHeight: "2rem",
-							color: "white",
-							cursor: "pointer",
-							backgroundColor: "transparent",
-							paddingBlock: 0,
-							paddingInline: 0,
-							border: "none",
-							borderRadius: "4px",
-						}}>
-						{currentlyPlaying === i && "🔴 "}
-						{roundName(brackets.length - i - 1)}
-					</button>
-				))}
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "row-reverse",
+					justifyContent: "space-between",
+				}}>
+				{Array.from({ length }, (_, i) => {
+					const newQuery = new URLSearchParams(query);
+
+					if (selectedRound === i) newQuery.delete("round");
+					else newQuery.set("round", String(i));
+					return (
+						<a
+							href={`?${newQuery}`}
+							key={i}
+							onClick={(event) => {
+								setRound((round) => (round === i ? null : i));
+								event.preventDefault();
+							}}
+							className="deleteButton"
+							style={{
+								width: "calc(2.4px + 10rem)",
+								padding: "0.5rem",
+								fontFamily: "ggsans",
+								fontSize: "1rem",
+								lineHeight: "2rem",
+								color: "white",
+								cursor: "pointer",
+								backgroundColor: "transparent",
+								paddingBlock: 0,
+								paddingInline: 0,
+								border: "none",
+								borderRadius: "4px",
+								textDecoration: "none",
+							}}>
+							{currentlyPlaying === i && "🔴 "}
+							{roundName(i)}
+						</a>
+					);
+				})}
 			</div>
 			<div
 				id="brackets"
 				style={{
 					display: "flex",
+					flexDirection: "row-reverse",
 					fontFamily: "LilitaOne",
 					fontSize: "0.875rem",
 					gap: "3rem",
 					lineHeight: "1.25rem",
 					whiteSpace: "nowrap",
-					height: `calc((5rem + 2.4px) * ${brackets[0]?.length ?? 0})`,
+					height: `calc((5rem + 2.4px) * ${getElementsCount(length - 1)})`,
 				}}>
-				{Array.from(brackets, (_, i) => (
+				{Array.from({ length }, (_, i) => (
 					<div
-						key={brackets.length - i}
+						key={i}
 						style={{
 							display: "flex",
 							flexDirection: "column",
 							justifyContent: "space-around",
 						}}>
-						{Array.from({ length: 2 ** (brackets.length - 1 - i) }, (_, k) => {
-							const match = resolveMatch(brackets, participantsMap, i, k);
+						{brackets
+							.slice(getFirstIndex(i), getLastIndex(i) + 1)
+							.map((match) => {
+								const newQuery = new URLSearchParams(query);
 
-							return (
-								<div
-									style={{
-										position: "relative",
-										border: style.border,
-										borderRadius: "4px",
-										backgroundColor: style.backgroundColor,
-										cursor: "pointer",
-									}}
-									key={match.id}
-									onClick={setActive.bind(null, match)}>
-									{i > 0 && (
-										<span style={{ pointerEvents: "none" }}>
-											<div
+								newQuery.set("match", String(match.id));
+								return (
+									<a
+										href={`?${newQuery}`}
+										style={{
+											position: "relative",
+											border: style.border,
+											borderRadius: "4px",
+											backgroundColor: style.backgroundColor,
+											cursor: "pointer",
+											color: "inherit",
+											textDecoration: "none",
+										}}
+										className="match"
+										key={match.id}
+										onClick={(event) => {
+											setActive(match.id);
+											event.preventDefault();
+										}}>
+										{i !== length - 1 && (
+											<span style={{ pointerEvents: "none" }}>
+												<div
+													style={{
+														border: "0.8px solid rgba(255, 255, 255, 0.2)",
+														borderLeft: "none",
+														left: "calc(-3rem - 0.8px)",
+														position: "absolute",
+														width: "1.5rem",
+														height: `calc((5rem + 2.4px) * ${2 ** (length - i - 2)} - 0.8px)`,
+														top: `calc((-2.5rem - 1.2px) * ${2 ** (length - i - 2)} + 2rem)`,
+													}}
+												/>
+												<div
+													style={{
+														borderBottom:
+															"0.8px solid rgba(255, 255, 255, 0.2)",
+														height: "2rem",
+														left: "calc(-1.5rem)",
+														position: "absolute",
+														width: "calc(1.5rem - 0.8px)",
+													}}
+												/>
+											</span>
+										)}
+										<div
+											style={{
+												top: "50%",
+												position: "absolute",
+												transform: `translate(${match.id ? "+" : "-"}50%, -50%)`,
+												pointerEvents: "none",
+												fontSize: "0.75rem",
+												fontFamily: "ggsans",
+												...(match.id ?
+													{ right: "calc(-0.75rem - 0.8px)" }
+												:	{ left: "calc(-0.75rem - 0.8px)" }),
+											}}>
+											{match.id}
+										</div>
+										<div
+											style={{
+												borderBottom: style.border,
+												display: "flex",
+												alignItems: "center",
+												height: "2rem",
+											}}>
+											<span
 												style={{
-													border: "0.8px solid rgba(255, 255, 255, 0.2)",
-													borderLeft: "none",
-													height: `calc((5rem + 2.4px) * ${2 ** (i - 1)} - 0.8px)`,
-													left: "calc(-3rem - 0.8px)",
-													position: "absolute",
-													top: `calc((-2.5rem - 1.2px) * ${2 ** (i - 1)} + 2rem)`,
-													width: "1.5rem",
-												}}
-											/>
-											<div
+													paddingBottom: "0.25rem",
+													textOverflow: "ellipsis",
+													overflowX: "clip",
+													width: "8rem",
+												}}>
+												{match.participants[0].participant.name}
+											</span>
+											<span
 												style={{
-													borderBottom: "0.8px solid rgba(255, 255, 255, 0.2)",
-													height: "2rem",
-													left: "calc(-1.5rem)",
-													position: "absolute",
-													width: "calc(1.5rem - 0.8px)",
-												}}
-											/>
-										</span>
-									)}
-									<div
-										style={{
-											top: "50%",
-											position: "absolute",
-											transform: `translate(${match.id ? "+" : "-"}50%, -50%)`,
-											pointerEvents: "none",
-											fontSize: "0.75rem",
-											fontFamily: "ggsans",
-											...(match.id ?
-												{ right: "calc(-0.75rem - 0.8px)" }
-											:	{ left: "calc(-0.75rem - 0.8px)" }),
-										}}>
-										{match.id}
-									</div>
-									<div
-										style={{
-											borderBottom: style.border,
-											display: "flex",
-											alignItems: "center",
-											height: "2rem",
-										}}>
+													width: "2rem",
+													borderLeft: style.border,
+													height: "1.25rem",
+												}}>
+												{match.participants[0].result}
+											</span>
+										</div>
 										<span
 											style={{
-												paddingBottom: "0.25rem",
-												textOverflow: "ellipsis",
-												overflowX: "clip",
-												width: "8rem",
+												position: "absolute",
+												top: "50%",
+												left: "calc(50% - 1rem)",
+												transform: "translate(-50%, -50%)",
+												fontSize: "1rem",
 											}}>
-											{match.participant1.player?.name ?? "???"}
+											VS
 										</span>
-										<span
+										<div
 											style={{
-												width: "2rem",
-												borderLeft: style.border,
-												height: "1.25rem",
+												display: "flex",
+												alignItems: "center",
+												height: "2rem",
 											}}>
-											{match.participant1.result}
-										</span>
-									</div>
-									<span
-										style={{
-											position: "absolute",
-											top: "50%",
-											left: "calc(50% - 1rem)",
-											transform: "translate(-50%, -50%)",
-											fontSize: "1rem",
-										}}>
-										VS
-									</span>
-									<div
-										style={{
-											display: "flex",
-											alignItems: "center",
-											height: "2rem",
-										}}>
-										<span
-											style={{
-												paddingTop: "0.25rem",
-												textOverflow: "ellipsis",
-												overflowX: "clip",
-												width: "8rem",
-											}}>
-											{match.participant2.player?.name ?? "???"}
-										</span>
-										<span
-											style={{
-												width: "2rem",
-												borderLeft: style.border,
-												height: "1.25rem",
-											}}>
-											{match.participant2.result}
-										</span>
-									</div>
-								</div>
-							);
-						})}
+											<span
+												style={{
+													paddingTop: "0.25rem",
+													textOverflow: "ellipsis",
+													overflowX: "clip",
+													width: "8rem",
+												}}>
+												{match.participants[1].participant.name}
+											</span>
+											<span
+												style={{
+													width: "2rem",
+													borderLeft: style.border,
+													height: "1.25rem",
+												}}>
+												{match.participants[1].result}
+											</span>
+										</div>
+									</a>
+								);
+							})}
 					</div>
 				))}
 			</div>
 		</div>
-	),
-);
+	);
+};
+const parseQueryNumber = (
+	query: URLSearchParams,
+	name: string,
+	{
+		min = -Infinity,
+		max = Infinity,
+		allowNaN,
+		aliases = {},
+	}: Partial<{
+		min: number;
+		max: number;
+		allowNaN: boolean;
+		aliases: Record<string, number>;
+	}> = {},
+): number | null => {
+	let value: string | number | null = query.get(name);
+
+	if (value == null) return null;
+	value = Object.hasOwn(aliases, value) ? aliases[value]! : +value;
+	if ((!allowNaN && Number.isNaN(value)) || value < min || value > max)
+		return null;
+	return value;
+};
 
 export default useClient(
 	"Brackets",
 	({
-		participants,
+		admin,
+		id,
 		matches,
 		mobile,
-		id,
-		admin,
+		participants,
+		query,
 		embed,
 	}: {
-		participants: Participants;
+		admin: boolean;
+		id: number;
 		matches: Matches;
 		mobile: boolean;
-		id: number;
-		admin: boolean;
+		participants: Participant[];
+		query: URLSearchParams;
 		embed?: boolean;
 	}) => {
-		const [active, setActive] = useState<ResolvedMatch>();
+		if (typeof location !== "undefined")
+			query = new URLSearchParams(location.search);
+		const ref = useRef(false);
 		const [currentMatches, setMatches] = useState(matches);
-		const [round, setRound] = useState<number>();
-		const [currentParticipants] = useState(participants);
-		const brackets = useMemo(() => {
-			const brackets: (Matches | undefined)[] = [];
-
-			for (const match of currentMatches) {
-				const level = Math.floor(Math.log2(match.id + 1));
-
-				if (round == null || level <= round)
-					(brackets[level] ??= [])[match.id - 2 ** level + 1] = match;
-			}
-			return brackets.reverse();
-		}, [currentMatches, round]);
-		const participantsMap = useMemo(
-			() => Object.fromEntries(currentParticipants.map((p) => [p.userId, p])),
-			[currentParticipants],
+		const [participantsMap, setParticipantsMap] = useState(() =>
+			Object.fromEntries(participants.map((p) => [p.userId, p])),
 		);
+		const brackets = useMemo(() => {
+			const brackets: ResolvedMatch[] = [];
+
+			for (const match of currentMatches)
+				brackets[match.id] = {
+					id: match.id,
+					original: match,
+					round: Math.floor(Math.log2(match.id + 1)),
+					status: match.status,
+					participants: [
+						{ user: match.user1, result: match.result1 },
+						{ user: match.user2, result: match.result2 },
+					].map<MatchParticipant>(({ user, result }) =>
+						user == null ?
+							{ result: "N", participant: { name: "N/A", userId: "" } }
+						:	{
+								participant: participantsMap[user] ?? {
+									name: "???",
+									userId: user,
+								},
+								result:
+									match.status === DBMatchStatus.Abandoned && result == null ?
+										"A"
+									:	String(result ?? 0),
+							},
+					) as [MatchParticipant, MatchParticipant],
+				};
+			for (
+				let id = 2 ** (Math.floor(Math.log2(brackets.length)) + 1) - 2;
+				id >= 0;
+				id--
+			) {
+				if (brackets[id]) continue;
+				const tbd = !brackets[Math.floor((id - 1) / 2)];
+
+				brackets[id] = {
+					id,
+					original: undefined,
+					round: Math.floor(Math.log2(id + 1)),
+					status: tbd ? DBMatchStatus.ToBePlayed : DBMatchStatus.Default,
+					participants: (tbd ?
+						[brackets[2 * id + 1], brackets[2 * id + 2]]
+					:	[null, null]
+					).map((match): MatchParticipant => {
+						const user =
+							match?.status === DBMatchStatus.ToBePlayed ?
+								undefined
+							:	resolveWinner(match?.original);
+
+						return (
+							user === undefined ?
+								{ participant: { userId: "", name: "TBD" }, result: "-" }
+							: user === null ?
+								{ participant: { userId: "", name: "N/A" }, result: "N" }
+							:	{
+									participant: participantsMap[user] ?? {
+										name: "???",
+										userId: user,
+									},
+									result: "-",
+								}
+						);
+					}) as [MatchParticipant, MatchParticipant],
+				};
+			}
+			return brackets;
+		}, [currentMatches, participantsMap]);
 		const currentlyPlaying = useMemo(
 			() =>
-				Math.max(
-					brackets.findLastIndex((b) =>
-						b?.some((p) => p.status !== DBMatchStatus.ToBePlayed),
-					),
-					0,
+				getLevel(
+					brackets.findIndex((p) => p.status !== DBMatchStatus.ToBePlayed),
 				),
 			[brackets],
 		);
+		const [active, setActive] = useState(() =>
+			parseQueryNumber(query, "match", { min: 0, max: brackets.length - 1 }),
+		);
+		const [round, setRound] = useState(() =>
+			parseQueryNumber(query, "round", {
+				min: 0,
+				max: getLastLevel(brackets.length),
+				aliases: { current: currentlyPlaying },
+			}),
+		);
 
+		useEffect(() => {
+			const listener = () => {
+				const query = new URLSearchParams(location.search);
+
+				setActive(parseQueryNumber(query, "match"));
+				setRound(parseQueryNumber(query, "round"));
+			};
+
+			addEventListener("popstate", listener);
+			return () => removeEventListener("popstate", listener);
+		}, []);
+		useEffect(() => {
+			const url = new URL(location.href);
+
+			if (active != null) url.searchParams.set("match", String(active));
+			else url.searchParams.delete("match");
+			if (round != null) url.searchParams.set("round", String(round));
+			else url.searchParams.delete("round");
+			if (url.href !== location.href)
+				if (ref.current) history.pushState(null, "", url);
+				else history.replaceState(null, "", url);
+			ref.current = true;
+		}, [active, round]);
 		return (
 			<>
 				<div
 					style={{
 						position: "fixed",
 						top: "2.5rem",
-						right: active ? "calc(1rem + 4px)" : "0.5rem",
+						right: active == null ? "0.5rem" : "calc(1rem + 4px)",
 						padding: "0 0.5rem",
 						display: "flex",
 						gap: "0.25rem",
@@ -939,11 +1093,7 @@ export default useClient(
 					<button
 						className="deleteButton"
 						type="button"
-						onClick={
-							typeof window === "undefined" ? undefined : (
-								window.location.reload.bind(window.location)
-							)
-						}
+						onClick={() => location.reload()}
 						style={{
 							backgroundColor: "transparent",
 							border: "none",
@@ -968,22 +1118,26 @@ export default useClient(
 						</svg>
 					</button>
 				</div>
-				{active ?
-					<MatchUI
-						active={active}
-						setActive={setActive}
-						mobile={mobile}
-						id={id}
-						admin={admin}
-						currentlyPlaying={currentlyPlaying}
-						setMatches={setMatches}
-					/>
-				:	<BracketsUI
+				{active == null ?
+					<BracketsUI
+						query={query}
 						brackets={brackets}
 						currentlyPlaying={currentlyPlaying}
-						participantsMap={participantsMap}
+						selectedRound={round}
 						setActive={setActive}
 						setRound={setRound}
+					/>
+				:	<MatchUI
+						admin={admin}
+						id={id}
+						mobile={mobile}
+						query={query}
+						active={active}
+						brackets={brackets}
+						currentlyPlaying={currentlyPlaying}
+						setActive={setActive}
+						setParticipantsMap={setParticipantsMap}
+						setMatches={setMatches}
 					/>
 				}
 			</>

@@ -18,6 +18,7 @@ import {
 import { Temporal } from "temporal-polyfill";
 import { ColorNumbers } from "../app/utils/Colors";
 import Command from "../Command";
+import { randomArrayItem } from "../util/arrays";
 import { forceCapitalize } from "../util/capitalize";
 import {
 	DBMatchStatus,
@@ -28,7 +29,6 @@ import {
 } from "../util/Constants";
 import { ok } from "../util/node";
 import normalizeError from "../util/normalizeError";
-import { randomArrayItem } from "../util/random";
 import { camelToSpace, template } from "../util/strings";
 import { matchStatus, roundName } from "../util/tournaments/Constants";
 import { finishRound } from "../util/tournaments/finishRound";
@@ -193,7 +193,7 @@ export class Tournament extends Command {
 
 		reply({
 			flags: MessageFlags.IsComponentsV2 | (full ? MessageFlags.Ephemeral : 0),
-			allowed_mentions: { parse: [] },
+			allowed_mentions: { parse: [], users: user === id ? [] : [user] },
 			components: [
 				{
 					type: ComponentType.TextDisplay,
@@ -420,17 +420,16 @@ export class Tournament extends Command {
 		}
 	};
 	static che = async (
-		{ edit, defer }: ComponentReplies,
+		{ edit, defer, reply }: ComponentReplies,
 		{
-			args: [matchId, tournamentId],
 			user: { id: userId },
 			interaction: {
 				member: { roles, permissions } = { roles: [] } as any,
 				locale,
+				channel: { id: channelId },
 			},
 		}: ComponentArgs,
 	) => {
-		defer();
 		const match = await env.DB.prepare(
 			`
 				SELECT m.*, t.game, t.rounds, t.flags,
@@ -440,10 +439,10 @@ export class Tournament extends Command {
 					AND p1.tournamentId = m.tournamentId
 				LEFT JOIN Participants p2 ON p2.userId = m.user2
 					AND p2.tournamentId = m.tournamentId
-				WHERE m.id = ?1 AND m.tournamentId = ?2
+				WHERE m.channelId = ?
 			`,
 		)
-			.bind(matchId, tournamentId)
+			.bind(channelId)
 			.first<
 				Database.Match &
 					Pick<Database.Tournament, "game" | "rounds" | "flags"> &
@@ -451,16 +450,22 @@ export class Tournament extends Command {
 					PossiblyNull<{ user2Tag: Database.Participant["tag"] }>
 			>();
 
-		if (!match?.id) return edit({ content: "Scontro non trovato!" });
+		if (!match)
+			return reply({
+				content: "Scontro non trovato!",
+				flags: MessageFlags.Ephemeral,
+			});
 		if ((match.flags & TournamentFlags.AutoDetectResults) === 0)
-			return edit({
+			return reply({
 				content:
 					"Il controllo dei risultati tramite registro battaglie non è attivato per questo torneo!",
+				flags: MessageFlags.Ephemeral,
 			});
 		if (match.game === SupercellPlayerType.ClashRoyale)
-			return edit({
+			return reply({
 				content:
 					"Il controllo dei risultati tramite registro battaglie non è supportato per Clash Royale!",
+				flags: MessageFlags.Ephemeral,
 			});
 		if (
 			match.status !== DBMatchStatus.Playing &&
@@ -468,14 +473,15 @@ export class Tournament extends Command {
 			new Set(roles).isDisjointFrom(new Set(env.ALLOWED_ROLES.split(","))) &&
 			!(BigInt(permissions) & PermissionFlagsBits.ManageGuild)
 		)
-			return edit({
-				flags: MessageFlags.Ephemeral,
+			return reply({
 				content:
 					"Solo gli amministratori possono aggiornare i risultati dopo che la partita è terminata!",
+				flags: MessageFlags.Ephemeral,
 			});
 		if (!match.user1Tag || !match.user2Tag)
-			return edit({
+			return reply({
 				content: "Entrambi i partecipanti devono avere il tag collegato!",
+				flags: MessageFlags.Ephemeral,
 			});
 		try {
 			const tags = [match.user1Tag, match.user2Tag];
@@ -486,6 +492,7 @@ export class Tournament extends Command {
 			const rounds = JSON.parse(match.rounds) as Database.Round[];
 			const round =
 				rounds[Math.floor(Math.log2(match.id + 1))] ?? rounds.at(-1)!;
+			defer();
 			const battles = await Brawl.getBattleLog(tag);
 			const filteredBattles = battles
 				.filter(
@@ -503,8 +510,7 @@ export class Tournament extends Command {
 			if (!filteredBattles.length)
 				return edit({
 					content: template`
-						Non risulta alcuna partita corrispondente! Assicurati di giocare le partite richieste prima di controllare i risultati.
-						-# Nota: solo le partite in ${round.mode} con i bot disattivati tra ${match.user1Tag} e ${match.user2Tag} vengono considerate
+						Non risulta alcuna partita corrispondente! **Invia i risultati solo dopo aver giocato le partite.**
 						${battles[0]}-# Ultima partita di ${tag} registrata il <t:${Math.round(Clash.parseAPIDate(battles[0]?.battleTime ?? "") / 1000)}:s>
 					`,
 				});
@@ -549,10 +555,6 @@ export class Tournament extends Command {
 							.slice(0, 9)
 							.map<APIMessageTopLevelComponent>((battle) => ({
 								type: ComponentType.Container,
-								accent_color:
-									battle.battle.result === "defeat" ? ColorNumbers.Danger
-									: battle.battle.result === "victory" ? ColorNumbers.Success
-									: undefined,
 								components: [
 									{
 										type: ComponentType.Section,
@@ -577,15 +579,6 @@ export class Tournament extends Command {
 													Modalità: **${camelToSpace(battle.battle.mode)}**
 													Mappa: **${battle.event.map}**
 													Tipo: **${battle.battle.type}**
-													Risultato: **${
-														(battle.battle.result &&
-															{
-																victory: "Vittoria",
-																defeat: "Sconfitta",
-																draw: "Pareggio",
-															}[battle.battle.result]) ??
-														battle.battle.result
-													}**
 													Durata: **${Temporal.Duration.from({ seconds: battle.battle.duration })
 														.round({ largestUnit: "day" })
 														.toLocaleString(locale, { style: "narrow" })}**

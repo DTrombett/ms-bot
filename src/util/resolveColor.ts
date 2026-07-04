@@ -1,5 +1,5 @@
 import capitalize from "./capitalize";
-import { randomArrayItem } from "./random";
+import { randomArrayItem } from "./arrays";
 
 export type RGB = [red: number, green: number, blue: number];
 export type HSL = [hue: number, sat: number, light: number];

@@ -9,11 +9,13 @@ import {
 	ComponentType,
 	MessageFlags,
 	Routes,
+	type APIComponentInContainer,
 	type APIMessageTopLevelComponent,
 	type RESTGetAPIChannelMessageResult,
 	type RESTPostAPIChannelMessageJSONBody,
 	type RESTPostAPIChannelMessageResult,
 } from "discord-api-types/v10";
+import { shuffleArray } from "./util/arrays";
 import {
 	DBMatchStatus,
 	QueueMessageType,
@@ -25,6 +27,7 @@ import {
 import { rest } from "./util/globals";
 import { ok } from "./util/node";
 import normalizeError from "./util/normalizeError";
+import { template } from "./util/strings";
 import { TimeUnit } from "./util/time";
 import { createRegistrationMessage } from "./util/tournaments/createRegistrationMessage";
 import { resolveWinner } from "./util/tournaments/resolveWinner";
@@ -208,17 +211,6 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 						),
 					),
 				);
-			if (participants.length > (tournament.maxPlayers ?? Infinity))
-				await step.do<never>(
-					"Participants count not satisfied",
-					{ retries: { limit: 0, delay: 0 } },
-					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
-						Promise,
-						new NonRetryableError(
-							`Massimo partecipanti non soddisfatto: ${participants.length} > ${tournament.maxPlayers}`,
-						),
-					),
-				);
 			if (participants.length > 1)
 				await step.do<void>(
 					"Save participants",
@@ -226,7 +218,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 				);
 			this.log(step, tournament.logChannel, "Brackets create", {
 				type: ComponentType.TextDisplay,
-				content: `## Brackets create!\nhttps://ms-bot.trombett.org/tournaments/${this.tournamentId}`,
+				content: `## Brackets create!\nhttps://ms-bot.trombett.org/tournaments/${this.tournamentId}/brackets`,
 			});
 		} catch (error) {
 			this.sendError(
@@ -242,43 +234,41 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		(participants: Pick<Database.Participant, "userId">[]) => async () => {
 			const length = 2 ** (Math.ceil(Math.log2(participants.length)) - 1),
 				query = this.env.DB.prepare(
-					`INSERT INTO Matches (id, status, tournamentId, user1, user2) VALUES (?1, ?2, ?3, ?4, ?5)`,
+					`
+						INSERT INTO Matches (id, status, tournamentId, user1, user2)
+						VALUES (?1, ?2, ?3, ?4, ?5)
+					`,
 				);
 
 			await this.env.DB.batch(
-				Array.from(
-					{ length },
-					this.createMatchQueries(length, participants, query),
-				).concat(
-					this.env.DB.prepare(
-						`UPDATE Tournaments SET statusFlags = statusFlags | ?1 WHERE id = ?2`,
-					).bind(TournamentStatusFlags.BracketsCreated, this.tournamentId),
-				),
-			);
-		};
-
-	private createMatchQueries =
-		(
-			length: number,
-			participants: Pick<Database.Participant, "userId">[],
-			query: D1PreparedStatement,
-		) =>
-		(_: unknown, i: number) => {
-			const match: Database.Match = {
-				id: i + length - 1,
-				status: 0,
-				tournamentId: this.tournamentId,
-				user1: participants[i]!.userId,
-				user2: participants[i + length]?.userId ?? null,
-			};
-
-			if (!match.user2) match.status = DBMatchStatus.Default;
-			return query.bind(
-				match.id,
-				match.status,
-				match.tournamentId,
-				match.user1,
-				match.user2,
+				// Shuffle so that bye matches are not only at the end
+				shuffleArray(
+					Array.from(
+						{ length },
+						(_, k): Pick<Database.Match, "user1" | "user2"> => ({
+							user1: participants[k]!.userId,
+							user2: participants[k + length]?.userId ?? null,
+						}),
+					),
+				)
+					.map((value, index) =>
+						query.bind(
+							index + length - 1,
+							value.user2 ? DBMatchStatus.ToBePlayed : DBMatchStatus.Default,
+							this.tournamentId,
+							value.user1,
+							value.user2,
+						),
+					)
+					.concat(
+						this.env.DB.prepare(
+							`
+								UPDATE Tournaments
+								SET statusFlags = statusFlags | ?1
+								WHERE id = ?2
+							`,
+						).bind(TournamentStatusFlags.BracketsCreated, this.tournamentId),
+					),
 			);
 		};
 
@@ -288,18 +278,8 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		)
 			.bind(this.tournamentId)
 			.run<Pick<Database.Participant, "userId">>();
-		let currentIndex = results.length;
 
-		if (currentIndex <= 1) return results;
-		while (currentIndex != 0) {
-			const randomIndex = Math.floor(Math.random() * currentIndex--);
-
-			[results[currentIndex], results[randomIndex]] = [
-				results[randomIndex]!,
-				results[currentIndex]!,
-			];
-		}
-		return results;
+		return shuffleArray(results);
 	};
 
 	private createChannels = async (
@@ -367,6 +347,14 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					`Wait for round ${tournament.currentRound} to start`,
 					{ type: `round-${tournament.currentRound + 1}` },
 				);
+			if (!tournament.matchMessageLink) {
+				this.sendError(
+					step,
+					tournament.logChannel,
+					"Non è stato impostato il link al messaggio da mandare nei canali!",
+				);
+				throw new Error("Missing match message link");
+			}
 			const [matches, message] = await Promise.all([
 				this.createRoundAndDeleteChannels(
 					step,
@@ -374,11 +362,10 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 					tournament.logChannel,
 					tournament.flags,
 				),
-				tournament.matchMessageLink &&
-					step.do(
-						`Fetch message for round ${tournament.currentRound}`,
-						this.fetchMatchMessage(tournament.matchMessageLink),
-					),
+				step.do(
+					`Fetch message for round ${tournament.currentRound}`,
+					this.fetchMatchMessage(tournament.matchMessageLink),
+				),
 			]);
 
 			if (matches.length)
@@ -594,8 +581,19 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		error?: unknown,
 	) => {
 		const id = crypto.randomUUID();
+		const newError = error == null ? null : normalizeError(error);
+		const component: APIComponentInContainer = {
+			type: ComponentType.TextDisplay,
+			content: template`
+				${message}### ${message}
+				${newError}\`\`\`\n${(newError?.stack ?? newError?.toString())?.slice(
+					0,
+					3952 - (message ? message.length + 5 : 0),
+				)}\n\`\`\`
+				-# ${id}
+			`,
+		};
 
-		error = normalizeError(error);
 		this.ctx.waitUntil(
 			step.do<void>(
 				`Report error ${id} in logs channel`,
@@ -609,12 +607,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 									{
 										type: ComponentType.Container,
 										accent_color: 0xff0000,
-										components: [
-											{
-												type: ComponentType.TextDisplay,
-												content: `${message ? `### ${message}\n` : ""}\`\`\`\n${(error as Error).stack?.slice(0, 3952 - (message ? message.length + 5 : 0))}\n\`\`\`\n-# ${id}`,
-											},
-										],
+										components: [component],
 									},
 								],
 							} satisfies RESTPostAPIChannelMessageJSONBody,

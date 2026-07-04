@@ -31,7 +31,7 @@ export const formatDuration = (
 		locales?: Intl.LocalesArgument;
 		long?: boolean;
 		// roundTo?: Partial<Temporal.DurationRoundingOptions>;
-		roundTo?: Partial<Extract<Temporal.DurationRoundTo, object>>;
+		roundTo?: Partial<Extract<Temporal.DurationRoundingOptions, object>>;
 		options?: Partial<Intl.DurationFormatOptions>;
 	} = {},
 ) => {

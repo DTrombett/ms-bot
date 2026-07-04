@@ -5,7 +5,6 @@ import {
 	type Dispatch,
 	type SetStateAction,
 } from "react";
-import type { Participants } from "../tournaments/[id].page";
 import { Colors } from "../utils/Colors";
 import useClient from "../utils/useClient";
 import { Section, styles, TextInput } from "./forms";
@@ -44,8 +43,8 @@ const DeleteButton = ({
 	i: number;
 	id: number;
 	mobile: boolean;
-	p: Participants[number];
-	setP: Dispatch<SetStateAction<Participants>>;
+	p: Participant;
+	setP: Dispatch<SetStateAction<Participant[]>>;
 	setError: Dispatch<SetStateAction<string | undefined>>;
 }) => {
 	const [active, setActive] = useState(false);
@@ -118,12 +117,12 @@ const ListUI = ({
 	setUI,
 	setParticipants,
 }: {
-	participants: Participants;
+	participants: Participant[];
 	mobile: boolean;
 	admin: boolean;
 	id: number;
 	setUI: Dispatch<SetStateAction<UI>>;
-	setParticipants: Dispatch<SetStateAction<Participants>>;
+	setParticipants: Dispatch<SetStateAction<Participant[]>>;
 }) => {
 	const [selection, setSelection] = useState(0);
 	const [disabled, setDisabled] = useState(false);
@@ -364,7 +363,7 @@ const AddParticipantUI = ({
 }: {
 	id: number;
 	setUI: Dispatch<SetStateAction<UI>>;
-	setParticipants: Dispatch<SetStateAction<Participants>>;
+	setParticipants: Dispatch<SetStateAction<Participant[]>>;
 }) => {
 	const [disabled, setDisabled] = useState(false);
 	const [error, setError] = useState<string>();
@@ -380,12 +379,7 @@ const AddParticipantUI = ({
 				});
 
 				if (response.ok) {
-					const result = await response.json<{
-						userId: string;
-						tournamentId: number;
-						tag: string | null;
-						name: string | null | undefined;
-					}>();
+					const result = await response.json<Database.Participant>();
 
 					setParticipants((p) => p.concat(result));
 					setUI(UI.List);
@@ -493,7 +487,7 @@ export default useClient(
 		mobile,
 		id,
 	}: {
-		participants: Participants;
+		participants: Participant[];
 		admin: boolean;
 		mobile: boolean;
 		id: number;

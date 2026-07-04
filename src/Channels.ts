@@ -49,6 +49,7 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 							const { id } = (await rest.post(
 								Routes.guildChannels(event.payload.tournament.guildId),
 								{
+									reason: `Creazione canale scontro ${match.id} torneo ${event.payload.tournament.name} tra <@${match.user1}> e <@${match.user2}>`,
 									body: {
 										name: placeholder(
 											channelName ?? "{matchId}-{player1}-vs-{player2}",
@@ -145,10 +146,10 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 					components: [
 						{
 							type: ComponentType.Button,
-							custom_id: `tournament-che-${match.id}-${event.payload.tournament.id}`,
+							custom_id: "tournament-che",
 							style: ButtonStyle.Success,
 							emoji: { name: "✅" },
-							label: "Controlla risultati",
+							label: "Invia risultati",
 						},
 					],
 				});

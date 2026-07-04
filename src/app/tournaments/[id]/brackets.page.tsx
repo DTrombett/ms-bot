@@ -2,7 +2,7 @@ import Brackets from "../../components/Brackets";
 import { Page } from "../../components/layout";
 import lilitaOne from "../../fonts/LilitaOne-Regular.ttf" with { type: "asset" };
 import ggsans from "../../fonts/ggsansvf.woff2" with { type: "asset" };
-import type { Matches, Participants } from "../[id].page";
+import type { Matches } from "../[id].page";
 
 export default ({
 	admin,
@@ -19,7 +19,7 @@ export default ({
 	styles?: string[];
 	tournament: Pick<Database.Tournament, "name" | "id">;
 	matches: Matches;
-	participants: Participants;
+	participants: Participant[];
 	url: URL;
 	embed: boolean;
 }) => (
@@ -38,11 +38,12 @@ export default ({
 		}}
 		url={url}>
 		<Brackets
+			admin={admin}
+			id={tournament.id}
+			matches={matches}
 			mobile={mobile}
 			participants={participants}
-			matches={matches}
-			id={tournament.id}
-			admin={admin}
+			query={url.searchParams}
 			embed={embed}
 		/>
 	</Page>

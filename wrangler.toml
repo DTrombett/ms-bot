@@ -73,11 +73,6 @@ binding = "SHORTEN"
 class_name = "Shorten"
 
 [[workflows]]
-name = "websocket"
-binding = "WEBSOCKET"
-class_name = "WebSocket"
-
-[[workflows]]
 name = "tournament"
 binding = "TOURNAMENT"
 class_name = "Tournament"

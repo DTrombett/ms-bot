@@ -7,6 +7,7 @@ import type {
 	APIApplicationCommandSubcommandGroupOption,
 	APIApplicationCommandSubcommandOption,
 	APIChatInputApplicationCommandInteraction,
+	APIGuildMember,
 	APIInteraction,
 	APIInteractionResponse,
 	APIInteractionResponseChannelMessageWithSource,
@@ -58,6 +59,8 @@ declare global {
 
 	type PossiblyUndefined<T> = T | { [P in keyof T]?: never };
 
+	type Optional<T, K extends keyof T> = Omit<T, K> & { [P in K]?: T[P] };
+
 	type QueueMessage =
 		| { t: QueueMessageType.Ack; d?: never }
 		| { t: QueueMessageType.TournamentMessageEdit; d: { id: number } };
@@ -102,6 +105,10 @@ declare global {
 	type Merge<A, B> = { [K in Exclude<keyof A, keyof B>]?: A[K] } & {
 		[K in Exclude<keyof B, keyof A>]?: B[K];
 	} & { [K in Extract<keyof A, keyof B>]: A[K] | B[K] };
+
+	type Exclusive<A, B> =
+		| (A & { [K in keyof B]?: never })
+		| (B & { [K in keyof A]?: never });
 
 	/**
 	 * Options to create a command
@@ -425,8 +432,8 @@ declare global {
 		type Participant = {
 			tournamentId: number;
 			userId: string;
+			name: string;
 			tag?: string | null;
-			name?: string | null;
 		};
 		type Round = { mode: string; bof: number };
 		type Match = {
@@ -608,18 +615,13 @@ declare global {
 
 	type Filter<T, U> = { [K in keyof T as T[K] extends U ? K : never]: T[K] };
 
-	type Participant = {
-		userId: string;
-		result: string;
-		player?:
-			| Partial<Pick<Brawl.Player | Clash.Player, "name" | "tag">>
-			| Brawl.Player
-			| Clash.Player;
-	};
+	type Participant = Pick<Database.Participant, "tag" | "userId" | "name"> &
+		Partial<{ player: Brawl.Player | Clash.Player; member: APIGuildMember }>;
+
+	type MatchParticipant = { participant: Participant; result: string };
 
 	type ResolvedMatch = {
-		participant1: Participant;
-		participant2: Participant;
+		participants: [MatchParticipant, MatchParticipant];
 		id: number;
 		status: DBMatchStatus;
 		round: number;
