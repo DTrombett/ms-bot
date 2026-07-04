@@ -348,7 +348,7 @@ const MatchUI = ({
 		return <></>;
 	}
 	useEffect(() => {
-		new JsonStreamSource(
+		const { eventSource } = new JsonStreamSource(
 			`/tournaments/${id}/matchData?${new URLSearchParams([
 				["id", String(match.id)],
 				...match.participants
@@ -388,7 +388,11 @@ const MatchUI = ({
 					return { ...map };
 				}),
 			);
-		return () => scroll({ behavior: "instant", top: ref.current });
+
+		return () => {
+			scroll({ behavior: "instant", top: ref.current });
+			eventSource.close();
+		};
 	}, []);
 	newQuery.delete("match");
 	return (
