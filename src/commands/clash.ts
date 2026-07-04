@@ -1223,7 +1223,7 @@ export class Clash extends Command {
 				emoji: { name: "⛓️‍💥" },
 				style: ButtonStyle.Danger,
 			});
-		if (player.clan.tag)
+		if (player.clan?.tag)
 			components[0]!.components.push({
 				type: ComponentType.Button,
 				custom_id: `clash-clan--${player.clan.tag}`,
@@ -1464,7 +1464,7 @@ export class Clash extends Command {
 				.first<string>("tag");
 
 			if (playerTag)
-				options.tag = (await this.getPlayer(playerTag, { edit })).clan.tag;
+				options.tag = (await this.getPlayer(playerTag, { edit })).clan?.tag;
 		}
 		if (!options.tag)
 			return edit({

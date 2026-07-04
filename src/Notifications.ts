@@ -130,7 +130,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 			const newRank = Math.floor((newPlayer.rankedRank - 1) / 3),
 				oldRank = Math.floor((oldPlayer.rankedRank - 1) / 3);
 
-			if (newRank > oldRank)
+			if (newRank > oldRank && oldRank !== -1)
 				components.push({
 					type: ComponentType.Container,
 					accent_color:
@@ -144,7 +144,7 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 							components: [
 								{
 									type: ComponentType.TextDisplay,
-									content: `## Nuova divisione raggiunta!\nHai raggiunto <:ranked:${(Brawl.RANKED_TIERS[newRank] ?? Brawl.RANKED_TIERS.at(-1))!.emoji}> **${forceCapitalize(newPlayer.rankedRankName.split(/\s+/)[0]!)}** in modalità Classificata!`,
+									content: `## Nuova divisione raggiunta!\nHai raggiunto <:ranked:${(Brawl.RANKED_TIERS[newRank] ?? Brawl.RANKED_TIERS.at(-1))!.emoji}> **${forceCapitalize((newPlayer.rankedRankName ?? "BRONZE I").split(/\s+/)[0]!)}** in modalità Classificata!`,
 								},
 							],
 							accessory: {

@@ -1292,7 +1292,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 	scheduled: async ({ cron }) => {
 		if (cron === "0 0 * * *")
 			await Promise.allSettled([env.PREDICTIONS_REMINDERS.create()]);
-		else if (cron === "*/5 * * * *") {
+		else if (cron === "0 */1 * * *") {
 			const { results } = await env.DB.prepare(
 				`SELECT * FROM SupercellPlayers WHERE notifications > 0`,
 			).run<Database.SupercellPlayer>();

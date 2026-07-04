@@ -1161,13 +1161,13 @@ declare global {
 			brawlers: BrawlerStatList;
 			rankedSeasonId: number;
 			rankedRank: number;
-			rankedRankName: string;
+			rankedRankName?: string;
 			rankedElo: number;
 			highestSeasonRankedRank: number;
-			highestSeasonRankedRankName: string;
+			highestSeasonRankedRankName?: string;
 			highestSeasonRankedElo: number;
 			highestAllTimeRankedRank: number;
-			highestAllTimeRankedRankName: string;
+			highestAllTimeRankedRankName?: string;
 			highestAllTimeRankedElo: number;
 			nameColor: string;
 		};
@@ -1274,7 +1274,7 @@ declare global {
 	}
 	namespace Clash {
 		type Player = {
-			clan: PlayerClan;
+			clan?: PlayerClan;
 			legacyTrophyRoadHighScore?: number;
 			currentDeck: PlayerItemLevelList;
 			currentDeckSupportCards: PlayerItemLevelList;

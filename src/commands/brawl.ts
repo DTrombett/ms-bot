@@ -1136,8 +1136,9 @@ export class Brawl extends Command {
 		order = MembersOrder.MostTrophies,
 		page = 0,
 	): APIMessageTopLevelComponent[] => {
-		const pages = Math.ceil(club.members.length / 10);
+		const pages = Math.max(1, Math.ceil(club.members.length / 10));
 		const members = club.members.map((m) => m.trophies).sort((a, b) => b - a);
+		const hasMembers = !!club.members.length;
 
 		club.members.sort(
 			order === MembersOrder.Name ? (a, b) => a.name.localeCompare(b.name)
@@ -1154,17 +1155,24 @@ export class Brawl extends Command {
 						components: [
 							{
 								type: ComponentType.TextDisplay,
-								content: `## ${club.name} (${
-									club.tag
-								})\n- Trofei medi: 🏆 ${Math.round(
-									club.trophies / club.members.length,
-								).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
-									percentile(members, 0.5),
-								).toLocaleString(locale)}\n- 75° Percentile: 🏆 ${Math.round(
-									percentile(members, 0.75),
-								).toLocaleString(locale)}\n- 90° Percentile: 🏆 ${Math.round(
-									percentile(members, 0.9),
-								).toLocaleString(locale)}`,
+								content:
+									!hasMembers ?
+										`## ${club.name} (${club.tag})\n- Nessun membro nel club`
+									:	`## ${club.name} (${
+											club.tag
+										})\n- Trofei medi: 🏆 ${Math.round(
+											club.trophies / club.members.length,
+										).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
+											percentile(members, 0.5),
+										).toLocaleString(
+											locale,
+										)}\n- 75° Percentile: 🏆 ${Math.round(
+											percentile(members, 0.75),
+										).toLocaleString(
+											locale,
+										)}\n- 90° Percentile: 🏆 ${Math.round(
+											percentile(members, 0.9),
+										).toLocaleString(locale)}`,
 							},
 						],
 						accessory: {
@@ -1220,7 +1228,7 @@ export class Brawl extends Command {
 								custom_id: `brawl-members-${id}-${club.tag}-${order}-${
 									page + 1
 								}`,
-								disabled: page >= pages - 1,
+								disabled: !hasMembers || page >= pages - 1,
 								style: ButtonStyle.Primary,
 							},
 						],
@@ -1284,7 +1292,9 @@ export class Brawl extends Command {
 				name: "🏆 Trofei",
 				value: `**Attuali**: ${player.trophies.toLocaleString(locale)}\n**Record**: ${player.highestTrophies.toLocaleString(
 					locale,
-				)}\n**Cammino**: ${
+				)}\n**Media Brawler**: ${Math.round(
+					player.trophies / player.brawlers.length,
+				).toLocaleString(locale)}\n**Cammino**: ${
 					(
 						this.TROPHY_ROAD_TIERS.findLast(
 							({ max }) => max <= player.highestTrophies,
@@ -1295,19 +1305,44 @@ export class Brawl extends Command {
 			},
 			{
 				name: "🔫 Brawler",
-				value: `**Ottenuti**: ${player.brawlers.length.toLocaleString(locale)}\n**Prestigio**: ${player.totalPrestigeLevel.toLocaleString(
+				value: `**Ottenuti**: ${player.brawlers.length.toLocaleString(
 					locale,
-				)}\n**Trofei medi**: ${Math.round(player.trophies / player.brawlers.length).toLocaleString(locale)}`,
+				)}\n**Gadget**: ${player.brawlers.reduce(
+					(c, b) => c + b.gadgets.length,
+					0,
+				)}\n**Star Power**: ${player.brawlers.reduce(
+					(c, b) => c + b.starPowers.length,
+					0,
+				)}\n**Overdrive**: ${player.brawlers.reduce(
+					(c, b) => c + b.hyperCharges.length,
+					0,
+				)}`,
 				inline: true,
 			},
 			{
 				name: "🏅 Vittorie",
-				value: `**3v3**: ${player["3vs3Victories"].toLocaleString(locale)}\n**Solo**: ${player.soloVictories.toLocaleString(locale)}\n**Duo**: ${player.duoVictories.toLocaleString(locale)}`,
+				value: `**3v3**: ${player["3vs3Victories"].toLocaleString(
+					locale,
+				)}\n**Solo**: ${player.soloVictories.toLocaleString(locale)}\n**Duo**: ${player.duoVictories.toLocaleString(
+					locale,
+				)}\n**Prestigio**: ${player.totalPrestigeLevel.toLocaleString(locale)}`,
 				inline: true,
 			},
 			{
 				name: "👑 Classificata",
-				value: `**Attuale**: ${this.resolveRanked(player, "ranked", locale)}\n**Migliore**: ${this.resolveRanked(player, "highestAllTimeRanked", locale)}\n**Stagione**: ${this.resolveRanked(player, "highestSeasonRanked", locale)}`,
+				value: `**Attuale**: ${this.resolveRanked(
+					player,
+					"ranked",
+					locale,
+				)}\n**Migliore**: ${this.resolveRanked(
+					player,
+					"highestAllTimeRanked",
+					locale,
+				)}\n**Stagione**: ${this.resolveRanked(
+					player,
+					"highestSeasonRanked",
+					locale,
+				)}`,
 				inline: true,
 			},
 			{
@@ -1316,7 +1351,9 @@ export class Brawl extends Command {
 					this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]
 				}\n**Big Game**: ${
 					this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]
-				}\n**Serie vittorie**: ${player.brawlers.reduce((m, b) => (b.maxWinStreak > m ? b.maxWinStreak : m), 0).toLocaleString(locale)}`,
+				}\n**Serie vittorie**: ${player.brawlers
+					.reduce((m, b) => (b.maxWinStreak > m ? b.maxWinStreak : m), 0)
+					.toLocaleString(locale)}`,
 				inline: true,
 			},
 		],
@@ -1332,7 +1369,7 @@ export class Brawl extends Command {
 			vicePresident: string[];
 			senior: string[];
 		} = {
-			president: { name: "*Non trovato*", nameColor: "" },
+			president: { name: "*Nessuno*", nameColor: "" },
 			vicePresident: [],
 			senior: [],
 		};
@@ -1344,6 +1381,40 @@ export class Brawl extends Command {
 				staff.vicePresident.push(member.name);
 			else if (member.role === "senior") staff.senior.push(member.name);
 		}
+		const components: APIMessageTopLevelComponent[] = [
+			{
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						custom_id: `brawl-members--${club.tag}---1`,
+						style: ButtonStyle.Primary,
+						label: "Lista Membri",
+						emoji: { name: "👥" },
+						disabled: !club.members.length,
+					},
+				],
+			},
+		];
+
+		if (club.members.length)
+			components.unshift({
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.StringSelect,
+						custom_id: "brawl-player",
+						placeholder: "Visualizza un membro...",
+						options: club.members
+							.slice(0, 25)
+							.map((m) => ({
+								label: m.name,
+								value: m.tag,
+								emoji: { name: MemberEmoji[m.role] ?? "👤" },
+							})),
+					},
+				],
+			});
 		return {
 			embeds: [
 				{
@@ -1351,7 +1422,7 @@ export class Brawl extends Command {
 					thumbnail: {
 						url: `https://cdn.brawlify.com/club-badges/regular/${club.badgeId}.png`,
 					},
-					color: parseInt(staff.president?.nameColor.slice(4) ?? "ffffff", 16),
+					color: parseInt(staff.president.nameColor.slice(4) || "ffffff", 16),
 					description: club.description
 						.replaceAll("|", " | ")
 						.replace(
@@ -1374,15 +1445,18 @@ export class Brawl extends Command {
 						},
 						{
 							name: "🏆 Membri",
-							value: `**Trofei medi**: ${Math.round(
-								club.trophies / club.members.length,
-							).toLocaleString(locale)}\n**Mediana**: ${Math.round(
-								percentile(members, 0.5),
-							).toLocaleString(locale)}\n**75° Percentile**: ${Math.round(
-								percentile(members, 0.75),
-							).toLocaleString(locale)}\n**90° Percentile**: ${Math.round(
-								percentile(members, 0.9),
-							).toLocaleString(locale)}`,
+							value:
+								!members.length ? "*Nessun membro*" : (
+									`**Trofei medi**: ${Math.round(
+										club.trophies / club.members.length,
+									).toLocaleString(locale)}\n**Mediana**: ${Math.round(
+										percentile(members, 0.5),
+									).toLocaleString(locale)}\n**75° Percentile**: ${Math.round(
+										percentile(members, 0.75),
+									).toLocaleString(locale)}\n**90° Percentile**: ${Math.round(
+										percentile(members, 0.9),
+									).toLocaleString(locale)}`
+								),
 							inline: true,
 						},
 						{
@@ -1397,37 +1471,7 @@ export class Brawl extends Command {
 					],
 				},
 			],
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.StringSelect,
-							custom_id: "brawl-player",
-							placeholder: "Visualizza un membro...",
-							options: club.members
-								.slice(0, 25)
-								.map((m) => ({
-									label: m.name,
-									value: m.tag,
-									emoji: { name: MemberEmoji[m.role] ?? "👤" },
-								})),
-						},
-					],
-				},
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: `brawl-members--${club.tag}---1`,
-							style: ButtonStyle.Primary,
-							label: "Lista Membri",
-							emoji: { name: "👥" },
-						},
-					],
-				},
-			],
+			components,
 		};
 	};
 	static createPlayerMessage = (
@@ -1487,9 +1531,9 @@ export class Brawl extends Command {
 		prefix: RankedPrefix,
 		locale?: string,
 	) =>
-		`<:ranked:${(this.RANKED_TIERS[Math.floor((player[`${prefix}Rank`] - 1) / 3)] ?? this.RANKED_TIERS.at(-1))!.emoji}> ${player[
-			`${prefix}RankName`
-		]
+		`<:ranked:${(this.RANKED_TIERS[Math.trunc((player[`${prefix}Rank`] - 1) / 3)] ?? this.RANKED_TIERS.at(-1))!.emoji}> ${(
+			player[`${prefix}RankName`] ?? "BRONZE I"
+		)
 			.split(/\s+/)
 			.map((v, i) => (i ? v : forceCapitalize(v)))
 			.join(" ")} (${player[`${prefix}Elo`].toLocaleString(locale)})`;
