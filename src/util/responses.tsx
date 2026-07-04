@@ -46,7 +46,9 @@ export class JsonStreamResponse extends Response {
 		super(new ReadableStream({ start: (c) => (controller = c) }), init);
 		this.controller = controller;
 	}
-	static override error(init: ResponseInit & { error?: Error | string } = {}) {
+	static override error(
+		init: Omit<ResponseInit, "status"> & { error?: Error | string } = {},
+	) {
 		return new this(init)
 			.send(
 				"error",

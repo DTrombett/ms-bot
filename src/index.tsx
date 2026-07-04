@@ -1027,7 +1027,6 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				if (Number.isNaN(tournamentId))
 					return JsonStreamResponse.error({
 						error: "Torneo non trovato",
-						status: 404,
 						headers: {
 							"accept-ch": "Sec-CH-UA-Mobile",
 							"cache-control": "public",
@@ -1036,7 +1035,6 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				if (Number.isNaN(id))
 					return JsonStreamResponse.error({
 						error: "ID scontro non valido",
-						status: 404,
 						headers: {
 							"accept-ch": "Sec-CH-UA-Mobile",
 							"cache-control": "public",
@@ -1081,7 +1079,6 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				if (!tournament)
 					return JsonStreamResponse.error({
 						error: "Torneo non trovato",
-						status: 404,
 						headers: {
 							"accept-ch": "Sec-CH-UA-Mobile",
 							"cache-control": "public",
