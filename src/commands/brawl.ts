@@ -1481,6 +1481,7 @@ export class Brawl extends Command {
 		commandId?: string,
 		link?: boolean,
 		locale?: string,
+		active?: boolean,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		const components: APIActionRowComponent<APIButtonComponent>[] = [
 			{
@@ -1497,22 +1498,6 @@ export class Brawl extends Command {
 			},
 		];
 
-		if (link)
-			components[0]!.components.unshift({
-				type: ComponentType.Button,
-				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}`,
-				label: "Salva",
-				emoji: { name: "🔗" },
-				style: ButtonStyle.Success,
-			});
-		else if (link === false)
-			components[0]!.components.unshift({
-				type: ComponentType.Button,
-				custom_id: `brawl-unlink-${userId}-${player.tag}-${commandId || "0"}`,
-				label: "Scollega",
-				emoji: { name: "⛓️‍💥" },
-				style: ButtonStyle.Danger,
-			});
 		if (player.club.tag)
 			components[0]!.components.push({
 				type: ComponentType.Button,
@@ -1521,6 +1506,31 @@ export class Brawl extends Command {
 				emoji: { name: "🫂" },
 				style: ButtonStyle.Primary,
 			});
+		if (link)
+			components[0]!.components.unshift({
+				type: ComponentType.Button,
+				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}`,
+				label: "Salva",
+				emoji: { name: "🔗" },
+				style: ButtonStyle.Success,
+			});
+		else if (link === false) {
+			components[0]!.components.unshift({
+				type: ComponentType.Button,
+				custom_id: `brawl-unlink-${userId}-${player.tag}-${commandId || "0"}`,
+				label: "Scollega",
+				emoji: { name: "⛓️‍💥" },
+				style: ButtonStyle.Danger,
+			});
+			if (!active)
+				components[0]!.components.push({
+					type: ComponentType.Button,
+					custom_id: `brawl-active-${userId}-${player.tag}`,
+					label: "Rendi principale",
+					emoji: { name: "⭕" },
+					style: ButtonStyle.Secondary,
+				});
+		}
 		return {
 			embeds: [this.createPlayerEmbed(player, { playerId, locale })],
 			components,
@@ -1738,26 +1748,28 @@ export class Brawl extends Command {
 			flags: subcommand === "player link" ? MessageFlags.Ephemeral : undefined,
 		});
 		if (subcommand === "player view") {
-			const [player, playerId] = await Promise.all([
+			const [player, found] = await Promise.all([
 				this.getPlayer(options.tag, { edit }),
-				userId ??
-					env.DB.prepare(
-						"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+				userId ?
+					{ userId, active: true }
+				:	env.DB.prepare(
+						"SELECT userId, active FROM SupercellPlayers WHERE tag = ? AND type = ?",
 					)
 						.bind(options.tag, SupercellPlayerType.BrawlStars)
-						.first<string>("userId"),
+						.first<Pick<Database.SupercellPlayer, "userId" | "active">>(),
 			]);
 
 			return edit(
-				Brawl.createPlayerMessage(
+				this.createPlayerMessage(
 					player,
 					id,
-					playerId ?? undefined,
+					found?.userId ?? undefined,
 					commandId,
-					playerId === id ? false
-					: playerId ? undefined
+					found?.userId === id ? false
+					: found?.userId ? undefined
 					: true,
 					locale,
+					found?.active,
 				),
 			);
 		}
@@ -1969,7 +1981,7 @@ export class Brawl extends Command {
 
 		if (!userId || args.user.id === userId)
 			return this[
-				`${action as "link" | "brawler" | "brawlers" | "unlink"}Component`
+				`${action as "link" | "brawler" | "brawlers" | "unlink" | "active"}Component`
 			]?.(replies, args);
 		return replies.reply({
 			flags: MessageFlags.Ephemeral,
@@ -2071,6 +2083,44 @@ export class Brawl extends Command {
 			});
 		}
 	};
+	static activeComponent = async (
+		{ update, reply }: ComponentReplies,
+		{
+			args: [tag],
+			user: { id },
+			interaction: {
+				message: { components },
+			},
+		}: ComponentArgs,
+	) => {
+		try {
+			await env.DB.prepare(
+				`
+					UPDATE SupercellPlayers
+					SET active = CASE
+						WHEN tag = ?1 THEN TRUE
+						ELSE FALSE
+					END
+					WHERE type = ?2 AND userId = ?3 AND (tag = ?1 OR active = TRUE)
+				`,
+			)
+				.bind(tag, SupercellPlayerType.BrawlStars, id)
+				.run();
+			if (components?.[0]?.type === ComponentType.ActionRow)
+				components[0].components.pop();
+			return update({
+				content: "Profilo impostato come principale!",
+				components,
+			});
+		} catch (err) {
+			console.error(err);
+			return reply({
+				content:
+					"Non è stato possibile completare l'operazione, contatta un moderatore!",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
+	};
 	static brawlersComponent = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
@@ -2147,23 +2197,24 @@ export class Brawl extends Command {
 		if (data.component_type === ComponentType.StringSelect) [tag] = data.values;
 		ok(tag);
 		defer({ flags: MessageFlags.Ephemeral });
-		const [player, playerId] = await Promise.all([
+		const [player, found] = await Promise.all([
 			this.getPlayer(tag, { edit }),
 			env.DB.prepare(
-				"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+				"SELECT userId, active FROM SupercellPlayers WHERE tag = ? AND type = ?",
 			)
 				.bind(tag, SupercellPlayerType.BrawlStars)
-				.first<string>("userId"),
+				.first<Pick<Database.SupercellPlayer, "userId" | "active">>("userId"),
 		]);
 
 		return edit(
 			this.createPlayerMessage(
 				player,
 				id,
-				playerId ?? undefined,
+				found?.userId ?? undefined,
 				undefined,
-				playerId !== id && (!playerId || undefined),
+				found?.userId !== id && (!found?.userId || undefined),
 				locale,
+				found?.active,
 			),
 		);
 	};
