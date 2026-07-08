@@ -816,6 +816,24 @@ export class Brawl extends Command {
 						],
 					},
 					{
+						name: "unlink",
+						description: "Scollega il tuo profilo Brawl Stars!",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "tag",
+								description: "Il tag giocatore da scollegare (es. #8QJR0YC)",
+								type: ApplicationCommandOptionType.String,
+							},
+							{
+								name: "user",
+								description:
+									"Opzione privata. L'utente Discord se non si sa il tag.",
+								type: ApplicationCommandOptionType.User,
+							},
+						],
+					},
+					{
 						name: "brawlers",
 						description: "Vedi i brawler posseduti da un giocatore",
 						type: ApplicationCommandOptionType.Subcommand,
@@ -1708,20 +1726,69 @@ export class Brawl extends Command {
 				member,
 				locale,
 			},
-		}: ChatInputArgs<typeof Brawl.chatInputData, `${"player"} ${string}`>,
+		}: ChatInputArgs<typeof Brawl.chatInputData, `player ${string}`>,
 	) => {
+		const isAdmin = Boolean(
+			member?.permissions &&
+			BigInt(member.permissions) & PermissionFlagsBits.ManageGuild,
+		);
 		if (
-			subcommand === "player link" &&
+			(subcommand === "player link" || subcommand === "player unlink") &&
 			options.user &&
-			!(
-				member?.permissions &&
-				BigInt(member.permissions) & PermissionFlagsBits.ManageGuild
-			)
+			!isAdmin
 		)
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content: "Questa opzione è privata!",
 			});
+		if (subcommand === "player unlink") {
+			const deleted = await env.DB.prepare(
+				`
+					DELETE FROM SupercellPlayers WHERE ${
+						options.tag ? "tag = ?1" : "userId = ?1 AND active = TRUE"
+					} AND type = ?2 AND ${
+						options.tag && !isAdmin ? "userId = ?3" : "?3 IS NOT NULL"
+					} RETURNING tag, userId LIMIT 1
+				`,
+			)
+				.bind(
+					options.tag ?? options.user ?? id,
+					SupercellPlayerType.BrawlStars,
+					id,
+				)
+				.first<Pick<Database.SupercellPlayer, "tag" | "userId">>()
+				.catch(normalizeError);
+
+			if (deleted instanceof Error)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: `Non è stato possibile scollegare il profilo!\n${
+						isAdmin ?
+							`Se il giocatore ha delle partecipazioni nei tornei non è possibile scollegarlo ma puoi spostarlo su un altro utente.`
+						:	"Contatta un moderatore..."
+					}`,
+				});
+			if (!deleted)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: "Non è stato trovato nessun profilo corrispondente!",
+				});
+			reply({
+				flags: MessageFlags.Ephemeral,
+				content: `${deleted.tag} è stato scollegato con successo da <@${deleted.userId}>!`,
+			});
+			return env.DB.prepare(
+				`
+					UPDATE SupercellPlayers SET active = TRUE
+					WHERE userId = ?1 AND type = ?2 AND
+						NOT EXISTS (SELECT TRUE FROM SupercellPlayers
+						WHERE userId = ?1 AND type = ?2 AND active = TRUE)
+					LIMIT 1
+				`,
+			)
+				.bind(options.user ?? id, SupercellPlayerType.BrawlStars)
+				.run();
+		}
 		const userId = options.tag ? undefined : (options.user ?? id);
 
 		options.tag ??=
@@ -1733,7 +1800,10 @@ export class Brawl extends Command {
 		if (!options.tag)
 			return reply({
 				flags: MessageFlags.Ephemeral,
-				content: `Non hai ancora collegato un profilo Brawl Stars! Specifica il tag giocatore come parametro e poi clicca su **Salva**.`,
+				content:
+					!options.user || options.user === id ?
+						"Non hai ancora collegato un profilo Brawl Stars! Specifica il tag giocatore come parametro e poi clicca su **Salva**."
+					:	"Non risulta nessun profilo collegato a questo utente!",
 			});
 		try {
 			options.tag = this.normalizeTag(options.tag);
