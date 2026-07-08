@@ -863,6 +863,26 @@ export class Brawl extends Command {
 							},
 						],
 					},
+					{
+						name: "moeves",
+						description:
+							"Comando privato! Sposta i dati di un giocatore da un utente a un altro",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "old",
+								description: "L'utente a cui sono attualmente collegati i dati",
+								type: ApplicationCommandOptionType.User,
+								required: true,
+							},
+							{
+								name: "new",
+								description: "L'utente a cui trasferire i dati",
+								type: ApplicationCommandOptionType.User,
+								required: true,
+							},
+						],
+					},
 				],
 			},
 			{
@@ -1732,6 +1752,39 @@ export class Brawl extends Command {
 			member?.permissions &&
 			BigInt(member.permissions) & PermissionFlagsBits.ManageGuild,
 		);
+		if (subcommand === "player moeves") {
+			if (!isAdmin)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: "Questo comando è riservato agli amministratori!",
+				});
+			const error = await env.DB.batch([
+				env.DB.prepare("PRAGMA defer_foreign_keys = ON"),
+				env.DB.prepare(
+					"UPDATE SupercellPlayers SET userId = ?1 WHERE userId = ?2",
+				).bind(options.new, options.old),
+				env.DB.prepare(
+					"UPDATE Participants SET userId = ?1 WHERE userId = ?2",
+				).bind(options.new, options.old),
+				env.DB.prepare("UPDATE Matches SET user1 = ?1 WHERE user1 = ?2").bind(
+					options.new,
+					options.old,
+				),
+				env.DB.prepare("UPDATE Matches SET user2 = ?1 WHERE user2 = ?2").bind(
+					options.new,
+					options.old,
+				),
+			])
+				.then(() => {})
+				.catch(normalizeError);
+
+			if (error)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: `\`\`\`\n${error.stack}\n\`\`\``,
+				});
+			return reply({ content: "Dati spostati correttamente!" });
+		}
 		if (
 			(subcommand === "player link" || subcommand === "player unlink") &&
 			options.user &&
