@@ -39,18 +39,18 @@
 		"@eslint/js": "^10.0.1",
 		"@tsconfig/recommended": "^1.0.13",
 		"@tsconfig/strictest": "^2.0.8",
-		"@types/node": "^24.13.2",
+		"@types/node": "^24.13.3",
 		"@types/react": "^19.2.17",
 		"@types/react-dom": "^19.2.3",
 		"eslint": "^10.6.0",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.62.1",
-		"wrangler": "^4.107.0"
+		"typescript-eslint": "^8.63.0",
+		"wrangler": "^4.108.0"
 	},
 	"allowScripts": {
 		"bufferutil@4.1.0": true,
 		"esbuild@0.28.1": true,
 		"sharp@0.34.5": true,
-		"workerd@1.20260701.1": true
+		"workerd@1.20260706.1": true
 	}
 }
