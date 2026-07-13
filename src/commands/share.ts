@@ -32,7 +32,7 @@ export class Share extends Command {
 	private static readonly USER_AGENT =
 		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
 	private static readonly REAL_USER_AGENT =
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
 	private static readonly TWITTER_REGEX =
 		/^(\d+)$|^https?:\/\/(?:(?:www|m(?:obile)?)\.)?(?:(?:twitter|x)\.com|twitter3e4tixl4xyajtrzo62zg5vztmjuricljdp2c5kshju4avyoid\.onion)\/(?:(?:i\/web|[^/]+)\/status|statuses)\/(\d+)/;
 	private static readonly TIKTOK_REGEX =
@@ -571,7 +571,10 @@ export class Share extends Command {
 				content:
 					"Impossibile estrarre i contenuti dalla pagina! Assicurati che il post sia visibile nel browser senza effettuare il login.",
 			});
-		const item = findJSONObjectAround<Instagram.Item>(html, index, 0);
+		let item = findJSONObjectAround<
+			Instagram.Item | { if_not_gated_logged_out: Instagram.Item }
+		>(html, index, 0);
+		if ("if_not_gated_logged_out" in item) item = item.if_not_gated_logged_out;
 		await edit({
 			flags: MessageFlags.IsComponentsV2,
 			components: [

@@ -11,15 +11,9 @@ export const GET: PageHandler = async ({ params: [id], response, url }) => {
 			matchId = Number(url.searchParams.get("id"));
 		const tournamentId = Number(id);
 		if (Number.isNaN(tournamentId))
-			return JsonStreamResponse.error("Torneo non trovato", {
-				...response,
-				status: 404,
-			});
+			return JsonStreamResponse.error("Torneo non trovato", response);
 		if (Number.isNaN(matchId))
-			return JsonStreamResponse.error("ID scontro non valido", {
-				...response,
-				status: 404,
-			});
+			return JsonStreamResponse.error("ID scontro non valido", response);
 		const statements: D1PreparedStatement[] = [
 			env.DB.prepare(`SELECT game, guildId FROM Tournaments WHERE id = ?`).bind(
 				tournamentId,
@@ -57,10 +51,7 @@ export const GET: PageHandler = async ({ params: [id], response, url }) => {
 			),
 		];
 		if (!tournament)
-			return JsonStreamResponse.error("Torneo non trovato", {
-				...response,
-				status: 404,
-			});
+			return JsonStreamResponse.error("Torneo non trovato", response);
 		const res = new JsonStreamResponse(response).sendAll(
 			{ event: "match", data: match },
 			...participants.map((data) => ({ event: "participant", data })),

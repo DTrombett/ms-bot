@@ -350,7 +350,7 @@ const MatchUI = ({
 		return <></>;
 	}
 	useEffect(() => {
-		new JsonStreamSource(
+		const { eventSource } = new JsonStreamSource(
 			`/tournaments/${id}/matchData?${new URLSearchParams([
 				["id", String(match.id)],
 				...match.participants
@@ -390,7 +390,11 @@ const MatchUI = ({
 					return { ...map };
 				}),
 			);
-		return () => scroll({ behavior: "instant", top: ref.current });
+
+		return () => {
+			scroll({ behavior: "instant", top: ref.current });
+			eventSource.close();
+		};
 	}, []);
 	newQuery.delete("match");
 	return (
@@ -903,8 +907,7 @@ const parseQueryNumber = (
 	let value: string | number | null = query.get(name);
 
 	if (value == null) return null;
-	if (value in aliases) return aliases[value]!;
-	value = +value;
+	value = Object.hasOwn(aliases, value) ? aliases[value]! : +value;
 	if ((!allowNaN && Number.isNaN(value)) || value < min || value > max)
 		return null;
 	return value;

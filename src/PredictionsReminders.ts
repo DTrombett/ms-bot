@@ -80,7 +80,7 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 							this.notExists.bind(this, userId, matchDay.id),
 						)
 					)
-						await step.do<void>(
+						await step.do(
 							`create ${userId} reminder`,
 							{ timeout },
 							this.createReminder.bind(this, userId, date, startTime, matchDay),
@@ -103,9 +103,9 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 			this.loadPredictions.bind(this, matches),
 		);
 		const promises: Promise<void>[] = [];
-		for (let i = 0; i < users.length; )
+		for (let i = 0; i < users.length;)
 			promises.push(
-				step.do<void>(
+				step.do(
 					`send chunk ${i / 5}`,
 					{ timeout },
 					this.sendEmbeds.bind(
@@ -124,12 +124,12 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 		);
 		started.push(matchDay.id);
 		await Promise.all([
-			step.do<void>(
+			step.do(
 				"pin message",
 				{ timeout },
 				this.pinMessage.bind(this, messageId),
 			),
-			step.do<void>(
+			step.do(
 				"update started matchday",
 				{ timeout },
 				this.updateStartedMatchday.bind(this, started),
@@ -181,9 +181,10 @@ export class PredictionsReminders extends WorkflowEntrypoint<Env, Params> {
 
 		return results
 			.sort((a, b) => b.remindMinutes! - a.remindMinutes!)
-			.map<
-				[recipient_id: string, date: number]
-			>((u) => [u.id, startTime - u.remindMinutes! * 60 * 1000]);
+			.map<[recipient_id: string, date: number]>((u) => [
+				u.id,
+				startTime - u.remindMinutes! * 60 * 1000,
+			]);
 	}
 
 	private async notExists(userId: string, matchId: string) {

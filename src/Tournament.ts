@@ -201,7 +201,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 
 			tournament.participantCount = participants.length;
 			if (participants.length < (tournament.minPlayers ?? 0))
-				await step.do<never>(
+				await step.do(
 					"Participants count not satisfied",
 					{ retries: { limit: 0, delay: 0 } },
 					Promise.reject.bind<PromiseConstructor, [Error], [], Promise<never>>(
@@ -595,7 +595,7 @@ export class Tournament extends WorkflowEntrypoint<Env, Params> {
 		};
 
 		this.ctx.waitUntil(
-			step.do<void>(
+			step.do(
 				`Report error ${id} in logs channel`,
 				{ retries: { limit: 1, delay: 5_000 } },
 				() =>

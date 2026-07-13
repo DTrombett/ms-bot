@@ -25,7 +25,7 @@ export class DeleteChannels extends WorkflowEntrypoint<Env, Params> {
 
 		for (const channelId of event.payload.channels)
 			try {
-				await step.do<void>(
+				await step.do(
 					`Delete channel ${channelId}`,
 					{ retries: { limit: 1, delay: 5_000 } },
 					() => rest.delete(Routes.channel(channelId)).then(() => {}),
@@ -49,7 +49,7 @@ export class DeleteChannels extends WorkflowEntrypoint<Env, Params> {
 					.then(() => {}),
 			);
 		if (errors.length)
-			await step.do<void>(
+			await step.do(
 				"Report errors in logs channel",
 				{ retries: { limit: 1, delay: 5_000 } },
 				() =>

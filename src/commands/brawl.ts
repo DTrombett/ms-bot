@@ -816,6 +816,24 @@ export class Brawl extends Command {
 						],
 					},
 					{
+						name: "unlink",
+						description: "Scollega il tuo profilo Brawl Stars!",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "tag",
+								description: "Il tag giocatore da scollegare (es. #8QJR0YC)",
+								type: ApplicationCommandOptionType.String,
+							},
+							{
+								name: "user",
+								description:
+									"Opzione privata. L'utente Discord se non si sa il tag.",
+								type: ApplicationCommandOptionType.User,
+							},
+						],
+					},
+					{
 						name: "brawlers",
 						description: "Vedi i brawler posseduti da un giocatore",
 						type: ApplicationCommandOptionType.Subcommand,
@@ -842,6 +860,26 @@ export class Brawl extends Command {
 									{ name: "Meno Trofei", value: BrawlerOrder.LeastTrophies },
 									{ name: "Livello", value: BrawlerOrder.PowerLevel },
 								],
+							},
+						],
+					},
+					{
+						name: "moeves",
+						description:
+							"Comando privato! Sposta i dati di un giocatore da un utente a un altro",
+						type: ApplicationCommandOptionType.Subcommand,
+						options: [
+							{
+								name: "old",
+								description: "L'utente a cui sono attualmente collegati i dati",
+								type: ApplicationCommandOptionType.User,
+								required: true,
+							},
+							{
+								name: "new",
+								description: "L'utente a cui trasferire i dati",
+								type: ApplicationCommandOptionType.User,
+								required: true,
 							},
 						],
 					},
@@ -1136,8 +1174,9 @@ export class Brawl extends Command {
 		order = MembersOrder.MostTrophies,
 		page = 0,
 	): APIMessageTopLevelComponent[] => {
-		const pages = Math.ceil(club.members.length / 10);
+		const pages = Math.max(1, Math.ceil(club.members.length / 10));
 		const members = club.members.map((m) => m.trophies).sort((a, b) => b - a);
+		const hasMembers = !!club.members.length;
 
 		club.members.sort(
 			order === MembersOrder.Name ? (a, b) => a.name.localeCompare(b.name)
@@ -1154,17 +1193,24 @@ export class Brawl extends Command {
 						components: [
 							{
 								type: ComponentType.TextDisplay,
-								content: `## ${club.name} (${
-									club.tag
-								})\n- Trofei medi: 🏆 ${Math.round(
-									club.trophies / club.members.length,
-								).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
-									percentile(members, 0.5),
-								).toLocaleString(locale)}\n- 75° Percentile: 🏆 ${Math.round(
-									percentile(members, 0.75),
-								).toLocaleString(locale)}\n- 90° Percentile: 🏆 ${Math.round(
-									percentile(members, 0.9),
-								).toLocaleString(locale)}`,
+								content:
+									!hasMembers ?
+										`## ${club.name} (${club.tag})\n- Nessun membro nel club`
+									:	`## ${club.name} (${
+											club.tag
+										})\n- Trofei medi: 🏆 ${Math.round(
+											club.trophies / club.members.length,
+										).toLocaleString(locale)}\n- Mediana: 🏆 ${Math.round(
+											percentile(members, 0.5),
+										).toLocaleString(
+											locale,
+										)}\n- 75° Percentile: 🏆 ${Math.round(
+											percentile(members, 0.75),
+										).toLocaleString(
+											locale,
+										)}\n- 90° Percentile: 🏆 ${Math.round(
+											percentile(members, 0.9),
+										).toLocaleString(locale)}`,
 							},
 						],
 						accessory: {
@@ -1220,7 +1266,7 @@ export class Brawl extends Command {
 								custom_id: `brawl-members-${id}-${club.tag}-${order}-${
 									page + 1
 								}`,
-								disabled: page >= pages - 1,
+								disabled: !hasMembers || page >= pages - 1,
 								style: ButtonStyle.Primary,
 							},
 						],
@@ -1284,7 +1330,9 @@ export class Brawl extends Command {
 				name: "🏆 Trofei",
 				value: `**Attuali**: ${player.trophies.toLocaleString(locale)}\n**Record**: ${player.highestTrophies.toLocaleString(
 					locale,
-				)}\n**Cammino**: ${
+				)}\n**Media Brawler**: ${Math.round(
+					player.trophies / player.brawlers.length,
+				).toLocaleString(locale)}\n**Cammino**: ${
 					(
 						this.TROPHY_ROAD_TIERS.findLast(
 							({ max }) => max <= player.highestTrophies,
@@ -1295,19 +1343,44 @@ export class Brawl extends Command {
 			},
 			{
 				name: "🔫 Brawler",
-				value: `**Ottenuti**: ${player.brawlers.length.toLocaleString(locale)}\n**Prestigio**: ${player.totalPrestigeLevel.toLocaleString(
+				value: `**Ottenuti**: ${player.brawlers.length.toLocaleString(
 					locale,
-				)}\n**Trofei medi**: ${Math.round(player.trophies / player.brawlers.length).toLocaleString(locale)}`,
+				)}\n**Gadget**: ${player.brawlers.reduce(
+					(c, b) => c + b.gadgets.length,
+					0,
+				)}\n**Star Power**: ${player.brawlers.reduce(
+					(c, b) => c + b.starPowers.length,
+					0,
+				)}\n**Overdrive**: ${player.brawlers.reduce(
+					(c, b) => c + b.hyperCharges.length,
+					0,
+				)}`,
 				inline: true,
 			},
 			{
 				name: "🏅 Vittorie",
-				value: `**3v3**: ${player["3vs3Victories"].toLocaleString(locale)}\n**Solo**: ${player.soloVictories.toLocaleString(locale)}\n**Duo**: ${player.duoVictories.toLocaleString(locale)}`,
+				value: `**3v3**: ${player["3vs3Victories"].toLocaleString(
+					locale,
+				)}\n**Solo**: ${player.soloVictories.toLocaleString(locale)}\n**Duo**: ${player.duoVictories.toLocaleString(
+					locale,
+				)}\n**Prestigio**: ${player.totalPrestigeLevel.toLocaleString(locale)}`,
 				inline: true,
 			},
 			{
 				name: "👑 Classificata",
-				value: `**Attuale**: ${this.resolveRanked(player, "ranked", locale)}\n**Migliore**: ${this.resolveRanked(player, "highestAllTimeRanked", locale)}\n**Stagione**: ${this.resolveRanked(player, "highestSeasonRanked", locale)}`,
+				value: `**Attuale**: ${this.resolveRanked(
+					player,
+					"ranked",
+					locale,
+				)}\n**Migliore**: ${this.resolveRanked(
+					player,
+					"highestAllTimeRanked",
+					locale,
+				)}\n**Stagione**: ${this.resolveRanked(
+					player,
+					"highestSeasonRanked",
+					locale,
+				)}`,
 				inline: true,
 			},
 			{
@@ -1316,7 +1389,9 @@ export class Brawl extends Command {
 					this.ROBO_RUMBLE_LEVELS[player.bestRoboRumbleTime]
 				}\n**Big Game**: ${
 					this.ROBO_RUMBLE_LEVELS[player.bestTimeAsBigBrawler]
-				}\n**Serie vittorie**: ${player.brawlers.reduce((m, b) => (b.maxWinStreak > m ? b.maxWinStreak : m), 0).toLocaleString(locale)}`,
+				}\n**Serie vittorie**: ${player.brawlers
+					.reduce((m, b) => (b.maxWinStreak > m ? b.maxWinStreak : m), 0)
+					.toLocaleString(locale)}`,
 				inline: true,
 			},
 		],
@@ -1332,7 +1407,7 @@ export class Brawl extends Command {
 			vicePresident: string[];
 			senior: string[];
 		} = {
-			president: { name: "*Non trovato*", nameColor: "" },
+			president: { name: "*Nessuno*", nameColor: "" },
 			vicePresident: [],
 			senior: [],
 		};
@@ -1344,6 +1419,40 @@ export class Brawl extends Command {
 				staff.vicePresident.push(member.name);
 			else if (member.role === "senior") staff.senior.push(member.name);
 		}
+		const components: APIMessageTopLevelComponent[] = [
+			{
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.Button,
+						custom_id: `brawl-members--${club.tag}---1`,
+						style: ButtonStyle.Primary,
+						label: "Lista Membri",
+						emoji: { name: "👥" },
+						disabled: !club.members.length,
+					},
+				],
+			},
+		];
+
+		if (club.members.length)
+			components.unshift({
+				type: ComponentType.ActionRow,
+				components: [
+					{
+						type: ComponentType.StringSelect,
+						custom_id: "brawl-player",
+						placeholder: "Visualizza un membro...",
+						options: club.members
+							.slice(0, 25)
+							.map((m) => ({
+								label: m.name,
+								value: m.tag,
+								emoji: { name: MemberEmoji[m.role] ?? "👤" },
+							})),
+					},
+				],
+			});
 		return {
 			embeds: [
 				{
@@ -1351,7 +1460,7 @@ export class Brawl extends Command {
 					thumbnail: {
 						url: `https://cdn.brawlify.com/club-badges/regular/${club.badgeId}.png`,
 					},
-					color: parseInt(staff.president?.nameColor.slice(4) ?? "ffffff", 16),
+					color: parseInt(staff.president.nameColor.slice(4) || "ffffff", 16),
 					description: club.description
 						.replaceAll("|", " | ")
 						.replace(
@@ -1374,15 +1483,18 @@ export class Brawl extends Command {
 						},
 						{
 							name: "🏆 Membri",
-							value: `**Trofei medi**: ${Math.round(
-								club.trophies / club.members.length,
-							).toLocaleString(locale)}\n**Mediana**: ${Math.round(
-								percentile(members, 0.5),
-							).toLocaleString(locale)}\n**75° Percentile**: ${Math.round(
-								percentile(members, 0.75),
-							).toLocaleString(locale)}\n**90° Percentile**: ${Math.round(
-								percentile(members, 0.9),
-							).toLocaleString(locale)}`,
+							value:
+								!members.length ? "*Nessun membro*" : (
+									`**Trofei medi**: ${Math.round(
+										club.trophies / club.members.length,
+									).toLocaleString(locale)}\n**Mediana**: ${Math.round(
+										percentile(members, 0.5),
+									).toLocaleString(locale)}\n**75° Percentile**: ${Math.round(
+										percentile(members, 0.75),
+									).toLocaleString(locale)}\n**90° Percentile**: ${Math.round(
+										percentile(members, 0.9),
+									).toLocaleString(locale)}`
+								),
 							inline: true,
 						},
 						{
@@ -1397,37 +1509,7 @@ export class Brawl extends Command {
 					],
 				},
 			],
-			components: [
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.StringSelect,
-							custom_id: "brawl-player",
-							placeholder: "Visualizza un membro...",
-							options: club.members
-								.slice(0, 25)
-								.map((m) => ({
-									label: m.name,
-									value: m.tag,
-									emoji: { name: MemberEmoji[m.role] ?? "👤" },
-								})),
-						},
-					],
-				},
-				{
-					type: ComponentType.ActionRow,
-					components: [
-						{
-							type: ComponentType.Button,
-							custom_id: `brawl-members--${club.tag}---1`,
-							style: ButtonStyle.Primary,
-							label: "Lista Membri",
-							emoji: { name: "👥" },
-						},
-					],
-				},
-			],
+			components,
 		};
 	};
 	static createPlayerMessage = (
@@ -1437,6 +1519,7 @@ export class Brawl extends Command {
 		commandId?: string,
 		link?: boolean,
 		locale?: string,
+		active?: boolean,
 	): RESTPatchAPIInteractionOriginalResponseJSONBody => {
 		const components: APIActionRowComponent<APIButtonComponent>[] = [
 			{
@@ -1453,22 +1536,6 @@ export class Brawl extends Command {
 			},
 		];
 
-		if (link)
-			components[0]!.components.unshift({
-				type: ComponentType.Button,
-				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}`,
-				label: "Salva",
-				emoji: { name: "🔗" },
-				style: ButtonStyle.Success,
-			});
-		else if (link === false)
-			components[0]!.components.unshift({
-				type: ComponentType.Button,
-				custom_id: `brawl-unlink-${userId}-${player.tag}-${commandId || "0"}`,
-				label: "Scollega",
-				emoji: { name: "⛓️‍💥" },
-				style: ButtonStyle.Danger,
-			});
 		if (player.club.tag)
 			components[0]!.components.push({
 				type: ComponentType.Button,
@@ -1477,6 +1544,31 @@ export class Brawl extends Command {
 				emoji: { name: "🫂" },
 				style: ButtonStyle.Primary,
 			});
+		if (link)
+			components[0]!.components.unshift({
+				type: ComponentType.Button,
+				custom_id: `brawl-link-${userId}-${player.tag}-${commandId || "0"}`,
+				label: "Salva",
+				emoji: { name: "🔗" },
+				style: ButtonStyle.Success,
+			});
+		else if (link === false) {
+			components[0]!.components.unshift({
+				type: ComponentType.Button,
+				custom_id: `brawl-unlink-${userId}-${player.tag}-${commandId || "0"}`,
+				label: "Scollega",
+				emoji: { name: "⛓️‍💥" },
+				style: ButtonStyle.Danger,
+			});
+			if (!active)
+				components[0]!.components.push({
+					type: ComponentType.Button,
+					custom_id: `brawl-active-${userId}-${player.tag}`,
+					label: "Rendi principale",
+					emoji: { name: "⭕" },
+					style: ButtonStyle.Secondary,
+				});
+		}
 		return {
 			embeds: [this.createPlayerEmbed(player, { playerId, locale })],
 			components,
@@ -1487,9 +1579,9 @@ export class Brawl extends Command {
 		prefix: RankedPrefix,
 		locale?: string,
 	) =>
-		`<:ranked:${(this.RANKED_TIERS[Math.floor((player[`${prefix}Rank`] - 1) / 3)] ?? this.RANKED_TIERS.at(-1))!.emoji}> ${player[
-			`${prefix}RankName`
-		]
+		`<:ranked:${(this.RANKED_TIERS[Math.trunc((player[`${prefix}Rank`] - 1) / 3)] ?? this.RANKED_TIERS.at(-1))!.emoji}> ${(
+			player[`${prefix}RankName`] ?? "BRONZE I"
+		)
 			.split(/\s+/)
 			.map((v, i) => (i ? v : forceCapitalize(v)))
 			.join(" ")} (${player[`${prefix}Elo`].toLocaleString(locale)})`;
@@ -1654,20 +1746,102 @@ export class Brawl extends Command {
 				member,
 				locale,
 			},
-		}: ChatInputArgs<typeof Brawl.chatInputData, `${"player"} ${string}`>,
+		}: ChatInputArgs<typeof Brawl.chatInputData, `player ${string}`>,
 	) => {
+		const isAdmin = Boolean(
+			member?.permissions &&
+			BigInt(member.permissions) & PermissionFlagsBits.ManageGuild,
+		);
+		if (subcommand === "player moeves") {
+			if (!isAdmin)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: "Questo comando è riservato agli amministratori!",
+				});
+			const error = await env.DB.batch([
+				env.DB.prepare("PRAGMA defer_foreign_keys = ON"),
+				env.DB.prepare(
+					"UPDATE SupercellPlayers SET userId = ?1 WHERE userId = ?2",
+				).bind(options.new, options.old),
+				env.DB.prepare(
+					"UPDATE Participants SET userId = ?1 WHERE userId = ?2",
+				).bind(options.new, options.old),
+				env.DB.prepare("UPDATE Matches SET user1 = ?1 WHERE user1 = ?2").bind(
+					options.new,
+					options.old,
+				),
+				env.DB.prepare("UPDATE Matches SET user2 = ?1 WHERE user2 = ?2").bind(
+					options.new,
+					options.old,
+				),
+			])
+				.then(() => {})
+				.catch(normalizeError);
+
+			if (error)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: `\`\`\`\n${error.stack}\n\`\`\``,
+				});
+			return reply({ content: "Dati spostati correttamente!" });
+		}
 		if (
-			subcommand === "player link" &&
+			(subcommand === "player link" || subcommand === "player unlink") &&
 			options.user &&
-			!(
-				member?.permissions &&
-				BigInt(member.permissions) & PermissionFlagsBits.ManageGuild
-			)
+			!isAdmin
 		)
 			return reply({
 				flags: MessageFlags.Ephemeral,
 				content: "Questa opzione è privata!",
 			});
+		if (subcommand === "player unlink") {
+			const deleted = await env.DB.prepare(
+				`
+					DELETE FROM SupercellPlayers WHERE ${
+						options.tag ? "tag = ?1" : "userId = ?1 AND active = TRUE"
+					} AND type = ?2 AND ${
+						options.tag && !isAdmin ? "userId = ?3" : "?3 IS NOT NULL"
+					} RETURNING tag, userId LIMIT 1
+				`,
+			)
+				.bind(
+					options.tag ?? options.user ?? id,
+					SupercellPlayerType.BrawlStars,
+					id,
+				)
+				.first<Pick<Database.SupercellPlayer, "tag" | "userId">>()
+				.catch(normalizeError);
+
+			if (deleted instanceof Error)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: `Non è stato possibile scollegare il profilo!\n${
+						isAdmin ?
+							`Se il giocatore ha delle partecipazioni nei tornei non è possibile scollegarlo ma puoi spostarlo su un altro utente.`
+						:	"Contatta un moderatore..."
+					}`,
+				});
+			if (!deleted)
+				return reply({
+					flags: MessageFlags.Ephemeral,
+					content: "Non è stato trovato nessun profilo corrispondente!",
+				});
+			reply({
+				flags: MessageFlags.Ephemeral,
+				content: `${deleted.tag} è stato scollegato con successo da <@${deleted.userId}>!`,
+			});
+			return env.DB.prepare(
+				`
+					UPDATE SupercellPlayers SET active = TRUE
+					WHERE userId = ?1 AND type = ?2 AND
+						NOT EXISTS (SELECT TRUE FROM SupercellPlayers
+						WHERE userId = ?1 AND type = ?2 AND active = TRUE)
+					LIMIT 1
+				`,
+			)
+				.bind(options.user ?? id, SupercellPlayerType.BrawlStars)
+				.run();
+		}
 		const userId = options.tag ? undefined : (options.user ?? id);
 
 		options.tag ??=
@@ -1679,7 +1853,10 @@ export class Brawl extends Command {
 		if (!options.tag)
 			return reply({
 				flags: MessageFlags.Ephemeral,
-				content: `Non hai ancora collegato un profilo Brawl Stars! Specifica il tag giocatore come parametro e poi clicca su **Salva**.`,
+				content:
+					!options.user || options.user === id ?
+						"Non hai ancora collegato un profilo Brawl Stars! Specifica il tag giocatore come parametro e poi clicca su **Salva**."
+					:	"Non risulta nessun profilo collegato a questo utente!",
 			});
 		try {
 			options.tag = this.normalizeTag(options.tag);
@@ -1694,26 +1871,28 @@ export class Brawl extends Command {
 			flags: subcommand === "player link" ? MessageFlags.Ephemeral : undefined,
 		});
 		if (subcommand === "player view") {
-			const [player, playerId] = await Promise.all([
+			const [player, found] = await Promise.all([
 				this.getPlayer(options.tag, { edit }),
-				userId ??
-					env.DB.prepare(
-						"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+				userId ?
+					{ userId, active: true }
+				:	env.DB.prepare(
+						"SELECT userId, active FROM SupercellPlayers WHERE tag = ? AND type = ?",
 					)
 						.bind(options.tag, SupercellPlayerType.BrawlStars)
-						.first<string>("userId"),
+						.first<Pick<Database.SupercellPlayer, "userId" | "active">>(),
 			]);
 
 			return edit(
-				Brawl.createPlayerMessage(
+				this.createPlayerMessage(
 					player,
 					id,
-					playerId ?? undefined,
+					found?.userId ?? undefined,
 					commandId,
-					playerId === id ? false
-					: playerId ? undefined
+					found?.userId === id ? false
+					: found?.userId ? undefined
 					: true,
 					locale,
+					found?.active,
 				),
 			);
 		}
@@ -1925,7 +2104,7 @@ export class Brawl extends Command {
 
 		if (!userId || args.user.id === userId)
 			return this[
-				`${action as "link" | "brawler" | "brawlers" | "unlink"}Component`
+				`${action as "link" | "brawler" | "brawlers" | "unlink" | "active"}Component`
 			]?.(replies, args);
 		return replies.reply({
 			flags: MessageFlags.Ephemeral,
@@ -2027,6 +2206,44 @@ export class Brawl extends Command {
 			});
 		}
 	};
+	static activeComponent = async (
+		{ update, reply }: ComponentReplies,
+		{
+			args: [tag],
+			user: { id },
+			interaction: {
+				message: { components },
+			},
+		}: ComponentArgs,
+	) => {
+		try {
+			await env.DB.prepare(
+				`
+					UPDATE SupercellPlayers
+					SET active = CASE
+						WHEN tag = ?1 THEN TRUE
+						ELSE FALSE
+					END
+					WHERE type = ?2 AND userId = ?3 AND (tag = ?1 OR active = TRUE)
+				`,
+			)
+				.bind(tag, SupercellPlayerType.BrawlStars, id)
+				.run();
+			if (components?.[0]?.type === ComponentType.ActionRow)
+				components[0].components.pop();
+			return update({
+				content: "Profilo impostato come principale!",
+				components,
+			});
+		} catch (err) {
+			console.error(err);
+			return reply({
+				content:
+					"Non è stato possibile completare l'operazione, contatta un moderatore!",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
+	};
 	static brawlersComponent = async (
 		{ defer, deferUpdate, edit }: ComponentReplies,
 		{
@@ -2103,23 +2320,24 @@ export class Brawl extends Command {
 		if (data.component_type === ComponentType.StringSelect) [tag] = data.values;
 		ok(tag);
 		defer({ flags: MessageFlags.Ephemeral });
-		const [player, playerId] = await Promise.all([
+		const [player, found] = await Promise.all([
 			this.getPlayer(tag, { edit }),
 			env.DB.prepare(
-				"SELECT userId FROM SupercellPlayers WHERE tag = ? AND type = ?",
+				"SELECT userId, active FROM SupercellPlayers WHERE tag = ? AND type = ?",
 			)
 				.bind(tag, SupercellPlayerType.BrawlStars)
-				.first<string>("userId"),
+				.first<Pick<Database.SupercellPlayer, "userId" | "active">>("userId"),
 		]);
 
 		return edit(
 			this.createPlayerMessage(
 				player,
 				id,
-				playerId ?? undefined,
+				found?.userId ?? undefined,
 				undefined,
-				playerId !== id && (!playerId || undefined),
+				found?.userId !== id && (!found?.userId || undefined),
 				locale,
+				found?.active,
 			),
 		);
 	};
