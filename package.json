@@ -45,7 +45,7 @@
 		"eslint": "^10.6.0",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.63.0",
-		"wrangler": "^4.108.0"
+		"wrangler": "^4.114.0"
 	},
 	"allowScripts": {
 		"bufferutil@4.1.0": true,
