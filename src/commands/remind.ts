@@ -118,6 +118,7 @@ export class Remind extends Command {
 		const id = Math.random().toString(36).slice(2, 10).padEnd(8, "0");
 		const result = await env.REMINDER.create({
 			id: `${userId}-${id}`,
+			retention: { successRetention: 0, errorRetention: "1 day" },
 			params: {
 				message: { content: `🔔 Promemoria: ${options.to}` },
 				timestamp: target.epochMilliseconds,

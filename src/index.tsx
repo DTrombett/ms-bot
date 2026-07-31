@@ -162,7 +162,11 @@ const server: ExportedHandler<Env, QueueMessage> = {
 						)
 						.run();
 
-					await env.TOURNAMENT.create({ id, params: { id: last_row_id } });
+					await env.TOURNAMENT.create({
+						id,
+						retention: { successRetention: 0, errorRetention: "1 day" },
+						params: { id: last_row_id },
+					});
 					return new Response(null, {
 						status: 303,
 						headers: {

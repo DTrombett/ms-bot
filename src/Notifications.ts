@@ -59,10 +59,10 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 			}),
 		);
 
-		await step.do<void>(
+		await step.do(
 			"Check errors",
 			{ retries: { limit: 0, delay: 0 } },
-			() => {
+			(): Promise<void> => {
 				const errors = results
 					.filter((r) => r.status === "rejected")
 					.map((r): unknown => r.reason);

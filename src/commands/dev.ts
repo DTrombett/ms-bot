@@ -431,6 +431,7 @@ export class Dev extends Command {
 	) => {
 		defer({ flags: MessageFlags.Ephemeral });
 		return env.SHORTEN.create({
+			retention: { successRetention: 0, errorRetention: "1 day" },
 			params: {
 				source: (options.source ??= crypto
 					.getRandomValues(new Uint8Array(8))

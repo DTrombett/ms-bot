@@ -41,10 +41,10 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 		for (const match of event.payload.matches)
 			try {
 				let channelName = event.payload.tournament.channelName;
-				const channelId = await step.do<string>(
+				const channelId = await step.do(
 					`Create channel for match ${match.id}`,
 					{ retries: { limit: 1, delay: 5_000 } },
-					async () => {
+					async (): Promise<string> => {
 						try {
 							const { id } = (await rest.post(
 								Routes.guildChannels(event.payload.tournament.guildId),
@@ -155,10 +155,10 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 				});
 				if (components.length > 1)
 					values.push(
-						step.do<void>(
+						step.do(
 							`Send message to channel ${channelId}`,
 							{ retries: { limit: 1, delay: 5_000 } },
-							() =>
+							(): Promise<void> =>
 								rest
 									.post(Routes.channelMessages(channelId), {
 										body: {
@@ -227,10 +227,10 @@ export class Channels extends WorkflowEntrypoint<Env, Params> {
 
 		error = normalizeError(error);
 		this.ctx.waitUntil(
-			step.do<void>(
+			step.do(
 				`Report error ${id} in logs channel`,
 				{ retries: { limit: 1, delay: 5_000 } },
-				() =>
+				(): Promise<void> =>
 					rest
 						.post(Routes.channelMessages(channelId), {
 							body: {
