@@ -39,12 +39,17 @@ export class Avatar extends Command {
 		if (member?.avatar)
 			items.push({
 				media: {
-					url: rest.cdn.guildMemberAvatar(
-						interaction.guild_id!,
-						user.id,
-						member.avatar,
-						{ size: 4096, extension: "png" },
-					),
+					url:
+						rest.cdn.guildMemberAvatar(
+							interaction.guild_id!,
+							user.id,
+							member.avatar,
+							{
+								size: 4096,
+								extension: member.avatar.startsWith("a_") ? "webp" : "png",
+								forceStatic: member.avatar.startsWith("a_"),
+							},
+						) + (member.avatar.startsWith("a_") ? "&animated=true" : ""),
 				},
 			});
 		if (user.avatar)
