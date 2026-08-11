@@ -107,8 +107,7 @@ declare global {
 	} & { [K in Extract<keyof A, keyof B>]: A[K] | B[K] };
 
 	type Exclusive<A, B> =
-		| (A & { [K in keyof B]?: never })
-		| (B & { [K in keyof A]?: never });
+		(A & { [K in keyof B]?: never }) | (B & { [K in keyof A]?: never });
 
 	/**
 	 * Options to create a command
@@ -500,8 +499,7 @@ declare global {
 			};
 	type ParseOptions<
 		T extends
-			| AsConst<RESTPostAPIChatInputApplicationCommandsJSONBody>
-			| undefined,
+			AsConst<RESTPostAPIChatInputApplicationCommandsJSONBody> | undefined,
 		R extends boolean = true,
 	> =
 		RESTPostAPIChatInputApplicationCommandsJSONBody extends T ?
@@ -647,14 +645,22 @@ declare global {
 		};
 		type User = {
 			__typename: "User";
-			id: string;
-			rest_id: string;
 			affiliates_highlighted_label: object;
-			avatar: { image_url: string };
-			core: { created_at: string; name: string; screen_name: string };
-			dm_permissions: object;
+			has_graduated_access: boolean;
+			has_nft_avatar: boolean;
+			id: string;
 			is_blue_verified: boolean;
+			profile_image_shape: string;
+			rest_id: string;
+			super_follow_eligible: boolean;
+			super_followed_by: boolean;
+			super_following: boolean;
 			legacy: {
+				blocked_by: boolean;
+				blocking: boolean;
+				can_dm: boolean;
+				can_media_tag: boolean;
+				created_at: string;
 				default_profile: boolean;
 				default_profile_image: boolean;
 				description: string;
@@ -664,31 +670,37 @@ declare global {
 				};
 				fast_followers_count: number;
 				favourites_count: number;
+				follow_request_sent: boolean;
+				followed_by: boolean;
 				followers_count: number;
+				following: boolean;
 				friends_count: number;
 				has_custom_timelines: boolean;
 				is_translator: boolean;
 				listed_count: number;
+				location: string;
 				media_count: number;
+				muting: boolean;
+				name: string;
+				needs_phone_verification: boolean;
 				normal_followers_count: number;
+				notifications: boolean;
 				pinned_tweet_ids_str: string[];
 				possibly_sensitive: boolean;
 				profile_banner_url: string;
+				profile_image_url_https: string;
 				profile_interstitial_type: string;
+				protected: boolean;
+				screen_name: string;
 				statuses_count: number;
+				time_zone: string;
 				translator_type: string;
-				withheld_in_countries: string[];
 				url: string;
+				utc_offset: number;
+				verified: boolean;
+				withheld_description: string;
+				withheld_scope: string;
 			};
-			location: { location: string };
-			media_permissions: object;
-			parody_commentary_fan_label: string;
-			profile_image_shape: string;
-			profile_bio: { description: string };
-			privacy: { protected: boolean };
-			relationship_perspectives: object;
-			verification: { verified: boolean };
-			profile_description_language?: string;
 		};
 		type Variant = { bitrate?: number; content_type: string; url: string };
 		type Media = {
@@ -795,25 +807,26 @@ declare global {
 				};
 				rest_id: string;
 			};
-			rest_id: string;
 			core: { user_results: { result: User } };
-			unmention_data: object;
-			edit_control: {
+			rest_id: string;
+			source: string;
+			unmention_info: object;
+			unmention_data?: object;
+			edit_control?: {
 				edit_tweet_ids: string[];
 				editable_until_msecs: string;
 				is_edit_eligible: boolean;
 				edits_remaining: `${number}`;
 			};
-			is_translatable: boolean;
-			views: { count?: `${number}`; state: string };
-			source: string;
+			is_translatable?: boolean;
+			views?: { count?: `${number}`; state: string };
 			note_tweet?: {
 				is_expandable: boolean;
 				note_tweet_results: {
 					result: { id: string; text: string; entity_set: Entities };
 				};
 			};
-			grok_analysis_button: boolean;
+			grok_analysis_button?: boolean;
 			quoted_status_result?: { result: Tweet };
 			legacy: {
 				bookmark_count: number;
@@ -841,7 +854,7 @@ declare global {
 				retweeted: boolean;
 				user_id_str: string;
 			};
-			grok_annotations: { is_image_editable_by_grok: boolean };
+			grok_annotations?: { is_image_editable_by_grok: boolean };
 		};
 		type TweetWithVisibilityResults = {
 			__typename: "TweetWithVisibilityResults";
@@ -957,8 +970,7 @@ declare global {
 			taken_at: number;
 			inventory_source: null;
 			video_versions:
-				| { width: number; height: number; url: string; type: number }[]
-				| null;
+				{ width: number; height: number; url: string; type: number }[] | null;
 			coauthor_producers: [];
 			invited_coauthor_producers: [];
 			facepile_top_likers: null;

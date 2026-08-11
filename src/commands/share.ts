@@ -20,10 +20,7 @@ import { fetchCache } from "../util/fetchCache";
 import { escapeBaseMarkdown } from "../util/formatters";
 import { cloudflare, rest } from "../util/globals";
 import normalizeError from "../util/normalizeError";
-import {
-	findJSObjectAround,
-	findJSONObjectAround,
-} from "../util/stringParsing";
+import { findJSONObjectAround } from "../util/stringParsing";
 import { template } from "../util/strings";
 import { TimeUnit } from "../util/time";
 
@@ -293,60 +290,20 @@ export class Share extends Command {
 				content: `Impossibile scaricare la pagina: ${response.status} ${response.statusText}`,
 			});
 		}
-		const guestId = response.headers
-			.getSetCookie()
+		const setCookie = response.headers.getSetCookie();
+		const guestId = setCookie
 			.find((v) => v.startsWith("guest_id="))
 			?.match(/^guest_id=([^;]+)/)?.[1];
 		if (!guestId) {
 			void response.body?.cancel();
 			return edit({ content: "Impossibile ottenere il guest id" });
 		}
-		let body = await response.text();
-
-		let match = body.match(/featureSwitch["']?\s*:\s*{/);
-		if (!match)
-			return edit({ content: "Impossibile trovare i dettagli della query" });
-		const featureSwitch = findJSObjectAround<{
-			defaultConfig: Record<string, { value: unknown }>;
-			user: { config: Record<string, { value: unknown }> };
-			debug: object;
-			featureSetToken: string;
-			isLoaded: boolean;
-			isLoading: boolean;
-			customOverrides: object;
-		}>(body, match.index! + match[0].length - 1, 0);
-		match = body.match(/document\s*\.\s*cookie\s*=\s*["']gt=([^;]+)/);
-		if (!match?.[1])
-			return edit({ content: "Impossibile ottenere il guest token" });
-		const gt = match[1];
-		match = body.match(
-			/<link\s+(?:[a-z0-9-.:_]+(?:=["'][^"']+["'])?\s+)*href=["']((?:|[^"']*\/)main(?:\.[^.]+)?\.js)["'][^>]*>/i,
-		);
-		if (!match?.[1])
-			return edit({
-				content: "Impossibile trovare il file JavaScript della pagina",
-			});
-		url = new URL(match[1], "https://x.com").href;
-
-		body = await fetchCache(
-			url,
-			{ headers: { "User-Agent": this.REAL_USER_AGENT } },
-			TimeUnit.Year / TimeUnit.Second,
-		).then((res) => res.text());
-		const authorization = body.match(/Bearer \w[^"']+/)?.[0];
-		if (!authorization)
-			return edit({
-				content: "Impossibile ottenere il token di autorizzazione",
-			});
-		const trbri = findJSObjectAround<{
-			queryId: string;
-			operationName: string;
-			operationType: string;
-			metadata: { featureSwitches: string[]; fieldToggles: string[] };
-		}>(body, body.indexOf('"TweetResultByRestId"'));
-
+		const gt = setCookie
+			.find((v) => v.startsWith("gt="))
+			?.match(/^gt=([^;]+)/)?.[1];
+		if (!gt) return edit({ content: "Impossibile ottenere il guest token" });
 		response = await fetch(
-			`https://api.x.com/graphql/${trbri.queryId}/TweetResultByRestId?${new URLSearchParams(
+			`https://x.com/i/api/graphql/2ICDjqPd81tulZcYrtpTuQ/TweetResultByRestId?${new URLSearchParams(
 				{
 					variables: JSON.stringify({
 						tweetId,
@@ -354,18 +311,10 @@ export class Share extends Command {
 						includePromotedContent: false,
 						withVoice: false,
 					}),
-					features: JSON.stringify(
-						Object.fromEntries(
-							trbri.metadata.featureSwitches.map((v) => [
-								v,
-								featureSwitch.user.config[v]?.value ??
-									featureSwitch.defaultConfig[v]?.value,
-							]),
-						),
-					),
+					features: JSON.stringify({}),
 					fieldToggles: JSON.stringify({
-						withArticleRichContentState: true,
-						withArticlePlainText: false,
+						withArticleRichContentState: false,
+						withArticlePlainText: true,
 						withGrokAnalyze: false,
 						withDisallowedReplyControls: false,
 					}),
@@ -374,13 +323,14 @@ export class Share extends Command {
 			{
 				headers: {
 					"Accept-Language": locale,
-					Authorization: authorization,
+					Authorization:
+						// We hardcode this as it became too difficult to get it from the page
+						"Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
 					"User-Agent": this.REAL_USER_AGENT,
 					"x-guest-token": gt,
 					"x-twitter-active-user": "yes",
 					"x-twitter-client-language": locale,
 					Cookie: `guest_id=${guestId}; gt=${gt}`,
-					"Content-Type": "application/json",
 					Origin: "https://x.com",
 				},
 			},
@@ -410,13 +360,13 @@ export class Share extends Command {
 			tweet.__typename === "Tweet" &&
 			tweet.legacy.retweeted_status_result?.result
 		) {
-			retweeter = tweet.core.user_results.result.core.name;
+			retweeter = tweet.core.user_results.result.legacy.name;
 			tweet = tweet.legacy.retweeted_status_result?.result;
 		}
 		let lastVersion: string | undefined;
 		if (tweet.__typename === "TweetWithVisibilityResults") {
 			tweet = { __typename: "Tweet", ...tweet.tweet };
-			lastVersion = tweet.edit_control.edit_tweet_ids.at(-1);
+			lastVersion = tweet.edit_control?.edit_tweet_ids.at(-1);
 			if (lastVersion === tweetId) lastVersion = undefined;
 		}
 		const components: APIMessageTopLevelComponent[] =
@@ -432,7 +382,7 @@ export class Share extends Command {
 			{
 				type: ComponentType.TextDisplay,
 				content: template`
-					-# ${[`<t:${Math.round(Date.parse(tweet.legacy.created_at) / 1000)}:f>`, tweet.views.count && `**${Number(tweet.views.count).toLocaleString(locale)}** visualizzazioni`].filter(Boolean).join(`\t·\t`)}
+					-# ${[`<t:${Math.round(Date.parse(tweet.legacy.created_at) / 1000)}:f>`, tweet.views?.count && `**${Number(tweet.views.count).toLocaleString(locale)}** visualizzazioni`].filter(Boolean).join(`\t·\t`)}
 					-# 🗨️ ${tweet.legacy.reply_count.toLocaleString(locale)}\t🔃 ${(tweet.legacy.quote_count + tweet.legacy.retweet_count).toLocaleString(locale)}\t❤️ ${tweet.legacy.favorite_count.toLocaleString(locale)}\t🔖 ${tweet.legacy.bookmark_count.toLocaleString(locale)}
 				`,
 			},
@@ -795,9 +745,9 @@ export class Share extends Command {
 		description:
 			[
 				media.ext_alt_text,
-				media.additional_media_info?.source_user?.user_results.result.core
+				media.additional_media_info?.source_user?.user_results.result.legacy
 					.name &&
-					`Di ${media.additional_media_info?.source_user?.user_results.result.core.name}`,
+					`Di ${media.additional_media_info?.source_user?.user_results.result.legacy.name}`,
 			]
 				.filter(Boolean)
 				.join("\n") || undefined,
@@ -817,7 +767,7 @@ export class Share extends Command {
 					{
 						type: ComponentType.TextDisplay,
 						content: template`
-							## [${user.core.name} @${user.core.screen_name}](https://twitter.com/${user.core.screen_name})
+							## [${user.legacy.name} @${user.legacy.screen_name}](https://twitter.com/${user.legacy.screen_name})
 							${true}${this.getFullTweet(tweet)}
 							${retweeter}-# \\🔃 Repost di ${retweeter}
 						`,
@@ -826,7 +776,10 @@ export class Share extends Command {
 				accessory: {
 					type: ComponentType.Thumbnail,
 					media: {
-						url: user.avatar.image_url.replace(/_[^_.-/?#]+?\.(\w+)$/, ".$1"),
+						url: user.legacy.profile_image_url_https.replace(
+							/_[^_.-/?#]+?\.(\w+)$/,
+							".$1",
+						),
 					},
 				},
 			},
