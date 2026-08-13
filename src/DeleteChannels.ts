@@ -20,23 +20,27 @@ export class DeleteChannels extends WorkflowEntrypoint<Env, Params> {
 		event: Readonly<WorkflowEvent<Params>>,
 		step: WorkflowStep,
 	) {
-		const toDelete: string[] = [];
-		const errors: { reason: Error; channel: string }[] = [];
+		const { toDelete, errors } = await step.do(
+			"Delete channels",
+			{ retries: { limit: 0, delay: 0 } },
+			async () => {
+				const toDelete: string[] = [];
+				const errors: { reason: Error; channel: string }[] = [];
 
-		for (const channelId of event.payload.channels)
-			try {
-				await step.do(
-					`Delete channel ${channelId}`,
-					{ retries: { limit: 1, delay: 5_000 } },
-					(): Promise<void> =>
-						rest.delete(Routes.channel(channelId)).then(() => {}),
-				);
-				toDelete.push(channelId);
-			} catch (err) {
-				if (err instanceof DiscordAPIError && err.code === 10003)
-					toDelete.push(channelId);
-				else errors.push({ channel: channelId, reason: normalizeError(err) });
-			}
+				for (const channelId of event.payload.channels)
+					try {
+						await rest.delete(Routes.channel(channelId));
+						toDelete.push(channelId);
+					} catch (err) {
+						if (err instanceof DiscordAPIError && err.code === 10003)
+							toDelete.push(channelId);
+						else
+							errors.push({ channel: channelId, reason: normalizeError(err) });
+					}
+				return { toDelete, errors };
+			},
+		);
+
 		if (toDelete.length)
 			await step.do<void>("Update channelId in database", () =>
 				this.env.DB.prepare(
