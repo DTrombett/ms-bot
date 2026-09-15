@@ -17,7 +17,10 @@ import {
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import capitalize, { forceCapitalize } from "../util/capitalize";
+import capitalize, {
+	forceCapitalize,
+	forceCapitalizeWords,
+} from "../util/capitalize";
 import { BrawlNotifications, SupercellPlayerType } from "../util/Constants";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
@@ -1222,25 +1225,23 @@ export class Brawl extends Command {
 					},
 					...club.members
 						.slice(page * 10, (page + 1) * 10)
-						.flatMap(
-							(member, i): APISectionComponent => ({
-								type: ComponentType.Section,
-								components: [
-									{
-										type: ComponentType.TextDisplay,
-										content: `${i + page * 10 + 1}.\t**${member.name}**\n${
-											MemberEmoji[member.role]
-										} ${ResolvedMemberRole[member.role]}\t🏆 ${member.trophies}`,
-									},
-								],
-								accessory: {
-									type: ComponentType.Button,
-									style: ButtonStyle.Secondary,
-									custom_id: `brawl-player-${id}-${member.tag}`,
-									label: "Dettagli",
+						.flatMap((member, i): APISectionComponent => ({
+							type: ComponentType.Section,
+							components: [
+								{
+									type: ComponentType.TextDisplay,
+									content: `${i + page * 10 + 1}.\t**${member.name}**\n${
+										MemberEmoji[member.role]
+									} ${ResolvedMemberRole[member.role]}\t🏆 ${member.trophies}`,
 								},
-							}),
-						),
+							],
+							accessory: {
+								type: ComponentType.Button,
+								style: ButtonStyle.Secondary,
+								custom_id: `brawl-player-${id}-${member.tag}`,
+								label: "Dettagli",
+							},
+						})),
 					{
 						type: ComponentType.ActionRow,
 						components: [
@@ -1332,13 +1333,9 @@ export class Brawl extends Command {
 					locale,
 				)}\n**Media Brawler**: ${Math.round(
 					player.trophies / player.brawlers.length,
-				).toLocaleString(locale)}\n**Cammino**: ${
-					(
-						this.TROPHY_ROAD_TIERS.findLast(
-							({ max }) => max <= player.highestTrophies,
-						) ?? this.TROPHY_ROAD_TIERS[0]
-					)?.name
-				}`,
+				).toLocaleString(
+					locale,
+				)}\n**Fama**: ${forceCapitalizeWords(player.fameTierName)} (${player.fame.toLocaleString(locale)})`,
 				inline: true,
 			},
 			{

@@ -148,7 +148,21 @@ export class Notifications extends WorkflowEntrypoint<Env, Params> {
 							components: [
 								{
 									type: ComponentType.TextDisplay,
-									content: `## Nuova divisione raggiunta!\nHai raggiunto <:ranked:${(Brawl.RANKED_TIERS[newRank] ?? Brawl.RANKED_TIERS.at(-1))!.emoji}> **${forceCapitalize((newPlayer.rankedRankName ?? "BRONZE I").split(newPlayer.rankedRank >= 16 ? /$/ : /\s+/)[0]!)}** in modalità Classificata!`,
+									content: `## Nuova divisione raggiunta!\nHai raggiunto <:ranked:${
+										(Brawl.RANKED_TIERS[newRank] ?? Brawl.RANKED_TIERS.at(-1))!
+											.emoji
+									}> **${
+										newPlayer.rankedRank >= 16 ?
+											(newPlayer.rankedRankName ?? "BRONZE I")
+												.split(/\s+/)
+												.map((v, i) => (i ? v : forceCapitalize(v)))
+												.join(" ")
+										:	forceCapitalize(
+												(newPlayer.rankedRankName ?? "BRONZE I").split(
+													/\s+/,
+												)[0]!,
+											)
+									}** in modalità Classificata!`,
 								},
 							],
 							accessory: {

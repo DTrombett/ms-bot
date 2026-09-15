@@ -1166,6 +1166,8 @@ declare global {
 			expPoints: number;
 			highestTrophies: number;
 			totalPrestigeLevel: number;
+			fame: number;
+			fameTierName: string;
 			soloVictories: number;
 			duoVictories: number;
 			bestRoboRumbleTime: number;
