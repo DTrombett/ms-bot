@@ -29,7 +29,7 @@ export class Share extends Command {
 	private static readonly USER_AGENT =
 		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
 	private static readonly REAL_USER_AGENT =
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
 	private static readonly TWITTER_REGEX =
 		/^(\d+)$|^https?:\/\/(?:(?:www|m(?:obile)?)\.)?(?:(?:twitter|x)\.com|twitter3e4tixl4xyajtrzo62zg5vztmjuricljdp2c5kshju4avyoid\.onion)\/(?:(?:i\/web|[^/]+)\/status|statuses)\/(\d+)/;
 	private static readonly TIKTOK_REGEX =
@@ -178,8 +178,9 @@ export class Share extends Command {
 		input.pathname = "/player/api/v1/items";
 		input.search = new URLSearchParams({
 			item_ids: id,
-			language: locale,
+			language: "en-GB",
 			aid: "1284",
+			data_source: "web_core",
 			app_name: "tiktok_web",
 			device_platform: "web_pc",
 			region: "JP",
@@ -188,21 +189,19 @@ export class Share extends Command {
 			referer: "",
 			screen_width: "1280",
 			screen_height: "720",
-			browser_language: locale,
+			browser_language: "en-GB",
 			browser_platform: "Win32",
 			browser_name,
 			browser_version,
 			browser_online: "true",
-			app_language: locale.split("-")[0]!,
-			timezone_name: "UTC",
+			app_language: "en",
+			timezone_name: "Europe/London",
 			is_page_visible: "true",
 			focus_state: "true",
 			is_fullscreen: "false",
 			history_len: "2",
 			security_verification_aid: "",
-			device_id: (
-				BigInt(id) + BigInt(Math.round(Math.random() * Number.MAX_SAFE_INTEGER))
-			).toString(),
+			device_id: "",
 		}).toString();
 		response = await fetch(input, {
 			headers: {
@@ -232,7 +231,7 @@ export class Share extends Command {
 					components: [
 						{
 							type: ComponentType.TextDisplay,
-							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${escapeBaseMarkdown(item.author_info.unique_id)}/video/${id})`,
+							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${escapeBaseMarkdown(item.author_info.unique_id)}/video/${id})\t[Guarda nel browser](https://www.tiktok.com/player/v1/${id})`,
 						},
 					],
 					accessory: {
@@ -260,6 +259,7 @@ export class Share extends Command {
 			],
 			allowed_mentions: { parse: [] },
 		});
+		console.log(item.video_info.url_list[0]!);
 	};
 	static twitter = async (
 		{ defer, edit, reply }: Merge<ChatInputReplies, ComponentReplies>,
