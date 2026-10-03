@@ -259,7 +259,6 @@ export class Share extends Command {
 			],
 			allowed_mentions: { parse: [] },
 		});
-		console.log(item.video_info.url_list[0]!);
 	};
 	static twitter = async (
 		{ defer, edit, reply }: Merge<ChatInputReplies, ComponentReplies>,

@@ -1285,6 +1285,7 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				{ headers: { "Content-Type": "image/png" } },
 			);
 		}
+		if (env.NODE_ENV === "development") console.log(request);
 		return new Response(null, { status: 404 });
 	},
 	scheduled: async ({ cron }) => {
