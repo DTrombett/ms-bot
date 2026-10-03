@@ -23,11 +23,12 @@ import normalizeError from "../util/normalizeError";
 import { findJSONObjectAround } from "../util/stringParsing";
 import { template } from "../util/strings";
 import { TimeUnit } from "../util/time";
+import { encrypt } from "../util/token";
 
 export class Share extends Command {
 	static override readonly supportComponentMethods = true;
-	private static readonly USER_AGENT =
-		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
+	// private static readonly DISCORD_USER_AGENT =
+	// 	"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
 	private static readonly REAL_USER_AGENT =
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
 	private static readonly TWITTER_REGEX =
@@ -141,13 +142,14 @@ export class Share extends Command {
 		{
 			options: { url, hide },
 			interaction: { locale },
+			request: { url: requestUrl },
 		}: ChatInputArgs<typeof Share.chatInputData, "tiktok">,
 	) => {
 		let response: Response;
 		if (this.TIKTOK_VM_REGEX.test(url)) {
 			response = await fetchCache(
 				url,
-				{ headers: { "User-Agent": this.USER_AGENT }, redirect: "manual" },
+				{ headers: { "User-Agent": this.REAL_USER_AGENT }, redirect: "manual" },
 				TimeUnit.Year / TimeUnit.Second,
 			);
 			void response.body?.cancel();
@@ -170,10 +172,9 @@ export class Share extends Command {
 		const input = new URL(
 			`https://www.tiktok.com/player/v1/${id}?__loader=layout&__ssrDirect=true`,
 		);
-		const [browser_name, browser_version] = this.USER_AGENT.split(/\/(.+)/) as [
-			string,
-			string,
-		];
+		const [browser_name, browser_version] = this.REAL_USER_AGENT.split(
+			/\/(.+)/,
+		) as [string, string];
 
 		input.pathname = "/player/api/v1/items";
 		input.search = new URLSearchParams({
@@ -205,7 +206,7 @@ export class Share extends Command {
 		}).toString();
 		response = await fetch(input, {
 			headers: {
-				"User-Agent": this.USER_AGENT,
+				"User-Agent": this.REAL_USER_AGENT,
 				Referer: `https://www.tiktok.com/player/v1/${id}`,
 				"agw-js-conv": "str",
 			},
@@ -218,10 +219,12 @@ export class Share extends Command {
 		}
 		const items = await response.json<TikTok.Items>().catch(console.error);
 
-		if (!items?.items?.[0] || items.status_code !== 0)
+		if (!items?.items?.[0] || items.status_code !== 0) {
+			console.error(items);
 			return edit({
 				content: `Si è verificato un errore: \`${items?.status_msg.replaceAll("`", "\\`") || "Errore sconosciuto"}\``,
 			});
+		}
 		const [item] = items.items;
 		await edit({
 			flags: MessageFlags.IsComponentsV2,
@@ -243,7 +246,22 @@ export class Share extends Command {
 					type: ComponentType.MediaGallery,
 					items: [
 						item.video_info.meta.duration > 0 && {
-							media: { url: item.video_info.url_list[0]! },
+							media: {
+								url: new URL(
+									`/proxy?${new URLSearchParams({
+										url: await encrypt(item.video_info.url_list[0]!),
+										headers: new URLSearchParams({
+											referer: "https://www.tiktok.com/",
+											"user-agent": this.REAL_USER_AGENT,
+										}).toString(),
+										resHeaders: new URLSearchParams({
+											"cache-control":
+												"max-age=31536000, immutable, stale-while-revalidate=31536000",
+										}).toString(),
+									})}`,
+									requestUrl,
+								).href,
+							},
 						},
 						...(item.image_post_info?.images.map((m) => ({
 							media: { url: m.display_image.url_list[0]! },

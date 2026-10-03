@@ -31,6 +31,7 @@ import { TimeUnit } from "./util/time";
 import {
 	createSetCookie,
 	createToken,
+	decrypt,
 	isAdmin,
 	parseToken,
 	refreshToken,
@@ -1283,6 +1284,35 @@ const server: ExportedHandler<Env, QueueMessage> = {
 					((await createSolidPng(256, 256, ...rgb)) as BodyInit)
 				:	null,
 				{ headers: { "Content-Type": "image/png" } },
+			);
+		}
+		if (url.pathname === "/proxy") {
+			let requestUrl = url.searchParams.get("url");
+			if (!requestUrl) return new Response(null, { status: 400 });
+			requestUrl = await decrypt(requestUrl).catch(() => null);
+			if (!requestUrl) return new Response(null, { status: 403 });
+			const headers = new Headers(
+				Object.fromEntries(
+					new URLSearchParams(url.searchParams.get("headers") ?? undefined),
+				),
+			);
+
+			for (const name of url.searchParams
+				.get("keepHeaders")
+				?.split(/\s*,\s*/g) ?? [])
+				if (request.headers.has(name))
+					headers.append(name, request.headers.get(name)!);
+			return fetch(requestUrl, { headers }).then(
+				(response) =>
+					new Response(response.clone().body, {
+						headers: Array.from(response.headers).concat([
+							...new URLSearchParams(
+								url.searchParams.get("resHeaders") ?? undefined,
+							),
+						]),
+						status: response.status,
+						statusText: response.statusText,
+					}),
 			);
 		}
 		if (env.NODE_ENV === "development") console.log(request);
