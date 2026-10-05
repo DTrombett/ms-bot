@@ -198,7 +198,7 @@ export class Share extends Command {
 			browser_version,
 			browser_online: "true",
 			app_language: locale.split("-")[0]!,
-			timezone_name: "Europe/London",
+			timezone_name: "UTC",
 			is_page_visible: "true",
 			focus_state: "true",
 			is_fullscreen: "false",
