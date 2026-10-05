@@ -107,7 +107,8 @@ declare global {
 	} & { [K in Extract<keyof A, keyof B>]: A[K] | B[K] };
 
 	type Exclusive<A, B> =
-		(A & { [K in keyof B]?: never }) | (B & { [K in keyof A]?: never });
+		| (A & { [K in keyof B]?: never })
+		| (B & { [K in keyof A]?: never });
 
 	/**
 	 * Options to create a command
@@ -499,7 +500,8 @@ declare global {
 			};
 	type ParseOptions<
 		T extends
-			AsConst<RESTPostAPIChatInputApplicationCommandsJSONBody> | undefined,
+			| AsConst<RESTPostAPIChatInputApplicationCommandsJSONBody>
+			| undefined,
 		R extends boolean = true,
 	> =
 		RESTPostAPIChatInputApplicationCommandsJSONBody extends T ?
@@ -910,7 +912,7 @@ declare global {
 					digg_count: number;
 					share_count: number;
 				};
-				video_info: {
+				video_info?: {
 					meta: {
 						bitrate: number;
 						duration: number;
@@ -970,7 +972,8 @@ declare global {
 			taken_at: number;
 			inventory_source: null;
 			video_versions:
-				{ width: number; height: number; url: string; type: number }[] | null;
+				| { width: number; height: number; url: string; type: number }[]
+				| null;
 			coauthor_producers: [];
 			invited_coauthor_producers: [];
 			facepile_top_likers: null;

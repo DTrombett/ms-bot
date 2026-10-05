@@ -27,8 +27,10 @@ import { encrypt } from "../util/token";
 
 export class Share extends Command {
 	static override readonly supportComponentMethods = true;
-	// private static readonly DISCORD_USER_AGENT =
-	// 	"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
+	private static readonly DISCORD_USER_AGENT =
+		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
+	private static readonly DISCORD_CLIENT_USER_AGENT =
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.1202 Chrome/148.0.7778.280 Electron/42.11.10 Safari/537.36";
 	private static readonly REAL_USER_AGENT =
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
 	private static readonly TWITTER_REGEX =
@@ -145,6 +147,7 @@ export class Share extends Command {
 			request: { url: requestUrl },
 		}: ChatInputArgs<typeof Share.chatInputData, "tiktok">,
 	) => {
+		const userAgent = this.DISCORD_USER_AGENT;
 		let response: Response;
 		if (this.TIKTOK_VM_REGEX.test(url)) {
 			response = await fetchCache(
@@ -169,17 +172,16 @@ export class Share extends Command {
 				content: `L'URL <${url}> non è valido!`,
 			});
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
-		const input = new URL(
-			`https://www.tiktok.com/player/v1/${id}?__loader=layout&__ssrDirect=true`,
-		);
-		const [browser_name, browser_version] = this.REAL_USER_AGENT.split(
-			/\/(.+)/,
-		) as [string, string];
+		const input = new URL(`https://www.tiktok.com/player/v1/${id}`);
+		const [browser_name, browser_version] = userAgent.split(/\/(.+)/) as [
+			string,
+			string,
+		];
 
 		input.pathname = "/player/api/v1/items";
 		input.search = new URLSearchParams({
 			item_ids: id,
-			language: "en-GB",
+			language: locale,
 			aid: "1284",
 			data_source: "web_core",
 			app_name: "tiktok_web",
@@ -190,12 +192,12 @@ export class Share extends Command {
 			referer: "",
 			screen_width: "1280",
 			screen_height: "720",
-			browser_language: "en-GB",
+			browser_language: locale,
 			browser_platform: "Win32",
 			browser_name,
 			browser_version,
 			browser_online: "true",
-			app_language: "en",
+			app_language: locale.split("-")[0]!,
 			timezone_name: "Europe/London",
 			is_page_visible: "true",
 			focus_state: "true",
@@ -206,9 +208,11 @@ export class Share extends Command {
 		}).toString();
 		response = await fetch(input, {
 			headers: {
-				"User-Agent": this.REAL_USER_AGENT,
+				Accept: "application/json",
+				"Accept-Language": locale,
+				"Agw-Js-Conv": "str",
 				Referer: `https://www.tiktok.com/player/v1/${id}`,
-				"agw-js-conv": "str",
+				"User-Agent": userAgent,
 			},
 		});
 		if (!response.ok) {
@@ -226,6 +230,19 @@ export class Share extends Command {
 			});
 		}
 		const [item] = items.items;
+		const href =
+			item.video_info &&
+			item.video_info.meta.duration > 0 &&
+			new URL(
+				`/proxy?${new URLSearchParams({
+					url: await encrypt(item.video_info.url_list[0]!),
+					headers: new URLSearchParams({
+						Referer: "https://www.tiktok.com/",
+					}).toString(),
+					keepHeaders: "Cache-Control, Dnt, Range",
+				})}`,
+				requestUrl,
+			).href;
 		await edit({
 			flags: MessageFlags.IsComponentsV2,
 			components: [
@@ -234,7 +251,7 @@ export class Share extends Command {
 					components: [
 						{
 							type: ComponentType.TextDisplay,
-							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${escapeBaseMarkdown(item.author_info.unique_id)}/video/${id})\t[Guarda nel browser](https://www.tiktok.com/player/v1/${id})`,
+							content: `## [${item.author_info.nickname}](https://www.tiktok.com/@${item.author_info.unique_id})\n${item.desc}\n[Apri in TikTok](https://www.tiktok.com/@${escapeBaseMarkdown(item.author_info.unique_id)}/video/${id})`,
 						},
 					],
 					accessory: {
@@ -245,24 +262,7 @@ export class Share extends Command {
 				{
 					type: ComponentType.MediaGallery,
 					items: [
-						item.video_info.meta.duration > 0 && {
-							media: {
-								url: new URL(
-									`/proxy?${new URLSearchParams({
-										url: await encrypt(item.video_info.url_list[0]!),
-										headers: new URLSearchParams({
-											referer: "https://www.tiktok.com/",
-											"user-agent": this.REAL_USER_AGENT,
-										}).toString(),
-										resHeaders: new URLSearchParams({
-											"cache-control":
-												"max-age=31536000, immutable, stale-while-revalidate=31536000",
-										}).toString(),
-									})}`,
-									requestUrl,
-								).href,
-							},
-						},
+						href && { media: { url: href } },
 						...(item.image_post_info?.images.map((m) => ({
 							media: { url: m.display_image.url_list[0]! },
 						})) ?? []),
@@ -272,7 +272,7 @@ export class Share extends Command {
 				},
 				{
 					type: ComponentType.TextDisplay,
-					content: `-# ❤️ ${item.statistics_info.digg_count.toLocaleString(locale)}\t🔗 ${item.statistics_info.share_count.toLocaleString(locale)}\t🗨️ ${item.statistics_info.comment_count.toLocaleString(locale)}`,
+					content: `-# [Apri video](${href ?? item.image_post_info?.images[0]?.display_image.url_list[0]})\n-# ❤️ ${item.statistics_info.digg_count.toLocaleString(locale)}\t🔗 ${item.statistics_info.share_count.toLocaleString(locale)}\t🗨️ ${item.statistics_info.comment_count.toLocaleString(locale)}`,
 				},
 			],
 			allowed_mentions: { parse: [] },
