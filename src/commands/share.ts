@@ -29,8 +29,8 @@ export class Share extends Command {
 	static override readonly supportComponentMethods = true;
 	private static readonly DISCORD_USER_AGENT =
 		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
-	private static readonly DISCORD_CLIENT_USER_AGENT =
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.1202 Chrome/148.0.7778.280 Electron/42.11.10 Safari/537.36";
+	// private static readonly DISCORD_CLIENT_USER_AGENT =
+	// 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.1202 Chrome/148.0.7778.280 Electron/42.11.10 Safari/537.36";
 	private static readonly REAL_USER_AGENT =
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
 	private static readonly TWITTER_REGEX =
