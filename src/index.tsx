@@ -19,6 +19,7 @@ import {
 	SupercellPlayerType,
 } from "./util/Constants";
 import { createSolidPng } from "./util/createSolidPng";
+import { fetchCache } from "./util/fetchCache";
 import { parseForm, ParseType } from "./util/forms";
 import { rest, textDecoder, textEncoder } from "./util/globals";
 import { isMobile } from "./util/isMobile";
@@ -31,6 +32,7 @@ import { TimeUnit } from "./util/time";
 import {
 	createSetCookie,
 	createToken,
+	decrypt,
 	isAdmin,
 	parseToken,
 	refreshToken,
@@ -1285,6 +1287,25 @@ const server: ExportedHandler<Env, QueueMessage> = {
 				{ headers: { "Content-Type": "image/png" } },
 			);
 		}
+		if (url.pathname === "/proxy") {
+			let requestUrl = url.searchParams.get("url");
+			if (!requestUrl) return new Response(null, { status: 400 });
+			requestUrl = await decrypt(requestUrl).catch(() => null);
+			if (!requestUrl) return new Response(null, { status: 403 });
+			const headers = new Headers();
+
+			for (const name of url.searchParams
+				.get("keepHeaders")
+				?.split(/\s*,\s*/g) ?? [])
+				if (request.headers.has(name))
+					headers.set(name, request.headers.get(name)!);
+			for (const [name, value] of new URLSearchParams(
+				url.searchParams.get("headers") ?? "",
+			))
+				headers.set(name, value);
+			return fetchCache(requestUrl, { headers });
+		}
+		if (env.NODE_ENV === "development") console.log(request);
 		return new Response(null, { status: 404 });
 	},
 	scheduled: async ({ cron }) => {

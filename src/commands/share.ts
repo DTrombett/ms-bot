@@ -23,13 +23,16 @@ import normalizeError from "../util/normalizeError";
 import { findJSONObjectAround } from "../util/stringParsing";
 import { template } from "../util/strings";
 import { TimeUnit } from "../util/time";
+import { encrypt } from "../util/token";
 
 export class Share extends Command {
 	static override readonly supportComponentMethods = true;
-	private static readonly USER_AGENT =
+	private static readonly DISCORD_USER_AGENT =
 		"Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)";
+	// private static readonly DISCORD_CLIENT_USER_AGENT =
+	// 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.1202 Chrome/148.0.7778.280 Electron/42.11.10 Safari/537.36";
 	private static readonly REAL_USER_AGENT =
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
 	private static readonly TWITTER_REGEX =
 		/^(\d+)$|^https?:\/\/(?:(?:www|m(?:obile)?)\.)?(?:(?:twitter|x)\.com|twitter3e4tixl4xyajtrzo62zg5vztmjuricljdp2c5kshju4avyoid\.onion)\/(?:(?:i\/web|[^/]+)\/status|statuses)\/(\d+)/;
 	private static readonly TIKTOK_REGEX =
@@ -141,13 +144,15 @@ export class Share extends Command {
 		{
 			options: { url, hide },
 			interaction: { locale },
+			request: { url: requestUrl },
 		}: ChatInputArgs<typeof Share.chatInputData, "tiktok">,
 	) => {
+		const userAgent = this.DISCORD_USER_AGENT;
 		let response: Response;
 		if (this.TIKTOK_VM_REGEX.test(url)) {
 			response = await fetchCache(
 				url,
-				{ headers: { "User-Agent": this.USER_AGENT }, redirect: "manual" },
+				{ headers: { "User-Agent": this.DISCORD_USER_AGENT }, redirect: "manual" },
 				TimeUnit.Year / TimeUnit.Second,
 			);
 			void response.body?.cancel();
@@ -167,10 +172,8 @@ export class Share extends Command {
 				content: `L'URL <${url}> non è valido!`,
 			});
 		defer({ flags: hide ? MessageFlags.Ephemeral : undefined });
-		const input = new URL(
-			`https://www.tiktok.com/player/v1/${id}?__loader=layout&__ssrDirect=true`,
-		);
-		const [browser_name, browser_version] = this.USER_AGENT.split(/\/(.+)/) as [
+		const input = new URL(`https://www.tiktok.com/player/v1/${id}`);
+		const [browser_name, browser_version] = userAgent.split(/\/(.+)/) as [
 			string,
 			string,
 		];
@@ -180,6 +183,7 @@ export class Share extends Command {
 			item_ids: id,
 			language: locale,
 			aid: "1284",
+			data_source: "web_core",
 			app_name: "tiktok_web",
 			device_platform: "web_pc",
 			region: "JP",
@@ -200,15 +204,15 @@ export class Share extends Command {
 			is_fullscreen: "false",
 			history_len: "2",
 			security_verification_aid: "",
-			device_id: (
-				BigInt(id) + BigInt(Math.round(Math.random() * Number.MAX_SAFE_INTEGER))
-			).toString(),
+			device_id: "",
 		}).toString();
 		response = await fetch(input, {
 			headers: {
-				"User-Agent": this.USER_AGENT,
+				Accept: "application/json",
+				"Accept-Language": locale,
+				"Agw-Js-Conv": "str",
 				Referer: `https://www.tiktok.com/player/v1/${id}`,
-				"agw-js-conv": "str",
+				"User-Agent": userAgent,
 			},
 		});
 		if (!response.ok) {
@@ -219,11 +223,26 @@ export class Share extends Command {
 		}
 		const items = await response.json<TikTok.Items>().catch(console.error);
 
-		if (!items?.items?.[0] || items.status_code !== 0)
+		if (!items?.items?.[0] || items.status_code !== 0) {
+			console.error(items);
 			return edit({
 				content: `Si è verificato un errore: \`${items?.status_msg.replaceAll("`", "\\`") || "Errore sconosciuto"}\``,
 			});
+		}
 		const [item] = items.items;
+		const href =
+			item.video_info &&
+			item.video_info.meta.duration > 0 &&
+			new URL(
+				`/proxy?${new URLSearchParams({
+					url: await encrypt(item.video_info.url_list[0]!),
+					headers: new URLSearchParams({
+						Referer: "https://www.tiktok.com/",
+					}).toString(),
+					keepHeaders: "Cache-Control, Dnt, Range",
+				})}`,
+				requestUrl,
+			).href;
 		await edit({
 			flags: MessageFlags.IsComponentsV2,
 			components: [
@@ -243,9 +262,7 @@ export class Share extends Command {
 				{
 					type: ComponentType.MediaGallery,
 					items: [
-						item.video_info.meta.duration > 0 && {
-							media: { url: item.video_info.url_list[0]! },
-						},
+						href && { media: { url: href } },
 						...(item.image_post_info?.images.map((m) => ({
 							media: { url: m.display_image.url_list[0]! },
 						})) ?? []),
@@ -255,7 +272,7 @@ export class Share extends Command {
 				},
 				{
 					type: ComponentType.TextDisplay,
-					content: `-# ❤️ ${item.statistics_info.digg_count.toLocaleString(locale)}\t🔗 ${item.statistics_info.share_count.toLocaleString(locale)}\t🗨️ ${item.statistics_info.comment_count.toLocaleString(locale)}`,
+					content: `-# [Apri video](${href ?? item.image_post_info?.images[0]?.display_image.url_list[0]})\n-# ❤️ ${item.statistics_info.digg_count.toLocaleString(locale)}\t🔗 ${item.statistics_info.share_count.toLocaleString(locale)}\t🗨️ ${item.statistics_info.comment_count.toLocaleString(locale)}`,
 				},
 			],
 			allowed_mentions: { parse: [] },
@@ -689,7 +706,7 @@ export class Share extends Command {
 				label: "Apri in Twitter",
 			},
 		];
-		const match = tweet.source.match(
+		const match = tweet.source?.match(
 			/<a\s+[^>]*href\s*=\s*["'](https?:\/\/(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}(?:\/[^"']+)?)["'][^>]*>([^<]+)<\/a>/,
 		);
 

@@ -809,7 +809,7 @@ declare global {
 			};
 			core: { user_results: { result: User } };
 			rest_id: string;
-			source: string;
+			source?: string;
 			unmention_info: object;
 			unmention_data?: object;
 			edit_control?: {
@@ -910,7 +910,7 @@ declare global {
 					digg_count: number;
 					share_count: number;
 				};
-				video_info: {
+				video_info?: {
 					meta: {
 						bitrate: number;
 						duration: number;

@@ -12,7 +12,7 @@ import { rest, textDecoder, textEncoder } from "./globals";
 import { toSearchParams } from "./objects";
 import { TimeUnit } from "./time";
 
-export const createToken = async (jwt: JWT) => {
+export const encrypt = async (input: string) => {
 	const iv = crypto.getRandomValues(new Uint8Array(12));
 	const ciphertext = await crypto.subtle.encrypt(
 		{ name: "AES-GCM", iv },
@@ -23,14 +23,17 @@ export const createToken = async (jwt: JWT) => {
 			false,
 			["encrypt"],
 		),
-		textEncoder.encode(toSearchParams(jwt).toString()),
+		textEncoder.encode(input),
 	);
-	const token = new Uint8Array(iv.length + ciphertext.byteLength);
+	const encrypted = new Uint8Array(iv.length + ciphertext.byteLength);
 
-	token.set(iv, 0);
-	token.set(new Uint8Array(ciphertext), iv.length);
-	return token.toBase64({ alphabet: "base64url", omitPadding: true });
+	encrypted.set(iv, 0);
+	encrypted.set(new Uint8Array(ciphertext), iv.length);
+	return encrypted.toBase64({ alphabet: "base64url", omitPadding: true });
 };
+
+export const createToken = (jwt: JWT) =>
+	encrypt(toSearchParams(jwt).toString());
 
 export const updateToken = async (
 	body: RESTPostOAuth2AccessTokenResult | JWT,
@@ -81,28 +84,31 @@ export const refreshToken: {
 		mayThrow,
 	);
 
+export const decrypt = async (encrypted: string) => {
+	const decoded = Uint8Array.fromBase64(encrypted, { alphabet: "base64url" });
+
+	return textDecoder.decode(
+		await crypto.subtle.decrypt(
+			{ name: "AES-GCM", iv: decoded.slice(0, 12) },
+			await crypto.subtle.importKey(
+				"raw",
+				Uint8Array.fromBase64(env.SECRET_KEY),
+				{ name: "AES-GCM" },
+				false,
+				["decrypt"],
+			),
+			decoded.slice(12),
+		),
+	);
+};
+
 export const parseToken = async (
 	token: string | undefined,
 	scopes?: Iterable<string>,
 ) => {
 	if (!token) return;
-	const decoded = Uint8Array.fromBase64(token, { alphabet: "base64url" });
 	const jwt = Object.fromEntries(
-		new URLSearchParams(
-			textDecoder.decode(
-				await crypto.subtle.decrypt(
-					{ name: "AES-GCM", iv: decoded.slice(0, 12) },
-					await crypto.subtle.importKey(
-						"raw",
-						Uint8Array.fromBase64(env.SECRET_KEY),
-						{ name: "AES-GCM" },
-						false,
-						["decrypt"],
-					),
-					decoded.slice(12),
-				),
-			),
-		),
+		new URLSearchParams(await decrypt(token)),
 	) as object as JWT;
 
 	if (scopes && !new Set(scopes).isSubsetOf(new Set(jwt.s?.split(" ")))) return;
