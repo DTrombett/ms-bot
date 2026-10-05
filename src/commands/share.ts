@@ -152,7 +152,7 @@ export class Share extends Command {
 		if (this.TIKTOK_VM_REGEX.test(url)) {
 			response = await fetchCache(
 				url,
-				{ headers: { "User-Agent": this.REAL_USER_AGENT }, redirect: "manual" },
+				{ headers: { "User-Agent": this.DISCORD_USER_AGENT }, redirect: "manual" },
 				TimeUnit.Year / TimeUnit.Second,
 			);
 			void response.body?.cancel();
