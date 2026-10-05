@@ -706,7 +706,7 @@ export class Share extends Command {
 				label: "Apri in Twitter",
 			},
 		];
-		const match = tweet.source.match(
+		const match = tweet.source?.match(
 			/<a\s+[^>]*href\s*=\s*["'](https?:\/\/(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}(?:\/[^"']+)?)["'][^>]*>([^<]+)<\/a>/,
 		);
 
