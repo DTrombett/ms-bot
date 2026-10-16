@@ -816,7 +816,7 @@ export class Share extends Command {
 					[]
 				).map(this.mapTwitterMedia),
 			);
-			if (tweet.card) {
+			if (tweet.card?.legacy) {
 				const { binding_values } = tweet.card.legacy;
 
 				switch (tweet.card.legacy.name) {
