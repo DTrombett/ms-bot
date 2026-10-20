@@ -28,12 +28,12 @@
 		"@discordjs/rest": "^2.6.3",
 		"bufferutil": "^4.1.0",
 		"cloudflare": "^6.5.0",
-		"discord-api-types": "^0.38.56",
+		"discord-api-types": "^0.38.57",
 		"entities": "^8.1.0",
 		"esbuild": "^0.28.2",
-		"react": "^19.3.0",
-		"react-dom": "^19.3.0",
-		"temporal-polyfill": "^1.0.5"
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1",
+		"temporal-polyfill": "^1.0.6"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
@@ -42,15 +42,15 @@
 		"@types/node": "^24.19.2",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
-		"eslint": "^10.12.0",
+		"eslint": "^10.13.0",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.71.1",
-		"wrangler": "^4.149.0"
+		"typescript-eslint": "^8.72.0",
+		"wrangler": "^4.151.3"
 	},
 	"allowScripts": {
 		"bufferutil@4.1.0": true,
 		"sharp@0.34.5": true,
 		"esbuild@0.28.2": true,
-		"workerd@1.20261006.1": true
+		"workerd@1.20261019.1": true
 	}
 }
