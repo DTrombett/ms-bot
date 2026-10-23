@@ -120,6 +120,23 @@ export class Search extends Command {
 						type: ApplicationCommandOptionType.String,
 						required: true,
 					},
+					{
+						name: "lang",
+						description: "La lingua in cui cercare (default: la tua)",
+						type: ApplicationCommandOptionType.String,
+						choices: [
+							{ name: "Italiano", value: "it" },
+							{ name: "English", value: "en" },
+							{ name: "Deutsch", value: "de" },
+							{ name: "Русский", value: "ru" },
+							{ name: "Português", value: "pt" },
+							{ name: "Polski", value: "pl" },
+							{ name: "中文", value: "zh" },
+							{ name: "Español", value: "es" },
+							{ name: "Français", value: "fr" },
+							{ name: "日本語", value: "ja" },
+						],
+					},
 				],
 			},
 		],
@@ -263,10 +280,11 @@ export class Search extends Command {
 	static wikipedia = (
 		{ reply }: ChatInputReplies,
 		{
-			options: { query },
+			interaction: { locale },
+			options: { query, lang },
 		}: ChatInputArgs<typeof Search.chatInputData, "wikipedia">,
 	) => {
-		const url = `https://wikipedia.org/w/index.php?search=${encodeURIComponent(
+		const url = `https://${lang ?? locale.match(/[a-z]+/)?.[0] ?? "www"}.wikipedia.org/w/index.php?title=Special:Search&search=${encodeURIComponent(
 			query,
 		)}`;
 
