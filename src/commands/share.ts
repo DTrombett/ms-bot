@@ -236,8 +236,7 @@ export class Share extends Command {
 		}
 		const [item] = items.items;
 		const href =
-			item.video_info &&
-			item.video_info.meta.duration > 0 &&
+			item.video_info?.meta?.duration &&
 			new URL(
 				`/proxy?${new URLSearchParams({
 					url: await encrypt(item.video_info.url_list[0]!),
