@@ -7,11 +7,12 @@ import {
 } from "discord-api-types/v10";
 import Command from "../Command";
 import { escapeMarkdown } from "../util/formatters";
+import { maxLength } from "../util/strings";
 
 export class Search extends Command {
 	static override chatInputData = {
 		name: "search",
-		description: "Cerca qualcosa all'interno di vari servizi",
+		description: "Cerca qualcosa all'interno di un sito",
 		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
@@ -119,6 +120,7 @@ export class Search extends Command {
 						description: "La query da cercare",
 						type: ApplicationCommandOptionType.String,
 						required: true,
+						autocomplete: true,
 					},
 					{
 						name: "lang",
@@ -167,6 +169,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	};
 	static spotify = (
@@ -195,6 +198,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	static youtube = (
 		{ reply }: ChatInputReplies,
@@ -222,6 +226,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	static "yt-music" = (
 		{ reply }: ChatInputReplies,
@@ -249,6 +254,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	static github = (
 		{ reply }: ChatInputReplies,
@@ -276,6 +282,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	static wikipedia = (
 		{ reply }: ChatInputReplies,
@@ -289,9 +296,9 @@ export class Search extends Command {
 		)}`;
 
 		reply({
-			content: `Risultati di Wikipedia per la ricerca "**[${escapeMarkdown(
+			content: `Risultati di Wikipedia per la ricerca **${escapeMarkdown(
 				query,
-			)}](${url} )**":`,
+			)}**[:](${url})`,
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -306,6 +313,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	};
 	static "google-translate" = (
@@ -333,5 +341,58 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
+	static override async autocomplete(
+		{ autocomplete }: AutoCompleteReplies,
+		{
+			interaction: { locale },
+			subcommand,
+			options,
+		}: AutoCompleteArgs<typeof Search.chatInputData>,
+	) {
+		if (subcommand === "wikipedia") {
+			if (!options.query) return autocomplete({});
+			const res = await fetch(
+				`https://${options.lang ?? locale.match(/[a-z]+/)?.[0] ?? "en"}.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(
+					options.query,
+				)}`,
+				{
+					headers: {
+						accept: "application/x-suggestions+json",
+						"user-agent":
+							"MS-Bot/0.0 (https://github.com/dtrombett/ms-bot; ms-bot@trombett.org) Cloudflare-Workers",
+					},
+				},
+			);
+			if (!res.ok) {
+				const contentType = res.headers.get("content-type");
+				const body = await ((
+					contentType?.endsWith("+json") || contentType?.endsWith("/json")
+				) ?
+					res.json()
+				:	res.text());
+
+				console.error(body);
+				throw new Error(
+					`Failed to obtain search suggestions with status ${res.status} ${res.statusText}`,
+				);
+			}
+			const suggestions =
+				await res.json<
+					[
+						query: string,
+						completions: string[],
+						descriptions?: string[],
+						urls?: string[],
+					]
+				>();
+
+			return autocomplete({
+				choices: suggestions[1]
+					.slice(0, 25)
+					.map((v) => ({ name: maxLength(v, 100), value: maxLength(v, 100) })),
+			});
+		}
+	}
 }
