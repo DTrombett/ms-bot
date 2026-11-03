@@ -7,11 +7,12 @@ import {
 } from "discord-api-types/v10";
 import Command from "../Command";
 import { escapeMarkdown } from "../util/formatters";
+import { maxLength } from "../util/strings";
 
 export class Search extends Command {
 	static override chatInputData = {
 		name: "search",
-		description: "Cerca qualcosa all'interno di vari servizi",
+		description: "Cerca qualcosa all'interno di un sito",
 		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
@@ -119,6 +120,24 @@ export class Search extends Command {
 						description: "La query da cercare",
 						type: ApplicationCommandOptionType.String,
 						required: true,
+						autocomplete: true,
+					},
+					{
+						name: "lang",
+						description: "La lingua in cui cercare (default: la tua)",
+						type: ApplicationCommandOptionType.String,
+						choices: [
+							{ name: "Italiano", value: "it" },
+							{ name: "English", value: "en" },
+							{ name: "Deutsch", value: "de" },
+							{ name: "Русский", value: "ru" },
+							{ name: "Português", value: "pt" },
+							{ name: "Polski", value: "pl" },
+							{ name: "中文", value: "zh" },
+							{ name: "Español", value: "es" },
+							{ name: "Français", value: "fr" },
+							{ name: "日本語", value: "ja" },
+						],
 					},
 				],
 			},
@@ -150,6 +169,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	};
 	static spotify = (
@@ -178,6 +198,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	static youtube = (
 		{ reply }: ChatInputReplies,
@@ -205,6 +226,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	static "yt-music" = (
 		{ reply }: ChatInputReplies,
@@ -232,6 +254,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	static github = (
 		{ reply }: ChatInputReplies,
@@ -259,21 +282,33 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	static wikipedia = (
 		{ reply }: ChatInputReplies,
 		{
-			options: { query },
+			interaction: { locale },
+			options: { query, lang },
 		}: ChatInputArgs<typeof Search.chatInputData, "wikipedia">,
 	) => {
-		const url = `https://wikipedia.org/w/index.php?search=${encodeURIComponent(
+		const parsed = URL.canParse(query) ? new URL(query) : null;
+		let url = `https://${lang ?? locale.match(/[a-z]+/)?.[0] ?? "www"}.wikipedia.org/w/index.php?title=Special:Search&search=${encodeURIComponent(
 			query,
 		)}`;
 
+		if (
+			parsed?.protocol === "https:" &&
+			/\.wikipedia\.org$/.test(parsed.host) &&
+			parsed.pathname.startsWith("/wiki/")
+		) {
+			url = parsed.href;
+			query = "";
+		}
 		reply({
-			content: `Risultati di Wikipedia per la ricerca "**[${escapeMarkdown(
-				query,
-			)}](${url} )**":`,
+			content:
+				query ?
+					`[Risultati di Wikipedia](${url}) per la ricerca "**${escapeMarkdown(query)}**":`
+				:	`Da [Wikipedia](${url}):`,
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -288,6 +323,7 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
 	};
 	static "google-translate" = (
@@ -315,5 +351,64 @@ export class Search extends Command {
 					],
 				},
 			],
+			allowed_mentions: { parse: [] },
 		});
+	static override async autocomplete(
+		{ autocomplete }: AutoCompleteReplies,
+		{
+			interaction: { locale },
+			subcommand,
+			options,
+		}: AutoCompleteArgs<typeof Search.chatInputData>,
+	) {
+		if (subcommand === "wikipedia") {
+			if (!options.query) return autocomplete({});
+			const res = await fetch(
+				`https://${options.lang ?? locale.match(/[a-z]+/)?.[0] ?? "en"}.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(
+					options.query,
+				)}`,
+				{
+					headers: {
+						accept: "application/x-suggestions+json",
+						"user-agent":
+							"MS-Bot/0.0 (https://github.com/dtrombett/ms-bot; ms-bot@trombett.org) Cloudflare-Workers",
+					},
+				},
+			);
+			if (!res.ok) {
+				const contentType = res.headers.get("content-type");
+				const body = await ((
+					contentType?.endsWith("+json") || contentType?.endsWith("/json")
+				) ?
+					res.json()
+				:	res.text());
+
+				console.error(body);
+				throw new Error(
+					`Failed to obtain search suggestions with status ${res.status} ${res.statusText}`,
+				);
+			}
+			const suggestions =
+				await res.json<
+					[
+						query: string,
+						completions: string[],
+						descriptions?: string[],
+						urls?: string[],
+					]
+				>();
+
+			return autocomplete({
+				choices: suggestions[1]
+					.slice(0, 25)
+					.map((v, i) => ({
+						name: maxLength(v, 100),
+						value:
+							suggestions[3]?.[i] && suggestions[3][i].length <= 100 ?
+								suggestions[3][i]
+							:	maxLength(v, 100),
+					})),
+			});
+		}
+	}
 }

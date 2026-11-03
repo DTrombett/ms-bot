@@ -178,6 +178,7 @@ export class CommandHandler {
 		let runner: Runner;
 
 		if (
+			interaction.type !== InteractionType.ApplicationCommandAutocomplete &&
 			args.subcommand &&
 			args.subcommand in Command &&
 			typeof Command[args.subcommand as never] === "function" &&
