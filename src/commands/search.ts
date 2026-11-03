@@ -291,14 +291,24 @@ export class Search extends Command {
 			options: { query, lang },
 		}: ChatInputArgs<typeof Search.chatInputData, "wikipedia">,
 	) => {
-		const url = `https://${lang ?? locale.match(/[a-z]+/)?.[0] ?? "www"}.wikipedia.org/w/index.php?title=Special:Search&search=${encodeURIComponent(
+		const parsed = URL.canParse(query) ? new URL(query) : null;
+		let url = `https://${lang ?? locale.match(/[a-z]+/)?.[0] ?? "www"}.wikipedia.org/w/index.php?title=Special:Search&search=${encodeURIComponent(
 			query,
 		)}`;
 
+		if (
+			parsed?.protocol === "https:" &&
+			/\.wikipedia\.org$/.test(parsed.host) &&
+			parsed.pathname.startsWith("/wiki/")
+		) {
+			url = parsed.href;
+			query = "";
+		}
 		reply({
-			content: `Risultati di Wikipedia per la ricerca **${escapeMarkdown(
-				query,
-			)}**[:](${url})`,
+			content:
+				query ?
+					`[Risultati di Wikipedia](${url}) per la ricerca "**${escapeMarkdown(query)}**":`
+				:	`Da [Wikipedia](${url}):`,
 			components: [
 				{
 					type: ComponentType.ActionRow,
@@ -391,7 +401,13 @@ export class Search extends Command {
 			return autocomplete({
 				choices: suggestions[1]
 					.slice(0, 25)
-					.map((v) => ({ name: maxLength(v, 100), value: maxLength(v, 100) })),
+					.map((v, i) => ({
+						name: maxLength(v, 100),
+						value:
+							suggestions[3]?.[i] && suggestions[3][i].length <= 100 ?
+								suggestions[3][i]
+							:	maxLength(v, 100),
+					})),
 			});
 		}
 	}
