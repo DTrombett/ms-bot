@@ -958,7 +958,7 @@ export class Brawl extends Command {
 						{
 							type: ComponentType.TextDisplay,
 							content: template`
-								## ${brawler.name}\n<:level:1431299161717866536> Lvl. ${
+								## ${brawler.name}\n<:level:1567613076709048360> Lvl. ${
 									brawler.power
 								}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}${brawler.prestigeLevel ? `\t<:prestigeLevel:1479095470541242480> ${brawler.prestigeLevel}` : ""}${brawler.currentWinStreak > 1 ? `\t🔥 ${brawler.currentWinStreak}` : ""}\t🔥 MAX ${brawler.maxWinStreak}
 								- <:gear:1431298227105300593> **${
@@ -968,33 +968,27 @@ export class Brawl extends Command {
 										g.name.toLowerCase().split(" ").map(capitalize).join(" "),
 									)
 									.join(", ")}
-								- <:gadget:1431298224966336639> **${brawler.gadgets.length}**${
+								- <:gadget:${brawler.buffies.gadget ? "1567611053041385615" : "1431298224966336639"}> **${brawler.gadgets.length}**${
 									brawler.gadgets.length ? ": " : ""
 								}${brawler.gadgets
 									.map((g) =>
 										g.name.toLowerCase().split(" ").map(capitalize).join(" "),
 									)
-									.join(
-										", ",
-									)}\t${brawler.buffies.gadget ? "<:buffed:1479492113250123797>" : ""}
-								- <:starpower:1431298229328150649> **${
+									.join(", ")}
+								- <:starpower:${brawler.buffies.starPower ? "1567611282406776914" : "1431298229328150649"}> **${
 									brawler.starPowers.length
 								}**${brawler.starPowers.length ? ": " : ""}${brawler.starPowers
 									.map((g) =>
 										g.name.toLowerCase().split(" ").map(capitalize).join(" "),
 									)
-									.join(
-										", ",
-									)}\t${brawler.buffies.starPower ? "<:buffed:1479492113250123797>" : ""}
-								- <:hyperCharge:1479489310808870983> **${
+									.join(", ")}
+								- <:hyperCharge:${brawler.buffies.hyperCharge ? "1567611194318131301" : "1567611134310219907"}> **${
 									brawler.hyperCharges.length
 								}**${brawler.hyperCharges.length ? ": " : ""}${brawler.hyperCharges
 									.map((g) =>
 										g.name.toLowerCase().split(" ").map(capitalize).join(" "),
 									)
-									.join(
-										", ",
-									)}\t${brawler.buffies.hyperCharge ? "<:buffed:1479492113250123797>" : ""}
+									.join(", ")}
 								`,
 						},
 					],
@@ -1077,7 +1071,9 @@ export class Brawl extends Command {
 										type: ComponentType.TextDisplay,
 										content: `<:l1:${l1}><:l2:${l2}>\t**${brawler.name}**\t${
 											brawler.gadgets.length ?
-												"<:gadget:1431298224966336639>"
+												brawler.buffies.gadget ?
+													"<:gadget:1567611053041385615>"
+												:	"<:gadget:1431298224966336639>"
 											:	" \t "
 										}${
 											brawler.gears.length ?
@@ -1085,13 +1081,21 @@ export class Brawl extends Command {
 											:	" \t "
 										}${
 											brawler.starPowers.length ?
-												"<:starpower:1431298229328150649>"
+												brawler.buffies.starPower ?
+													"<:starpower:1567611282406776914>"
+												:	"<:starpower:1431298229328150649>"
 											:	" \t "
 										}${
 											brawler.gears.length >= 2 ?
 												"<:gear:1431298227105300593>"
 											:	""
-										}\n<:l3:${l3}><:l4:${l4}>\t<:level:1431299161717866536> ${
+										}\n<:l3:${l3}><:l4:${l4}>\t${
+											brawler.power === 11 && brawler.hyperCharges.length ?
+												brawler.buffies.hyperCharge ?
+													`<:hypercharge:1567611194318131301>`
+												:	`<:hypercharge:1567611134310219907>`
+											:	`<:level:1567613076709048360>`
+										} ${
 											brawler.power
 										}\t🏆 ${brawler.trophies}  🔝 ${brawler.highestTrophies}`,
 									},
