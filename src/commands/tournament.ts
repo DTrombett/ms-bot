@@ -87,7 +87,13 @@ export class Tournament extends Command {
 					{
 						type: ApplicationCommandOptionType.Boolean,
 						name: "full",
-						description: "Se vedere tutto lo storico del torneo",
+						description: "Se vedere tutto lo storico del torneo (default: no)",
+					},
+					{
+						type: ApplicationCommandOptionType.Integer,
+						name: "id",
+						description:
+							"L'id del torneo da controllare (default: l'ultimo in corso)",
 					},
 				],
 			},
@@ -164,7 +170,7 @@ export class Tournament extends Command {
 		{ reply }: ChatInputReplies,
 		{
 			user: { id },
-			options: { user = id, full },
+			options: { user = id, full, id: tournamentId },
 			interaction: { guild_id },
 		}: ChatInputArgs<typeof Tournament.chatInputData, "status">,
 	) => {
@@ -172,9 +178,13 @@ export class Tournament extends Command {
 			`
 				WITH t AS (
 					SELECT id FROM Tournaments
-					WHERE currentRound IS NOT NULL
-						AND (statusFlags & ?2) = 0
-						AND guildId = ?4
+					WHERE id = ?5 OR (
+						?5 IS NULL AND
+						currentRound IS NOT NULL AND
+						(statusFlags & ?2) = 0 AND
+						guildId = ?4
+					)
+					ORDER BY id DESC
 					LIMIT 1
 				)
 				SELECT * FROM Matches
@@ -186,7 +196,13 @@ export class Tournament extends Command {
 				LIMIT ?3
 			`,
 		)
-			.bind(user, TournamentStatusFlags.Finished, full ? 19 : 1, guild_id)
+			.bind(
+				user,
+				TournamentStatusFlags.Finished,
+				full ? 19 : 1,
+				guild_id,
+				tournamentId,
+			)
 			.run<Database.Match>();
 		const [match] = results;
 		const winner = resolveWinner(match);
