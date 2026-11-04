@@ -17,10 +17,7 @@ import {
 	type RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
 import Command from "../Command";
-import capitalize, {
-	forceCapitalize,
-	forceCapitalizeWords,
-} from "../util/capitalize";
+import capitalize, { forceCapitalize } from "../util/capitalize";
 import { BrawlNotifications, SupercellPlayerType } from "../util/Constants";
 import { percentile } from "../util/maths";
 import { ok } from "../util/node";
@@ -1337,9 +1334,12 @@ export class Brawl extends Command {
 					locale,
 				)}\n**Media Brawler**: ${Math.round(
 					player.trophies / player.brawlers.length,
-				).toLocaleString(
-					locale,
-				)}\n**Fama**: ${forceCapitalizeWords(player.fameTierName)} (${player.fame.toLocaleString(locale)})`,
+				).toLocaleString(locale)}\n**Fama**: ${player.fameTierName
+					.split(/\s+/)
+					.map((s, i, { length }) =>
+						i === length - 1 ? s : forceCapitalize(s),
+					)
+					.join(" ")} (${player.fame.toLocaleString(locale)})`,
 				inline: true,
 			},
 			{
