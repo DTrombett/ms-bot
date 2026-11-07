@@ -13,6 +13,7 @@ export * from "./icon";
 export * from "./kick";
 export * from "./love";
 export * from "./matchChannel";
+export * from "./meme";
 export * from "./ping";
 export * from "./predict";
 export * from "./predictions";

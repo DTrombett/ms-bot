@@ -11,6 +11,9 @@ send_metrics = false
 command = "node --enable-source-maps src/build.ts"
 watch_dir = "src"
 
+[images]
+binding = "IMAGES"
+
 [observability]
 enabled = true
 [observability.traces]
