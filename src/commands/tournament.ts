@@ -526,7 +526,7 @@ export class Tournament extends Command {
 			if (!filteredBattles.length)
 				return edit({
 					content: template`
-						Non risulta alcuna partita corrispondente! **Invia i risultati solo dopo aver giocato le partite.**
+						**Premi il pulsante solo dopo aver giocato le partite!**
 						${battles[0]}-# Ultima partita di ${tag} registrata il <t:${Math.round(Clash.parseAPIDate(battles[0]?.battleTime ?? "") / 1000)}:s>
 					`,
 				});
@@ -585,9 +585,9 @@ export class Tournament extends Command {
 												type: ComponentType.TextDisplay,
 												content: template`
 													## ${(
-														battle.battle.players?.map(
-															this.stringifyBattlePlayer,
-														) ??
+														battle.battle.players
+															?.sort((a) => (a.tag === match.user1Tag ? -1 : 1))
+															.map(this.stringifyBattlePlayer) ??
 														battle.battle.teams?.map((t) =>
 															t.map(this.stringifyBattlePlayer).join(", "),
 														)
