@@ -11,13 +11,28 @@ import { fetchCache } from "../util/fetchCache";
 import { rest } from "../util/globals";
 import { findJSONObjectAround } from "../util/stringParsing";
 
+type TextSettings = {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	rotation: number;
+	font: string;
+	font_color: string;
+	outline_color: string;
+	force_caps: boolean;
+	text_align: string;
+	vertical_align: string;
+};
+
 export class Meme extends Command {
-	private static readonly choices: APIApplicationCommandOptionChoice<string>[] =
+	private static readonly CHOICES: APIApplicationCommandOptionChoice<string>[] =
 		[
 			{ name: "Drake Hotline Bling", value: "Drake-Hotline-Bling.jpg" },
 			{ name: "Two Buttons", value: "Two-Buttons.jpg" },
 			{ name: "Distracted Boyfriend", value: "Distracted-Boyfriend.jpg" },
 		];
+	private static readonly FONTS = ["arial", "impact"];
 	static override chatInputData = {
 		name: "meme",
 		description: "Crea un meme a partire da un'immagine",
@@ -28,22 +43,48 @@ export class Meme extends Command {
 				description: "Il template da usare",
 				type: ApplicationCommandOptionType.String,
 				required: true,
-				choices: Meme.choices,
+				choices: Meme.CHOICES,
+			},
+			{
+				name: "text1",
+				description: "Il primo testo da inserire",
+				type: ApplicationCommandOptionType.String,
+				required: true,
+			},
+			{
+				name: "text2",
+				description: "Il secondo testo da inserire",
+				type: ApplicationCommandOptionType.String,
+			},
+			{
+				name: "font-size",
+				description: "La grandezza del testo (default: 50pt)",
+				type: ApplicationCommandOptionType.Integer,
 			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
-	static loadMemes = async () => {
+	static loadSettings = async (url: URL) => {
+		if (url.origin !== "https://imgflip.com") return;
+		let match = url.pathname.match(/\/s\/meme\/([^./]+)\.([^/]+)$/);
+
+		if (!match) return;
+		const [, name, ext] = match;
 		const res = await fetchCache(
 			"https://imgflip.com/memegenerator",
 			{},
 			86400,
 		);
-		if (!res.ok) return [];
+		if (!res.ok)
+			return console.error(
+				"Failed to retrieve meme generator response:",
+				res.status,
+				res.statusText,
+			);
 		const html = await res.text();
-		const match = html.match(/\bmemes\s*=\s*[{[]/);
-
-		if (!match?.index) return [];
-		return findJSONObjectAround<
+		match = html.match(/\bmemes\s*=\s*[{[]/);
+		if (!match?.index)
+			return console.error("Failed to find memes object inside response");
+		const memes = findJSONObjectAround<
 			{
 				id: number;
 				uid: number;
@@ -59,55 +100,39 @@ export class Meme extends Command {
 				private: 0 | 1;
 			}[]
 		>(html, match.index + match[0].length - 1, 0);
+		return JSON.parse(
+			memes?.find((m) => m.url_name === name && m.file_type === ext)
+				?.default_settings ?? "[]",
+		) as TextSettings[];
 	};
 	static override async chatInput(
 		{ reply, defer }: ChatInputReplies,
 		{
-			options: { template },
+			options: { template, text1, text2, "font-size": fontSize },
 			fullRoute,
 		}: ChatInputArgs<typeof Meme.chatInputData>,
 	) {
-		const [img, memes] = await Promise.all([
-			fetch(
-				URL.canParse(template) ? template : (
-					new URL(template, "https://imgflip.com/s/meme/")
-				),
-			),
-			this.loadMemes().catch(() => []),
+		const url = new URL(
+			template,
+			URL.canParse(template) ? undefined : "https://imgflip.com/s/meme/",
+		);
+		const [img, settings] = await Promise.all([
+			fetch(url),
+			this.loadSettings(url).catch(console.error),
 		]);
-
 		if (!img.ok || !img.body)
 			return reply({ content: "Impossibile caricare l'immagine di template!" });
 		defer();
-		const settings: {
-			x: number;
-			y: number;
-			w: number;
-			h: number;
-			rotation: number;
-			font: string;
-			font_color: string;
-			outline_color: string;
-			force_caps: boolean;
-			text_align: string;
-			vertical_align: string;
-		}[] = JSON.parse(
-			memes.find((m) => `${m.url_name}.${m.file_type}` === template)
-				?.default_settings ?? "[]",
-		);
-		const result = await env.IMAGES.input(img.body)
-			.draw(
-				env.IMAGES.text("hello", {
-					font: {
-						url: `https://test-bot.trombett.org/fonts/${settings[0]?.font ?? "arial"}.ttf`,
-					},
-					color: settings[0]?.font_color ?? "#000000",
-					size: 50,
-				}),
-				{ top: settings[0]?.y ?? 40, right: settings[0]?.x ?? 40 },
-			)
-			.output({ format: "image/png" });
+		console.log(settings);
+		const transformer = env.IMAGES.input(img.body);
 
+		await Promise.all([
+			this.applyText(transformer, text1, settings?.[0], fontSize),
+			text2 &&
+				(!settings || settings[1]) &&
+				this.applyText(transformer, text2, settings?.[1], fontSize),
+		]);
+		const result = await transformer.output({ format: "image/png" });
 		return rest.patch(fullRoute, {
 			body: {
 				attachments: [{ id: 0, filename: "meme.png" }],
@@ -121,4 +146,41 @@ export class Meme extends Command {
 			],
 		});
 	}
+
+	private static applyText = async (
+		transformer: ImageTransformer,
+		text: string,
+		settings?: TextSettings,
+		fontSize?: number,
+	) => {
+		const info = (await env.IMAGES.info(
+			(
+				await this.createText(text, settings, fontSize).output({
+					format: "image/png",
+				})
+			).image(),
+		)) as Extract<ImageInfoResponse, { fileSize: number }>;
+
+		if (settings?.text_align === "center")
+			settings.x += (settings.w - info.width) / 2;
+		if (settings?.vertical_align === "middle")
+			settings.y += (settings.h - info.height) / 2;
+		transformer.draw(this.createText(text, settings, fontSize), {
+			top: settings?.y ?? 40,
+			left: settings?.x ?? 40,
+		});
+	};
+
+	private static createText = (
+		text: string,
+		settings?: TextSettings,
+		size = 50,
+	) =>
+		env.IMAGES.text(settings?.force_caps ? text.toUpperCase() : text, {
+			font: {
+				url: `https://test-bot.trombett.org/fonts/${settings?.font && this.FONTS.includes(settings.font) ? settings.font : "arial"}.ttf`,
+			},
+			color: settings?.font_color ?? "#000000",
+			size,
+		});
 }

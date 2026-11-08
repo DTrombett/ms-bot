@@ -19,6 +19,7 @@
 		"build": "node --enable-source-maps src/build.ts",
 		"deploy": "npm run build && wrangler deploy",
 		"dev": "wrangler dev --test-scheduled",
+		"dev:remote": "wrangler dev --remote",
 		"lint": "eslint --flag unstable_native_nodejs_ts_config src --fix",
 		"test": "npm run build && tsc && eslint --flag unstable_native_nodejs_ts_config src",
 		"types": "wrangler types && node src/patchTypes.ts"

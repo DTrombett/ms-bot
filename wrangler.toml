@@ -13,6 +13,7 @@ watch_dir = "src"
 
 [images]
 binding = "IMAGES"
+remote = true
 
 [observability]
 enabled = true
