@@ -23,6 +23,13 @@ type TextSettings = {
 	force_caps: boolean;
 	text_align: string;
 	vertical_align: string;
+	font_max_size?: number;
+};
+type ResolvedText = {
+	width: number;
+	height: number;
+	text: string;
+	size: number;
 };
 
 export class Meme extends Command {
@@ -55,11 +62,6 @@ export class Meme extends Command {
 				name: "text2",
 				description: "Il secondo testo da inserire",
 				type: ApplicationCommandOptionType.String,
-			},
-			{
-				name: "font-size",
-				description: "La grandezza del testo (default: 50pt)",
-				type: ApplicationCommandOptionType.Integer,
 			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
@@ -108,10 +110,11 @@ export class Meme extends Command {
 	static override async chatInput(
 		{ reply, defer }: ChatInputReplies,
 		{
-			options: { template, text1, text2, "font-size": fontSize },
+			options: { template, text1, text2 },
 			fullRoute,
 		}: ChatInputArgs<typeof Meme.chatInputData>,
 	) {
+		// TODO: Add third text
 		const url = new URL(
 			template,
 			URL.canParse(template) ? undefined : "https://imgflip.com/s/meme/",
@@ -127,10 +130,10 @@ export class Meme extends Command {
 		const transformer = env.IMAGES.input(img.body);
 
 		await Promise.all([
-			this.applyText(transformer, text1, settings?.[0], fontSize),
+			this.applyText(transformer, text1, settings?.[0]),
 			text2 &&
 				(!settings || settings[1]) &&
-				this.applyText(transformer, text2, settings?.[1], fontSize),
+				this.applyText(transformer, text2, settings?.[1]),
 		]);
 		const result = await transformer.output({ format: "image/png" });
 		return rest.patch(fullRoute, {
@@ -151,24 +154,77 @@ export class Meme extends Command {
 		transformer: ImageTransformer,
 		text: string,
 		settings?: TextSettings,
-		fontSize?: number,
 	) => {
-		const info = (await env.IMAGES.info(
-			(
-				await this.createText(text, settings, fontSize).output({
-					format: "image/png",
-				})
-			).image(),
-		)) as Extract<ImageInfoResponse, { fileSize: number }>;
+		const words: ResolvedText[] = await Promise.all(
+			text.split(/\s+/g).map(async (t): Promise<ResolvedText> => {
+				let size = settings?.font_max_size ?? 50;
+				let info = (await env.IMAGES.info(
+					(
+						await this.createText(t, settings, size).output({
+							format: "image/png",
+						})
+					).image(),
+				)) as Extract<ImageInfoResponse, { fileSize: number }>;
 
-		if (settings?.text_align === "center")
-			settings.x += (settings.w - info.width) / 2;
+				if (settings && info.width > settings.w) {
+					size =
+						// size : info.width = x : settings.w
+						(size * settings.w) / info.width;
+					info = (await env.IMAGES.info(
+						(
+							await this.createText(t, settings, size).output({
+								format: "image/png",
+							})
+						).image(),
+					)) as Extract<ImageInfoResponse, { fileSize: number }>;
+				}
+				return { text: t, height: info.height, width: info.width, size };
+			}),
+		);
+		const lines = words.reduce<ResolvedText[][]>(
+			(lines, word) => {
+				const line = lines.at(-1)!;
+				const lineWidth =
+					line.reduce<number>((t, s) => t + s.width, 0) +
+					word.width +
+					word.size * 0.4 * line.length;
+
+				if (settings && lineWidth > settings.w && line.length)
+					lines.push([word]);
+				else line.push(word);
+				return lines;
+			},
+			[[]],
+		);
+		const lineHeight = lines.reduce<number>(
+			(h, l) => l.reduce<number>((g, w) => Math.max(g, w.height), h),
+			0,
+		);
+		const textHeight = lineHeight * lines.length;
+		let top = settings?.y ?? 40;
+
 		if (settings?.vertical_align === "middle")
-			settings.y += (settings.h - info.height) / 2;
-		transformer.draw(this.createText(text, settings, fontSize), {
-			top: settings?.y ?? 40,
-			left: settings?.x ?? 40,
-		});
+			top += (settings.h - textHeight) / 2;
+		for (const line of lines) {
+			const lineWidth = line.reduce<number>(
+				(w, t) => w + t.size + t.width,
+				-line[0]!.size,
+			);
+			let left = settings?.x ?? 40;
+
+			if (settings?.text_align === "center")
+				left += (settings.w - lineWidth) / 2;
+			// TODO: Apply rotation
+			transformer.draw(
+				this.createText(
+					line.map((l) => l.text).join(" "),
+					settings,
+					line[0]?.size,
+				),
+				{ top, left },
+			);
+			top += lineHeight;
+		}
 	};
 
 	private static createText = (
