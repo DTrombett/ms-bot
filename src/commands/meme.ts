@@ -20,6 +20,7 @@ type TextSettings = {
 	font: string;
 	font_color: string;
 	outline_color: string;
+	outline_width?: number;
 	force_caps: boolean;
 	text_align: string;
 	vertical_align: string;
@@ -199,15 +200,18 @@ export class Meme extends Command {
 			},
 			[[]],
 		);
-		const lineHeight = lines.reduce<number>(
-			(h, l) => l.reduce<number>((g, w) => Math.max(g, w.height), h),
-			0,
-		);
+		const lineHeight =
+			lines.reduce<number>(
+				(h, l) => l.reduce<number>((g, w) => Math.max(g, w.height), h),
+				0,
+			) * 1.2;
 		const textHeight = lineHeight * lines.length;
 		let top = settings?.y ?? 40;
 
 		if (settings?.vertical_align === "middle")
 			top += (settings.h - textHeight) / 2;
+		else if (settings?.vertical_align === "bottom")
+			top += settings.h - textHeight;
 		for (const line of lines) {
 			const lineWidth = line.reduce<number>(
 				(w, t) => w + t.size + t.width,
