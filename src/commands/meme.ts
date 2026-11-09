@@ -63,6 +63,11 @@ export class Meme extends Command {
 				description: "Il secondo testo da inserire",
 				type: ApplicationCommandOptionType.String,
 			},
+			{
+				name: "text3",
+				description: "Il terzo testo da inserire",
+				type: ApplicationCommandOptionType.String,
+			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 	static loadSettings = async (url: URL) => {
@@ -110,11 +115,10 @@ export class Meme extends Command {
 	static override async chatInput(
 		{ reply, defer }: ChatInputReplies,
 		{
-			options: { template, text1, text2 },
+			options: { template, text1, text2, text3 },
 			fullRoute,
 		}: ChatInputArgs<typeof Meme.chatInputData>,
 	) {
-		// TODO: Add third text
 		const url = new URL(
 			template,
 			URL.canParse(template) ? undefined : "https://imgflip.com/s/meme/",
@@ -134,6 +138,9 @@ export class Meme extends Command {
 			text2 &&
 				(!settings || settings[1]) &&
 				this.applyText(transformer, text2, settings?.[1]),
+			text3 &&
+				(!settings || settings[2]) &&
+				this.applyText(transformer, text3, settings?.[2]),
 		]);
 		const result = await transformer.output({ format: "image/png" });
 		return rest.patch(fullRoute, {
@@ -158,7 +165,7 @@ export class Meme extends Command {
 		const words: ResolvedText[] = await Promise.all(
 			text.split(/\s+/g).map(async (t): Promise<ResolvedText> => {
 				let size = settings?.font_max_size ?? 50;
-				let info = (await env.IMAGES.info(
+				const info = (await env.IMAGES.info(
 					(
 						await this.createText(t, settings, size).output({
 							format: "image/png",
@@ -166,17 +173,13 @@ export class Meme extends Command {
 					).image(),
 				)) as Extract<ImageInfoResponse, { fileSize: number }>;
 
+				// size : info.width = newSize : settings.w
 				if (settings && info.width > settings.w) {
-					size =
-						// size : info.width = x : settings.w
-						(size * settings.w) / info.width;
-					info = (await env.IMAGES.info(
-						(
-							await this.createText(t, settings, size).output({
-								format: "image/png",
-							})
-						).image(),
-					)) as Extract<ImageInfoResponse, { fileSize: number }>;
+					const ratio = settings.w / info.width;
+
+					info.width *= ratio;
+					info.height *= ratio;
+					size *= ratio;
 				}
 				return { text: t, height: info.height, width: info.width, size };
 			}),
