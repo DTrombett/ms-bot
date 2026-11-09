@@ -15,14 +15,14 @@ type TextSettings = {
 	y: number;
 	w: number;
 	h: number;
-	rotation: number | null;
-	font: string;
-	font_color: string;
-	outline_color: string;
+	rotation?: number | null;
+	font?: string;
+	font_color?: string;
+	outline_color?: string;
 	outline_width?: number;
-	force_caps: boolean;
-	text_align: string;
-	vertical_align: string;
+	force_caps?: boolean;
+	text_align?: string;
+	vertical_align?: string;
 	font_max_size?: number;
 };
 type ResolvedText = {
@@ -191,22 +191,26 @@ export class Meme extends Command {
 		const memes = await this.loadMemes();
 
 		if (!memes) return autocomplete();
+		template = template.toLowerCase();
 		return autocomplete({
 			choices: memes
 				.map<[SearchScore, MemeSettings]>((meme) => {
 					if (!template) return [SearchScore.PartialNameMatchStart, meme];
 					if (template === String(meme.id))
 						return [SearchScore.FullIDMatch, meme];
-					if (template === meme.name) return [SearchScore.FullNameMatch, meme];
-					if (template === meme.url_name)
+					const name = meme.name.toLowerCase();
+					if (template === name) return [SearchScore.FullNameMatch, meme];
+					if (template === meme.url_name.toLowerCase())
 						return [SearchScore.FullURLMatch, meme];
-					const alts = meme.altNames.split(/\s*,\s*/g);
+					const alts = meme.altNames
+						.split(/\s*,\s*/g)
+						.map((v) => v.toLowerCase());
 					if (alts.includes(template)) return [SearchScore.FullAltMatch, meme];
-					if (meme.name.startsWith(template))
+					if (name.startsWith(template))
 						return [SearchScore.PartialNameMatchStart, meme];
 					if (alts.some((a) => a.startsWith(template)))
 						return [SearchScore.PartialAltMatchStart, meme];
-					if (meme.name.includes(template))
+					if (name.includes(template))
 						return [SearchScore.PartialNameMatch, meme];
 					if (alts.some((a) => a.includes(template)))
 						return [SearchScore.PartialAltMatch, meme];
@@ -225,11 +229,13 @@ export class Meme extends Command {
 	private static applyText = async (
 		transformer: ImageTransformer,
 		text: string,
-		settings?: TextSettings,
+		settings: TextSettings = { h: Infinity, w: Infinity, x: 80, y: 80 },
 	) => {
-		const words: ResolvedText[] = await Promise.all(
+		settings.font_max_size ??= 100;
+		let lineHeight = 0;
+		const words = await Promise.all(
 			text.split(/\s+/g).map(async (t): Promise<ResolvedText> => {
-				let size = settings?.font_max_size ?? 100;
+				let size = settings.font_max_size!;
 				const info = (await env.IMAGES.info(
 					(
 						await this.createText(t, settings, size).output({
@@ -239,58 +245,61 @@ export class Meme extends Command {
 				)) as Extract<ImageInfoResponse, { fileSize: number }>;
 
 				// size : info.width = newSize : settings.w
-				if (settings && info.width > settings.w) {
+				if (info.width > settings.w) {
 					const ratio = Math.floor(size * (settings.w / info.width)) / size;
 
 					info.width *= ratio;
 					info.height *= ratio;
 					size *= ratio;
 				}
+				lineHeight = Math.max(lineHeight, info.height);
 				return { text: t, height: info.height, width: info.width, size };
 			}),
 		);
-		const lines = words.reduce<ResolvedText[][]>(
-			(lines, word) => {
-				const line = lines.at(-1)!;
-				const lineWidth =
-					line.reduce<number>((t, s) => t + s.width, 0) +
-					word.width +
-					word.size * 0.4 * line.length;
+		let lines = this.createLines(words, settings);
 
-				if (settings && lineWidth > settings.w && line.length)
-					lines.push([word]);
-				else line.push(word);
-				return lines;
-			},
-			[[]],
-		);
-		const lineHeight =
-			lines.reduce<number>(
-				(h, l) => l.reduce<number>((g, w) => Math.max(g, w.height), h),
-				0,
-			) * 1.2;
-		const textHeight = lineHeight * lines.length;
-		let top = settings?.y ?? 40;
+		lineHeight *= 1.2;
+		let textHeight = lineHeight * lines.length;
+		if (textHeight > settings.h) {
+			settings.font_max_size = Math.floor(
+				(settings.font_max_size * (settings.h + textHeight)) / textHeight / 2,
+			);
+			lineHeight = 0;
+			for (const word of words.filter(
+				(w) => w.size > settings.font_max_size!,
+			)) {
+				// word.size : settings.font_max_size = word.width : newWidth
+				const ratio = settings.font_max_size / word.size;
 
-		if (settings?.vertical_align === "middle")
+				word.height *= ratio;
+				word.width *= ratio;
+				word.size = settings.font_max_size;
+				lineHeight = Math.max(lineHeight, word.height);
+			}
+			lines = this.createLines(words, settings);
+			lineHeight *= 1.2;
+			textHeight = lineHeight * lines.length;
+		}
+		let top = settings.y ?? 40;
+		if (settings.vertical_align === "middle")
 			top += (settings.h - textHeight) / 2;
-		else if (settings?.vertical_align === "bottom")
+		else if (settings.vertical_align === "bottom")
 			top += settings.h - textHeight;
 		for (const line of lines) {
+			const size = line.reduce<number>(
+				(n, w) => Math.min(n, w.size),
+				settings.font_max_size,
+			);
 			const lineWidth = line.reduce<number>(
 				(w, t) => w + t.size + t.width,
-				-line[0]!.size,
+				-size,
 			);
-			let left = settings?.x ?? 40;
+			let left = settings.x ?? 40;
 
-			if (settings?.text_align === "center")
+			if (settings.text_align === "center")
 				left += (settings.w - lineWidth) / 2;
 			transformer.draw(
-				this.createText(
-					line.map((l) => l.text).join(" "),
-					settings,
-					line[0]?.size,
-				),
+				this.createText(line.map((l) => l.text).join(" "), settings, size),
 				{ top, left },
 			);
 			top += lineHeight;
@@ -299,24 +308,43 @@ export class Meme extends Command {
 
 	private static createText = (
 		text: string,
-		settings?: TextSettings,
-		size = settings?.font_max_size ?? 100,
+		settings: TextSettings,
+		size = settings.font_max_size,
 	) => {
 		const transformer = env.IMAGES.text(
 			settings?.force_caps ? text.toUpperCase() : text,
 			{
 				font: {
-					url: `https://test-bot.trombett.org/fonts/${settings?.font && this.FONTS.includes(settings.font) ? settings.font : "arial"}.ttf`,
+					url: `https://test-bot.trombett.org/fonts/${settings.font && this.FONTS.includes(settings.font) ? settings.font : "arial"}.ttf`,
 				},
-				color: settings?.font_color ?? "#000000",
-				size,
+				color: settings.font_color ?? "#000000",
+				size: size ?? 50,
 			},
 		);
 		const rotate =
-			settings?.rotation ? Math.round(settings.rotation / 90) * 90 : 0;
+			settings.rotation ? Math.round(settings.rotation / 90) * 90 : 0;
 
 		if (rotate <= 0 && rotate >= 360)
 			transformer.transform({ rotate: rotate as 90 | 180 | 270 });
 		return transformer;
 	};
+
+	private static createLines = (
+		words: ResolvedText[],
+		settings: TextSettings,
+	) =>
+		words.reduce<ResolvedText[][]>(
+			(lines, word) => {
+				const line = lines.at(-1)!;
+				const lineWidth =
+					line.reduce<number>((t, s) => t + s.width, 0) +
+					word.width +
+					word.size * 0.4 * line.length;
+
+				if (lineWidth > settings.w && line.length) lines.push([word]);
+				else line.push(word);
+				return lines;
+			},
+			[[]],
+		);
 }
