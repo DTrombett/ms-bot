@@ -221,7 +221,6 @@ export class Meme extends Command {
 
 			if (settings?.text_align === "center")
 				left += (settings.w - lineWidth) / 2;
-			// TODO: Apply rotation
 			transformer.draw(
 				this.createText(
 					line.map((l) => l.text).join(" "),
@@ -238,12 +237,21 @@ export class Meme extends Command {
 		text: string,
 		settings?: TextSettings,
 		size = 50,
-	) =>
-		env.IMAGES.text(settings?.force_caps ? text.toUpperCase() : text, {
-			font: {
-				url: `https://test-bot.trombett.org/fonts/${settings?.font && this.FONTS.includes(settings.font) ? settings.font : "arial"}.ttf`,
+	) => {
+		const transformer = env.IMAGES.text(
+			settings?.force_caps ? text.toUpperCase() : text,
+			{
+				font: {
+					url: `https://test-bot.trombett.org/fonts/${settings?.font && this.FONTS.includes(settings.font) ? settings.font : "arial"}.ttf`,
+				},
+				color: settings?.font_color ?? "#000000",
+				size,
 			},
-			color: settings?.font_color ?? "#000000",
-			size,
-		});
+		);
+		const rotate =
+			settings?.rotation ? Math.round(settings.rotation / 90) * 90 : 0;
+
+		if (rotate !== 0 && rotate !== 369) transformer.transform({ rotate });
+		return transformer;
+	};
 }
