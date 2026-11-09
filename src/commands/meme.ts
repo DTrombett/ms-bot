@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
-	type APIApplicationCommandOptionChoice,
 	type RESTPatchAPIWebhookWithTokenMessageJSONBody,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord-api-types/v10";
@@ -32,14 +31,34 @@ type ResolvedText = {
 	text: string;
 	size: number;
 };
+type Meme = {
+	id: number;
+	uid: number;
+	name: string;
+	w: number;
+	h: number;
+	file_type: string;
+	url_name: string;
+	altNames: string;
+	safe_for_work: string;
+	default_settings: string;
+	has_transparency: 0 | 1;
+	private: 0 | 1;
+};
+
+enum SearchScore {
+	NoMatch,
+	PartialAltMatch,
+	PartialNameMatch,
+	PartialAltMatchStart,
+	PartialNameMatchStart,
+	FullAltMatch,
+	FullURLMatch,
+	FullNameMatch,
+	FullIDMatch,
+}
 
 export class Meme extends Command {
-	private static readonly CHOICES: APIApplicationCommandOptionChoice<string>[] =
-		[
-			{ name: "Drake Hotline Bling", value: "Drake-Hotline-Bling.jpg" },
-			{ name: "Two Buttons", value: "Two-Buttons.jpg" },
-			{ name: "Distracted Boyfriend", value: "Distracted-Boyfriend.jpg" },
-		];
 	private static readonly FONTS = ["arial", "impact"];
 	static override chatInputData = {
 		name: "meme",
@@ -51,7 +70,7 @@ export class Meme extends Command {
 				description: "Il template da usare",
 				type: ApplicationCommandOptionType.String,
 				required: true,
-				choices: Meme.CHOICES,
+				autocomplete: true,
 			},
 			{
 				name: "text1",
@@ -71,12 +90,8 @@ export class Meme extends Command {
 			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
-	static loadSettings = async (url: URL) => {
-		if (url.origin !== "https://imgflip.com") return;
-		let match = url.pathname.match(/\/s\/meme\/([^./]+)\.([^/]+)$/);
 
-		if (!match) return;
-		const [, name, ext] = match;
+	private static loadMemes = async () => {
 		const res = await fetchCache(
 			"https://imgflip.com/memegenerator",
 			{},
@@ -89,30 +104,30 @@ export class Meme extends Command {
 				res.statusText,
 			);
 		const html = await res.text();
-		match = html.match(/\bmemes\s*=\s*[{[]/);
+		const match = html.match(/\bmemes\s*=\s*[{[]/);
+
 		if (!match?.index)
 			return console.error("Failed to find memes object inside response");
-		const memes = findJSONObjectAround<
-			{
-				id: number;
-				uid: number;
-				name: string;
-				w: number;
-				h: number;
-				file_type: string;
-				url_name: string;
-				altNames: string;
-				safe_for_work: string;
-				default_settings: string;
-				has_transparency: 0 | 1;
-				private: 0 | 1;
-			}[]
-		>(html, match.index + match[0].length - 1, 0);
+		return findJSONObjectAround<Meme[]>(
+			html,
+			match.index + match[0].length - 1,
+			0,
+		);
+	};
+
+	private static getSettings = async (url: URL) => {
+		if (url.origin !== "https://imgflip.com") return;
+		const match = url.pathname.match(/\/s\/meme\/([^./]+)\.([^/]+)$/);
+
+		if (!match) return;
+		const [, name, ext] = match;
+		const memes = await this.loadMemes();
 		return JSON.parse(
 			memes?.find((m) => m.url_name === name && m.file_type === ext)
 				?.default_settings ?? "[]",
 		) as TextSettings[];
 	};
+
 	static override async chatInput(
 		{ reply, defer }: ChatInputReplies,
 		{
@@ -126,12 +141,11 @@ export class Meme extends Command {
 		);
 		const [img, settings] = await Promise.all([
 			fetch(url),
-			this.loadSettings(url).catch(console.error),
+			this.getSettings(url).catch(console.error),
 		]);
 		if (!img.ok || !img.body)
 			return reply({ content: "Impossibile caricare l'immagine di template!" });
 		defer();
-		console.log(settings);
 		const transformer = env.IMAGES.input(img.body);
 
 		await Promise.all([
@@ -155,6 +169,43 @@ export class Meme extends Command {
 					contentType: "image/png",
 				},
 			],
+		});
+	}
+
+	static override async autocomplete(
+		{ autocomplete }: AutoCompleteReplies,
+		{ options: { template } }: AutoCompleteArgs<(typeof Meme)["chatInputData"]>,
+	) {
+		const memes = await this.loadMemes();
+
+		if (!memes) return autocomplete();
+		return autocomplete({
+			choices: memes
+				.map<[SearchScore, Meme]>((meme) => {
+					if (!template) return [SearchScore.PartialNameMatchStart, meme];
+					if (template === meme.id) return [SearchScore.FullIDMatch, meme];
+					if (template === meme.name) return [SearchScore.FullNameMatch, meme];
+					if (template === meme.url_name)
+						return [SearchScore.FullURLMatch, meme];
+					const alts = meme.altNames.split(/\s*,\s*/g);
+					if (alts.includes(template)) return [SearchScore.FullAltMatch, meme];
+					if (meme.name.startsWith(template))
+						return [SearchScore.PartialNameMatchStart, meme];
+					if (alts.some((a) => a.startsWith(template)))
+						return [SearchScore.PartialAltMatchStart, meme];
+					if (meme.name.includes(template))
+						return [SearchScore.PartialNameMatch, meme];
+					if (alts.some((a) => a.includes(template)))
+						return [SearchScore.PartialAltMatch, meme];
+					return [SearchScore.NoMatch, meme];
+				})
+				.filter(([s]) => s)
+				.sort(([a], [b]) => b - a)
+				.slice(0, 25)
+				.map(([, m]) => ({
+					name: m.name,
+					value: `${m.url_name}.${m.file_type}`,
+				})),
 		});
 	}
 
