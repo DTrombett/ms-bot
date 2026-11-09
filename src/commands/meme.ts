@@ -15,7 +15,7 @@ type TextSettings = {
 	y: number;
 	w: number;
 	h: number;
-	rotation: number;
+	rotation: number | null;
 	font: string;
 	font_color: string;
 	outline_color: string;
@@ -31,7 +31,7 @@ type ResolvedText = {
 	text: string;
 	size: number;
 };
-type Meme = {
+type MemeSettings = {
 	id: number;
 	uid: number;
 	name: string;
@@ -88,6 +88,16 @@ export class Meme extends Command {
 				description: "Il terzo testo da inserire",
 				type: ApplicationCommandOptionType.String,
 			},
+			{
+				name: "text4",
+				description: "Il quarto testo da inserire",
+				type: ApplicationCommandOptionType.String,
+			},
+			{
+				name: "text5",
+				description: "Il quinto testo da inserire",
+				type: ApplicationCommandOptionType.String,
+			},
 		],
 	} as const satisfies RESTPostAPIApplicationCommandsJSONBody;
 
@@ -108,7 +118,7 @@ export class Meme extends Command {
 
 		if (!match?.index)
 			return console.error("Failed to find memes object inside response");
-		return findJSONObjectAround<Meme[]>(
+		return findJSONObjectAround<MemeSettings[]>(
 			html,
 			match.index + match[0].length - 1,
 			0,
@@ -124,7 +134,7 @@ export class Meme extends Command {
 		const memes = await this.loadMemes();
 		return JSON.parse(
 			memes?.find((m) => m.url_name === name && m.file_type === ext)
-				?.default_settings ?? "[]",
+				?.default_settings || "[]",
 		) as TextSettings[];
 	};
 
@@ -143,6 +153,8 @@ export class Meme extends Command {
 			fetch(url),
 			this.getSettings(url).catch(console.error),
 		]);
+		// TODO: remove this before merge
+		console.log(settings);
 		if (!img.ok || !img.body)
 			return reply({ content: "Impossibile caricare l'immagine di template!" });
 		defer();
@@ -181,9 +193,10 @@ export class Meme extends Command {
 		if (!memes) return autocomplete();
 		return autocomplete({
 			choices: memes
-				.map<[SearchScore, Meme]>((meme) => {
+				.map<[SearchScore, MemeSettings]>((meme) => {
 					if (!template) return [SearchScore.PartialNameMatchStart, meme];
-					if (template === meme.id) return [SearchScore.FullIDMatch, meme];
+					if (template === String(meme.id))
+						return [SearchScore.FullIDMatch, meme];
 					if (template === meme.name) return [SearchScore.FullNameMatch, meme];
 					if (template === meme.url_name)
 						return [SearchScore.FullURLMatch, meme];
@@ -216,7 +229,7 @@ export class Meme extends Command {
 	) => {
 		const words: ResolvedText[] = await Promise.all(
 			text.split(/\s+/g).map(async (t): Promise<ResolvedText> => {
-				let size = settings?.font_max_size ?? 50;
+				let size = settings?.font_max_size ?? 100;
 				const info = (await env.IMAGES.info(
 					(
 						await this.createText(t, settings, size).output({
@@ -287,7 +300,7 @@ export class Meme extends Command {
 	private static createText = (
 		text: string,
 		settings?: TextSettings,
-		size = 50,
+		size = settings?.font_max_size ?? 100,
 	) => {
 		const transformer = env.IMAGES.text(
 			settings?.force_caps ? text.toUpperCase() : text,
@@ -302,7 +315,8 @@ export class Meme extends Command {
 		const rotate =
 			settings?.rotation ? Math.round(settings.rotation / 90) * 90 : 0;
 
-		if (rotate !== 0 && rotate !== 369) transformer.transform({ rotate });
+		if (rotate <= 0 && rotate >= 360)
+			transformer.transform({ rotate: rotate as 90 | 180 | 270 });
 		return transformer;
 	};
 }
