@@ -175,7 +175,7 @@ export class Meme extends Command {
 
 				// size : info.width = newSize : settings.w
 				if (settings && info.width > settings.w) {
-					const ratio = settings.w / info.width;
+					const ratio = Math.floor(size * (settings.w / info.width)) / size;
 
 					info.width *= ratio;
 					info.height *= ratio;
