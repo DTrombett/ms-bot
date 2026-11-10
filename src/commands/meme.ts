@@ -25,12 +25,7 @@ type TextSettings = {
 	vertical_align?: string;
 	font_max_size?: number;
 };
-type ResolvedText = {
-	width: number;
-	height: number;
-	text: string;
-	size: number;
-};
+type ResolvedText = { width: number; height: number; text: string };
 type MemeSettings = {
 	id: number;
 	uid: number;
@@ -59,7 +54,7 @@ enum SearchScore {
 }
 
 export class Meme extends Command {
-	private static readonly FONTS = ["arial", "impact"];
+	private static readonly FONTS = ["arial", "impact", "comic sans ms"];
 	static override chatInputData = {
 		name: "meme",
 		description: "Crea un meme a partire da un'immagine",
@@ -231,11 +226,12 @@ export class Meme extends Command {
 		text: string,
 		settings: TextSettings = { h: Infinity, w: Infinity, x: 80, y: 80 },
 	) => {
-		settings.font_max_size ??= 100;
-		let lineHeight = 0;
+		const maxSize = settings.font_max_size ?? 100;
+		let maxWidth = 0,
+			maxHeight = 0,
+			size = maxSize;
 		const words = await Promise.all(
 			text.split(/\s+/g).map(async (t): Promise<ResolvedText> => {
-				let size = settings.font_max_size!;
 				const info = (await env.IMAGES.info(
 					(
 						await this.createText(t, settings, size).output({
@@ -244,55 +240,50 @@ export class Meme extends Command {
 					).image(),
 				)) as Extract<ImageInfoResponse, { fileSize: number }>;
 
-				// size : info.width = newSize : settings.w
-				if (info.width > settings.w) {
-					const ratio = Math.floor(size * (settings.w / info.width)) / size;
-
-					info.width *= ratio;
-					info.height *= ratio;
-					size *= ratio;
-				}
-				lineHeight = Math.max(lineHeight, info.height);
-				return { text: t, height: info.height, width: info.width, size };
+				if (info.width > maxWidth) maxWidth = info.width;
+				if (info.height > maxHeight) maxHeight = info.height;
+				return { text: t, height: info.height, width: info.width };
 			}),
 		);
-		let lines = this.createLines(words, settings);
+		if (maxWidth > settings.w) {
+			const newSize = Math.floor(size * (settings.w / maxWidth));
+			const ratio = newSize / size;
 
-		lineHeight *= 1.2;
-		let textHeight = lineHeight * lines.length;
-		if (textHeight > settings.h) {
-			settings.font_max_size = Math.floor(
-				(settings.font_max_size * (settings.h + textHeight)) / textHeight / 2,
-			);
-			lineHeight = 0;
-			for (const word of words.filter(
-				(w) => w.size > settings.font_max_size!,
-			)) {
-				// word.size : settings.font_max_size = word.width : newWidth
-				const ratio = settings.font_max_size / word.size;
-
-				word.height *= ratio;
+			for (const word of words) {
 				word.width *= ratio;
-				word.size = settings.font_max_size;
-				lineHeight = Math.max(lineHeight, word.height);
+				word.height *= ratio;
 			}
-			lines = this.createLines(words, settings);
-			lineHeight *= 1.2;
-			textHeight = lineHeight * lines.length;
+			maxHeight *= ratio;
+			size = newSize;
 		}
-		let top = settings.y ?? 40;
+		let lines = this.createLines(words, size, settings.w);
+		let textHeight = maxHeight * lines.length * 1.2;
+
+		if (textHeight > settings.h) {
+			const newSize = Math.floor(
+				(size * (settings.h + textHeight)) / textHeight / 2,
+			);
+			const ratio = newSize / size;
+
+			for (const word of words) {
+				word.width *= ratio;
+				word.height *= ratio;
+			}
+			maxHeight *= ratio;
+			size = newSize;
+			lines = this.createLines(words, size, settings.w);
+			textHeight = maxHeight * lines.length * 1.2;
+		}
+		let top = (settings.y ?? 40) + maxHeight * 0.1;
 		if (settings.vertical_align === "middle")
 			top += (settings.h - textHeight) / 2;
 		else if (settings.vertical_align === "bottom")
 			top += settings.h - textHeight;
 		for (const line of lines) {
-			const size = line.reduce<number>(
-				(n, w) => Math.min(n, w.size),
-				settings.font_max_size,
-			);
+			const space = size * 0.4;
 			const lineWidth = line.reduce<number>(
-				(w, t) => w + t.size + t.width,
-				-size,
+				(w, t) => w + space + t.width,
+				-space,
 			);
 			let left = settings.x ?? 40;
 
@@ -302,7 +293,7 @@ export class Meme extends Command {
 				this.createText(line.map((l) => l.text).join(" "), settings, size),
 				{ top, left },
 			);
-			top += lineHeight;
+			top += maxHeight * 1.2;
 		}
 	};
 
@@ -331,7 +322,8 @@ export class Meme extends Command {
 
 	private static createLines = (
 		words: ResolvedText[],
-		settings: TextSettings,
+		size: number,
+		width: number,
 	) =>
 		words.reduce<ResolvedText[][]>(
 			(lines, word) => {
@@ -339,9 +331,9 @@ export class Meme extends Command {
 				const lineWidth =
 					line.reduce<number>((t, s) => t + s.width, 0) +
 					word.width +
-					word.size * 0.4 * line.length;
+					size * 0.4 * line.length;
 
-				if (lineWidth > settings.w && line.length) lines.push([word]);
+				if (lineWidth > width && line.length) lines.push([word]);
 				else line.push(word);
 				return lines;
 			},
