@@ -226,9 +226,10 @@ export class Meme extends Command {
 		text: string,
 		settings: TextSettings = { h: Infinity, w: Infinity, x: 80, y: 80 },
 	) => {
+		text = text.trim();
+		if (!text) return;
 		const maxSize = settings.font_max_size ?? 100;
 		let maxWidth = 0,
-			maxHeight = 0,
 			size = maxSize;
 		const words = await Promise.all(
 			text.split(/\s+/g).map(async (t): Promise<ResolvedText> => {
@@ -241,59 +242,42 @@ export class Meme extends Command {
 				)) as Extract<ImageInfoResponse, { fileSize: number }>;
 
 				if (info.width > maxWidth) maxWidth = info.width;
-				if (info.height > maxHeight) maxHeight = info.height;
 				return { text: t, height: info.height, width: info.width };
 			}),
 		);
-		if (maxWidth > settings.w) {
-			const newSize = Math.floor(size * (settings.w / maxWidth));
-			const ratio = newSize / size;
+		let lines: ResolvedText[] = this.computeLines(words, size, settings.w);
+		let textHeight = lines.reduce<number>((s, l) => s + l.height * 1.2, 0);
 
-			for (const word of words) {
-				word.width *= ratio;
-				word.height *= ratio;
-			}
-			maxHeight *= ratio;
-			size = newSize;
-		}
-		let lines = this.createLines(words, size, settings.w);
-		let textHeight = maxHeight * lines.length * 1.2;
-
-		if (textHeight > settings.h) {
-			const newSize = Math.floor(
-				(size * (settings.h + textHeight)) / textHeight / 2,
-			);
-			const ratio = newSize / size;
-
-			for (const word of words) {
-				word.width *= ratio;
-				word.height *= ratio;
-			}
-			maxHeight *= ratio;
-			size = newSize;
-			lines = this.createLines(words, size, settings.w);
-			textHeight = maxHeight * lines.length * 1.2;
-		}
-		let top = (settings.y ?? 40) + maxHeight * 0.1;
+		if (maxWidth > settings.w)
+			({ size, lines, textHeight } = this.computeSize(
+				Math.floor(size * (settings.w / maxWidth)),
+				size,
+				words,
+				settings,
+			));
+		if (textHeight > settings.h)
+			({ size, lines, textHeight } = this.computeSize(
+				Math.floor((size * (settings.h + textHeight)) / textHeight / 2),
+				size,
+				words,
+				settings,
+			));
+		let top = settings.y ?? 40;
 		if (settings.vertical_align === "middle")
 			top += (settings.h - textHeight) / 2;
 		else if (settings.vertical_align === "bottom")
 			top += settings.h - textHeight;
 		for (const line of lines) {
-			const space = size * 0.4;
-			const lineWidth = line.reduce<number>(
-				(w, t) => w + space + t.width,
-				-space,
-			);
+			top += line.height * 0.1;
 			let left = settings.x ?? 40;
 
 			if (settings.text_align === "center")
-				left += (settings.w - lineWidth) / 2;
-			transformer.draw(
-				this.createText(line.map((l) => l.text).join(" "), settings, size),
-				{ top, left },
-			);
-			top += maxHeight * 1.2;
+				left += (settings.w - line.width) / 2;
+			transformer.draw(this.createText(line.text, settings, size), {
+				top,
+				left,
+			});
+			top += line.height * 1.1;
 		}
 	};
 
@@ -320,23 +304,45 @@ export class Meme extends Command {
 		return transformer;
 	};
 
-	private static createLines = (
+	private static computeLines = (
 		words: ResolvedText[],
 		size: number,
 		width: number,
 	) =>
-		words.reduce<ResolvedText[][]>(
+		words.reduce<ResolvedText[]>(
 			(lines, word) => {
 				const line = lines.at(-1)!;
-				const lineWidth =
-					line.reduce<number>((t, s) => t + s.width, 0) +
-					word.width +
-					size * 0.4 * line.length;
+				const lineWidth = line.width + size * 0.4 + word.width;
 
-				if (lineWidth > width && line.length) lines.push([word]);
-				else line.push(word);
+				if (lineWidth > width && line.width > 0) lines.push({ ...word });
+				else {
+					if (line.text) line.text += " ";
+					line.text += word.text;
+					line.width = lineWidth;
+					if (word.height > line.height) line.height = word.height;
+				}
 				return lines;
 			},
-			[[]],
+			[{ height: 0, text: "", width: -size * 0.4 }],
 		);
+
+	private static computeSize = (
+		newSize: number,
+		oldSize: number,
+		words: ResolvedText[],
+		settings: TextSettings,
+	) => {
+		const ratio = newSize / oldSize;
+		for (const word of words) {
+			word.width *= ratio;
+			word.height *= ratio;
+		}
+		const lines = this.computeLines(words, newSize, settings.w);
+
+		return {
+			size: newSize,
+			lines,
+			textHeight: lines.reduce<number>((s, l) => s + l.height * 1.2, 0),
+		};
+	};
 }
