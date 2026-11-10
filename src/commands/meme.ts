@@ -246,7 +246,7 @@ export class Meme extends Command {
 			}),
 		);
 		let lines: ResolvedText[] = this.computeLines(words, size, settings.w);
-		let textHeight = lines.reduce<number>((s, l) => s + l.height * 1.2, 0);
+		let textHeight = lines.length * size * 1.2;
 
 		if (maxWidth > settings.w)
 			({ size, lines, textHeight } = this.computeSize(
@@ -268,7 +268,8 @@ export class Meme extends Command {
 		else if (settings.vertical_align === "bottom")
 			top += settings.h - textHeight;
 		for (const line of lines) {
-			top += line.height * 0.1;
+			const margin = (size * 1.2 - line.height) / 2;
+			top += margin;
 			let left = settings.x ?? 40;
 
 			if (settings.text_align === "center")
@@ -277,7 +278,7 @@ export class Meme extends Command {
 				top,
 				left,
 			});
-			top += line.height * 1.1;
+			top += line.height + margin;
 		}
 	};
 
@@ -312,7 +313,7 @@ export class Meme extends Command {
 		words.reduce<ResolvedText[]>(
 			(lines, word) => {
 				const line = lines.at(-1)!;
-				const lineWidth = line.width + size * 0.4 + word.width;
+				const lineWidth = line.width + size * 0.25 + word.width;
 
 				if (lineWidth > width && line.width > 0) lines.push({ ...word });
 				else {
@@ -323,7 +324,7 @@ export class Meme extends Command {
 				}
 				return lines;
 			},
-			[{ height: 0, text: "", width: -size * 0.4 }],
+			[{ height: 0, text: "", width: -size * 0.25 }],
 		);
 
 	private static computeSize = (
@@ -339,10 +340,6 @@ export class Meme extends Command {
 		}
 		const lines = this.computeLines(words, newSize, settings.w);
 
-		return {
-			size: newSize,
-			lines,
-			textHeight: lines.reduce<number>((s, l) => s + l.height * 1.2, 0),
-		};
+		return { size: newSize, lines, textHeight: lines.length * newSize * 1.2 };
 	};
 }
