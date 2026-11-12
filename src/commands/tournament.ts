@@ -201,7 +201,7 @@ export class Tournament extends Command {
 				TournamentStatusFlags.Finished,
 				full ? 19 : 1,
 				guild_id,
-				tournamentId,
+				tournamentId ?? null,
 			)
 			.run<Database.Match>();
 		const [match] = results;
